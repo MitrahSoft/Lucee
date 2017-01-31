@@ -1,4 +1,27 @@
 <cfparam name="FORM.Scene" default="1">
+<cffunction name="createPackage" access="public">
+	<cfquery name="tmpQry">
+		CREATE OR REPLACE package lucee_bug_tester1 as
+		 PROCEDURE testprocs;
+		 PROCEDURE testprocs2(p1 varchar2);
+		end;
+		/
+		CREATE OR REPLACE package body lucee_bug_tester1 as
+		  PROCEDURE testprocs IS
+		  BEGIN
+		    NULL;
+		  END;
+		  procedure testprocs(p1 varchar2) is
+		  begin
+		    null;
+		  end;
+		END;
+		/
+		create or replace synonym bu07## for lucee_bug_test1
+	</cfquery>
+	<cfreturn true>
+</cffunction>
+
 <cffunction name="isDataAvail" access="public" returntype="boolean">
 	<cfquery name="tmpQry">
 			SELECT CAST(OBJECT_NAME AS varchar2(50)) || '|' || CAST(OBJECT_TYPE AS varchar2(50)) || '|' || CAST( OWNER AS varchar2(30) ) AS Name FROM ALL_OBJECTS WHERE OBJECT_NAME = 'LUCEE_BUG_TEST' AND STATUS = 'VALID'
@@ -69,12 +92,14 @@
 </cffunction>
 
 <cfif FORM.Scene EQ 1>
-	<cfset result = PackageWithoutParameter()>
+	<cfset result = createPackage()>
 <cfelseif FORM.Scene EQ 2>
-	<cfset result = PackageWithParameter()>
+	<cfset result = PackageWithoutParameter()>
 <cfelseif FORM.Scene EQ 3>
-	<cfset result = synonymWithoutParameter()>
+	<cfset result = PackageWithParameter()>
 <cfelseif FORM.Scene EQ 4>
+	<cfset result = synonymWithoutParameter()>
+<cfelseif FORM.Scene EQ 5>
 	<cfset result = synonymWithParameter()>
 </cfif>
 <cfoutput>#result#</cfoutput>

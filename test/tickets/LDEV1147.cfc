@@ -7,16 +7,16 @@
 
 		function run(){
 			describe( title="Test suite for LDEV-1147", skip=isNotSupported(), body=function(){
-				it(title="Calling Package without parameters",  body=function(){
+				it(title="Creating package with procedure",  body=function(){
 					var uri=createURI("LDEV1147/testcase.cfm");
 					var result = _InternalRequest(
 						template:uri,
 						forms:{Scene=1}
 					);
-					expect(result.filecontent.trim()).toBe('false');
+					expect(result.filecontent.trim()).toBe('true');
 				});
 
-				it(title="Calling Package with parameters", body=function(){
+				it(title="Calling Package without parameters",  body=function(){
 					var uri=createURI("LDEV1147/testcase.cfm");
 					var result = _InternalRequest(
 						template:uri,
@@ -25,7 +25,7 @@
 					expect(result.filecontent.trim()).toBe('false');
 				});
 
-				it(title="Calling synonym without parameters", body=function(){
+				it(title="Calling Package with parameters", body=function(){
 					var uri=createURI("LDEV1147/testcase.cfm");
 					var result = _InternalRequest(
 						template:uri,
@@ -34,11 +34,20 @@
 					expect(result.filecontent.trim()).toBe('false');
 				});
 
-				it(title="Calling synonym with parameters", body=function(){
+				it(title="Calling synonym without parameters", body=function(){
 					var uri=createURI("LDEV1147/testcase.cfm");
 					var result = _InternalRequest(
 						template:uri,
 						forms:{Scene=4}
+					);
+					expect(result.filecontent.trim()).toBe('false');
+				});
+
+				it(title="Calling synonym with parameters", body=function(){
+					var uri=createURI("LDEV1147/testcase.cfm");
+					var result = _InternalRequest(
+						template:uri,
+						forms:{Scene=5}
 					);
 					expect(result.filecontent.trim()).toBe('false');
 				});
