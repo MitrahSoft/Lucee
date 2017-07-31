@@ -1,6 +1,6 @@
 <cfscript>
 stText.services.update.serverNotReachable="Could not reach server {url}.";
-stText.services.update.serverFailed="server {url} failed to return a valid response.";
+stText.services.update.serverFailed="server {url} failed to return a valid response. Please try after sometimes";
 
 	struct function getAvailableVersion() localmode="true"{
 		restBasePath="/rest/update/provider/";
@@ -34,11 +34,13 @@ stText.services.update.serverFailed="server {url} failed to return a valid respo
 			}
 			// server failed
 			else {
-				rsp={"type":"warning","message":replace(stText.services.update.serverFailed,'{url}',update.location)&" "&http.filecontent};
+				errorMessage = replace(stText.services.update.serverFailed,'{url}',update.location);
+				rsp={"type":"warning","message": "<b>" & http.filecontent& ":"  &"</b>"& " "  & errorMessage};
 			}
 		}
 		catch(e){
-			rsp={"type":"warning","message":replace(stText.services.update.serverFailed,'{url}',update.location)&" "&e.message};
+			errorMessage = replace(stText.services.update.serverFailed,'{url}',update.location);
+			rsp={"type":"warning","message": e.message &":" & " " &  errorMessage};
 		}
 		rsp.provider=update;
 		return rsp;

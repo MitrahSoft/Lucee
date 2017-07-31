@@ -120,22 +120,27 @@ include "services.update.functions.cfm";
 
 	curr=server.lucee.version;
 	updateData=getAvailableVersion();
-try{
-	updateData.qryOtherVersions=queryNew('version,versionSortable');
-	queryAddRow(updateData.qryOtherVersions,updateData.otherVersions.len());
-	loop array=updateData.otherVersions item="v" index="i" {
-		updateData.qryOtherVersions.version[i]=v;
-		updateData.qryOtherVersions.versionSortable[i]=toVersionSortable(v);
+	if(updateData.type == "warning"){
+		error.message = updateData.message;
+		updateData.qryOtherVersions=queryNew('version,versionSortable');
+	} else{
+		try{
+			updateData.qryOtherVersions=queryNew('version,versionSortable');
+			queryAddRow(updateData.qryOtherVersions,updateData.otherVersions.len());
+			loop array=updateData.otherVersions item="v" index="i" {
+				updateData.qryOtherVersions.version[i]=v;
+				updateData.qryOtherVersions.versionSortable[i]=toVersionSortable(v);
+			}
+		} catch (any e){
+			error.message=cfcatch.message;
+			error.detail=cfcatch.Detail;
+			error.exception = cfcatch;
+		}
 	}
-} catch (any e){
-	error.message=cfcatch.message;
-	error.detail=cfcatch.Detail;
-	error.exception = cfcatch;
-}
-printError(error);
 	querySort(updateData.qryOtherVersions,'versionSortable','desc');
 	hasAccess=1;
 	hasUpdate=structKeyExists(updateData,"available");
+	printError(error);
 </cfscript>
 
 
