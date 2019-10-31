@@ -10,5 +10,6 @@
 	transaction isolation='read_uncommitted' {
 		embargo = EntityLoad("RosterEmbargo",{teamID:'E6983EDD-BBEB-43D3-BEC2-C648660142C7'},true);
 		EntitySave(embargo);
+		
 	}
 </cfscript>
