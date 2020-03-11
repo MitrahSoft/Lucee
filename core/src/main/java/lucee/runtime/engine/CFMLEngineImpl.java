@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -125,6 +126,7 @@ import lucee.runtime.engine.listener.CFMLServletContextListener;
 import lucee.runtime.exp.Abort;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.CasterException;
+import lucee.runtime.exp.MissingIncludeException;
 import lucee.runtime.exp.NativeException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.PageServletException;
@@ -184,6 +186,9 @@ import lucee.runtime.video.VideoUtilImpl;
  */
 public final class CFMLEngineImpl implements CFMLEngine {
 
+	public static final PrintStream CONSOLE_ERR = System.err;
+	public static final PrintStream CONSOLE_OUT = System.out;
+
 	private static Map<String, CFMLFactory> initContextes = MapFactory.<String, CFMLFactory>getConcurrentMap();
 	private static Map<String, CFMLFactory> contextes = MapFactory.<String, CFMLFactory>getConcurrentMap();
 	private ConfigServerImpl configServer = null;
@@ -205,6 +210,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 	private Controler controler;
 	private CFMLServletContextListener scl;
 	private Boolean asyncReqHandle;
+	private String envExt;
 
 	// private static CFMLEngineImpl engine=new CFMLEngineImpl();
 
@@ -343,10 +349,12 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		}
 
 		// install extension defined
-		String extensionIds = SystemUtil.getSystemPropOrEnvVar("lucee-extensions", null); // old no longer used
-		if (StringUtil.isEmpty(extensionIds, true)) extensionIds = SystemUtil.getSystemPropOrEnvVar("lucee.extensions", null);
+		String extensionIds = StringUtil.unwrap(SystemUtil.getSystemPropOrEnvVar("lucee-extensions", null)); // old no longer used
+		if (StringUtil.isEmpty(extensionIds, true)) extensionIds = StringUtil.unwrap(SystemUtil.getSystemPropOrEnvVar("lucee.extensions", null));
 
+		this.envExt = null;
 		if (!StringUtil.isEmpty(extensionIds, true)) {
+			this.envExt = extensionIds;
 			LogUtil.log(cs, Log.LEVEL_INFO, "deploy", "controller", "extensions to install defined in env variable or system property:" + extensionIds);
 			List<ExtensionDefintion> _extensions = RHExtension.toExtensionDefinitions(extensionIds);
 			extensions = toSet(extensions, _extensions);
@@ -829,7 +837,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		return configServer;
 	}
 
-	private Resource getSeverContextConfigDirectory(CFMLEngineFactory factory) throws IOException {
+	public static Resource getSeverContextConfigDirectory(CFMLEngineFactory factory) throws IOException {
 		ResourceProvider frp = ResourcesImpl.getFileResourceProvider();
 		return frp.getResource(factory.getResourceRoot().getAbsolutePath()).getRealResource("context");
 	}
@@ -1127,7 +1135,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 					throw td;
 				}
 				catch (Throwable t) {
-					if (t instanceof Exception && !Abort.isSilentAbort(t)) LogUtil.log(configServer, "controller", (Exception) t);
+					if (t instanceof Exception && !Abort.isSilentAbort(t))
+						LogUtil.log(configServer, "application", "controller", (Exception) t, t instanceof MissingIncludeException ? Log.LEVEL_WARN : Log.LEVEL_ERROR);
 				}
 			}
 		}
@@ -1758,4 +1767,11 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		return defaultValue;
 	}
 
+	public Object getEnvExt() {
+		return envExt;
+	}
+
+	public void setEnvExt(String envExt) {
+		this.envExt = envExt;
+	}
 }
