@@ -402,6 +402,6 @@
 		</script>
 	</cfhtmlbody>
 
-	<p class="comment">* #replace(stText.services.update.titleDesc2,'{min-version}',"<b>"&minVersion&"</b>") #</p>
+	<p class="comment"><b>* #replace(stText.services.update.titleDesc2,'{min-version}',"<b>"&minVersion&"</b>") #</b></p>
 	
 </cfoutput>
