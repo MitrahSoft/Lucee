@@ -3,20 +3,20 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 		describe( "Test case for LDEV-1868", function() {
 			it( title='Checking Application context for MailSettings', body=function( currentSpec ) {
 				defineMailSettings(25, false, false);
-				assertEquals(25, getApplicationSettings().mails[1].port);
-				assertEquals(false, getApplicationSettings().mails[1].tls);
-				assertEquals(false, getApplicationSettings().mails[1].ssl);
+				assertEquals(25, getApplicationSettings().mailservers[1].port);
+				assertEquals(false, getApplicationSettings().mailservers[1].USETLS);
+				assertEquals(false, getApplicationSettings().mailservers[1].USESSL);
 				defineMailSettings(587, true, true);
-				assertEquals(587, getApplicationSettings().mails[1].port);
-				assertEquals(true, getApplicationSettings().mails[1].tls);
-				assertEquals(true, getApplicationSettings().mails[1].ssl);
+				assertEquals(587, getApplicationSettings().mailservers[1].port);
+				assertEquals(true, getApplicationSettings().mailservers[1].USETLS);
+				assertEquals(true, getApplicationSettings().mailservers[1].USESSL);
 			});
 		});
 	}
 
 	private void function defineMailSettings(port, tls, ssl){
 		application action="update"
-		mails =[ {
+		mailservers =[{
 		  	server :"smtp.mail.com"
 			, port: arguments.port
 			, userName:"testing@mail.com"
