@@ -181,6 +181,8 @@ public final class Invoke extends BodyTagImpl implements DynamicAttributes {
 
 	@Override
 	public int doEndTag() throws PageException {
+		// check method attribute
+		if (StringUtil.isEmpty(method, true)) throw new ApplicationException("Attribute [method] for tag [invoke] is required in this context.");
 		// CFC
 		if (component != null) {
 			doComponent(component);
@@ -215,8 +217,6 @@ public final class Invoke extends BodyTagImpl implements DynamicAttributes {
 	private void doFunction(PageContext pc) throws PageException {
 
 		// execute
-		if (StringUtil.isEmpty(method, true)) throw new ApplicationException("Attribute [method] for tag [invoke] is required in this context.");
-
 		Object oUDF = pc.getVariable(method);
 		if (!(oUDF instanceof UDF)) throw new ApplicationException("there is no function with name " + method);
 		Object rtn = ((UDF) oUDF).callWithNamedValues(pageContext, data, false);
