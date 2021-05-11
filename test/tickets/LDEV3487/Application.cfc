@@ -6,7 +6,7 @@ component {
     public function onRequestStart(){
         if( StructIsEmpty(mySQL) ){
             writeoutput("Datasource credentials was not available"); // Datasource credentials was not available means need to skip the iteration.
-        abort;
+            return false;
         }
         query{
             echo("DROP TABLE IF EXISTS LDEV3487_MYSQL");
