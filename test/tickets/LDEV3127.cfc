@@ -6,6 +6,7 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" {
 	}
 
 	function run( testResults, textbox ){
+		skip = !(structKeyExists(server.system.properties,'lucee.datasource.mssql.modern') || structKeyExists(server.system.environment,'LUCEE_DATASOURCE_MSSQL_MODERN'));
 		if( !hasCredentials() ){
 			// TODO handle better
 			return;
@@ -17,7 +18,7 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" {
 		];
 
 		for( var data in drivers ){
-			describe("testcase for LDEV-XXXX using #data.label# driver", function(){
+			describe(title="testcase for LDEV-XXXX using #data.label# driver", skip=skip, body=function(){
 				it(title = "Should throw custom RAISERROR in #data.label#", data=data, body = function ( currentSpec ){
 					var exceptionMessage = "[no exception found]";
 					

@@ -33,6 +33,7 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" {
 	}
 
 	function run( testResults, textbox ){
+		skip = !(structKeyExists(server.system.properties,'lucee.datasource.mssql.modern') || structKeyExists(server.system.environment,'LUCEE_DATASOURCE_MSSQL_MODERN'));
 		if( !hasCredentials() ){
 			return; // TODO add "skip" to the code below instead of this
 			//throw "No SQL Server credentials defined!";
@@ -44,7 +45,7 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" {
 		];
 
 		for( var data in drivers ){
-			describe("testcase for LDEV-3102 using #data.label# driver", function(){
+			describe(title="testcase for LDEV-3102 using #data.label# driver",skip=skip, body=function(){
 				beforeEach( function( currentSpec ){
 					query datasource=data.datasource {
 						// reset the table state
