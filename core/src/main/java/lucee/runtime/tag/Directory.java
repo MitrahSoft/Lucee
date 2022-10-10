@@ -61,6 +61,8 @@ import lucee.runtime.type.Struct;
 import lucee.runtime.type.UDF;
 import lucee.runtime.type.util.KeyConstants;
 
+import lucee.runtime.functions.other.SystemOutput;
+
 /**
  * Handles interactions with directories.
  **/
@@ -490,6 +492,8 @@ public final class Directory extends TagImpl {
 			}
 		}
 
+		SystemOutput.call(pageContext, query, true, true);
+
 		query.setExecutionTime(System.nanoTime() - startNS);
 
 		if (typeArray) {
@@ -500,6 +504,8 @@ public final class Directory extends TagImpl {
 				else array.appendEL(row.get("directory") + lucee.commons.io.FileUtil.FILE_SEPERATOR_STRING + row.get("name"));
 			}
 		}
+		
+		SystemOutput.call(pageContext, rtn, true, true);
 
 		return rtn;
 	}
