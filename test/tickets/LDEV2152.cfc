@@ -37,18 +37,26 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 		describe( "test suite for LDEV-2152", function() {
 			it(title = "directorylist() with attribute listinfo = 'query'", body = function( currentSpec ) {
 				var dirList = directorylist( base, true, 'query', '*.txt', 'directory ASC');
+				systemOutput(dirList,1,1);
 				var names = queryColumnData( dirList, "name" );
+				systemOutput(names,1,1);
+				systemOutput("=======================================",1,1);
 				expect( names ).toBe ( [ "a.txt", "c.txt", "j.txt", "e.txt", "g.txt", "p.txt", "h.txt", "o.txt" ] );
 			});
 
 			it(title = "directorylist() with attribute listinfo = 'query',sort = 'desc'", body = function( currentSpec ) {
 				var dirList = directorylist( base, true, 'query', '*.txt', 'directory DESC');
+				systemOutput(dirList,1,1);
 				var names = queryColumnData( dirList, "name" );
+				systemOutput(names,1,1);
+				systemOutput("=======================================",1,1);
 				expect( names ).toBe(['h.txt','o.txt','g.txt','p.txt','e.txt','a.txt','c.txt','j.txt']);
 			});
 
 			it(title = "directorylist() with attribute listinfo = 'path', sort directory ASC", body = function( currentSpec ) {
 				var dirList = directorylist( base, true, 'path', '*.txt', 'directory ASC');
+				systemOutput(dirList,1,1);
+				systemOutput("=======================================",1,1);
 				loop array=dirList item="local.dir" index="local.i" {
 					dirList[ local.i ] =  replace( listlast( dir, "LDEV2152" ), "\", "/", "all" );
 				}
@@ -57,6 +65,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it(title = "directorylist() with attribute listinfo = 'path',sort = 'directory desc'",  body = function( currentSpec ) {
 				var dirList = directorylist( base, true, 'path', '*.txt', 'directory DESC');
+				systemOutput(dirList,1,1);
+				systemOutput("=======================================",1,1);
 				loop array=dirList item="local.dir" index="local.i" {
 					dirList[ local.i ] =  replace( listlast( dir, "LDEV2152" ), "\", "/", "all" );
 				}
