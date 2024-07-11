@@ -107,6 +107,7 @@ import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.SecurityException;
 import lucee.runtime.exp.TemplateException;
 import lucee.runtime.extension.Extension;
+import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.ExtensionProvider;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.extension.RHExtensionProvider;
@@ -252,7 +253,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private TimeZone timeZone;
 
 	private String timeServer = "";
-	private boolean useTimeServer = true;
+	private boolean useTimeServer = false;
 
 	private long timeOffset;
 
@@ -354,6 +355,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private RHExtensionProvider[] rhextensionProviders = Constants.RH_EXTENSION_PROVIDERS;
 
+	private List<ExtensionDefintion> extensionsDefs;
 	private RHExtension[] rhextensions = RHEXTENSIONS_EMPTY;
 	private String extensionsMD5;
 	private boolean allowRealPath = true;
@@ -460,6 +462,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public void reset() {
 		timeServer = "";
+		useTimeServer = false;
 		componentDumpTemplate = "";
 		// resources.reset();
 		ormengines.clear();
@@ -2740,8 +2743,17 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	protected void setExtensions(RHExtension[] extensions, String md5) {
+		this.extensionsDefs = null;
 		this.rhextensions = extensions;
 		this.extensionsMD5 = md5;
+	}
+
+	protected void setExtensionDefinitions(List<ExtensionDefintion> extensionsDefs) {
+		this.extensionsDefs = extensionsDefs;
+	}
+
+	public List<ExtensionDefintion> getExtensionDefinitions() {
+		return this.extensionsDefs;
 	}
 
 	@Override

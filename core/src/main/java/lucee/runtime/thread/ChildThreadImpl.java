@@ -121,7 +121,6 @@ public class ChildThreadImpl extends ChildThread implements Serializable {
 		start = System.currentTimeMillis();
 		if (attrs == null) this.attrs = new StructImpl();
 		else this.attrs = attrs;
-
 		if (!serializable) {
 			this.page = page;
 			if (parent != null) {
