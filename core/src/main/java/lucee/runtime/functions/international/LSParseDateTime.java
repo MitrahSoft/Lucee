@@ -77,19 +77,14 @@ public final class LSParseDateTime implements Function {
 		String strDate = StringUtil.replaceSpecialWhiteSpace(Caster.toString(oDate));
 
 		if (format != null && "epoch".equalsIgnoreCase(format.trim())) {
-			String seconds = oDate.toString();
-			long timeSeconds = Long.parseLong(seconds);
-			long milliseconds = timeSeconds*1000;
-			Instant instant = Instant.ofEpochMilli(milliseconds);
+			Instant instant = Instant.ofEpochMilli(Long.parseLong(oDate.toString()) * 1000);
 			LocalDateTime localDateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
 			strDate = StringUtil.replaceSpecialWhiteSpace(Caster.toString(localDateTime));
 			return DateCaster.toDateTime(locale, strDate, tz, isUSLike(locale));
 		}
+
 		else if (format != null && "epochms".equalsIgnoreCase(format.trim())) {
-			String seconds = oDate.toString();
-			long timeSeconds = Long.parseLong(seconds);
-			long milliseconds = timeSeconds;
-			Instant instant = Instant.ofEpochMilli(milliseconds);
+			Instant instant = Instant.ofEpochMilli(Long.parseLong(oDate.toString()));
 			LocalDateTime localDateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime();
 			strDate = StringUtil.replaceSpecialWhiteSpace(Caster.toString(localDateTime));
 			return DateCaster.toDateTime(locale, strDate, tz, isUSLike(locale));
