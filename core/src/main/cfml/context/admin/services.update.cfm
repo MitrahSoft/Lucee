@@ -80,7 +80,7 @@
 			type="#request.adminType#"
 			password="#session["password"&request.adminType]#"
 			returnvariable="minVersion";
-		minVs = toVersionSortable(minVersion);
+		// minVs = toVersionSortable(minVersion);
 		try {
 			otherVersions=LuceeVersionsList();
 		}
