@@ -482,7 +482,7 @@ public final class DebuggerImpl implements Debugger {
 					StringBuilder paramType = new StringBuilder();
 					for (int i = 0; i < params.length; i++) {
 						paramValue.append(params[i].getValue()).toString();
-						if (i < params.length - 1) paramValue.append(",");
+						if (i < params.length - 1) paramValue.append(",,");
 						paramType.append(SQLCaster.toStringType(params[i].getType(), "")).toString();
 						if (i < params.length - 1) paramType.append(",");
 					}

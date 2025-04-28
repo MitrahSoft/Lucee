@@ -382,7 +382,7 @@ if(!pages.recordcount || !hasQueries) {
 </cfif>
 <pre>#queries.sql#</pre>
 <cfif !isEmpty(queries.paramValue) && !isEmpty(queries.paramType)>
-<cfset paramValue1 = listtoarray(queries.paramValue,",")>
+<cfset paramValue1 = listtoarray(queries.paramValue,",,",false,true)>
 <cfset paramType1 = listtoarray(queries.paramType, ",")>
 <cfoutput>
 	<pre><b> Query Parameter Value(s) - </b><br><br><cfloop from="1" to="#arraylen(paramValue1)#" index="i">###i# Parameter(#paramType1[i]#) = #paramValue1[i]#<br></cfloop></pre>
