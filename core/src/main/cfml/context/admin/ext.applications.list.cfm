@@ -92,7 +92,9 @@
 				><cfscript>
 					arrayAppend(spev, _extensions.id&";version="&_extensions.version);
 					latest=getLatestVersion(_extensions.id);
-					hasUpdates=latest.vs GT toVersionSortable(_extensions.version);
+					latestVersion = latest.vs;
+					hasUpdates = toNumeric( REReplace( latestVersion, "[^\d]", "", "all" ) ) GT
+								 toNumeric( REReplace( toVersionSortable( _extensions.version ), "[^\d]", "", "all" ) );
 					link="#request.self#?action=#url.action#&action2=detail&id=#_extensions.id#";
 					img=_extensions.image;
 					if(len(img)==0) {
