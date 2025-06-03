@@ -8,7 +8,7 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" {
                 try {
                     result = createObject("java", "org.mindrot.jbcrypt.BCrypt", expandPath("./LDEV5620/test.jar"));
                 } catch (any e) {
-                    result = e.message;
+                    result = e.stackTrace;
                 }
                 expect( isObject(result) ).toBeTrue();
                 var className = result.getClass().getName();
