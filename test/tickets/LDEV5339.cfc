@@ -7,9 +7,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase" skip="true"{
                 var result = "";
                 try{
                     thread action="run" name=threadName{ 
-                        sleep(500);
+                        sleep(50);
                     }
-                    sleep(500);
+                    sleep(50);
                     // interrupt the thread
                     thread action="interrupt" name=threadName{
                     }
