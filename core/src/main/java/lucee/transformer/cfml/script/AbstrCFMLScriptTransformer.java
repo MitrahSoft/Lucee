@@ -778,13 +778,29 @@ public abstract class AbstrCFMLScriptTransformer extends AbstrCFMLExprTransforme
 				}
 			}
 		}
-
+		// Detect access modifier
+		boolean hasAccessModifier = false;
+		for (int i = 0; i < tokens.length; i++) {
+			if (tokens[i] != null && ComponentUtil.toIntAccess(tokens[i], -1) != -1) {
+				hasAccessModifier = true;
+				break;
+			}
+		}
 		// function name
 		String functionName = null;
 		for (int i = tokens.length - 1; i >= 0; i--) {
 			// first from right is the function name
 			if (tokens[i] != null) {
 				functionName = tokens[i];
+				if (hasAccessModifier) {
+					for (int j = 1; j < tokens.length; j++) {
+						if(functionName.equalsIgnoreCase(tokens[j]) && !tokens[j-1].equalsIgnoreCase("function")) {
+								data.srcCode.setPos(pos);
+								Position errPos = data.srcCode.getPosition();
+								throw new TemplateException(data.srcCode, "Invalid syntax found on line " + (errPos.line) + " at column " + (errPos.column) + ". Function name is missing.");
+						}
+					}
+				}
 				tokens[i] = null;
 				break;
 			}
