@@ -28,7 +28,7 @@
 	*/
 	public HelperBase function addParam() {
 		  // Only validate the param being added (arguments itself)
-		if (structKeyExists(arguments, "list") && arguments.list) {
+		if (arguments.list ?: false) {
 			if (structKeyExists(arguments, "value") && trim(arguments.value) == '') {
 				var errorMsg = structKeyExists(arguments, "name") 
 					? "param [#arguments.name#] may not be empty" 
