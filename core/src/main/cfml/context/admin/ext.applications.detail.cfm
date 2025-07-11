@@ -129,7 +129,7 @@
 						<cfset dn=getDumpNail(app.image,400,400)>
 
 						<div style="width:100%;overflow:auto;">
-							<img width="400" src="#dn#" alt="#stText.ext.extThumbnail#" />
+							<img class="ext-logo" width="400" src="#dn#" alt="#stText.ext.extThumbnail#" />
 						</div>
 					</cfif>
 				</td>

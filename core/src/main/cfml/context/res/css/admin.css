@@ -213,6 +213,9 @@ img,
 a img {
     border: 0;
 }
+.ext-logo {
+    background-color: #fff !important;
+}
 
 form,
 div {
@@ -1174,18 +1177,25 @@ tbody#extproviderlist td {
 
 .extensionthumb {
     width: 146px;
-    height: 140px;
+    height: 153px; /* Increase if needed */
     overflow: hidden;
-    margin: 2px 2px 2px 2px;
+    margin: 2px;
     float: left;
     text-align: center;
     position: relative;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .extensionthumb a {
     display: block;
     padding: 0px;
-    height: 130px;
+    height: 170px;
     text-decoration: none !important;
     border: 5px solid #dcdad3;
     background-color: #fff;
