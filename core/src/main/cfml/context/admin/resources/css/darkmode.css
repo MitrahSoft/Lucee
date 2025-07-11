@@ -307,6 +307,10 @@ body.dark-mode .coding-tip code {
 }
 
 /* Additional specific elements */
+body.dark-mode span.ext-name{
+  color: #6D6D6D !important;
+}
+
 body.dark-mode span,
 body.dark-mode label,
 body.dark-mode tbody,

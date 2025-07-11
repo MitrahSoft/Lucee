@@ -125,10 +125,10 @@ Latest version: #latest.v#</cfif>"><cfif hasUpdates>
 								</cfif>
 							</div>
 							<cfset listinstalled = listinstalled+1>
-							<span <cfif _type=="server">style="color:##bf4f36"</cfif>>#cut(_extensions.name,40)#<br>
+							<span class="ext-name" style="font-size: 13px;">#cut(_extensions.name,40)#<br>
 							#_extensions.version#<br />
 							</span>
-							<span class="comment" <cfif _type=="server">style="color:##bf4f36"</cfif>>
+							<span class="comment" style="font-size: 13px;">
 							<cfif hasUpdates>#latest.v#</cfif></span>
 
 						</a>
