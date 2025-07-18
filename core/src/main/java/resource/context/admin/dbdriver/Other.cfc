@@ -24,25 +24,34 @@
 	<cfset this.type.database=this.TYPE_HIDDEN>
 	<cfset this.data.classname="">
 	<cfset this.data.dsn="">
+	<cfset this.data.bundlename="">
+	<cfset this.data.bundleversion="">
 	
 	<cffunction name="onBeforeUpdate" returntype="void" output="no">
 		<cfset this.class=form.custom_class>
 		<cfset StructDelete(form,'custom_class')>
 		<cfset this.dsn=form.custom_dsn>
 		<cfset StructDelete(form,'custom_dsn')>
+		<cfset this.bundlename=form.custom_bundlename>
+		<cfset StructDelete(form,'custom_bundlename')>
+		<cfset this.bundleversion=form.custom_bundleversion>
+		<cfset StructDelete(form,'custom_bundleversion')>
 	</cffunction>
 
 	<cffunction name="init" returntype="void" output="no">
 		<cfargument name="data" required="yes" type="struct">
 		<cfscript>
 		if(!structKeyExists(data,"classname")) data.classname="";
-		//if(!structKeyExists(data,"bundleName")) data.bundleName="";
-		//if(!structKeyExists(data,"bundleVersion")) data.bundleVersion="";
+		if(!structKeyExists(data,"bundleName")) data.bundlename="";
+		if(!structKeyExists(data,"bundleVersion")) data.bundleversion="";
 		if(!structKeyExists(data,"dsn")) data.dsn="";
 		
 		fields=array(
 			field("Class","class",data.classname,true,"The JDBC class that implement the Driver."),
-			field("Connection String","dsn",data.dsn,true,"The Datasource Connection String, please consult the documentation of the JDBC Driver for details on the connection string.")
+			field("Connection String","dsn",data.dsn,true,"The Datasource Connection String, please consult the documentation of the JDBC Driver for details on the connection string."),
+			field("bundlename","bundlename",data.bundlename,false,"The OSGi bundle name of the Driver, only necessary if the jar is OSGi based."),
+			field("bundleversion","bundleversion",data.bundleversion,false,"The OSGi bundle version of the Driver, only necessary if the driver is OSGi based.")
+
 		);
 		</cfscript>
 		
@@ -63,7 +72,16 @@
 		hint="returns array of fields">
 		<cfreturn fields>
 	</cffunction>
+
+	<cffunction name="getBundleName" returntype="string" output="no"
+		hint="returns the name of the bundle that contains the JDBC Driver">
+		<cfreturn this.data.bundlename>
+	</cffunction>
 	
+	<cffunction name="getBundleVersion" returntype="string" output="no"
+		hint="returns the version of the bundle that contains the JDBC Driver">
+		<cfreturn this.data.bundleversion>
+	</cffunction>
 	
 	<cffunction name="equals" returntype="boolean" output="false"
 		hint="always returns false">

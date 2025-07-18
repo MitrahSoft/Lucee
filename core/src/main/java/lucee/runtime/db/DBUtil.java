@@ -123,15 +123,29 @@ public final class DBUtil {
 		public ClassDefinition classDefinition;
 		public final String connectionString;
 		public final int port;
+		public final String bundleName;
+		public final String bundleVersion;
 
-		DataSourceDefintion(String className, String connectionString, int port) {
-			this(new ClassDefinitionImpl(className), connectionString, port);
+		// Constructor with bundleName and bundleVersion
+		DataSourceDefintion(String className, String connectionString, int port, String bundleName, String bundleVersion) {
+			this(new ClassDefinitionImpl(className, bundleName, bundleVersion, null), connectionString, port, bundleName, bundleVersion);
 		}
 
-		DataSourceDefintion(ClassDefinition cd, String connectionString, int port) {
+		DataSourceDefintion(ClassDefinition cd, String connectionString, int port, String bundleName, String bundleVersion) {
 			this.classDefinition = cd;
 			this.connectionString = connectionString;
 			this.port = port;
+			this.bundleName = bundleName;
+			this.bundleVersion = bundleVersion;
+		}
+
+
+		DataSourceDefintion(String className, String connectionString, int port) {
+			this(new ClassDefinitionImpl(className), connectionString, port, "", "");
+		}
+
+		DataSourceDefintion(ClassDefinition cd, String connectionString, int port) {
+			this(cd, connectionString, port, "", "");
 		}
 	}
 }

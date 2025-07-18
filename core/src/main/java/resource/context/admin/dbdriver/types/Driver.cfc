@@ -75,6 +75,18 @@
 		
 		<cfreturn this.dsn>
 	</cffunction>
+
+	<cffunction name="getBundleName" returntype="string" output="no"
+		hint="returns the name of the bundle that contains the JDBC Driver">
+
+		<cfreturn this.bundlename>
+	</cffunction>
+
+	<cffunction name="getBundleVersion" returntype="string" output="no"
+		hint="returns the version of the bundle that contains the JDBC Driver">
+		
+		<cfreturn this.bundleversion>
+	</cffunction>
 	
 	<cffunction name="onBeforeUpdate" returntype="void" output="false">
 	</cffunction>
