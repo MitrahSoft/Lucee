@@ -4993,7 +4993,6 @@ public final class Caster {
 		if (src instanceof File) src = src.toString();
 		if (src instanceof String) {
 			String strSrc = (String) src;
-			System.out.println("strSrc::1 " + strSrc);
 			// If it's a URL and contains spaces, encode them
 			if (strSrc.startsWith("http") && strSrc.contains(" ")) {
 				strSrc = strSrc.replace(" ", "%20");
@@ -5009,13 +5008,8 @@ public final class Caster {
 		if (src instanceof Resource) return (Resource) src;
 		if (src instanceof File) src = src.toString();
 		if (src instanceof String) {
-			String strSrc = (String) src;
-			// If it's a URL and contains spaces, encode them
-			if (strSrc.startsWith("http") && strSrc.contains(" ")) {
-				strSrc = strSrc.replace(" ", "%20");
-			}
-			if (existing) return ResourceUtil.toResourceExisting(config, strSrc);
-			return ResourceUtil.toResourceNotExisting(config, strSrc);
+			if (existing) return ResourceUtil.toResourceExisting(config, (String) src);
+			return ResourceUtil.toResourceNotExisting(config, (String) src);
 		}
 		if (src instanceof FileStreamWrapper) return ((FileStreamWrapper) src).getResource();
 		throw new CasterException(src, "Resource");
