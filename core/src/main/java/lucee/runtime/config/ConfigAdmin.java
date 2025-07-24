@@ -1585,9 +1585,9 @@ public final class ConfigAdmin {
 				if (!StringUtil.isEmpty(id)) el.setEL(KeyConstants._id, id);
 				else if (el.containsKey(KeyConstants._id)) el.removeEL(KeyConstants._id);
 
-				if (!StringUtil.isEmpty(bundleName)) el.setEL("bundleName", bundleName);
+				if (!StringUtil.isEmpty(bundleName)) el.setEL(KeyConstants._bundleName, bundleName);
 
-        		if (!StringUtil.isEmpty(bundleVersion)) el.setEL("bundleVersion", bundleVersion);
+        		if (!StringUtil.isEmpty(bundleVersion)) el.setEL(KeyConstants._bundleVersion, bundleVersion);
 
 				el.setEL(KeyConstants._dsn, dsn);
 				el.setEL(KeyConstants._username, username);
@@ -1646,9 +1646,9 @@ public final class ConfigAdmin {
 		children.setEL(!StringUtil.isEmpty(newName) ? newName : name, el);
 		setClass(el, null, "", cd);
 		el.setEL("dsn", dsn);
-		if (!StringUtil.isEmpty(bundleName)) el.setEL("bundleName", bundleName);
+		if (!StringUtil.isEmpty(bundleName)) el.setEL(KeyConstants._bundleName, bundleName);
 
-        if (!StringUtil.isEmpty(bundleVersion)) el.setEL("bundleVersion", bundleVersion);
+        if (!StringUtil.isEmpty(bundleVersion)) el.setEL(KeyConstants._bundleVersion, bundleVersion);
 
 		if (!StringUtil.isEmpty(id)) el.setEL(KeyConstants._id, id);
 		else if (el.containsKey(KeyConstants._id)) el.removeEL(KeyConstants._id);

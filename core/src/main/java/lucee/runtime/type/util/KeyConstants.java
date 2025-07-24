@@ -2039,6 +2039,7 @@ public final class KeyConstants {
 	public static final Key _APPENDERCLASS = KeyImpl._const("APPENDERCLASS");
 	public static final Key _IF_MODIFIED_SINCE = KeyImpl._const("IF_MODIFIED_SINCE");
 	public static final Key _COMPONENTDUMPTEMPLATE = KeyImpl._const("COMPONENTDUMPTEMPLATE");
+	public static final Key _componentDumpTemplate = KeyImpl._const("componentDumpTemplate");
 	public static final Key __QUERY = KeyImpl._const("_QUERY");
 	public static final Key _doNotRedirect = KeyImpl._const("doNotRedirect");
 	public static final Key _TOKEN = KeyImpl._const("TOKEN");
