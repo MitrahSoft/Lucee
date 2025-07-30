@@ -2656,6 +2656,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		String id = getString("id", null);
 		String dsn = getString("admin", action, "dsn");
+		String bundleName = getString("bundlename", null);
+		String bundleVersion = getString("bundleversion", null);
 		String name = getString("admin", action, "name");
 		String newName = getString("admin", action, "newName");
 		String username = getString("admin", action, "dbusername");
@@ -2683,7 +2685,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		// config.getDatasourceConnectionPool().remove(name);
 		DataSourcePro ds = null;
 		try {
-			ds = new DataSourceImpl(config, name, cd, host, dsn, database, port, username, password, null, connLimit, idleTimeout, liveTimeout, minIdle, maxIdle, maxTotal,
+			ds = new DataSourceImpl(config, name, cd, host, dsn, bundleName, bundleVersion, database, port, username, password, null, connLimit, idleTimeout, liveTimeout, minIdle, maxIdle, maxTotal,
 					metaCacheTimeout, blob, clob, allow, custom, false, validate, storage, null, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
 					alwaysResetConnections, ThreadLocalPageContext.getLog(pageContext, "application"));
 		}
@@ -2693,7 +2695,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		if (verify) _doVerifyDatasource(ds, username, password);
 		// print.out("limit:"+connLimit);
-		admin.updateDataSource(id, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, metaCacheTimeout, blob, clob, allow,
+		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, metaCacheTimeout, blob, clob, allow,
 				validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive, alwaysResetConnections);
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetDataSources();

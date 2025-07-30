@@ -1508,6 +1508,8 @@ public final class ConfigAdmin {
 	 * update or insert new database connection
 	 * 
 	 * @param id
+	 * @param bundleName
+	 * @param bundleVersion
 	 * @param name
 	 * @param newName
 	 * @param cd
@@ -1537,7 +1539,7 @@ public final class ConfigAdmin {
 	 * 
 	 * @throws PageException
 	 */
-	public void updateDataSource(String id, String name, String newName, ClassDefinition cd, String dsn, String username, String password, String host, String database, int port,
+	public void updateDataSource(String id, String bundleName, String bundleVersion, String name, String newName, ClassDefinition cd, String dsn, String username, String password, String host, String database, int port,
 			int connectionLimit, int idleTimeout, int liveTimeout, long metaCacheTimeout, boolean blob, boolean clob, int allow, boolean validate, boolean storage, String timezone,
 			Struct custom, String dbdriver, ParamSyntax paramSyntax, boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout, boolean requestExclusive,
 			boolean alwaysResetConnections) throws PageException {
@@ -1582,6 +1584,10 @@ public final class ConfigAdmin {
 
 				if (!StringUtil.isEmpty(id)) el.setEL(KeyConstants._id, id);
 				else if (el.containsKey(KeyConstants._id)) el.removeEL(KeyConstants._id);
+
+				if (!StringUtil.isEmpty(bundleName)) el.setEL(KeyConstants._bundleName, bundleName);
+
+        		if (!StringUtil.isEmpty(bundleVersion)) el.setEL(KeyConstants._bundleVersion, bundleVersion);
 
 				el.setEL(KeyConstants._dsn, dsn);
 				el.setEL(KeyConstants._username, username);
@@ -1640,6 +1646,9 @@ public final class ConfigAdmin {
 		children.setEL(!StringUtil.isEmpty(newName) ? newName : name, el);
 		setClass(el, null, "", cd);
 		el.setEL("dsn", dsn);
+		if (!StringUtil.isEmpty(bundleName)) el.setEL(KeyConstants._bundleName, bundleName);
+
+        if (!StringUtil.isEmpty(bundleVersion)) el.setEL(KeyConstants._bundleVersion, bundleVersion);
 
 		if (!StringUtil.isEmpty(id)) el.setEL(KeyConstants._id, id);
 		else if (el.containsKey(KeyConstants._id)) el.removeEL(KeyConstants._id);

@@ -24,25 +24,33 @@
 	<cfset this.type.database=this.TYPE_HIDDEN>
 	<cfset this.data.classname="">
 	<cfset this.data.dsn="">
+	<cfset this.data.bundlename="">
+	<cfset this.data.bundleversion="">
 	
 	<cffunction name="onBeforeUpdate" returntype="void" output="no">
 		<cfset this.class=form.custom_class>
 		<cfset StructDelete(form,'custom_class')>
 		<cfset this.dsn=form.custom_dsn>
 		<cfset StructDelete(form,'custom_dsn')>
+		<cfset this.bundlename=form.custom_bundlename>
+		<cfset StructDelete(form,'custom_bundlename')>
+		<cfset this.bundleversion=form.custom_bundleversion>
+		<cfset StructDelete(form,'custom_bundleversion')>
 	</cffunction>
 
 	<cffunction name="init" returntype="void" output="no">
 		<cfargument name="data" required="yes" type="struct">
 		<cfscript>
 		if(!structKeyExists(data,"classname")) data.classname="";
-		//if(!structKeyExists(data,"bundleName")) data.bundleName="";
-		//if(!structKeyExists(data,"bundleVersion")) data.bundleVersion="";
+		if(!structKeyExists(data,"bundlename")) data.bundlename="";
+		if(!structKeyExists(data,"bundleversion")) data.bundleversion="";
 		if(!structKeyExists(data,"dsn")) data.dsn="";
 		
 		fields=array(
 			field("Class","class",data.classname,true,"The JDBC class that implement the Driver."),
-			field("Connection String","dsn",data.dsn,true,"The Datasource Connection String, please consult the documentation of the JDBC Driver for details on the connection string.")
+			field("Connection String","dsn",data.dsn,true,"The Datasource Connection String, please consult the documentation of the JDBC Driver for details on the connection string."),
+			field("Bundle Name","bundlename",data.bundlename,false,"The OSGi bundle name of the Driver, only necessary if the jar is OSGi based."),
+			field("Bundle Version","bundleversion",data.bundleversion,false,"The OSGi bundle version of the Driver, only necessary if the driver is OSGi based.")
 		);
 		</cfscript>
 		

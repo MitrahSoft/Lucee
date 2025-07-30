@@ -21,6 +21,8 @@
 		<cfif dbdriver == "Other">
 			
 			<cfset driver.className = form.custom_class>
+			<cfset driver.bundlename = form.custom_bundlename>
+			<cfset driver.bundleversion = form.custom_bundleversion>
 		</cfif>
 
 		<cfset driver.onBeforeUpdate()>
@@ -46,6 +48,8 @@
 			id="#isNull(driver.getId)?'':driver.getId()#"
 			classname="#driver.getClass()#"
 			dsn="#driver.getDSN()#"
+			bundlename="#isNull(driver.bundleName)?'':driver.bundleName#"
+			bundleversion="#isNull(driver.bundleVersion)?'':driver.bundleVersion#"
 			customParameterSyntax="#isNull(driver.customParameterSyntax)?nullValue():driver.customParameterSyntax()#"
 			literalTimestampWithTSOffset="#isNull(driver.literalTimestampWithTSOffset)?false:driver.literalTimestampWithTSOffset()#"
 			alwaysSetTimeout="#isNull(driver.alwaysSetTimeout)?false:driver.alwaysSetTimeout()#"
@@ -515,6 +519,14 @@
 							<cfcase value="DSN">
 								
 								<cfset default = datasource.dsn>
+							</cfcase>
+							<cfcase value="BundleName">
+								
+								<cfset default = datasource.bundlename>
+							</cfcase>
+							<cfcase value="BundleVersion">
+								
+								<cfset default = datasource.bundleversion>
 							</cfcase>
 						</cfswitch>
 					<cfelse>

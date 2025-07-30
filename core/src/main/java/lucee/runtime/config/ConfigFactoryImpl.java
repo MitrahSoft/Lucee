@@ -1676,7 +1676,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			try {
 				setDatasource(config, datasources, QOQ_DATASOURCE_NAME,
 						new ClassDefinitionImpl("org.hsqldb.jdbcDriver", "org.lucee.hsqldb", "2.7.2.jdk8", config.getIdentification()), "hypersonic-hsqldb", "", -1,
-						"jdbc:hsqldb:mem:tempQoQ;sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;", "sa", "", null, DEFAULT_MAX_CONNECTION, -1, -1,
+						"jdbc:hsqldb:mem:tempQoQ;sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;", "sa", "", null, null, null, DEFAULT_MAX_CONNECTION, -1, -1,
 						60000, 0, 0, 0, true, true, DataSource.ALLOW_ALL, false, false, null, new StructImpl(), "", ParamSyntaxImpl.DEFAULT, false, false, false, false);
 			}
 			catch (Throwable t) {
@@ -1756,8 +1756,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 							}
 
 						}
+						String bundleName = getAttr(dataSource, "bundleName");
+						String bundleVersion = getAttr(dataSource, "bundleVersion");
+
 						setDatasource(config, datasources, e.getKey().getString(), cd, getAttr(dataSource, "host"), getAttr(dataSource, "database"),
-								Caster.toIntValue(getAttr(dataSource, "port"), -1), dsn, getAttr(dataSource, "username"), ConfigUtil.decrypt(getAttr(dataSource, "password")), null,
+								Caster.toIntValue(getAttr(dataSource, "port"), -1), dsn, bundleName, bundleVersion, getAttr(dataSource, "username"), ConfigUtil.decrypt(getAttr(dataSource, "password")), null,
 								Caster.toIntValue(getAttr(dataSource, "connectionLimit"), DEFAULT_MAX_CONNECTION), idle,
 								Caster.toIntValue(getAttr(dataSource, "liveTimeout"), defLive), Caster.toIntValue(getAttr(dataSource, "minIdle"), 0),
 								Caster.toIntValue(getAttr(dataSource, "maxIdle"), 0), Caster.toIntValue(getAttr(dataSource, "maxTotal"), 0),
@@ -2108,13 +2111,13 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	}
 
 	private static void setDatasource(ConfigImpl config, Map<String, DataSource> datasources, String datasourceName, ClassDefinition cd, String server, String databasename,
-			int port, String dsn, String user, String pass, TagListener listener, int connectionLimit, int idleTimeout, int liveTimeout, int minIdle, int maxIdle, int maxTotal,
+			int port, String dsn, String bundleName, String bundleVersion, String user, String pass, TagListener listener, int connectionLimit, int idleTimeout, int liveTimeout, int minIdle, int maxIdle, int maxTotal,
 			long metaCacheTimeout, boolean blob, boolean clob, int allow, boolean validate, boolean storage, String timezone, Struct custom, String dbdriver, ParamSyntax ps,
 			boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout, boolean requestExclusive, boolean alwaysResetConnections)
 			throws BundleException, ClassException, SQLException {
 
 		datasources.put(datasourceName.toLowerCase(),
-				new DataSourceImpl(config, datasourceName, cd, server, dsn, databasename, port, user, pass, listener, connectionLimit, idleTimeout, liveTimeout, minIdle, maxIdle,
+				new DataSourceImpl(config, datasourceName, cd, server, dsn, bundleName, bundleVersion, databasename, port, user, pass, listener, connectionLimit, idleTimeout, liveTimeout, minIdle, maxIdle,
 						maxTotal, metaCacheTimeout, blob, clob, allow, custom, false, validate, storage,
 						StringUtil.isEmpty(timezone, true) ? null : TimeZoneUtil.toTimeZone(timezone, null), dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout,
 						requestExclusive, alwaysResetConnections, ThreadLocalPageContext.getLog(config, "application")));
