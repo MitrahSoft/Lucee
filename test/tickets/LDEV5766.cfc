@@ -2,14 +2,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 	
 	public function run( testResults , testBox ) {
 		describe( "Test suite for LDEV-5766", function() {
-			xit("Decrypt with 4-byte key (key1)", function( currentSpec ){
-                //encrypt('lucee', 'key1', 'BLOWFISH', 'Base64')
-				var encryptedString = "n6XKfEbaBzw="; //encrypted string
-                var key = 'key1';
-                var decryptedString = decrypt(encryptedString, key, "BLOWFISH", "base64");
-                expect(decryptedString).toBe("lucee");
-			});
-            xit("Decrypt with 8-byte key (key12345)", function( currentSpec ){
+            it("Decrypt with 8-byte key (key12345)", function( currentSpec ){
                 //encrypt('lucee', 'key12345', 'BLOWFISH', 'Base64')
 				var encryptedString = "LFAfnDbOWhg="; //encrypted string
                 var key = 'key12345';

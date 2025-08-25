@@ -125,7 +125,7 @@ public class Cryptor {
 				if ("AES".equalsIgnoreCase(algo) || "DES".equalsIgnoreCase(algo) || "DESEDE".equalsIgnoreCase(algo) || "BLOWFISH".equalsIgnoreCase(algo)) {
 
 					// Check if this looks like a Base64 string (contains typical Base64 chars and/or padding)
-					boolean looksLikeBase64 = key.matches("^[A-Za-z0-9+/]*={0,2}.*$") && key.length() > 8;
+					boolean looksLikeBase64 = key.matches("^[A-Za-z0-9+/]*={0,2}.*$") && key.length() >= 8;
 
 					if (looksLikeBase64) {
 						try {
