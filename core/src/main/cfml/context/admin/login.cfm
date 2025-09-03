@@ -68,7 +68,7 @@
 						<tr>
 							<th scope="row" class="right">#stText.login.captchaHelp#</th>
 							<td>
-								<cfset ImageWriteToBrowser(imageCaptcha(cap,180,180,"medium"))>
+								<cfset ImageWriteToBrowser(imageCaptcha(cap,60,180,"low"))>
 								<a style="font-size : 10px" href="#request.self#<cfif structKeyExists(url,"action")>?action=#url.action#</cfif>">Reload</a><br />
 								<cfinputClassic type="text" name="captcha" value="" passthrough='autocomplete="off"'
 									class="medium" required="yes" message="#stText.login.captchaHelpMiss#">
