@@ -1473,6 +1473,11 @@ class SingleContextConfigWeb extends ConfigBase implements ConfigWebInner {
 	}
 
 	@Override
+	public String getLoginCaptchaDifficulty() {
+		return cs.getLoginCaptchaDifficulty();
+	}
+
+	@Override
 	public int getLoginDelay() {
 		return cs.getLoginDelay();
 	}

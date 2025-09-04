@@ -1793,6 +1793,11 @@ public class ConfigWebImpl implements ConfigWebPro {
 	}
 
 	@Override
+	public String getLoginCaptchaDifficulty() {
+		return instance.getLoginCaptchaDifficulty();
+	}
+
+	@Override
 	public boolean getErrorStatusCode() {
 		return instance.getErrorStatusCode();
 	}
