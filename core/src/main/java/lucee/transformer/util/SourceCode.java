@@ -35,7 +35,7 @@ public class SourceCode {
 
 	protected final char[] text;
 	protected final char[] lcText;
-	protected final Integer[] lines; // TODO to int[]
+	protected final int[] lines;
 	private final boolean writeLog;
 	private int hash;
 	private SourceCode parent;
@@ -79,7 +79,7 @@ public class SourceCode {
 		}
 		pos = 0;
 		arr.add(Integer.valueOf(text.length));
-		lines = arr.toArray(new Integer[arr.size()]);
+		lines = arr.stream().mapToInt(Integer::intValue).toArray();
 
 		this.writeLog = writeLog;
 	}
@@ -765,17 +765,24 @@ public class SourceCode {
 	}
 
 	public Position getPosition(int pos) {
+		// Binary search to find the line containing the position
+		int left = 0;
+		int right = lines.length - 1;
 		int line = 0;
-		int posAtStart = 0;
-		for (int i = 0; i < lines.length; i++) {
-			if (pos <= lines[i].intValue()) {
-				line = i + 1;
-				if (i > 0) posAtStart = lines[i - 1].intValue();
-				break;
+
+		while (left <= right) {
+			int mid = left + (right - left) / 2;
+			if (pos <= lines[mid]) {
+				line = mid + 1;
+				right = mid - 1;
+			} else {
+				left = mid + 1;
 			}
 		}
+
 		if (line == 0) throw new RuntimeException("syntax error");
 
+		int posAtStart = (line > 1) ? lines[line - 2] : 0;
 		int column = pos - posAtStart;
 
 		return new Position(line, column, pos, getSourceOffset());
@@ -788,10 +795,19 @@ public class SourceCode {
 	 * @return Zeilennummer
 	 */
 	public int getLine(int pos) {
-		for (int i = 0; i < lines.length; i++) {
-			if (pos <= lines[i].intValue()) return i + 1;
+		// Binary search to find the line containing the position
+		int left = 0;
+		int right = lines.length - 1;
+
+		while (left <= right) {
+			int mid = left + (right - left) / 2;
+			if (pos <= lines[mid]) {
+				right = mid - 1;
+			} else {
+				left = mid + 1;
+			}
 		}
-		return lines.length;
+		return left + 1;
 	}
 
 	/**
@@ -812,7 +828,7 @@ public class SourceCode {
 	public int getColumn(int pos) {
 		int line = getLine(pos) - 1;
 		if (line == 0) return pos + 1;
-		return pos - lines[line - 1].intValue();
+		return pos - lines[line - 1];
 	}
 
 	/**
@@ -833,9 +849,9 @@ public class SourceCode {
 	public String getLineAsString(int line) {
 		int index = line - 1;
 		if (lines.length <= index) return null;
-		int max = lines[index].intValue();
+		int max = lines[index];
 		int min = 0;
-		if (index != 0) min = lines[index - 1].intValue() + 1;
+		if (index != 0) min = lines[index - 1] + 1;
 
 		if (min < max && max - 1 < lcText.length) return this.substring(min, max - min);
 		return "";
