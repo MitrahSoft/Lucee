@@ -122,7 +122,7 @@
     <property name="tmpContext" location="${temp}/context"/>
     <property name="deployLco" value=""/>    
     <!-- <property file="${rootDir}/build.properties"/> -->
-
+    <property name="testHideJavaStack" value=""/>
 
     <!-- get the extensions from manifest -->
     <!-- TODO extension handling must be more dynamic! -->
@@ -718,6 +718,7 @@
         felix.log.level
         lucee.controller.disabled
     -->
+      <jvmarg value="-DtestHideJavaStack=${testHideJavaStack}"/>  
 
     </java>
     <outputTrimmedString str="${exc2}"/>
