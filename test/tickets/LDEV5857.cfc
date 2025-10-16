@@ -3,7 +3,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
     function run(testResults, testBox) {
         describe("Testcase for LDEV-5857", function() {
             xit("ACF compatibility: ReplaceNoCase with empty substring should return original string", function(currentSpec) {
-                var mainString = "test";
+                var mainString = "lucee";
                 var subString = "";
                 var replacement = "test";
                 var uri = createURI("ldev5857");
@@ -16,7 +16,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			    }
 
 				);
-                expect(trim(result.filecontent)).toBe("test");
+                expect(trim(result.filecontent)).toBe("lucee");
             });
         });
     }
