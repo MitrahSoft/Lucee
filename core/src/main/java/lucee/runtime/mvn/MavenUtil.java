@@ -844,6 +844,12 @@ public final class MavenUtil {
 
 						Caster.toString(el.get(KeyConstants._checksum, null), null));
 			}
+
+			// single entry with gradle style?
+			String m = Caster.toString(el.get(KeyConstants._maven, null), null);
+			if (!StringUtil.isEmpty(m, true)) {
+				return toGAVSO(m, defaultValue);
+			}
 			return defaultValue;
 		}
 		// gradle style?

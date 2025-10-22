@@ -1,6 +1,5 @@
 package lucee.runtime.config.maven;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,9 +24,9 @@ import org.xml.sax.SAXException;
 
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.CharsetUtil;
-import lucee.commons.io.DevNullOutputStream;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.ExceptionUtil;
@@ -36,22 +35,17 @@ import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.Header;
 import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.loader.engine.CFMLEngineFactory;
-import lucee.runtime.PageContext;
 import lucee.runtime.converter.ConverterException;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
-import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
-import lucee.runtime.exp.PageServletException;
-import lucee.runtime.interpreter.JSONExpressionInterpreter;
 import lucee.runtime.listener.SerializationSettings;
+import lucee.runtime.op.CastImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.date.DateCaster;
 import lucee.runtime.osgi.OSGiUtil;
-import lucee.runtime.thread.SerializableCookie;
 import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.util.ListUtil;
-import lucee.runtime.util.PageContextUtil;
 
 public final class MavenUpdateProvider {
 
@@ -230,6 +224,7 @@ public final class MavenUpdateProvider {
 					try {
 						MetadataReader mr = new MetadataReader(repo, group, artifact);
 						for (Version v: mr.read()) {
+							// print.e(repo.label + "(" + repo.url + "):" + v);
 							versions.add(v);
 						}
 					}
@@ -319,7 +314,6 @@ public final class MavenUpdateProvider {
 
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";
 		else requiredArtifactExtension = requiredArtifactExtension.toLowerCase();
-
 		try {
 			// direct access
 			{
@@ -401,7 +395,6 @@ public final class MavenUpdateProvider {
 					.getRealResource("detail_" + HashUtil.create64BitHashAsString(group + "_" + artifact + "_" + version + "_lastmod", Character.MAX_RADIX));
 			Resource resVersions = repository.cacheDirectory
 					.getRealResource("detail_" + HashUtil.create64BitHashAsString(group + "_" + artifact + "_" + version + "_versions", Character.MAX_RADIX));
-
 			String content = fromMapToJsonString(detail, true);
 
 			IOUtil.write(resVersions, StringUtil.isEmpty(content, true) ? "" : content.trim(), CharsetUtil.UTF8, false);
@@ -416,22 +409,25 @@ public final class MavenUpdateProvider {
 		try {
 			Resource resLastmod = repository.cacheDirectory
 					.getRealResource("detail_" + HashUtil.create64BitHashAsString(group + "_" + artifact + "_" + version + "_lastmod", Character.MAX_RADIX));
+
 			if (resLastmod.isFile()) {
 				long lastmod = repository.timeoutDetail == Repository.TIMEOUT_NEVER ? Repository.TIMEOUT_NEVER
 						: Caster.toLongValue(IOUtil.toString(resLastmod, CharsetUtil.UTF8), 0L);
+
 				if (repository.timeoutDetail == Repository.TIMEOUT_NEVER || lastmod + repository.timeoutDetail > System.currentTimeMillis()) {
+
 					Resource resVersions = repository.cacheDirectory
 							.getRealResource("detail_" + HashUtil.create64BitHashAsString(group + "_" + artifact + "_" + version + "_versions", Character.MAX_RADIX));
 					String content = IOUtil.toString(resVersions, CharsetUtil.UTF8);
 					if (content.length() > 0) {
-						return fromJsonStringToMap(content);
+						return new CastImpl().fromJsonStringToMap(content);
 					}
 					return null;
 				}
 			}
 		}
 		catch (Exception e) {
-			// LogUtil.log("MetadataReader", e);
+			LogUtil.log(Log.LEVEL_WARN, "MetadataReader", e);
 		}
 		return null;
 	}
@@ -482,21 +478,6 @@ public final class MavenUpdateProvider {
 		}
 	}
 
-	private static Map<String, Object> fromJsonStringToMap(String str) throws PageException {
-		PageContext pc = ThreadLocalPageContext.get(true);
-		if (pc == null) {
-			try {
-				pc = PageContextUtil.getPageContext(null, null, new File("."), "localhost", "/", "", SerializableCookie.COOKIES0, null, null, null,
-						DevNullOutputStream.DEV_NULL_OUTPUT_STREAM, false, 100000, false);
-			}
-			catch (PageServletException e) {
-				throw Caster.toPageException(e);
-			}
-		}
-
-		return Caster.toMap(new JSONExpressionInterpreter(false, JSONExpressionInterpreter.FORMAT_JSON5).interpret(pc, str));
-	}
-
 	public final static class Repository implements Cloneable {
 
 		public static final long TIMEOUT_1HOUR = 60 * 60 * 1000;
@@ -545,7 +526,16 @@ public final class MavenUpdateProvider {
 
 		@Override
 		public Object clone() {
+			return duplicate();
+		}
+
+		public Repository duplicate() {
 			return new Repository(label, url, timeoutList, timeoutDetail, cacheDirectory);
+		}
+
+		@Override
+		public String toString() {
+			return "label:" + label + ";url:" + url + ";timeoutList:" + timeoutList + ";timeoutDetail:" + timeoutDetail;
 		}
 	}
 }

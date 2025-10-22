@@ -39,6 +39,7 @@ import java.io.Writer;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
@@ -55,6 +56,7 @@ import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
 
 import lucee.commons.io.res.Resource;
+import lucee.commons.io.res.type.file.FileResource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
@@ -1016,17 +1018,40 @@ public final class IOUtil {
 	}
 
 	public static void write(Resource res, String string, Charset charset, boolean append) throws IOException {
+		write(res, string, charset, append, false);
+	}
+
+	public static void write(Resource res, String string, Charset charset, boolean append, boolean force) throws IOException {
 		if (charset == null) {
 			charset = SystemUtil.getCharset();
 		}
 
-		Writer writer = null;
-		try {
-			writer = getWriter(res, charset, append);
-			writer.write(string);
+		if (force && res instanceof FileResource) {
+			// Use FileChannel for better control over flushing
+			try (FileOutputStream fos = new FileOutputStream((FileResource) res, append);
+					FileChannel channel = fos.getChannel();
+					Writer writer = new OutputStreamWriter(fos, charset)) {
+
+				writer.write(string);
+				writer.flush();
+
+				// Force data to disk
+				channel.force(false); // true = also sync metadata
+
+			}
+			catch (Exception e) {
+				throw new IOException(e);
+			}
 		}
-		finally {
-			close(writer);
+		else {
+			Writer writer = null;
+			try {
+				writer = getWriter(res, charset, append);
+				writer.write(string);
+			}
+			finally {
+				close(writer);
+			}
 		}
 	}
 

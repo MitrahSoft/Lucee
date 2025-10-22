@@ -471,7 +471,7 @@ public final class DeployHandler {
 		return null;
 	}
 
-	private static Resource downloadExtensionFromMaven(ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
+	private static Resource downloadExtensionFromMaven(Config config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
 			// get extension from Maven
 			ExtensionProvider ep = new ExtensionProvider();
@@ -505,10 +505,12 @@ public final class DeployHandler {
 			}
 			if (version == null) return null;
 
-			Resource res = SystemUtil.getTempDirectory().getRealResource(ep.getGroup() + "-" + artifact + "-" + version + ".lex");
-			ResourceUtil.touch(res);
-			IOUtil.copy(ep.get(artifact, version), res, true);
-			return res;
+			return ep.getResource((ConfigPro) config, artifact, version);
+			// Resource res = SystemUtil.getTempDirectory().getRealResource(ep.getGroup() + "-" + artifact + "-"
+			// + version + ".lex");
+			// ResourceUtil.touch(res);
+			// IOUtil.copy(ep.get(artifact, version), res, true);
+			// return res;
 		}
 		catch (Exception e) {
 			if (throwOnError) throw Caster.toPageException(e);
@@ -524,7 +526,7 @@ public final class DeployHandler {
 		// TODO set investigate to true and log as warning if it fallback to old behaviour
 		if (USE_MAVEN_EXTENSION_PROVIDER) {
 			try {
-				Resource res = downloadExtensionFromMaven(ed, false, false, log);
+				Resource res = downloadExtensionFromMaven(config, ed, false, false, log);
 				if (res != null) return res;
 			}
 			catch (PageException e) {

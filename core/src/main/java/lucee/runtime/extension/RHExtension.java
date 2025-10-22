@@ -70,6 +70,7 @@ import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.Constants;
 import lucee.runtime.config.DeployHandler;
 import lucee.runtime.config.ResetFilter;
+import lucee.runtime.config.maven.ExtensionProvider;
 import lucee.runtime.converter.ConverterException;
 import lucee.runtime.engine.ThreadLocalConfig;
 import lucee.runtime.engine.ThreadLocalPageContext;
@@ -79,6 +80,7 @@ import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.functions.conversion.DeserializeJSON;
 import lucee.runtime.mvn.MavenUtil;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
 import lucee.runtime.osgi.BundleFile;
@@ -1290,6 +1292,7 @@ public final class RHExtension implements Serializable {
 		String name;
 		Resource res;
 		Config c = ThreadLocalPageContext.getConfig();
+		GAVSO gavso = null;
 		for (String ss: arrr) {
 			res = null;
 			index = ss.indexOf('=');
@@ -1299,6 +1302,11 @@ public final class RHExtension implements Serializable {
 				if ("path".equalsIgnoreCase(name) && c != null) {
 					res = ResourceUtil.toResourceExisting(c, ss.substring(index + 1).trim(), null);
 				}
+			}
+			// gradle style maven
+			else if (ed.getId() == null && (gavso = MavenUtil.toGAVSO(ss, null)) != null) {
+				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, false, null);
+				if (tmp != null) ed = tmp;
 			}
 			else if (ed.getId() == null || Decision.isUUId(ed.getId())) {
 				if (c == null || Decision.isUUId(ss) || (res = ResourceUtil.toResourceExisting(ThreadLocalPageContext.getConfig(), ss.trim(), null)) == null) ed.setId(ss);
@@ -1327,7 +1335,7 @@ public final class RHExtension implements Serializable {
 			}
 
 		}
-		return ed;
+		return StringUtil.isEmpty(ed.getId(), true) ? null : ed;
 	}
 
 	public static ExtensionDefintion toExtensionDefinition(Config config, String id, Map<String, String> data) {

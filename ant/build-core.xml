@@ -16,15 +16,16 @@
     value="https://downloads.ortussolutions.com/ortussolutions/testbox/${testboxVersion}/testbox-${testboxVersion}.zip"/>
   <property name="extURL" value="https://extension.lucee.org/rest/extension/provider/full/"/>
   
-  <property name="extMongo"     value="E6634E1A-4CC5-4839-A83C67549ECA8D5B"/>
+  <property name="extMongo"     value="org.lucee:mongodb-extension:3.12.13.9"/>
   <property name="extH2"        value="465E1E35-2425-4F4E-8B3FAB638BD7280A;version=2.1.214.0001L"/>
   <property name="extOracle"    value="D4EDFDBD-A9A3-E9AF-597322D767E0C949;version=21.3.0.0-ojdbc11"/>
-  <property name="extLucene"    value="EFDEB172-F52E-4D84-9CD1A1F561B3DFC8;version=3.0.0.163"/>
-  <property name="extAxis"      value="DF28D0A4-6748-44B9-A2FDC12E4E2E4D38;version=1.5.0.5"/>
-  <property name="extChart"     value="D46B46A9-A0E3-44E1-D972A04AC3A8DC10;version=2.0.0.1"/>
-  <property name="extRedis"     value="60772C12-F179-D555-8E2CD2B4F7428718;version=4.0.0.0"/>
-  <property name="extHibernate" value="FAD1E8CB-4F45-4184-86359145767C29DE;version=5.4.29.27-BETA"/>
-  <property name="extEHCache"   value="87FE44E5-179C-43A3-A87B3D38BEF4652E;version=2.10.0.38"/>
+  <property name="extLucene"    value="org.lucee:lucene-search-extension:3.0.0.163"/>
+  <property name="extAxis"      value="org.lucee:axis-extension:1.5.0.5"/>
+  <property name="extChart"     value="org.lucee:chart-extension:2.0.0.1"/>
+  <property name="extRedis"     value="org.lucee:redis-extension:4.0.0.0"/>
+  <property name="extHibernate" value="org.lucee:hibernate-extension:5.4.29.27-BETA"/>
+  <property name="extEHCache"   value="org.lucee:ehcache-extension:2.10.0.38"/>
+
 
   <property name="stableLoader" value="lucee-5.3.7.48"/>
   <property name="javaVersionCoreDefault" value="11"/>
