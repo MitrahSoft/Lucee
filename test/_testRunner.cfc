@@ -278,6 +278,18 @@ component {
 
 	// exceptions
 	if ( !isSimpleValue( bundle.globalException ) ) {
+
+		var failedTestCase = {
+			 type       : "Errored"
+			,bundle     : bundle.name
+			,testCase   : "Global Bundle Exception"
+			,errMessage : bundle.globalException.type & ": " & bundle.globalException.message & ( len( bundle.globalException.detail ) ? NL & bundle.globalException.detail : "" )
+			,cfmlStackTrace : []
+			,stackTrace : bundle.globalException.stacktrace
+		};
+
+		failedTestCases.append( failedTestCase );
+
 		systemOutput( "Global Bundle Exception
 		#bundle.globalException.type#
 		#bundle.globalException.message#

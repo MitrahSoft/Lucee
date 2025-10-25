@@ -1,12 +1,12 @@
 component extends="org.lucee.cfml.test.LuceeTestCase" {
 	function beforeAll() {
 		variables.Dir = "#GetDirectoryFromPath(getCurrentTemplatePath())#LDEV2339\";
-		if(!directoryExists(dir)) {
-			directoryCreate(dir&'path1');
-			directoryCreate(dir&'path2');
-		}
-		fileWrite(dir&"path1\newfile.txt","This is new file");
-		FileSetAttribute(dir&"path1\newfile.txt","readonly");
+		purge();
+		directoryCreate( dir );
+		directoryCreate( dir & 'path1' );
+		directoryCreate( dir & 'path2' );
+		fileWrite( dir & "path1\newfile.txt", "This is new file" );
+		FileSetAttribute( dir & "path1\newfile.txt", "readonly" );
 	}
 
 	function run( testResults , testBox ) {
@@ -19,9 +19,19 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 		});
 	}
 
-	function afterAll() {
-		if(directoryExists(dir)) {
-			directoryDelete(dir,true);
+	private function purge(){
+		if ( directoryExists( dir ) ) {
+			var files = directoryList( dir, true, "path" );
+			for ( var file in files ) {
+				if ( fileExists( file ) ) {
+					FileSetAttribute( file, "normal" );
+				}
+			}
+			directoryDelete( dir, true );
 		}
+	}
+
+	function afterAll() {
+		purge();
 	}
 }
