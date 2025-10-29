@@ -10,7 +10,6 @@ import lucee.runtime.config.ConfigWeb;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
-import lucee.runtime.spooler.mail.MailSpoolerTask;
 import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
@@ -54,6 +53,7 @@ public abstract class CFMLSpoolerTaskListener extends SpoolerTaskListener {
 			args.set(KeyConstants._id, task.getId());
 			args.set(KeyConstants._type, task.getType());
 
+			/* TODO: re-implement
 			Struct details = task.detail();
 			if (task instanceof MailSpoolerTask) {
 				details.set(KeyConstants._charset, ((MailSpoolerTask) task).getCharset());
@@ -61,7 +61,7 @@ public abstract class CFMLSpoolerTaskListener extends SpoolerTaskListener {
 				details.set("failto", ((MailSpoolerTask) task).getFailTos());
 			}
 			args.set(KeyConstants._detail, details);
-
+			*/
 			args.set(KeyConstants._tries, task.tries());
 			args.set("remainingtries", e == null ? 0 : task.getPlans().length - task.tries());
 			args.set("closed", task.closed());
@@ -77,11 +77,12 @@ public abstract class CFMLSpoolerTaskListener extends SpoolerTaskListener {
 			args.set("advanced", adv);
 			adv.set("exceptions", task.getExceptions());
 			adv.set("executedPlans", task.getPlans());
-
+			/* TODO: re-implement
 			Object o = _listen(pc, args, before);
 			if (before && o instanceof Struct && task instanceof MailSpoolerTask) {
 				((MailSpoolerTask) task).mod((Struct) o);
 			}
+			*/
 
 		}
 		catch (Exception pe) {

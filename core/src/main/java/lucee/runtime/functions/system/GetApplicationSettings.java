@@ -57,7 +57,7 @@ import lucee.runtime.listener.SessionCookieData;
 import lucee.runtime.listener.SessionCookieDataImpl;
 import lucee.runtime.mvn.POM;
 import lucee.runtime.net.mail.Server;
-import lucee.runtime.net.mail.ServerImpl;
+// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.s3.Properties;
 import lucee.runtime.op.Caster;
@@ -324,11 +324,12 @@ public final class GetApplicationSettings extends BIF {
 					s.setEL("ssl", srv.isSSL());
 					s.setEL("tls", srv.isTLS());
 
-					if (srv instanceof ServerImpl) {
-						ServerImpl srvi = (ServerImpl) srv;
-						s.setEL("lifeTimespan", TimeSpanImpl.fromMillis(srvi.getLifeTimeSpan()));
-						s.setEL("idleTimespan", TimeSpanImpl.fromMillis(srvi.getIdleTimeSpan()));
-					}
+					// Mail functionality removed - ServerImpl no longer exists
+					// if (srv instanceof ServerImpl) {
+					// 	ServerImpl srvi = (ServerImpl) srv;
+					// 	s.setEL("lifeTimespan", TimeSpanImpl.fromMillis(srvi.getLifeTimeSpan()));
+					// 	s.setEL("idleTimespan", TimeSpanImpl.fromMillis(srvi.getIdleTimeSpan()));
+					// }
 				}
 			}
 		}

@@ -152,9 +152,9 @@ import lucee.runtime.monitor.RequestMonitor;
 import lucee.runtime.net.http.CertificateInstaller;
 import lucee.runtime.net.http.ReqRspUtil;
 import lucee.runtime.net.mail.SMTPException;
-import lucee.runtime.net.mail.SMTPVerifier;
+// import lucee.runtime.net.mail.SMTPVerifier; // removed with mail functionality
 import lucee.runtime.net.mail.Server;
-import lucee.runtime.net.mail.ServerImpl;
+// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
@@ -2314,7 +2314,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		for (int i = 0; i < servers.length; i++) {
 			Server s = servers[i];
 			int row = i + 1;
-			qry.setAt("id", row, s instanceof ServerImpl ? ((ServerImpl) s).getId() : -1);
+			qry.setAt("id", row, -1); // s instanceof ServerImpl ? ((ServerImpl) s).getId() : -1
 			qry.setAt("hostname", row, s.getHostName());
 			qry.setAt("password", row, s.isReadOnly() ? "" : s.getPassword());
 			qry.setAt("passwordEncrypted", row, s.isReadOnly() ? "" : ConfigUtil.encrypt(s.getPassword()));
@@ -2324,12 +2324,13 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			qry.setAt("authentication", row, Caster.toBoolean(s.hasAuthentication()));
 			qry.setAt("ssl", row, Caster.toBoolean(s.isSSL()));
 			qry.setAt("tls", row, Caster.toBoolean(s.isTLS()));
-			if (s instanceof ServerImpl) {
-				ServerImpl si = (ServerImpl) s;
-				qry.setAt("type", row, si.getType() == ServerImpl.TYPE_GLOBAL ? "global" : "local");
-				qry.setAt("life", row, (si.getLifeTimeSpan() / 1000));
-				qry.setAt("idle", row, (si.getIdleTimeSpan() / 1000));
-			}
+			// Mail functionality removed - ServerImpl no longer exists
+			// if (s instanceof ServerImpl) {
+			// 	ServerImpl si = (ServerImpl) s;
+			// 	qry.setAt("type", row, si.getType() == ServerImpl.TYPE_GLOBAL ? "global" : "local");
+			// 	qry.setAt("life", row, (si.getLifeTimeSpan() / 1000));
+			// 	qry.setAt("idle", row, (si.getIdleTimeSpan() / 1000));
+			// }
 		}
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
 	}
@@ -2847,12 +2848,13 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void _doVerifyMailServer(String host, int port, String user, String pass) throws PageException {
-		try {
-			SMTPVerifier.verify(host, user, pass, port);
-		}
-		catch (SMTPException e) {
-			throw Caster.toPageException(e);
-		}
+		// Mail functionality removed
+		// try {
+		// 	SMTPVerifier.verify(host, user, pass, port);
+		// }
+		// catch (SMTPException e) {
+		// 	throw Caster.toPageException(e);
+		// }
 	}
 
 	/**

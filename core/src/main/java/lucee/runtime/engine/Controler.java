@@ -52,7 +52,6 @@ import lucee.runtime.config.DatasourceConnPool;
 import lucee.runtime.config.DeployHandler;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.lock.LockManagerImpl;
-import lucee.runtime.net.smtp.SMTPConnectionPool;
 import lucee.runtime.op.Caster;
 import lucee.runtime.schedule.Scheduler;
 import lucee.runtime.schedule.SchedulerImpl;
@@ -544,7 +543,7 @@ public final class Controler extends ParentThreasRefThread {
 	}
 
 	private void doClearMailConnections() {
-		SMTPConnectionPool.closeSessions();
+		// SMTPConnectionPool.closeSessions(); // removed with mail functionality
 	}
 
 	private void checkOldClientFile(ConfigWeb config, Log log) {

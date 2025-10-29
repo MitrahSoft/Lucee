@@ -54,7 +54,7 @@ import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.net.mail.Server;
-import lucee.runtime.net.mail.ServerImpl;
+// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
 import lucee.runtime.net.s3.Properties;
 import lucee.runtime.net.s3.PropertiesImpl;
 import lucee.runtime.op.Caster;
@@ -818,7 +818,9 @@ public final class AppListenerUtil {
 		if (value == null) value = data.get("useSsl", null);
 		boolean ssl = Caster.toBooleanValue(value, false);
 
-		return new ServerImpl(-1, hostName, port, username, password, lifeTimespan.getMillis(), idleTimespan.getMillis(), tls, ssl, false, ServerImpl.TYPE_LOCAL); // MUST improve
+		// Mail functionality removed - ServerImpl no longer exists
+		return null;
+		// return new ServerImpl(-1, hostName, port, username, password, lifeTimespan.getMillis(), idleTimespan.getMillis(), tls, ssl, false, ServerImpl.TYPE_LOCAL);
 		// store
 		// connection
 		// somehow

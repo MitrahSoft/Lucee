@@ -579,7 +579,22 @@ component {
 
 		switch ( arguments.service ){
 			case "orm":
-				return {}
+				// check if ORM engine is available
+				try {
+					admin
+						action="getORMEngine"
+						type="server"
+						password="#server.SERVERADMINPASSWORD#"
+						returnVariable="local.ormEngine";
+					if ( isStruct( local.ormEngine )
+							&& len( local.ormEngine.class ?: "" )
+							&& local.ormEngine.class neq "lucee.runtime.orm.DummyORMEngine" ){
+						return { available: true };
+					}
+				} catch ( any e ){
+					// ORM engine not available
+				}
+				return {};
 			case "updateProvider":
 				updateProvider = server._getSystemPropOrEnvVars( "URL", "UPDATE_PROVIDER_" );
 				if ( structCount( updateProvider ) eq 1 ){

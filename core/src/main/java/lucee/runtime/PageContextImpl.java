@@ -150,7 +150,7 @@ import lucee.runtime.monitor.RequestMonitorPro;
 import lucee.runtime.net.ftp.FTPPoolImpl;
 import lucee.runtime.net.http.HTTPServletRequestWrap;
 import lucee.runtime.net.http.ReqRspUtil;
-import lucee.runtime.net.mail.ServerImpl;
+// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
@@ -4121,14 +4121,8 @@ public final class PageContextImpl extends PageContext {
 
 	@Override
 	public lucee.runtime.net.mail.Server[] getMailServers() {
-		lucee.runtime.net.mail.Server[] appms = applicationContext == null ? null : getApplicationContext().getMailServers();
-		if (ArrayUtil.isEmpty(appms)) return config.getMailServers();
-
-		lucee.runtime.net.mail.Server[] cms = config.getMailServers();
-		if (ArrayUtil.isEmpty(cms)) return appms;
-
-		lucee.runtime.net.mail.Server[] arr = ServerImpl.merge(appms, cms);
-		return arr;
+		// Mail functionality removed
+		return new lucee.runtime.net.mail.Server[0];
 	}
 
 	@Override
