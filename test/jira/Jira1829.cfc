@@ -22,7 +22,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm" {
 	//public function setUp(){}
 
 	public void function test(){
-		if (!noOrm()) return;
+		if (noOrm()) return;
 
 		//dump(getApplicationSettings().mappings);
 

@@ -21,7 +21,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm" {
 	//public function setUp(){}
 
 	public void function test(){
-		if (!noOrm()) return;
+		if (noOrm()) return;
 		local.uri=createURI("LDEV0423/index.cfm");
 		local.result=_InternalRequest(uri);
 		assertTrue(find(':fine:',result.filecontent));

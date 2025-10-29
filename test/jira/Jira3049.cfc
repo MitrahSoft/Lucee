@@ -3,7 +3,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm" {
 	
 
 	public void function test() localMode="modern" {
-		if (!noOrm()) return;
+		if (noOrm()) return;
 		local.uri=createURI("Jira3049/index.cfm");
 		local.result=_InternalRequest(uri);
 		

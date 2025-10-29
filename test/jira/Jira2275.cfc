@@ -22,7 +22,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm"	{
 	//public function setUp(){}
 
 	public void function test(){
-		if (!noOrm()) return;
+		if (noOrm()) return;
 		local.uri=createURI("Jira2275/index.cfm");
 		local.result=_InternalRequest(uri);
 		assertEquals("DISPLAY,FIELD_ID,INFOCARD_ID,TYPE",trim(result.filecontent));
