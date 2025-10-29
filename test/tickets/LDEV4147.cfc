@@ -114,7 +114,15 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 		describe("Testcase for LDEV-5823", function() {
 
 			beforeEach(function( currentSpec ){
-				expect(variables.sendingMails).tobe("Done!!!"); // to check the mails has sended successfully
+				var inboxBeforeMove = getInboxMails();
+				if(inboxBeforeMove.recordCount == 0){
+					var sendMailResult = _internalRequest(
+						template="#variables.uri#/sendMails.cfm",
+						forms = {username: variables.username}
+					).filecontent;
+					expect(sendMailResult).tobe("Done!!!");
+					inboxBeforeMove = getInboxMails();
+				}
 			});
 
 			it( title="CFIMAP action='delete' - Folder Attribute Test", skip="#notHasServices()#", body=function( currentSpec ) {
