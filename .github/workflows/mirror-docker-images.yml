@@ -1,0 +1,75 @@
+name: Mirror Docker Images to GHCR
+
+on:
+  workflow_dispatch: # Manual trigger only
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_PUBLIC_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PUBLIC_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mirror Redis
+        run: |
+          echo "Pulling redis:latest"
+          docker pull redis:latest
+          echo "Tagging as ghcr.io/lucee/redis:test-mirror"
+          docker tag redis:latest ghcr.io/lucee/redis:test-mirror
+          echo "Pushing to ghcr.io/lucee/redis:test-mirror"
+          docker push ghcr.io/lucee/redis:test-mirror
+          echo "Successfully mirrored redis"
+
+      - name: Mirror OpenLDAP
+        run: |
+          echo "Pulling rroemhild/test-openldap:latest"
+          docker pull rroemhild/test-openldap:latest
+          echo "Tagging as ghcr.io/lucee/test-openldap:test-mirror"
+          docker tag rroemhild/test-openldap:latest ghcr.io/lucee/test-openldap:test-mirror
+          echo "Pushing to ghcr.io/lucee/test-openldap:test-mirror"
+          docker push ghcr.io/lucee/test-openldap:test-mirror
+          echo "Successfully mirrored test-openldap"
+
+      - name: Mirror GreenMail
+        run: |
+          echo "Pulling greenmail/standalone:1.6.9"
+          docker pull greenmail/standalone:1.6.9
+          echo "Tagging as ghcr.io/lucee/greenmail-standalone:test-mirror"
+          docker tag greenmail/standalone:1.6.9 ghcr.io/lucee/greenmail-standalone:test-mirror
+          echo "Pushing to ghcr.io/lucee/greenmail-standalone:test-mirror"
+          docker push ghcr.io/lucee/greenmail-standalone:test-mirror
+          echo "Successfully mirrored greenmail-standalone"
+
+      - name: Mirror HTTPBin
+        run: |
+          echo "Pulling kennethreitz/httpbin:latest"
+          docker pull kennethreitz/httpbin:latest
+          echo "Tagging as ghcr.io/lucee/httpbin:test-mirror"
+          docker tag kennethreitz/httpbin:latest ghcr.io/lucee/httpbin:test-mirror
+          echo "Pushing to ghcr.io/lucee/httpbin:test-mirror"
+          docker push ghcr.io/lucee/httpbin:test-mirror
+          echo "Successfully mirrored httpbin"
+
+      - name: Mirror MS SQL Server
+        run: |
+          echo "Pulling mcr.microsoft.com/mssql/server:2022-latest"
+          docker pull mcr.microsoft.com/mssql/server:2022-latest
+          echo "Tagging as ghcr.io/lucee/mssql-server:test-mirror"
+          docker tag mcr.microsoft.com/mssql/server:2022-latest ghcr.io/lucee/mssql-server:test-mirror
+          echo "Pushing to ghcr.io/lucee/mssql-server:test-mirror"
+          docker push ghcr.io/lucee/mssql-server:test-mirror
+          echo "Successfully mirrored mssql-server"
