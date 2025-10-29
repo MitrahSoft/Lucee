@@ -127,7 +127,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 						port = "#creds.imap.PORT_INSECURE#",
 						username = "#variables.username#",
 						password = "#creds.imap.PASSWORD#",
-						secure = true
+						secure = "no"
 					);
 				} catch (any ee) {}
 			
@@ -138,7 +138,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 					port = "#creds.imap.PORT_INSECURE#",
 					username = "#variables.username#",
 					password = "#creds.imap.PASSWORD#",
-					secure = true,
+					secure = "no",
 					folder = "NewFolderFromIMAP123"
 				);
 			
@@ -150,7 +150,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 					port = "#creds.imap.PORT_INSECURE#",
 					username = "#variables.username#",
 					password = "#creds.imap.PASSWORD#",
-					secure = true
+					secure = "no"
 				);
 			
 				// Move mail to the new folder
@@ -162,7 +162,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 					port = "#creds.imap.PORT_INSECURE#",
 					username = "#variables.username#",
 					password = "#creds.imap.PASSWORD#",
-					secure = true
+					secure = "no"
 				);
 				// Close connection
 				cfimap(
@@ -183,7 +183,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 					port = "#creds.imap.PORT_INSECURE#",
 					username = "#variables.username#",
 					password = "#creds.imap.PASSWORD#",
-					secure = true
+					secure = "no"
 				);
 			
 				var resultAfterDelete = ListAllFolders("NewFolderFromIMAP123");
@@ -243,7 +243,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="imap" {
 			port = "#creds.imap.PORT_INSECURE#",
 			username = "#variables.username#",
 			password = "#creds.imap.PASSWORD#",
-			secure = true,
+			secure = "no",
 			name = "local.Folder"
 		);
 		query name="local.result" dbtype="query"{
