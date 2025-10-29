@@ -69,8 +69,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="zip"	{
 
 
 	private function getDir() {
-
-		return listFirst( getCurrentTemplatePath(), '.' );
+		return getDirectoryFromPath( getCurrentTemplatePath() ) 
+			& listFirst( listLast( getCurrentTemplatePath(), '\/' ), '.' );
 	}
 
 	public function setUp(){
