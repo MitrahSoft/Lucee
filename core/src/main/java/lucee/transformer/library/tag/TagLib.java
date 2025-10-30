@@ -31,8 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.Md5;
 import lucee.commons.lang.StringUtil;
+import lucee.runtime.config.Config;
 import lucee.runtime.config.Identification;
 import lucee.runtime.db.ClassDefinition;
+import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.transformer.cfml.ExprTransformer;
@@ -446,11 +448,24 @@ public class TagLib implements Cloneable, Lib {
 	}
 
 	public TagLibTag createUnknownTagHandler(String name) {
+
 		TagLibTag unknownTagHandler = new TagLibTag(this);
-		unknownTagHandler.setAttributeType(TagLibTag.ATTRIBUTE_TYPE_DYNAMIC);
+		unknownTagHandler.setAttributeType(TagLibTag.ATTRIBUTE_TYPE_MIXED);
 		unknownTagHandler.setName(name);
-		unknownTagHandler.setMin(0);
-		unknownTagHandler.setMax(Integer.MAX_VALUE);
+		unknownTagHandler.setBodyContent("free");
+		unknownTagHandler.setHandleExceptions(true);
+		unknownTagHandler.setParseBody(false);
+		unknownTagHandler.setDescription("");
+		TagLibTagScript tlts = new TagLibTagScript(unknownTagHandler);
+		tlts.setType(TagLibTagScript.TYPE_MULTIPLE);
+		unknownTagHandler.setScript(tlts);
+
+		Config config = ThreadLocalPageContext.getConfig();
+		if (config != null) {
+			unknownTagHandler.setTagClassDefinition("lucee.runtime.tag.CFTagCore", config.getIdentification(), null);
+		}
+		// setTag(unknownTagHandler);
+
 		return unknownTagHandler;
 	}
 

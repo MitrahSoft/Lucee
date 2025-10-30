@@ -1,4 +1,4 @@
-component extends = "org.lucee.cfml.test.LuceeTestCase" skip=true{
+component extends = "org.lucee.cfml.test.LuceeTestCase" {
 
 	function run( testResults , testBox ) {
 		
@@ -77,7 +77,8 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" skip=true{
 			});
 
 			it( title = 'test unknown tag self-closing without slash', body = function( currentSpec ) {
-				var result = astFromString('<cfUnknown susi="1">');
+				var pre='<cf';
+				var result = astFromString(pre&'Unknown susi="1">');
 				assertEquals("Program", result.type);
 				assertTrue(arrayLen(result.body) > 0);
 				assertEquals("CFMLTag", result.body[1].type);
@@ -89,7 +90,9 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" skip=true{
 			});
 
 			it( title = 'test unknown tag self-closing with slash', body = function( currentSpec ) {
-				var result = astFromString('<cfUnknown susi="1"/>');
+				// we cannot define a cf tag in the string, Lucee will still parse this
+				var prefix="cf";
+				var result = astFromString('<#prefix#Unknown susi="1"/>');
 				assertEquals("Program", result.type);
 				assertTrue(arrayLen(result.body) > 0);
 				assertEquals("CFMLTag", result.body[1].type);
@@ -101,7 +104,8 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" skip=true{
 			});
 
 			it( title = 'test unknown tag with body content', body = function( currentSpec ) {
-				var result = astFromString('<cfUnknown susi="1">ddd</cfUnknown>');
+				var prefix="cf";
+				var result = astFromString('<#prefix#Unknown susi="1">ddd</#prefix#Unknown>');
 				assertEquals("Program", result.type);
 				assertTrue(arrayLen(result.body) > 0);
 				assertEquals("CFMLTag", result.body[1].type);
@@ -114,13 +118,59 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" skip=true{
 			});
 
 			it( title = 'test unknown tag with string content', body = function( currentSpec ) {
-				var result = astFromString('<cfscript>writeOutput("<cfUnknown susi=\"1\">ddd</cfUnknown>");</cfscript>');
+				var prefix="cf";
+				var result = astFromString('<#prefix#script>
+```
+<#prefix#Unknown susi="1">ddd</#prefix#Unknown>
+``` 
+</#prefix#script>');
 				assertEquals("Program", result.type);
 				assertTrue(arrayLen(result.body) > 0);
 				assertEquals("CFMLTag", result.body[1].type);
 				assertEquals("script", result.body[1].name);
 			});
-			
+
+			it( title = 'test known script tag in legacy style', body = function( currentSpec ) {
+				var result = astFromString('loop from=1 to=10 index="x" {echo("ddd");}',"script");
+				assertEquals("Program", result.type);
+				assertTrue(arrayLen(result.body) > 0);
+				assertEquals("CFMLTag", result.body[1].type);
+				assertEquals("loop", result.body[1].name);
+			});
+
+			it( title = 'test known script tag in function style', body = function( currentSpec ) {
+				var result = astFromString('cfloop(from=1, to=10, index="x") {echo("ddd");}',"script");
+				assertEquals("Program", result.type);
+				assertTrue(arrayLen(result.body) > 0);
+				assertEquals("CFMLTag", result.body[1].type);
+				assertEquals("loop", result.body[1].name);
+			});
+
+			xit( title = 'test unknown script tag in legacy style', body = function( currentSpec ) {
+				var result = astFromString('unknown susi="1" {echo("ddd");}',"script");
+				assertEquals("Program", result.type);
+				assertTrue(arrayLen(result.body) > 0);
+				assertEquals("CFMLTag", result.body[1].type);
+				assertEquals("unknown", result.body[1].name);
+				assertEquals("cf", result.body[1].nameSpace);
+				assertEquals("cfUnknown", result.body[1].fullname);
+				assertEquals(1, arrayLen(result.body[1].attributes));
+				assertEquals("susi", result.body[1].attributes[1].name);
+				assertTrue(structKeyExists(result.body[1], "body"));
+			});
+			xit( title = 'test unknown script tag in function style', body = function( currentSpec ) {
+				var result = astFromString('cfUnknown(susi="1") {echo("ddd");}',"script");
+				assertEquals("Program", result.type);
+				assertTrue(arrayLen(result.body) > 0);
+				assertEquals("CFMLTag", result.body[1].type);
+				assertEquals("unknown", result.body[1].name);
+				assertEquals("cf", result.body[1].nameSpace);
+				assertEquals("cfUnknown", result.body[1].fullname);
+				assertEquals(1, arrayLen(result.body[1].attributes));
+				assertEquals("susi", result.body[1].attributes[1].name);
+				assertTrue(structKeyExists(result.body[1], "body"));
+			});
+
 		});
 	}
 }
