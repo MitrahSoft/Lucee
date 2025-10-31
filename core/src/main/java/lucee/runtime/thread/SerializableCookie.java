@@ -19,6 +19,7 @@
 package lucee.runtime.thread;
 
 import java.io.Serializable;
+import java.util.Map;
 
 import jakarta.servlet.http.Cookie;
 import lucee.runtime.type.scope.CookieImpl;
@@ -161,6 +162,16 @@ public final class SerializableCookie implements Serializable {
 		SerializableCookie[] dest = new SerializableCookie[src.length];
 		for (int i = 0; i < src.length; i++) {
 			dest[i] = new SerializableCookie(src[i]);
+		}
+		return dest;
+	}
+
+	public static SerializableCookie[] toSerializableCookie(Map<String, Cookie> src) {
+		if (src == null || src.isEmpty()) return new SerializableCookie[0];
+		SerializableCookie[] dest = new SerializableCookie[src.size()];
+		int i = 0;
+		for (Cookie cookie : src.values()) {
+			dest[i++] = new SerializableCookie(cookie);
 		}
 		return dest;
 	}

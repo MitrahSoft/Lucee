@@ -1099,4 +1099,19 @@ public final class CastImpl implements Cast {
 		return Caster.toStruct(new JSONExpressionInterpreter(false, JSONExpressionInterpreter.FORMAT_JSON5).interpret(pc, str));
 	}
 
+	public Map<String, Object> fromJsonStringToMap(String str) throws PageException {
+		PageContext pc = ThreadLocalPageContext.get(true);
+		if (pc == null) {
+			try {
+				pc = PageContextUtil.getPageContext(null, null, new File("."), "localhost", "/", "", SerializableCookie.COOKIES0, null, null, null,
+						DevNullOutputStream.DEV_NULL_OUTPUT_STREAM, false, 100000, false);
+			}
+			catch (PageServletException e) {
+				throw Caster.toPageException(e);
+			}
+		}
+
+		return Caster.toMap(new JSONExpressionInterpreter(false, JSONExpressionInterpreter.FORMAT_JSON5).interpret(pc, str));
+	}
+
 }

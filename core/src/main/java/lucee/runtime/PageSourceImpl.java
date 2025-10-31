@@ -90,7 +90,6 @@ public final class PageSourceImpl implements PageSource {
 	private long lastAccess;
 	private RefIntegerSync accessCount = new RefIntegerSync();
 	private boolean flush = false;
-	private int sourceOffset; // used to track when wrapping in cfscript tag
 
 	private static class PageAndClassName {
 		private Page page;
@@ -282,6 +281,9 @@ public final class PageSourceImpl implements PageSource {
 			return page;
 		}
 		catch (Exception e) {
+			if (mapping.getLog() != null) {
+				mapping.getLog().error("page-source", "Failed to load [" + getDisplayPath() + "] from archive [" + getArchiveClass() + "]", e);
+			}
 			return defaultValue;
 		}
 	}
@@ -1136,15 +1138,6 @@ public final class PageSourceImpl implements PageSource {
 		if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "reset loaded [" + getDisplayPath() + "]");
 		Page p = pcn.page;
 		if (p != null) p.setLoadType((byte) 0);
-	}
-
-	public void setSourceOffset(int sourceOffset) {
-		this.sourceOffset = sourceOffset;
-	}
-
-	public int getSourceOffset() {
-		// lucee.aprint.o("sourceOffset:"+ sourceOffset);
-		return sourceOffset;
 	}
 
 }

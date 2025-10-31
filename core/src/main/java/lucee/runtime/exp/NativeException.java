@@ -19,6 +19,7 @@
 package lucee.runtime.exp;
 
 import lucee.commons.lang.ExceptionUtil;
+import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.Constants;
 import lucee.runtime.dump.DumpData;
@@ -64,7 +65,82 @@ public class NativeException extends PageExceptionImpl {
 
 	public static NativeException newInstance(Throwable t, boolean rethrowIfNecessary) {
 		if (rethrowIfNecessary) ExceptionUtil.rethrowIfNecessary(t);
-		return new NativeException(t);
+		return new NativeException(wrapIfNeeded(t));
+	}
+
+	private static Throwable wrapIfNeeded(Throwable t) {
+		if (t == null) return t;
+
+		String message = t.getMessage();
+		if (StringUtil.isEmpty(message, true)) return t;
+
+		// Handle NoClassDefFoundError (e.g., "javax/servlet/jsp/tagext/TryCatchFinally")
+		if (t instanceof NoClassDefFoundError) {
+			String className = extractClassName(message);
+			if (isServletClass(className)) {
+				return new JavaxNeededException(t, className);
+			}
+		}
+
+		// Handle ClassNotFoundException (e.g., "javax.servlet.jsp.tagext.TryCatchFinally not found by
+		// redis.extension [98]")
+		if (t instanceof ClassNotFoundException) {
+			String className = extractClassNameFromCNFE(message);
+			if (isServletClass(className)) {
+				return new JavaxNeededException(t, className);
+			}
+		}
+
+		// Recursively check the cause
+		Throwable cause = t.getCause();
+		if (cause != null && cause != t) {
+			Throwable wrappedCause = wrapIfNeeded(cause);
+			if (wrappedCause != cause) {
+				return wrappedCause;
+			}
+		}
+
+		return t;
+	}
+
+	private static boolean isServletClass(String className) {
+		return className != null && (className.startsWith("javax.servlet.") || className.startsWith("jakarta.servlet."));
+	}
+
+	private static String extractClassName(String message) {
+		if (message == null) return null;
+
+		// NoClassDefFoundError format: "javax/servlet/jsp/tagext/TryCatchFinally"
+		// Convert slashes to dots
+		String className = message.replace('/', '.');
+
+		// Remove any trailing text (sometimes there's extra info)
+		int spaceIdx = className.indexOf(' ');
+		if (spaceIdx > 0) {
+			className = className.substring(0, spaceIdx);
+		}
+
+		return className.trim();
+	}
+
+	private static String extractClassNameFromCNFE(String message) {
+		if (message == null) return null;
+
+		// ClassNotFoundException format: "javax.servlet.jsp.tagext.TryCatchFinally not found by
+		// redis.extension [98]"
+		// Extract the class name before "not found" or similar phrases
+		String[] stopPhrases = { " not found", " cannot be found", " could not be found" };
+
+		String className = message;
+		for (String phrase: stopPhrases) {
+			int idx = message.indexOf(phrase);
+			if (idx > 0) {
+				className = message.substring(0, idx).trim();
+				break;
+			}
+		}
+
+		return className;
 	}
 
 	@Override

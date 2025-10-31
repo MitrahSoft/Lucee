@@ -27,9 +27,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.lang.ref.SoftReference;
-import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Enumeration;
@@ -70,6 +69,7 @@ import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.loader.osgi.BundleCollection;
@@ -97,6 +97,10 @@ public final class OSGiUtil {
 	private static final int QUALIFIER_APPENDIX_STABLE = 5;
 
 	private static final int MAX_REDIRECTS = 5;
+
+	private static final int DOWNLOAD_CONNECT_TIMEOUT = 10000; // 10 seconds
+	private static final int DOWNLOAD_READ_TIMEOUT = 60000; // 60 seconds
+	private static final String DOWNLOAD_USER_AGENT = "Lucee";
 
 	private static ClassLoader emptyBundleClassLoader;
 
@@ -774,6 +778,8 @@ public final class OSGiUtil {
 			}
 		}
 
+		// if (bundlesThreadLocal.get().contains(bn)) {
+
 		// if not found try to download
 		if (downloadIfNecessary) {
 			try {
@@ -880,62 +886,15 @@ public final class OSGiUtil {
 		final URL updateUrl = BundleProvider.getInstance().getBundleAsURL(new BundleDefinition(symbolicName, symbolicVersion), true);
 
 		log(Logger.LOG_INFO, "Downloading bundle [" + symbolicName + ":" + symbolicVersion + "] from [" + updateUrl + "]");
-		int code;
-		HttpURLConnection conn;
-		try {
-			conn = (HttpURLConnection) updateUrl.openConnection();
-			conn.setRequestMethod("GET");
-			conn.setConnectTimeout(10000);
-			conn.connect();
-			code = conn.getResponseCode();
-		}
-		catch (UnknownHostException e) {
-			throw new IOException("Downloading the bundle  [" + symbolicName + ":" + symbolicVersion + "] from [" + updateUrl + "] failed", e);
-		}
-		// the update provider is not providing a download for this
-		if (code != 200) {
-			int count = 1;
-			// the update provider can also provide a different (final) location for this
-			while ((code == 301 || code == 302) && count++ <= MAX_REDIRECTS) {
-				String location = conn.getHeaderField("Location");
-				// just in case we check invalid names
-				if (location == null) location = conn.getHeaderField("location");
-				if (location == null) location = conn.getHeaderField("LOCATION");
-				LogUtil.log(Log.LEVEL_INFO, OSGiUtil.class.getName(), "Download redirected: " + location); // MUST remove
-
-				conn.disconnect();
-				URL url = new URL(location);
-				try {
-					conn = (HttpURLConnection) url.openConnection();
-					conn.setRequestMethod("GET");
-					conn.setConnectTimeout(10000);
-					conn.connect();
-					code = conn.getResponseCode();
-				}
-				catch (final UnknownHostException e) {
-					log(e);
-					throw new IOException("Failed to download the bundle  [" + symbolicName + ":" + symbolicVersion + "] from [" + location + "]", e);
-				}
-			}
-
-			// no download available!
-			if (code != 200) {
-				final String msg = "Download bundle failed for [" + symbolicName + "] in version [" + symbolicVersion + "] from [" + updateUrl
-						+ "], please download manually and copy to [" + jarDir + "]";
-				log(Logger.LOG_ERROR, msg);
-				conn.disconnect();
-				throw new IOException(msg);
-			}
-
-		}
 
 		// extract version if necessary
 		if ("latest".equals(symbolicVersion)) {
 			// copy to temp file
 			Resource temp = SystemUtil.getTempFile("jar", false);
-			IOUtil.copy((InputStream) conn.getContent(), temp, true);
+			InputStream is = null;
 			try {
-				conn.disconnect();
+				is = HTTPDownloader.get( updateUrl, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT );
+				IOUtil.copy( is, temp, true );
 
 				// extract version and create file with correct name
 				BundleFile bf = BundleFile.getInstance(temp);
@@ -943,14 +902,31 @@ public final class OSGiUtil {
 				IOUtil.copy(temp, jar);
 				return jar;
 			}
+			catch (GeneralSecurityException e) {
+				throw new IOException("Failed to download the bundle [" + symbolicName + ":" + symbolicVersion + "] from [" + updateUrl + "]", e);
+			}
 			finally {
+				IOUtil.closeEL(is);
 				temp.delete();
 			}
 		}
 
 		Resource jar = jarDir.getRealResource(symbolicName + "-" + symbolicVersion + ".jar");
-		IOUtil.copy((InputStream) conn.getContent(), jar, true);
-		conn.disconnect();
+		try {
+			HTTPDownloader.downloadToFile(
+				updateUrl,
+				ResourceUtil.toFile(jar),
+				DOWNLOAD_CONNECT_TIMEOUT,
+				DOWNLOAD_READ_TIMEOUT,
+				DOWNLOAD_USER_AGENT
+			);
+		}
+		catch (GeneralSecurityException e) {
+			final String msg = "Download bundle failed for [" + symbolicName + "] in version [" + symbolicVersion + "] from [" + updateUrl
+					+ "], please download manually and copy to [" + jarDir + "]";
+			log(Logger.LOG_ERROR, msg);
+			throw new IOException(msg, e);
+		}
 		return jar;
 
 	}
@@ -1027,7 +1003,7 @@ public final class OSGiUtil {
 		index = q.indexOf('-');
 		String qra = index == -1 ? "" : q.substring(index + 1).trim();
 		String qrn = index == -1 ? q : q.substring(0, index);
-		int qr = StringUtil.isEmpty(qln) ? Integer.MIN_VALUE : Caster.toIntValue(qrn, Integer.MAX_VALUE);
+		int qr = StringUtil.isEmpty(qrn) ? Integer.MIN_VALUE : Caster.toIntValue(qrn, Integer.MAX_VALUE);
 
 		if (ql > qr) return 5;
 		if (ql < qr) return -5;
@@ -1471,7 +1447,8 @@ public final class OSGiUtil {
 
 		synchronized (SystemUtil.createToken(bundle.getSymbolicName(), bundle.getVersion().toString())) {
 			if (bundle.getState() != Bundle.ACTIVE) {
-				Bundle result = _start(bundle, parents);
+
+				Bundle result = parents == null ? start(bundle) : _start(bundle, parents);
 				return result;
 			}
 			return bundle;
@@ -1479,6 +1456,7 @@ public final class OSGiUtil {
 	}
 
 	public static Bundle start(Bundle bundle) throws BundleException {
+		if (bundle == null) return bundle;
 		try {
 			return _start(bundle, null);
 		}

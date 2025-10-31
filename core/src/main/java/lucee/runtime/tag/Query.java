@@ -112,6 +112,8 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 	public static final int RETURN_TYPE_STRUCT = 3;
 	public static final int RETURN_TYPE_STORED_PROC = 4;
 
+	private static final boolean USE_LOCAL_SCOPE = Caster.toBooleanValue( SystemUtil.getSystemPropOrEnvVar( "lucee.tag.populate.localscope", "true" ), true );
+
 	public boolean orgPSQ;
 	public boolean hasChangedPSQ;
 
@@ -1020,7 +1022,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 		rm.meta = args.get(KeyConstants._meta, null);
 		if (rm.meta != null) {
 			if (StringUtil.isEmpty(data.result)) {
-				if (pageContext.undefinedScope().getCheckArguments()) pageContext.localScope().setEL(KeyConstants._cfquery, rm.meta);
+				if (USE_LOCAL_SCOPE && pageContext.undefinedScope().getCheckArguments()) pageContext.localScope().setEL(KeyConstants._cfquery, rm.meta);
 				else pageContext.undefinedScope().setEL(KeyConstants._cfquery, rm.meta);
 
 			}
@@ -1051,7 +1053,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 	private static Struct setExecutionTime(PageContext pc, long exe) {
 		Struct sct = new StructImpl();
 		sct.setEL(KeyConstants._executionTime, Double.valueOf(exe));
-		if (pc.undefinedScope().getCheckArguments()) pc.localScope().setEL(KeyConstants._cfquery, sct);
+		if (USE_LOCAL_SCOPE && pc.undefinedScope().getCheckArguments()) pc.localScope().setEL(KeyConstants._cfquery, sct);
 		else pc.undefinedScope().setEL(KeyConstants._cfquery, sct);
 		return sct;
 	}

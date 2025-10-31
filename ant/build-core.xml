@@ -15,16 +15,19 @@
   <property name="testboxURL" 
     value="https://downloads.ortussolutions.com/ortussolutions/testbox/${testboxVersion}/testbox-${testboxVersion}.zip"/>
   <property name="extURL" value="https://extension.lucee.org/rest/extension/provider/full/"/>
+  <property name="extURLMaven" value="https://repo1.maven.org/maven2/"/>
+  <property name="extURLCDN" value="https://cdn.lucee.org/"/>
   
-  <property name="extMongo"     value="E6634E1A-4CC5-4839-A83C67549ECA8D5B"/>
+  <property name="extMongo"     value="org.lucee:mongodb-extension:3.12.13.9"/>
   <property name="extH2"        value="465E1E35-2425-4F4E-8B3FAB638BD7280A;version=2.1.214.0001L"/>
   <property name="extOracle"    value="D4EDFDBD-A9A3-E9AF-597322D767E0C949;version=21.3.0.0-ojdbc11"/>
-  <property name="extLucene"    value="EFDEB172-F52E-4D84-9CD1A1F561B3DFC8;version=3.0.0.163"/>
-  <property name="extAxis"      value="DF28D0A4-6748-44B9-A2FDC12E4E2E4D38;version=1.5.0.5"/>
-  <property name="extChart"     value="D46B46A9-A0E3-44E1-D972A04AC3A8DC10;version=2.0.0.1"/>
-  <property name="extRedis"     value="60772C12-F179-D555-8E2CD2B4F7428718;version=4.0.0.0"/>
-  <property name="extHibernate" value="FAD1E8CB-4F45-4184-86359145767C29DE;version=5.4.29.27-BETA"/>
-  <property name="extEHCache"   value="87FE44E5-179C-43A3-A87B3D38BEF4652E;version=2.10.0.38"/>
+  <property name="extLucene"    value="org.lucee:lucene-search-extension:3.0.0.163"/>
+  <property name="extAxis"      value="org.lucee:axis-extension:1.5.0.5"/>
+  <property name="extChart"     value="org.lucee:chart-extension:2.0.0.1"/>
+  <property name="extRedis"     value="org.lucee:redis-extension:4.0.0.0"/>
+  <property name="extHibernate" value="org.lucee:hibernate-extension:5.4.29.27-BETA"/>
+  <property name="extEHCache"   value="org.lucee:ehcache-extension:2.10.0.38"/>
+
 
   <property name="stableLoader" value="lucee-5.3.7.48"/>
   <property name="javaVersionCoreDefault" value="11"/>
@@ -127,48 +130,102 @@
     <!-- get the extensions from manifest -->
     <!-- TODO extension handling must be more dynamic! -->
     <readRequiredExtensions file="${coreManifest}"/>
-    <fail message="Missing data from [Require-Extension] inside ${coreManifest}">
+    <fail message="Missing PDF data from [Require-Extension] inside ${coreManifest}.">
     <condition>
         <or>
-        <!-- PDF -->
-        <not><isset property="extPDF"/></not>
-        <not><isset property="extPDFVersion"/></not>
-        <!-- S3 -->
-        <not><isset property="extS3"/></not>
-        <not><isset property="extS3Version"/></not>
-        <!-- MySQL -->
-        <not><isset property="extMySQL"/></not>
-        <not><isset property="extMySQLVersion"/></not>
-        <!-- MSSQL -->
-        <not><isset property="extMSSQL"/></not>
-        <not><isset property="extMSSQLVersion"/></not>
-        <!-- PostgreSQL -->
-        <not><isset property="extPostgreSQL"/></not>
-        <not><isset property="extPostgreSQLVersion"/></not>
-        <!-- JDTsSQL -->
-        <not><isset property="extJDTsSQL"/></not>
-        <not><isset property="extJDTsSQLVersion"/></not>
-        <!-- Admin -->
-        <not><isset property="extAdmin"/></not>
-        <not><isset property="extAdminVersion"/></not>
-        <!-- Doc -->
-        <not><isset property="extDoc"/></not>
-        <not><isset property="extDocVersion"/></not>
-        <!-- Image -->
-        <not><isset property="extImage"/></not>
-        <not><isset property="extImageVersion"/></not>
-        <!-- Esapi -->
-        <not><isset property="extEsapi"/></not>
-        <not><isset property="extEsapiVersion"/></not>
-        <!-- Scheduler -->
-        <not><isset property="extScheduler"/></not>
-        <not><isset property="extSchedulerVersion"/></not>
-        <!-- Compress -->
-        <not><isset property="extCompress"/></not>
-        <not><isset property="extCompressVersion"/></not>
+            <not><isset property="extPdfExtension"/></not>
+            <not><isset property="extPdfExtensionVersion"/></not>
         </or>
     </condition>
-    </fail>
+</fail>
+<fail message="Missing S3 data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extS3Extension"/></not>
+            <not><isset property="extS3ExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing MySQL data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extMysqlJdbcExtension"/></not>
+            <not><isset property="extMysqlJdbcExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing MSSQL data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extMssqlJdbcExtension"/></not>
+            <not><isset property="extMssqlJdbcExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing PostgreSQL data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extPostgresqlJdbcExtension"/></not>
+            <not><isset property="extPostgresqlJdbcExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing JDTsSQL data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extJtdsJdbcExtension"/></not>
+            <not><isset property="extJtdsJdbcExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing Admin data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extAdministratorExtension"/></not>
+            <not><isset property="extAdministratorExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing Doc data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extDocumentationExtension"/></not>
+            <not><isset property="extDocumentationExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing Image data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extImageExtension"/></not>
+            <not><isset property="extImageExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing Esapi data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extEsapiExtension"/></not>
+            <not><isset property="extEsapiExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing Scheduler data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extSchedulerClassicExtension"/></not>
+            <not><isset property="extSchedulerClassicExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
+<fail message="Missing Compress data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extCompressExtension"/></not>
+            <not><isset property="extCompressExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
 
 <echo level="info">  
 
@@ -751,7 +808,6 @@
       <jvmarg value="-Dbasedir=${baseDir}"/>
       <jvmarg value="-Dlucee.base.dir=${temp}/archive/base"/>
       <jvmarg value="-Dlucee.web.dir=${temp}/archive/webroot"/>
-      <!-- <jvmarg value="-Dlucee-extensions=${extS3}"/> -->
       <jvmarg value="-Dlucee.extensions.install=true"/>
       <jvmarg value="-Dlucee.full.null.support=false"/>
       <jvmarg value="-Dluceejar=${trgLoader}/lucee-${version}.jar"/>

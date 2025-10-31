@@ -36,6 +36,7 @@ public abstract class ExecutionLogSupport implements ExecutionLog {
 	private Map<String, Pair> map = new ConcurrentHashMap<String, Pair>();
 	protected long min = Long.MIN_VALUE;
 	protected short unit = UNIT_UNDEFINED;
+	protected long spawnOffsetNano = 0;
 
 	@Override
 	public void init(PageContext pc, Map<String, String> arguments) {
@@ -110,6 +111,21 @@ public abstract class ExecutionLogSupport implements ExecutionLog {
 		}
 	}
 
+	/**
+	 * Get the current execution position (most recent start position)
+	 * Used for capturing parent execution context when spawning child threads
+	 * @return position or -1 if no position is being tracked
+	 */
+	public int getCurrentPosition() {
+		if (map.isEmpty()) return -1;
+		// Return the position from the most recently added entry
+		// Since we're in a concurrent context, we'll just return the first available position
+		for (Pair pair : map.values()) {
+			return pair.pos;
+		}
+		return -1;
+	}
+
 	protected abstract void _init(PageContext pc, Map<String, String> arguments);
 
 	protected abstract void _log(int startPos, int endPos, long startTime, long endTime);
@@ -132,6 +148,14 @@ public abstract class ExecutionLogSupport implements ExecutionLog {
 		if (targetUnit == UNIT_MICRO) return timeInNanos / 1000;
 		else if (targetUnit == UNIT_MILLI) return timeInNanos / 1000000;
 		return timeInNanos; // UNIT_NANO
+	}
+
+	public void setSpawnOffsetNano(long spawnOffsetNano) {
+		this.spawnOffsetNano = spawnOffsetNano;
+	}
+
+	public long getSpawnOffsetNano() {
+		return spawnOffsetNano;
 	}
 
 	private final static class Pair {

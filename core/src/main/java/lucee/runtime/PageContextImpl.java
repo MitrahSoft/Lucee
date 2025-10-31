@@ -28,11 +28,11 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
@@ -752,7 +752,8 @@ public final class PageContextImpl extends PageContext {
 		if (!hasFamily) {
 			pathList.clear();
 			includePathList.clear();
-			udfs.clear();
+			// Only clear UDF stack if empty - active UDFs will clean themselves up
+			if (udfs.isEmpty()) udfs.clear();
 		}
 		executionTime = 0;
 
@@ -3667,9 +3668,9 @@ public final class PageContextImpl extends PageContext {
 		}
 	}
 
-	public Struct transform(SourceCode sc) throws PageException {
+	public Struct transform(SourceCode sc, Boolean script) throws PageException {
 		try {
-			return config.getCompiler().ast(config, sc, ignoreScopes());
+			return config.getCompiler().ast(config, sc, ignoreScopes(), script);
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);
@@ -3913,6 +3914,10 @@ public final class PageContextImpl extends PageContext {
 	@Override
 	public void exeLogEnd(int position, String id) {
 		if (execLog != null) execLog.end(position, id);
+	}
+
+	public ExecutionLog getExecutionLog() {
+		return execLog;
 	}
 
 	@Override
@@ -4373,12 +4378,16 @@ public final class PageContextImpl extends PageContext {
 		return PageContextUtil.loadInline(this, realPath, inlineName);
 	}
 
-	// keep this for backward compatibility to jakarta 10 as long ExpressionEvaluator is not removed by future versions
+	// keep this for backward compatibility to jakarta 10 as long ExpressionEvaluator is not removed by
+	// future versions
+	@Override
 	public ExpressionEvaluator getExpressionEvaluator() {
 		throw new RuntimeException("not supported!");
 	}
 
-	// keep this for backward compatibility to jakarta 10 as long VariableResolver is not removed by future versions
+	// keep this for backward compatibility to jakarta 10 as long VariableResolver is not removed by
+	// future versions
+	@Override
 	public VariableResolver getVariableResolver() {
 		throw new RuntimeException("not supported!");
 	}

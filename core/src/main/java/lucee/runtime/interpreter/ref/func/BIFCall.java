@@ -227,6 +227,10 @@ public final class BIFCall extends RefSupport implements Ref {
 		return "built in function";
 	}
 
+	public FunctionLibFunction getFunctionLibFunction() {
+		return flf;
+	}
+
 }
 
 class VT {

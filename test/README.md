@@ -24,6 +24,8 @@ Or, to run a specific test suite:
 mvn test -DtestFilter="{testFilename}"
 ```
 
+Pipe the build output to a file, which you can then grep afterwards, rather than re-running the build just to grep again.
+
 ### Test Runner Options
 
 You can use the following options to control which tests are run and how they are executed (see [Lucee Docs](https://docs.lucee.org/guides/working-with-source/build-from-source.html#build-performance-tips)):
@@ -54,3 +56,11 @@ You can use the following options to control which tests are run and how they ar
 - `-DtestServices="service1,service2"` — Restricts test services to a comma-separated list.
 
 For more details, see the [Lucee build guide](https://docs.lucee.org/guides/working-with-source/build-from-source.html).
+
+#### Avoid defensive code
+
+Tests should fail if needed, too defensive code tends to mask underlying problems.
+
+#### Try Catch
+
+If you do use try catch to return an error, return the `e.stacktrace`, rather than just the `e.message` as it's more useful to action.

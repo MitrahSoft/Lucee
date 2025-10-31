@@ -14,10 +14,20 @@ public final class AstFromString extends BIF {
 
 	@Override
 	public Object invoke(PageContext pc, Object[] args) throws PageException {
-		if (args.length != 1) throw new FunctionException(pc, "AstFromString", 1, 1, args.length);
+		if (args.length < 1 || args.length > 2) throw new FunctionException(pc, "AstFromString", 1, 2, args.length);
 
 		String content = Caster.toString(args[0]);
 		if (content == null) content = "";
-		return ((PageContextImpl) pc).transform(new SourceCode(null, content, false));
+
+		// mode
+		Boolean script = Boolean.FALSE;
+		if (args.length == 2) {
+			String mode = Caster.toString(args[1], null);
+			//
+			if ("script".equalsIgnoreCase(mode)) script = Boolean.TRUE;
+
+		}
+
+		return ((PageContextImpl) pc).transform(new SourceCode(null, content, false, 0), script);
 	}
 }

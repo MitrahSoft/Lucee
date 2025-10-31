@@ -16,30 +16,29 @@
 	}
 </cfscript>
 
-<cfadmin
-   action="getRHServerExtensions"
-   type="#request.adminType#"
-   password="#session["password"&request.adminType]#"
-   returnVariable="serverExtensions">
-
-
-  <cfquery name="LuceneExtInstl" dbtype="query">
-  	select * from serverExtensions where ID = 'EFDEB172-F52E-4D84-9CD1A1F561B3DFC8'
-  </cfquery>
-<cfif LuceneExtInstl.recordcount EQ 0><cflocation url="#request.self#" addtoken="no"></cfif>
-
 <cfparam name="form.run" default="none">
 <cfparam name="error" default="#struct(message:"",detail:"")#">
 
-<cfadmin 
-	action="securityManager"
-	type="#request.adminType#"
-	password="#session["password"&request.adminType]#"
-	returnVariable="hasAccess"
-	secType="search"
-	secValue="yes">
+<cfif not extensionExists( "EFDEB172-F52E-4D84-9CD1A1F561B3DFC8" )>
+	<cfset local.extLink = request.self & "?action=ext.applications&action2=detail&id=EFDEB172-F52E-4D84-9CD1A1F561B3DFC8&name=" & URLEncodedFormat( 'Lucee Search' )>
+	<cfoutput>
+		<div class="error">
+			#stText.Search.extensionmissing#
+		</div>
+		<p>
+			<a href="#local.extLink#">#stText.Search.extensionmissinglink#</a>
+		</p>
+	</cfoutput>
+<cfelse>
+	<cfadmin
+		action="securityManager"
+		type="#request.adminType#"
+		password="#session["password"&request.adminType]#"
+		returnVariable="hasAccess"
+		secType="search"
+		secValue="yes">
 
-<cfif request.singlemode or request.adminType EQ "web">
+	<cfif request.singlemode or request.adminType EQ "web">
 	<cftry>
 		<cfswitch expression="#form.run#">
 			<!--- Index --->
@@ -459,7 +458,8 @@
 						</table>
 					</cfif>
 				</cfif>
-			</cfif>	
+			</cfif>
 		</cfoutput>
+	</cfif>
 	</cfif>
 </cfif>

@@ -25,9 +25,9 @@ import org.xml.sax.helpers.DefaultHandler;
 import lucee.commons.date.DateTimeUtil;
 import lucee.commons.date.TimeZoneConstants;
 import lucee.commons.io.IOUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.op.Caster;
 import lucee.runtime.text.xml.XMLUtil;
 import lucee.runtime.type.dt.DateTime;
@@ -72,18 +72,15 @@ public final class RepoReader extends DefaultHandler {
 
 		URL url = new URL(base + "maven-metadata.xml");
 
-		HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-		if (rsp != null) {
-			int sc = rsp.getStatusCode();
-			if (sc < 200 || sc >= 300) return null;
-		}
-		else {
-			return null;
-		}
+		// Use HTTPDownloader with DEBUG logging for Maven repo metadata lookups
 		Reader r = null;
 		try {
-
-			init(new InputSource(r = IOUtil.getReader(rsp.getContentAsStream(), (Charset) null)));
+			r = IOUtil.getReader( HTTPDownloader.get( url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE ), (Charset) null );
+			init(new InputSource(r));
+		}
+		catch (IOException ioe) {
+			// 404 or other errors - return null
+			return null;
 		}
 		finally {
 			IOUtil.close(r);

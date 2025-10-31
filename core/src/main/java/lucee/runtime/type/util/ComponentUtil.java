@@ -193,7 +193,7 @@ public final class ComponentUtil {
 		adapter.loadThis();
 		adapter.invokeConstructor(Types.OBJECT, CONSTRUCTOR_OBJECT);
 		PageImpl.registerFields(new BytecodeContext(ThreadLocalPageContext.getConfig(pc), null, constr, getPage(constr), _keys, cw, real, adapter, CONSTRUCTOR_OBJECT, writeLog,
-				suppressWSbeforeArg, output, returnValue), _keys);
+				suppressWSbeforeArg, output, returnValue, 0), _keys);
 		adapter.returnValue();
 		adapter.endMethod();
 
@@ -594,7 +594,7 @@ public final class ComponentUtil {
 			Method method = new Method(udf.getFunctionName(), rtnType, types);
 			GeneratorAdapter adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, method, null, null, cw);
 			BytecodeContext bc = new BytecodeContext(ThreadLocalPageContext.getConfig(pc), null, constr, getPage(constr), keys, cw, className, adapter, method, writeLog,
-					suppressWSbeforeArg, output, returnValue);
+					suppressWSbeforeArg, output, returnValue, 0);
 			Label start = adapter.newLabel();
 			adapter.visitLabel(start);
 
@@ -1119,13 +1119,13 @@ public final class ComponentUtil {
 	 * @param getter has getter
 	 * @throws PageException
 	 */
-	public static void registerProperty(PageContext pc, String name, String type, Object defaultValue, String access, String hint, String displayname,
-			boolean required, boolean setter, boolean getter) throws PageException {
+	public static void registerProperty(PageContext pc, String name, String type, Object defaultValue, String access, String hint, String displayname, boolean required,
+			boolean setter, boolean getter) throws PageException {
 		registerProperty(pc, name, type, defaultValue, access, hint, displayname, required, setter, getter, null);
 	}
 
-	public static void registerProperty(PageContext pc, String name, String type, Object defaultValue, String access, String hint, String displayname,
-			boolean required, boolean setter, boolean getter, Struct dynamicAttributes) throws PageException {
+	public static void registerProperty(PageContext pc, String name, String type, Object defaultValue, String access, String hint, String displayname, boolean required,
+			boolean setter, boolean getter, Struct dynamicAttributes) throws PageException {
 		if (pc.variablesScope() instanceof ComponentScope) {
 			Component comp = ((ComponentScope) pc.variablesScope()).getComponent();
 			PropertyImpl property = new PropertyImpl();
@@ -1149,6 +1149,5 @@ public final class ComponentUtil {
 			property.setOwnerName(comp.getAbsName());
 		}
 	}
-
 
 }

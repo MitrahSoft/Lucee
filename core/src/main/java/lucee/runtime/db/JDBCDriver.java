@@ -26,6 +26,7 @@ import org.osgi.framework.Bundle;
 
 import lucee.commons.io.IOUtil;
 import lucee.commons.lang.StringUtil;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.type.util.ListUtil;
 
 public final class JDBCDriver {
@@ -60,9 +61,18 @@ public final class JDBCDriver {
 	public static String extractClassName(Bundle bundle) throws IOException {
 		URL url = bundle.getResource("/META-INF/services/java.sql.Driver");
 
-		BufferedReader br = new BufferedReader(new InputStreamReader(url.openConnection().getInputStream()));
-		String content = IOUtil.toString(br);
-		return ListUtil.first(content, " \n\t");
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new InputStreamReader(HTTPDownloader.get(url)));
+			String content = IOUtil.toString(br);
+			return ListUtil.first(content, " \n\t");
+		}
+		catch (java.security.GeneralSecurityException e) {
+			throw new IOException("Failed to read driver manifest from [" + url + "]", e);
+		}
+		finally {
+			IOUtil.closeEL(br);
+		}
 	}
 
 	public static String extractClassName(Bundle bundle, String defaultValue) {

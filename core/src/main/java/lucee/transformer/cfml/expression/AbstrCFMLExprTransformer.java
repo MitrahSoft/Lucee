@@ -896,7 +896,7 @@ public abstract class AbstrCFMLExprTransformer {
 		comments(data);
 		if (leftEnd != null) {
 			start = leftEnd;
-			end = new Position(leftEnd.line, leftEnd.column + 2, leftEnd.pos + 2);
+			end = new Position(leftEnd.line, leftEnd.column + 2, leftEnd.pos + 2, data.srcCode.getSourceOffset());
 		}
 
 		if (op == Factory.OP_UNARY_CONCAT) return data.factory.opUnaryString((Variable) expr, data.factory.NUMBER_ONE(), Factory.OP_UNARY_POST, op, start, end);
@@ -1418,15 +1418,9 @@ public abstract class AbstrCFMLExprTransformer {
 		int pos = data.srcCode.getPos();
 		if (!data.srcCode.forwardIfCurrent("(")) return null;
 		ArrayList<lucee.transformer.statement.Argument> args = null;
-		// data.cfml.previous();
-		try {
-			args = getScriptFunctionArguments(data);
-		}
-		catch (TemplateException e) {
-			// if there is a template exception, the argument syntax is not correct, and must not be a lambda
-			// expression
-			// TODO find a better way to test for lambda than to attempt processing the arguments and catch an
-			// exception if it fails.
+
+		args = getScriptFunctionArguments(data, null);
+		if (args == null) {
 			data.srcCode.setPos(pos);
 			return null;
 		}
@@ -1446,10 +1440,12 @@ public abstract class AbstrCFMLExprTransformer {
 				lambdaPart(data, "lambda_" + CreateUniqueId.invoke(), Component.ACCESS_PUBLIC, Component.MODIFIER_NONE, "any", data.srcCode.getPosition(), args));
 	}
 
-	protected abstract Function lambdaPart(Data data, String id, int access, int modifier, String rtnType, Position line,
-			ArrayList<lucee.transformer.statement.Argument> args) throws TemplateException;
+	protected abstract Function lambdaPart(Data data, String id, int access, int modifier, String rtnType, Position line, ArrayList<lucee.transformer.statement.Argument> args)
+			throws TemplateException;
 
 	protected abstract ArrayList<lucee.transformer.statement.Argument> getScriptFunctionArguments(Data data) throws TemplateException;
+
+	protected abstract ArrayList<lucee.transformer.statement.Argument> getScriptFunctionArguments(Data data, ArrayList<lucee.transformer.statement.Argument> defaultValue);
 
 	protected FunctionLibFunction getFLF(Data data, String name) {
 		return data.flibs.getFunction(name);

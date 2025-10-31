@@ -232,7 +232,7 @@ public abstract class ConfigFactory {
 				IOUtil.copy(configFile, bugFile);
 				configFile.delete();
 			}
-			createConfigFile(type, configFile);
+			ConfigFile.createConfigFile(type, configFile);
 			return loadDocument(configFile);
 		}
 	}
@@ -981,17 +981,6 @@ public abstract class ConfigFactory {
 		return "/" + MD5.getDigestAsString(physical + ":" + archive, "");
 	}
 
-	/**
-	 * creates the Config File, if File not exist
-	 * 
-	 * @param xmlName
-	 * @param configFile
-	 * @throws IOException
-	 */
-	static void createConfigFile(String name, Resource configFile) throws IOException {
-		createFileFromResource("/resource/config/" + name + ".json", configFile.getAbsoluteResource());
-	}
-
 	private static Struct _loadDocument(Resource res) throws IOException, PageException {
 		String name = res.getName();
 		// That step is not necessary anymore TODO remove
@@ -1044,37 +1033,6 @@ public abstract class ConfigFactory {
 				LogUtil.logGlobal(ThreadLocalPageContext.getConfig(), ConfigFactory.class.getName(), e);
 			}
 		}
-	}
-
-	/**
-	 * creates a File and his content from a resource
-	 * 
-	 * @param resource
-	 * @param file
-	 * @param password
-	 * @throws IOException
-	 */
-	static void createFileFromResource(String resource, Resource file, String password) throws IOException {
-		if (file.exists()) file.delete();
-
-		InputStream is = InfoImpl.class.getResourceAsStream(resource);
-		if (is == null) is = SystemUtil.getResourceAsStream(null, resource);
-		if (is == null) throw new IOException("File [" + resource + "] does not exist.");
-		file.createNewFile();
-		IOUtil.copy(is, file, true);
-		LogUtil.logGlobal(ThreadLocalPageContext.getConfig(), Log.LEVEL_DEBUG, ConfigFactory.class.getName(), "Written file: [" + file + "]");
-
-	}
-
-	/**
-	 * creates a File and his content froma a resurce
-	 * 
-	 * @param resource
-	 * @param file
-	 * @throws IOException
-	 */
-	static void createFileFromResource(String resource, Resource file) throws IOException {
-		createFileFromResource(resource, file, null);
 	}
 
 	static void create(String srcPath, String[] names, Resource dir, boolean doNew) {

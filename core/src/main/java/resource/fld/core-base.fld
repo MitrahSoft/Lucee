@@ -1624,6 +1624,15 @@ The returned AST uses **neutral, language-agnostic node types** following ESTree
 			<required>Yes</required>
 		<description>a string containing CFML code to be parsed into an AST structure</description>
     </argument>
+    <argument>
+			<name>mode</name>
+			<type>string</type>
+			<required>No</required>
+		<description>Is the CFML code given script or tag based, possibles values are:
+- **tag** (default): the CFML code is tag based
+- **script**: the CFML code is script based.  		
+</description>
+    </argument>
 		<return>
 			<type>struct</type>
 			<description>A struct representing the complete Abstract Syntax Tree of the parsed CFML code. The struct contains nested structures representing language constructs like expressions, statements, functions, and control flow using neutral node types with source position information. The root node is of type &quot;Program&quot; containing a &quot;body&quot; array of top-level statements.</description>

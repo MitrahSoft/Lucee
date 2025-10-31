@@ -28,6 +28,8 @@ import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
+import lucee.runtime.engine.ExecutionLog;
+import lucee.runtime.engine.ExecutionLogSupport;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.ParentException;
@@ -79,6 +81,14 @@ public final class UDFCaller2<P> implements Callable<Data<P>> {
 		if (this.pc == null) {
 			ThreadLocalPageContext.register(parent);
 			this.pc = ThreadUtil.clonePageContext(parent, baos, false, false, false);
+
+			// Capture spawn offset for execution log
+			PageContextImpl pci = this.pc;
+			ExecutionLog execLog = pci.getExecutionLog();
+			if (execLog != null && execLog instanceof ExecutionLogSupport) {
+				PageContextImpl parentPci = (PageContextImpl) parent;
+				((ExecutionLogSupport) execLog).setSpawnOffsetNano(System.nanoTime() - parentPci.getStartTimeNS());
+			}
 		}
 		ThreadLocalPageContext.register(pc);
 		pc.getRootOut().setAllowCompression(false); // make sure content is not compressed

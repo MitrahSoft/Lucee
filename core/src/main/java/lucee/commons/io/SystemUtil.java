@@ -1341,12 +1341,15 @@ public final class SystemUtil {
 
 	/**
 	 * returns a system setting by either a Java property name or a System environment variable
-	 * 
+	 *
 	 * @param name - either a lowercased Java property name (e.g. lucee.controller.disabled) or an
 	 *            UPPERCASED Environment variable name ((e.g. LUCEE_CONTROLLER_DISABLED))
 	 * @param defaultValue - value to return if the neither the property nor the environment setting was
 	 *            found
 	 * @return - the value of the property referenced by propOrEnv or the defaultValue if not found
+	 *
+	 * @see core/src/main/java/resource/setting/sysprop-envvar.json for the complete list of all supported properties
+	 * @see core/src/main/java/resource/setting/sysprop-envvar-schema.md for documentation on the JSON schema format
 	 */
 	public static String getSystemPropOrEnvVar(String name, String defaultValue) {
 		// env

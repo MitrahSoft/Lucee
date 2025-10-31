@@ -34,9 +34,12 @@ import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.StringUtil;
+import lucee.loader.engine.CFMLEngineFactory;
 import lucee.runtime.PageContext;
-import lucee.runtime.functions.other.CreateUUID;
+import lucee.runtime.PageContextImpl;
 import lucee.runtime.op.Caster;
+import lucee.runtime.thread.ChildThread;
+import lucee.runtime.thread.ChildThreadImpl;
 
 public final class ResourceExecutionLog extends ExecutionLogSupport {
 
@@ -51,6 +54,7 @@ public final class ResourceExecutionLog extends ExecutionLogSupport {
 	private Resource dir;
 	private static final int DEFAULT_BUFFER_SIZE = 100000; // 100K chars (~200KB)
 	private int bufferSize = DEFAULT_BUFFER_SIZE;
+	private static final long SERVER_START_TIME = CFMLEngineFactory.getInstance().uptime();
 
 	@Override
 	protected void _init(PageContext pc, Map<String, String> arguments) {
@@ -73,6 +77,33 @@ public final class ResourceExecutionLog extends ExecutionLogSupport {
 		createHeader(header, "query-string", req.getQueryString());
 		createHeader(header, "unit", unitShortToString(unit));
 		createHeader(header, "min-time-nano", min + "");
+
+		// request and PageContext IDs (all files)
+		createHeader(header, "request-id", String.valueOf(((PageContextImpl) pc).getRequestId()));
+		createHeader(header, "pc-id", String.valueOf(pc.getId()));
+
+		// parent thread birth info (only child threads from cfthread)
+		Thread currentThread = Thread.currentThread();
+		if (currentThread instanceof ChildThread) {
+			ChildThread childThread = (ChildThread) currentThread;
+			if (childThread instanceof ChildThreadImpl) {
+				ChildThreadImpl childThreadImpl = (ChildThreadImpl) childThread;
+				PageContext parentPC = childThreadImpl.getParentPageContext();
+				if (parentPC != null && parentPC instanceof PageContextImpl) {
+					PageContextImpl parentPci = (PageContextImpl) parentPC;
+					createHeader(header, "parent-request", String.valueOf(parentPci.getRequestId()));
+					createHeader(header, "parent-pc", String.valueOf(parentPci.getId()));
+					lucee.runtime.PageSource parentPs = parentPci.getCurrentPageSource(null);
+					if (parentPs != null) {
+						createHeader(header, "parent-path", parentPs.getDisplayPath());
+					}
+					long spawnOffsetNano = childThreadImpl.getSpawnOffsetNano();
+					if (spawnOffsetNano > 0) {
+						createHeader(header, "spawn-offset-nano", String.valueOf(spawnOffsetNano));
+					}
+				}
+			}
+		}
 
 		// buffer-size
 		String strBufferSize = arguments.get("buffer-size");
@@ -107,7 +138,7 @@ public final class ResourceExecutionLog extends ExecutionLogSupport {
 				}
 			}
 		}
-		file = dir.getRealResource((pc.getId()) + "-" + CreateUUID.call(pc) + ".exl");
+		file = dir.getRealResource((((PageContextImpl) pc).getRequestId()) + "-" + pc.getId() + "-" + SERVER_START_TIME + ".exl");
 		// Always use local temp for buffer file
 		Resource localTemp = getTemp(pc);
 		tmpFile = localTemp.getRealResource(file.getName() + ".tmp");
@@ -129,6 +160,23 @@ public final class ResourceExecutionLog extends ExecutionLogSupport {
 		// execution time
 		long executionTime = System.nanoTime() - start;
 		createHeader(header, "execution-time", Caster.toString(convertTime(executionTime, unit)));
+
+		// parent execution context (for parallel operations like arrayMap(..., true))
+		PageContextImpl pci = (PageContextImpl) pc;
+		PageContext parentPC = pci.getParentPageContext();
+		if (parentPC != null && parentPC instanceof PageContextImpl) {
+			PageContextImpl parentPci = (PageContextImpl) parentPC;
+			createHeader(header, "parent-request", String.valueOf(parentPci.getRequestId()));
+			createHeader(header, "parent-pc", String.valueOf(parentPci.getId()));
+			lucee.runtime.PageSource parentPs = parentPci.getCurrentPageSource(null);
+			if (parentPs != null) {
+				createHeader(header, "parent-path", parentPs.getDisplayPath());
+			}
+			if (spawnOffsetNano > 0) {
+				createHeader(header, "spawn-offset-nano", String.valueOf(spawnOffsetNano));
+			}
+		}
+
 		header.append("\n");
 
 		// path

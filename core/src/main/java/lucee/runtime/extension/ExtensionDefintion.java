@@ -12,6 +12,7 @@ import lucee.commons.lang.StringUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.osgi.OSGiUtil;
 
 public final class ExtensionDefintion {
@@ -21,6 +22,7 @@ public final class ExtensionDefintion {
 	private Resource source;
 	private Config config;
 	private RHExtension rhe;
+	private GAVSO gavso;
 
 	public ExtensionDefintion() {
 	}
@@ -48,12 +50,29 @@ public final class ExtensionDefintion {
 		return id;
 	}
 
-	public String getGroupId() {
-		return null; // TODO
+	public GAVSO getGAVSO() {
+		return gavso;
+	}
+
+	public void setGAVSO(GAVSO gavso) {
+		this.gavso = gavso;
+		if (gavso != null) {
+			if (!StringUtil.isEmpty(gavso.g, true)) setParam("groupId", gavso.g);
+			if (!StringUtil.isEmpty(gavso.a, true)) setParam("artifactId", gavso.a);
+			if (!StringUtil.isEmpty(gavso.v, true)) setParam("version", gavso.v);
+			if (!StringUtil.isEmpty(gavso.s, true)) setParam("scope", gavso.s);
+			if (!StringUtil.isEmpty(gavso.o, true)) setParam("optional", gavso.o);
+		}
 	}
 
 	public String getArtifactId() {
-		return null; // TODO
+		if (gavso != null) return gavso.a;
+		return null;
+	}
+
+	public String getGroupId() {
+		if (gavso != null) return gavso.g;
+		return null;
 	}
 
 	public String getSymbolicName() {
@@ -162,6 +181,6 @@ public final class ExtensionDefintion {
 		if (rhe != null) return rhe.getExtensionFile();
 
 		return source = RHExtension.getExtensionInstalledFile(config, getId(), getVersion(), false);
-
 	}
+
 }

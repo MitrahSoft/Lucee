@@ -21,6 +21,7 @@ package lucee.runtime.net.http;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -100,12 +101,13 @@ public final class HttpUtil {
 	}
 
 	public static Cookie[] cloneCookies(PageContext pc, HttpServletRequest req) {
-		Cookie[] src = ReqRspUtil.getCookies(req, pc != null ? pc.getWebCharset() : CharsetUtil.ISO88591);
-		if (src == null) return SerializableCookie.COOKIES0;
+		Map<String, Cookie> src = ReqRspUtil.getCookies(req, pc != null ? pc.getWebCharset() : CharsetUtil.ISO88591);
+		if (src == null || src.isEmpty()) return SerializableCookie.COOKIES0;
 
-		Cookie[] dest = new Cookie[src.length];
-		for (int i = 0; i < src.length; i++) {
-			dest[i] = (Cookie) src[i].clone();
+		Cookie[] dest = new Cookie[src.size()];
+		int i = 0;
+		for (Cookie cookie : src.values()) {
+			dest[i++] = (Cookie) cookie.clone();
 		}
 		return dest;
 	}

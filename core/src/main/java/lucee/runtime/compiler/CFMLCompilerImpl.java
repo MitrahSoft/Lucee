@@ -31,15 +31,19 @@ import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.filter.ResourceNameFilter;
+import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.compiler.JavaFunction;
 import lucee.runtime.PageSource;
 import lucee.runtime.PageSourceImpl;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.Constants;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.TemplateException;
 import lucee.runtime.op.Caster;
+import lucee.runtime.type.Array;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
+import lucee.runtime.type.util.KeyConstants;
 import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.Page;
 import lucee.transformer.Position;
@@ -48,9 +52,11 @@ import lucee.transformer.bytecode.BytecodeFactory;
 import lucee.transformer.bytecode.PageImpl;
 import lucee.transformer.bytecode.util.ASMUtil;
 import lucee.transformer.bytecode.util.ClassRenamer;
+import lucee.transformer.cfml.script.CFMLScriptTransformer;
 import lucee.transformer.cfml.tag.CFMLTransformer;
 import lucee.transformer.library.function.FunctionLib;
 import lucee.transformer.library.tag.TagLib;
+import lucee.transformer.library.tag.TagLibTag;
 import lucee.transformer.util.AlreadyClassException;
 import lucee.transformer.util.PageSourceCode;
 import lucee.transformer.util.SourceCode;
@@ -60,35 +66,100 @@ import lucee.transformer.util.SourceCode;
  */
 public final class CFMLCompilerImpl implements CFMLCompiler {
 
-	private CFMLTransformer cfmlTransformer;
+	private CFMLTransformer cfmlTagTransformer;
+	private CFMLScriptTransformer cfmlScriptTransformer;
 	private ConcurrentLinkedQueue<WatchEntry> watched = new ConcurrentLinkedQueue<WatchEntry>();
 
 	/**
 	 * Constructor of the compiler
 	 */
 	public CFMLCompilerImpl() {
-		cfmlTransformer = new CFMLTransformer();
+		cfmlTagTransformer = new CFMLTransformer();
+		cfmlScriptTransformer = new CFMLScriptTransformer();
 	}
 
 	public Struct ast(ConfigPro config, PageSource ps, boolean ignoreScopes) throws TemplateException, IOException {
 
 		BytecodeFactory factory = BytecodeFactory.getInstance(config);
 		// , cwi.getFLDs()
-		PageImpl page = ((PageImpl) cfmlTransformer.transform(factory, config, ps, config.getTLDs(), config.getFLDs(), false, ignoreScopes));
-		Struct sct = new StructImpl();
-		page.dump(sct);
-		return sct;
+		PageImpl page = ((PageImpl) cfmlTagTransformer.transform(factory, config, ps, config.getTLDs(), config.getFLDs(), false, ignoreScopes));
+		Struct root = new StructImpl(Struct.TYPE_LINKED);
+		page.dump(root);
+
+		// TODO better solution than simply look at the offset from script
+		if (page.getSourceCode().getSourceOffset() == 10) {
+
+			boolean isCFMLCompExt = Constants.isCFMLComponentExtension(ResourceUtil.getExtension(ps.getResource(), ""));
+			// in case of a component Lucee moves the component to the root, so at the first position is just an
+			// empty script, we simply have to emove this
+			// TODO remove the script after moving in the parser
+			if (isCFMLCompExt) {
+				removeEmptyScriptTag(root);
+			}
+			else {
+				extractScriptTagInRoot(root);
+			}
+		}
+		return root;
 	}
 
-	public Struct ast(ConfigPro config, SourceCode sc, boolean ignoreScopes) throws TemplateException {
-
+	public Struct ast(ConfigPro config, SourceCode sc, boolean ignoreScopes, Boolean script) throws PageException {
 		BytecodeFactory factory = BytecodeFactory.getInstance(config);
-		// , cwi.getFLDs()
-		PageImpl page = ((PageImpl) cfmlTransformer.transform(factory, config, sc, config.getTLDs(), config.getFLDs(), System.currentTimeMillis(), config.getDotNotationUpperCase(),
-				false, ignoreScopes, false, false, false));
-		Struct sct = new StructImpl(Struct.TYPE_LINKED);
-		page.dump(sct);
-		return sct;
+		// TODO auto when script is null
+
+		if (script != null && script) {
+			TagLibTag scriptTag = CFMLTransformer.getTLT(sc, Constants.CFML_SCRIPT_TAG_NAME, config.getIdentification());
+
+			sc.setPos(0);
+			// try inside a cfscript
+			String text = "<" + scriptTag.getFullName() + ">" + sc.getText() + "\n</" + scriptTag.getFullName() + ">";
+			int sourceOffset = ("<" + scriptTag.getFullName() + ">").length();
+			sc = new SourceCode(null, text, sc.getWriteLog(), sourceOffset);
+		}
+
+		PageImpl page = ((PageImpl) cfmlTagTransformer.transform(factory, config, sc, config.getTLDs(), config.getFLDs(), System.currentTimeMillis(),
+				config.getDotNotationUpperCase(), false, ignoreScopes, false, false, false, true));
+		Struct root = new StructImpl(Struct.TYPE_LINKED);
+		page.dump(root);
+
+		if (script != null && script) {
+			extractScriptTagInRoot(root);
+		}
+
+		return root;
+	}
+
+	// remove script again (a bit complicated, but atm the only way to do it)
+	private void extractScriptTagInRoot(Struct root) {
+		Array body = Caster.toArray(root.get(KeyConstants._body, null), null);
+		if (body != null) {
+			Struct first = Caster.toStruct(body.get(1, null), null);
+			if (first != null) {
+				Struct body2 = Caster.toStruct(first.get(KeyConstants._body, null), null);
+				if (body2 != null) {
+					Object body3 = body2.get(KeyConstants._body, null);
+					if (body3 != null) {
+						root.setEL(KeyConstants._body, body3);
+					}
+				}
+			}
+		}
+	}
+
+	private void removeEmptyScriptTag(Struct root) {
+		Array body = Caster.toArray(root.get(KeyConstants._body, null), null);
+		if (body != null && body.size() > 1) {
+			Struct first = Caster.toStruct(body.get(1, null), null);
+			if (first != null) {
+				if ("cfscript".equalsIgnoreCase(Caster.toString(first.get("fullname", null), null))) {
+					Struct body2 = Caster.toStruct(first.get(KeyConstants._body, null), null);
+					Array body3 = Caster.toArray(body2.get(KeyConstants._body, null), null);
+					if (body3 != null && body3.size() == 0) {
+						body.removeEL(1);
+					}
+				}
+			}
+		}
 	}
 
 	public Result compile(ConfigPro config, PageSource ps, TagLib[] tld, FunctionLib fld, Resource classRootDir, boolean returnValue, boolean ignoreScopes)
@@ -122,9 +193,9 @@ public final class CFMLCompilerImpl implements CFMLCompiler {
 		PageImpl page = null;
 		BytecodeFactory factory = BytecodeFactory.getInstance(config);
 		try {
-			page = sc == null ? ((PageImpl) cfmlTransformer.transform(factory, config, ps, tld, fld, returnValue, ignoreScopes))
-					: ((PageImpl) cfmlTransformer.transform(factory, config, sc, tld, fld, System.currentTimeMillis(), config.getDotNotationUpperCase(), returnValue, ignoreScopes,
-							false, false, false));
+			page = sc == null ? ((PageImpl) cfmlTagTransformer.transform(factory, config, ps, tld, fld, returnValue, ignoreScopes))
+					: ((PageImpl) cfmlTagTransformer.transform(factory, config, sc, tld, fld, System.currentTimeMillis(), config.getDotNotationUpperCase(), returnValue,
+							ignoreScopes, false, false, false, false));
 			page.setSplitIfNecessary(false);
 
 			// StructImpl sct = new StructImpl(Struct.TYPE_LINKED);
@@ -278,7 +349,7 @@ public final class CFMLCompilerImpl implements CFMLCompiler {
 	}
 
 	public Page transform(ConfigPro config, PageSource source, TagLib[] tld, FunctionLib funcLib, boolean returnValue, boolean ignoreScopes) throws TemplateException, IOException {
-		return cfmlTransformer.transform(BytecodeFactory.getInstance(config), config, source, tld, funcLib, returnValue, ignoreScopes);
+		return cfmlTagTransformer.transform(BytecodeFactory.getInstance(config), config, source, tld, funcLib, returnValue, ignoreScopes);
 	}
 
 	public final class Result {

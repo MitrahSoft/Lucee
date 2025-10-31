@@ -70,7 +70,6 @@ import lucee.runtime.op.Caster;
 import lucee.runtime.security.ScriptProtect;
 import lucee.runtime.text.xml.XMLCaster;
 import lucee.runtime.text.xml.XMLUtil;
-import lucee.runtime.thread.SerializableCookie;
 import lucee.runtime.type.UDF;
 import lucee.runtime.type.util.CollectionUtil;
 
@@ -139,7 +138,7 @@ public final class ReqRspUtil {
 		rsp.setContentType(contentType);
 	}
 
-	public static Cookie[] getCookies(HttpServletRequest req, Charset charset) {
+	public static Map<String, Cookie> getCookies(HttpServletRequest req, Charset charset) {
 		Cookie[] cookies = req.getCookies();
 		if (cookies != null) {
 			String tmp;
@@ -152,40 +151,57 @@ public final class ReqRspUtil {
 			}
 		}
 
+		java.util.Map<String, Cookie> map = new HashMap<String, Cookie>();
+		if (cookies != null) {
+			for (Cookie cookie: cookies) {
+				if (cookie != null) map.put(cookie.getName().toUpperCase(), cookie);
+			}
+		}
+
 		Enumeration<String> values = req.getHeaders("Cookie");
 		if (values != null) {
-			java.util.Map<String, Cookie> map = new HashMap<String, Cookie>();
-			if (cookies != null) {
-				for (Cookie cookie: cookies) {
-					if (cookie != null) map.put(cookie.getName().toUpperCase(), cookie);
-				}
-			}
-
 			try {
 				String val;
 				while (values.hasMoreElements()) {
 					val = values.nextElement();
-					String[] arr = lucee.runtime.type.util.ListUtil.listToStringArray(val, ';'), tmp;
+					int len = val.length();
+					int start = 0;
 					Cookie c;
-					for (int i = 0; i < arr.length; i++) {
-						tmp = lucee.runtime.type.util.ListUtil.listToStringArray(arr[i], '=');
-						if (tmp.length > 0) {
-							c = ReqRspUtil.toCookie(dec(tmp[0], charset.name(), false), tmp.length > 1 ? dec(tmp[1], charset.name(), false) : "", null);
-							if (c != null) map.put(c.getName().toUpperCase(), c);
+
+					for (int i = 0; i < len; i++) {
+						char ch = val.charAt(i);
+						if (ch == ';' || i == len - 1) {
+							int end = (ch == ';') ? i : len;
+							String pair = val.substring(start, end).trim();
+							if (pair.length() > 0) {
+								int equalsIndex = pair.indexOf('=');
+								String name, value;
+								if (equalsIndex > 0) {
+									name = pair.substring(0, equalsIndex);
+									value = pair.substring(equalsIndex + 1);
+								}
+								else if (equalsIndex == 0) {
+									start = i + 1;
+									continue;
+								}
+								else {
+									name = pair;
+									value = "";
+								}
+								c = ReqRspUtil.toCookie(dec(name, charset.name(), false), dec(value, charset.name(), false), null);
+								if (c != null) map.put(c.getName().toUpperCase(), c);
+							}
+							start = i + 1;
 						}
 					}
 				}
-
-				cookies = map.values().toArray(new Cookie[map.size()]);
 			}
 			catch (Throwable t) {
 				ExceptionUtil.rethrowIfNecessary(t);
 			}
 		}
 
-		if (cookies == null) return SerializableCookie.COOKIES0;
-
-		return cookies;
+		return map;
 	}
 
 	public static void setCharacterEncoding(HttpServletResponse rsp, String charset) {

@@ -18,21 +18,22 @@
  **/
 package lucee.runtime.functions.other;
 
+import java.util.Map;
+
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpSession;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.Config;
 import lucee.runtime.ext.function.Function;
 import lucee.runtime.net.http.ReqRspUtil;
-import lucee.runtime.type.util.ArrayUtil;
 
 public final class URLSessionFormat implements Function {
 
 	private static final long serialVersionUID = 1486918425114400713L;
 
 	public static String call(PageContext pc, String strUrl) {
-		Cookie[] cookies = ReqRspUtil.getCookies(pc.getHttpServletRequest(), pc.getWebCharset());
-		if (!pc.getApplicationContext().isSetClientCookies() || ArrayUtil.isEmpty(cookies)) {
+		Map<String, Cookie> cookies = ReqRspUtil.getCookies(pc.getHttpServletRequest(), pc.getWebCharset());
+		if (!pc.getApplicationContext().isSetClientCookies() || cookies.isEmpty()) {
 			HttpSession s;
 			if (pc.getSessionType() == Config.SESSION_TYPE_APPLICATION) {
 				int indexQ = strUrl.indexOf('?');

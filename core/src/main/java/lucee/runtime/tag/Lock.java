@@ -18,6 +18,7 @@
  **/
 package lucee.runtime.tag;
 
+import lucee.commons.io.SystemUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
@@ -63,6 +64,8 @@ public final class Lock extends BodyTagTryCatchFinallyImpl {
 	private static final short SCOPE_APPLICATION = 2;
 	private static final short SCOPE_SESSION = 3;
 	private static final short SCOPE_REQUEST = 4;
+
+	private static final boolean USE_LOCAL_SCOPE = Caster.toBooleanValue( SystemUtil.getSystemPropOrEnvVar( "lucee.tag.populate.localscope", "true" ), true );
 
 	private String id = "anonymous";
 
@@ -249,7 +252,7 @@ public final class Lock extends BodyTagTryCatchFinallyImpl {
 		cflock.set(KeyConstants._errortext, "");
 
 		if (result == null) {
-			if (pageContext.undefinedScope().getCheckArguments()) pageContext.localScope().setEL(KeyConstants._cflock, cflock);
+			if (USE_LOCAL_SCOPE && pageContext.undefinedScope().getCheckArguments()) pageContext.localScope().setEL(KeyConstants._cflock, cflock);
 			else pageContext.undefinedScope().setEL(KeyConstants._cflock, cflock);
 		}
 		else {

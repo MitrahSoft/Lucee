@@ -10,10 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.security.CodeSource;
 import java.security.GeneralSecurityException;
@@ -48,12 +46,10 @@ import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
-import lucee.commons.io.res.Resource;
-import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.HTTPUtil;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.loader.engine.CFMLEngine;
@@ -78,6 +74,11 @@ public final class BundleProvider extends DefaultHandler {
 	public static final int CONNECTION_TIMEOUT = 1000;
 	private static final long MAX_AGE = 24 * 60 * 60 * 1000;
 	private static final int MAX_REDIRECTS = 10;
+
+	private static final int DOWNLOAD_CONNECT_TIMEOUT = 10000; // 10 seconds
+	private static final int DOWNLOAD_READ_TIMEOUT = 60000; // 60 seconds
+	private static final int DOWNLOAD_HEAD_READ_TIMEOUT = 20000; // 20 seconds
+	private static final String DOWNLOAD_USER_AGENT = "Lucee";
 
 	private static URL DEFAULT_PROVIDER_LIST = null;
 	private static URL[] DEFAULT_PROVIDER_DETAILS = null;
@@ -341,65 +342,19 @@ public final class BundleProvider extends DefaultHandler {
 		LogUtil.log(Log.LEVEL_INFO, "deploy", "bundle-download",
 				"Downloading bundle [" + bd.getName() + ":" + bd.getVersionAsString() + "] from " + updateUrl + " and copying to " + jar);
 
-		int code;
-		HttpURLConnection conn;
 		try {
-			conn = (HttpURLConnection) updateUrl.openConnection();
-			conn.setRequestMethod("GET");
-			conn.setConnectTimeout(10000);
-			conn.connect();
-			code = conn.getResponseCode();
+			HTTPDownloader.downloadToFile(updateUrl, jar, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
+			return jar;
 		}
-		catch (UnknownHostException e) {
-			LogUtil.log(Log.LEVEL_INFO, "deploy", "bundle-download",
-					"Failed to download the bundle  [" + bd.getName() + ":" + bd.getVersionAsString() + "] from [" + updateUrl + "] and copy to [" + jar + "]");
-			// remove
-			throw new IOException("Failed to download the bundle  [" + bd.getName() + ":" + bd.getVersionAsString() + "] from [" + updateUrl + "] and copy to [" + jar + "]", e);
+		catch (GeneralSecurityException e) {
+			throw new IOException("Failed to download the bundle for [" + bd.getName() + "] in version [" + bd.getVersionAsString() + "] from [" + updateUrl
+					+ "], please download manually and copy to [" + jarDir + "]", e);
 		}
-		// the update provider is not providing a download for this
-		if (code != 200) {
-
-			// the update provider can also provide a different (final) location for this
-			int count = 1;
-			while ((code == 302 || code == 301) && count++ <= MAX_REDIRECTS) {
-				String location = conn.getHeaderField("Location");
-				// just in case we check invalid names
-				if (location == null) location = conn.getHeaderField("location");
-				if (location == null) location = conn.getHeaderField("LOCATION");
-				LogUtil.log(Log.LEVEL_INFO, "deploy", "bundle-download", "download redirected:" + location);
-
-				conn.disconnect();
-				URL url = new URL(location);
-				try {
-					conn = (HttpURLConnection) url.openConnection();
-					conn.setRequestMethod("GET");
-					conn.setConnectTimeout(10000);
-					conn.connect();
-					code = conn.getResponseCode();
-				}
-				catch (final UnknownHostException e) {
-					LogUtil.log("deploy", "bundle-download", e);
-					throw new IOException("Failed to download the bundle  [" + bd.getName() + ":" + bd.getVersionAsString() + "] from [" + location + "] and copy to [" + jar + "]",
-							e);
-				}
-			}
-
-			// no download available!
-			if (code != 200) {
-				final String msg = "Failed to download the bundle for [" + bd.getName() + "] in version [" + bd.getVersionAsString() + "] from [" + updateUrl
-						+ "], please download manually and copy to [" + jarDir + "]";
-				LogUtil.log(Log.LEVEL_INFO, "deploy", "bundle-download", msg);
-				conn.disconnect();
-				throw new IOException(msg);
-			}
-
+		catch (IOException e) {
+			// Add context and rethrow
+			throw new IOException("Failed to download the bundle for [" + bd.getName() + "] in version [" + bd.getVersionAsString() + "] from [" + updateUrl
+					+ "], please download manually and copy to [" + jarDir + "]", e);
 		}
-		Resource tmp = SystemUtil.getTempFile("jar", false);
-		IOUtil.copy((InputStream) conn.getContent(), tmp.getOutputStream(), true, true);
-		HTTPUtil.validateDownload(updateUrl, conn, tmp, null, true, null);
-		ResourceUtil.toFile(tmp).renameTo(jar);
-		conn.disconnect();
-		return jar;
 		/*
 		 * } else { throw new IOException("File ["+jar.getName()+"] already exists, won't copy new one"); }
 		 */
@@ -620,16 +575,8 @@ public final class BundleProvider extends DefaultHandler {
 	}
 
 	public static URL validate(URL url, URL defaultValue) {
-		try {
-			HTTPResponse rsp = HTTPEngine4Impl.head(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-			if (rsp != null) {
-				int sc = rsp.getStatusCode();
-				if (sc >= 200 && sc < 300) return url;
-				else LogUtil.log(Log.LEVEL_WARN, "deploy", "bundle-download", "Fetch bundle url [" + url + "] returned [" + sc + "]");
-			}
-		}
-		catch (Exception e) {
-
+		if (HTTPDownloader.exists(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_HEAD_READ_TIMEOUT)) {
+			return url;
 		}
 		return defaultValue;
 	}

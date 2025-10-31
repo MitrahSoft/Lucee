@@ -30,8 +30,6 @@ import lucee.commons.io.SystemUtil;
 import lucee.commons.lang.CFTypes;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
-import lucee.runtime.PageSource;
-import lucee.runtime.PageSourceImpl;
 import lucee.runtime.functions.other.CreateUniqueId;
 import lucee.runtime.op.Caster;
 import lucee.transformer.Position;
@@ -159,8 +157,7 @@ public final class ExpressionUtil {
 			GeneratorAdapter adapter = bc.getAdapter();
 			adapter.loadArg(0);
 			// adapter.checkCast(Types.PAGE_CONTEXT_IMPL);
-			PageSource ps = bc.getPageSource();
-			int off = (ps instanceof PageSourceImpl) ? ((PageSourceImpl) ps).getSourceOffset() : 0;
+			int off = bc.getSourceOffset();
 			adapter.push(pos.pos - off);
 			adapter.push(id);
 			adapter.invokeVirtual(Types.PAGE_CONTEXT, method);

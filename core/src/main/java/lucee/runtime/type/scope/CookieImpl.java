@@ -355,9 +355,9 @@ public final class CookieImpl extends ScopeSupport implements Cookie, ScriptProt
 
 		HttpServletRequest req = pc.getHttpServletRequest();
 		this.rsp = pc.getHttpServletResponse();
-		jakarta.servlet.http.Cookie[] cookies = ReqRspUtil.getCookies(req, pc.getWebCharset());
-		for (int i = 0; i < cookies.length; i++) {
-			set(config, cookies[i]);
+		Map<String, jakarta.servlet.http.Cookie> cookies = ReqRspUtil.getCookies(req, pc.getWebCharset());
+		for (jakarta.servlet.http.Cookie cookie : cookies.values()) {
+			set(config, cookie);
 		}
 	}
 

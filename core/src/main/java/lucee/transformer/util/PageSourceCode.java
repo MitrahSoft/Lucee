@@ -25,7 +25,6 @@ import lucee.commons.digest.HashUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.lang.ClassUtil;
 import lucee.runtime.PageSource;
-import lucee.runtime.PageSourceImpl;
 
 public final class PageSourceCode extends SourceCode {
 
@@ -33,23 +32,22 @@ public final class PageSourceCode extends SourceCode {
 	private final PageSource ps;
 
 	public PageSourceCode(PageSource ps, Charset charset, boolean writeLog) throws IOException {
-		super(null, toString(ps, charset), writeLog);
+		super(null, toString(ps, charset), writeLog, 0);
 		this.charset = charset;
 		this.ps = ps;
 		// this.source=ps.getPhyscalFile().getAbsolutePath();
 	}
 
 	public PageSourceCode(PageSource ps, String text, Charset charset, boolean writeLog) {
-		super(null, text, writeLog);
+		super(null, text, writeLog, 0);
 		this.charset = charset;
 		this.ps = ps;
 	}
 
 	public PageSourceCode(PageSource ps, String text, Charset charset, boolean writeLog, int sourceOffset) {
-		super(null, text, writeLog);
+		super(null, text, writeLog, sourceOffset);
 		this.charset = charset;
 		this.ps = ps;
-		if (ps instanceof PageSourceImpl) ((PageSourceImpl) ps).setSourceOffset(sourceOffset);
 	}
 
 	public static String toString(PageSource ps, Charset charset) throws IOException {

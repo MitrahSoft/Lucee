@@ -20,10 +20,10 @@ import org.xml.sax.helpers.DefaultHandler;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.op.Caster;
 import lucee.runtime.osgi.OSGiUtil;
@@ -79,22 +79,17 @@ public final class MetadataReader extends DefaultHandler {
 
 		// Updated URL with correct parameter names and no classifier filter
 		URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
-		HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-		if (rsp != null) {
-			int sc = rsp.getStatusCode();
-			if (sc == 404) {
-				storeToCache(versions, "");
-				return versions;
-			}
-			if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + url + "], status code [" + sc + "]");
-		}
-		else {
-			throw new IOException("unable to invoke [" + repository.url + "], no response.");
-		}
 
+		// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
 		Reader r = null;
 		try {
-			init(new InputSource(r = IOUtil.getReader(rsp.getContentAsStream(), (Charset) null)));
+			r = IOUtil.getReader( HTTPDownloader.get( url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE ), (Charset) null );
+			init(new InputSource(r));
+		}
+		catch (IOException ioe) {
+			// 404 or other errors - return empty list
+			storeToCache(versions, "");
+			return versions;
 		}
 		finally {
 			IOUtil.close(r);

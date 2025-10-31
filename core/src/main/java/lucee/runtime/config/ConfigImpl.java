@@ -182,6 +182,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private Integer mode;
 	private static final double DEFAULT_VERSION = 5.0d;
+	private static final long CACHE_DIR_SIZE_DEFAULT = 1024L * 1024L * 100L;
 
 	private final Map<String, PhysicalClassLoader> rpcClassLoaders = new ConcurrentHashMap<String, PhysicalClassLoader>();
 	private PhysicalClassLoader directClassLoader;
@@ -3319,7 +3320,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 				if (cacheDirSize == null) {
 					String strMax = ConfigFactoryImpl.getAttr(root, "cacheDirectoryMaxSize");
 					if (!StringUtil.isEmpty(strMax)) {
-						cacheDirSize = ByteSizeParser.parseByteSizeDefinition(strMax, 1024L * 1024L * 100L);
+						cacheDirSize = ByteSizeParser.parseByteSizeDefinition(strMax, CACHE_DIR_SIZE_DEFAULT);
+					}
+					else {
+						cacheDirSize = CACHE_DIR_SIZE_DEFAULT;
 					}
 				}
 			}

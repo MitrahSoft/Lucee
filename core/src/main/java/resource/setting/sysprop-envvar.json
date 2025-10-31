@@ -1,477 +1,1007 @@
 [
-    {
-        "sysprop": "lucee.queue.enable",
-        "envvar": "LUCEE_QUEUE_ENABLE",
-        "desc": "boolean value to enable or disable the Lucee request queue, default is false"
-    },
-    {
-        "sysprop": "lucee.loginstorage.iterations",
-        "envvar": "LUCEE_LOGINSTORAGE_ITERATIONS",
-        "desc": "numeric value for salt iterations for credentials done for the tag cflogin, by default the value is 10"
-    },
-    {
-        "sysprop": "lucee.datasource.pool.validate",
-        "envvar": "LUCEE_DATASOURCE_POOL_VALIDATE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.task.directory",
-        "envvar": "LUCEE_TASK_DIRECTORY",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.type.checking",
-        "envvar": "LUCEE_TYPE_CHECKING",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.mail.use.7bit.transfer.encoding.for.html.parts",
-        "envvar": "LUCEE_MAIL_USE_7BIT_TRANSFER_ENCODING_FOR_HTML_PARTS",
-        "desc": "Enabled by default in Lucee 7"
-    },
-    {
-        "sysprop": "lucee.extensions",
-        "envvar": "LUCEE_EXTENSIONS",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.qoq.hsqldb.disable",
-        "envvar": "LUCEE_QOQ_HSQLDB_DISABLE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.loginstorage.salt",
-        "envvar": "LUCEE_LOGINSTORAGE_SALT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.request.limit.concurrent.maxnosleep",
-        "envvar": "LUCEE_REQUEST_LIMIT_CONCURRENT_MAXNOSLEEP",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.request.limit.concurrent.maxnormprio",
-        "envvar": "LUCEE_REQUEST_LIMIT_CONCURRENT_MAXNORMPRIO",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.loginstorage.privatekey",
-        "envvar": "LUCEE_LOGINSTORAGE_PRIVATEKEY",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.precise.math",
-        "envvar": "LUCEE_PRECISE_MATH",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.default.tld",
-        "envvar": "LUCEE_LIBRARY_DEFAULT_TLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.default.tag",
-        "envvar": "LUCEE_LIBRARY_DEFAULT_TAG",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.log.reflection",
-        "envvar": "LUCEE_LOG_REFLECTION",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.system.out",
-        "envvar": "LUCEE_SYSTEM_OUT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.status.code",
-        "envvar": "LUCEE_STATUS_CODE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.application.mode",
-        "envvar": "LUCEE_APPLICATION_MODE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.requesttimeout.concurrentrequestthreshold",
-        "envvar": "LUCEE_REQUESTTIMEOUT_CONCURRENTREQUESTTHRESHOLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.datasource.mssql.modern",
-        "envvar": "LUCEE_DATASOURCE_MSSQL_MODERN",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.fld",
-        "envvar": "LUCEE_LIBRARY_FLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.logging.main",
-        "envvar": "LUCEE_LOGGING_MAIN",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.admin.enabled",
-        "envvar": "LUCEE_ADMIN_ENABLED",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.requesttimeout.cputhreshold",
-        "envvar": "LUCEE_REQUESTTIMEOUT_CPUTHRESHOLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.async.request.handle",
-        "envvar": "LUCEE_ASYNC_REQUEST_HANDLE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.resource.charset",
-        "envvar": "LUCEE_RESOURCE_CHARSET",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.system.err",
-        "envvar": "LUCEE_SYSTEM_ERR",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.enable.dialect",
-        "envvar": "LUCEE_ENABLE_DIALECT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.controller.disabled",
-        "envvar": "LUCEE_CONTROLLER_DISABLED",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.controller.gc",
-        "envvar": "LUCEE_CONTROLLER_GC",
-        "desc": "Default false, previously Lucee always ran a System.GC() every 5 minutes, available since 6.2"
-    },
-    {
-        "sysprop": "lucee.library.tld",
-        "envvar": "LUCEE_LIBRARY_TLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.ignore.scopes",
-        "envvar": "LUCEE_IGNORE_SCOPES",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.enable.warmup",
-        "envvar": "LUCEE_ENABLE_WARMUP",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.qoq.hsqldb.debug",
-        "envvar": "LUCEE_QOQ_HSQLDB_DEBUG",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.cfml.writer",
-        "envvar": "LUCEE_CFML_WRITER",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.allow.compression",
-        "envvar": "LUCEE_ALLOW_COMPRESSION",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.script.protect",
-        "envvar": "LUCEE_SCRIPT_PROTECT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.requesttimeout.memorythreshold",
-        "envvar": "LUCEE_REQUESTTIMEOUT_MEMORYTHRESHOLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.qoq.parallelism",
-        "envvar": "LUCEE_QOQ_PARALLELISM",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.use.lucee.SSL.TrustStore",
-        "envvar": "LUCEE_USE_LUCEE_SSL_TRUSTSTORE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.read.cfid.from.url",
-        "envvar": "LUCEE_READ_CFID_FROM_URL",
-        "desc": ""
-    },
-    {
-        "sysprop": "startlogdirectory",
-        "envvar": "STARTLOGDIRECTORY",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.cfml.writer",
-        "envvar": "LUCEE_CFML_WRITER",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.function",
-        "envvar": "LUCEE_LIBRARY_FUNCTION",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.request.limit.concurrent.sleeptime",
-        "envvar": "LUCEE_REQUEST_LIMIT_CONCURRENT_SLEEPTIME",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.queue.max",
-        "envvar": "LUCEE_QUEUE_MAX",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.preserve.case",
-        "envvar": "LUCEE_PRESERVE_CASE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.tag",
-        "envvar": "LUCEE_LIBRARY_TAG",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.cascade.to.resultset",
-        "envvar": "LUCEE_CASCADE_TO_RESULTSET",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.default.fld",
-        "envvar": "LUCEE_LIBRARY_DEFAULT_FLD",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.queue.timeout",
-        "envvar": "LUCEE_QUEUE_TIMEOUT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.listener.mode",
-        "envvar": "LUCEE_LISTENER_MODE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.disable.systemProxies",
-        "envvar": "LUCEE_DISABLE_SYSTEMPROXIES",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.security.limitEvaluation",
-        "envvar": "LUCEE_SECURITY_LIMITEVALUATION",
-        "desc": "Disable evaluating expressions when accessing scopes, Lucee 7 defaults to enabling this setting for security reasons"
-    },
-    {
-        "sysprop": "lucee.store.empty",
-        "envvar": "LUCEE_STORE_EMPTY",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.cli.printExceptions",
-        "envvar": "LUCEE_CLI_PRINTEXCEPTIONS",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.security.isdefined",
-        "envvar": "LUCEE_SECURITY_ISDEFINED",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.debugging.options",
-        "envvar": "LUCEE_DEBUGGING_OPTIONS",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.xmlfeatures.override.disable",
-        "envvar": "LUCEE_XMLFEATURES_OVERRIDE_DISABLE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.extensions.install",
-        "envvar": "LUCEE_EXTENSIONS_INSTALL",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.isdefined.limit",
-        "envvar": "LUCEE_ISDEFINED_LIMIT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.additional.tag",
-        "envvar": "LUCEE_LIBRARY_ADDITIONAL_TAG",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.full.null.support",
-        "envvar": "LUCEE_FULL_NULL_SUPPORT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.pagePool.maxSize",
-        "envvar": "LUCEE_PAGEPOOL_MAXSIZE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.application.path.cache.timeout",
-        "envvar": "LUCEE_APPLICATION_PATH_CACHE_TIMEOUT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.application.listener",
-        "envvar": "LUCEE_APPLICATION_LISTENER",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.default.function",
-        "envvar": "LUCEE_LIBRARY_DEFAULT_FUNCTION",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.library.additional.function",
-        "envvar": "LUCEE_LIBRARY_ADDITIONAL_FUNCTION",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.suppress.ws.before.arg",
-        "envvar": "LUCEE_SUPPRESS_WS_BEFORE_ARG",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.udf.type.checking",
-        "envvar": "LUCEE_UDF_TYPE_CHECKING",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.listener.type",
-        "envvar": "LUCEE_LISTENER_TYPE",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.requesttimeout",
-        "envvar": "LUCEE_REQUESTTIMEOUT",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.mapping.first",
-        "envvar": "LUCEE_MAPPING_FIRST",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.template.charset",
-        "envvar": "LUCEE_TEMPLATE_CHARSET",
-        "desc": ""
-    },
-    {
-        "sysprop": "lucee.url.encodeAllowPlus",
-        "envvar": "LUCEE_URL_ENCODEALLOWPLUS",
-        "desc": "Enabled by default in Lucee 7, previously Lucee would attempt to re-encode a url param which contained a space. If the url param was already encoded, it would trigger re-encoding the param again, breaking it. This was avoidable previously by using cfhttp encodeurl=false, set to false to enable previous behaviour"
-    },
-    {
-        "sysprop": "lucee.dump.threads",
-        "envvar": "LUCEE_DUMP_THREADS",
-        "desc": "Used for debugging, when enabled, it will dump out running threads to the console via the background controller thread"
-    },
-    {
-        "sysprop": "lucee.scope.local.capacity",
-        "envvar": "LUCEE_SCOPE_LOCAL_CAPACITY",
-        "desc": "Sets the initial capacity (size) for the local scope hashmap"
-    },
-    {
-        "sysprop": "lucee.scope.arguments.capacity",
-        "envvar": "LUCEE_SCOPE_ARGUMENTS_CAPACITY",
-        "desc": "Sets the initial capacity (size) for the arguments scope hashmap"
-    },
-    {
-        "sysprop": "lucee.cache.variableKeys",
-        "envvar": "LUCEE_CACHE_VARIABLEKEYS",
-        "desc": "Sets the max number of variable names (keys) to cache"
-    },
-    {
-        "sysprop": "lucee.threads.maxDefault",
-        "envvar": "LUCEE_THREADS_MAXDEFAULT",
-        "desc": "Sets the default max number of parallel threads, default 20"
-    },
-    {
-        "sysprop": "lucee.debugging.maxPageParts",
-        "envvar": "LUCEE_DEBUGGING_MAXPAGEPARTS",
-        "desc": "Maximum number of debugging page parts (executionLogs to output), 0 to disable max limit"
-    },
-    {
-        "sysprop": "lucee.logging.force.appender",
-        "envvar": "LUCEE_LOGGING_FORCE_APPENDER",
-        "desc": "If set, override the default log4j appender, which is usually resource (log files), use console to log all logs to console"
-    },
-    {
-        "sysprop": "lucee.logging.force.level",
-        "envvar": "LUCEE_LOGGING_FORCE_LEVEL",
-        "desc": "If set, override the default log4j log level for all logs, which is usually ERROR"
-    },
-    {
-        "sysprop": "lucee.sessionCookie.rotate.unknown",
-        "envvar": "LUCEE_SESSIONCOOKIE_ROTATE_UNKNOWN",
-        "desc": "Default true, when false, unknown cfml session cookies won't be automatically rotated"
-    },
-    {
-        "sysprop": "lucee.inspect.template",
-        "envvar": "LUCEE_INSPECT_TEMPLATE",
-        "desc": "Controls how often Lucee checks to see if a template has changed"
-    },
-    {
-        "sysprop": "lucee.maven.default.repositories",
-        "envvar": "LUCEE_MAVEN_DEFAULT_REPOSITORIES",
-        "desc": "Specifies a comma-separated list of Maven repository URLs to use before the default repositories (Maven Central, Sonatype, JCenter). This allows customizing the Maven repositories used by Lucee for downloading dependencies. URL must include a trailing /"
-    },
-    {
-        "sysprop": "lucee.compiler.block.bytecode",
-        "envvar": "LUCEE_COMPILER_BLOCK_BYTECODE",
-        "desc": "Boolean which controls whether Lucee allows cfml files to be bytecode, disabled by default in Lucee 7"
-    },
-    {
-        "sysprop": "lucee.jsch.debug",
-        "envvar": "LUCEE_JSCH_DEBUG",
-        "desc": "Boolean which enables debug logging to the console for SFTP"
-    },
-    {
-        "sysprop": "lucee.ftp.debug",
-        "envvar": "LUCEE_FTP_DEBUG",
-        "desc": "Boolean which enables debug logging to the console for FTP"
-    },
-    {
-        "sysprop": "lucee.controller.log.threshold",
-        "envvar": "LUCEE_CONTROLLER_LOG_THRESHOLD",
-        "desc": "Enables logging out when a step in the background controller thread exceeds a certain threshold in seconds. Default is 20, set 0 to disable, entries are logged out in the application.log file"
-    },
-    {
-        "sysprop": "lucee.log.webcontext",
-        "envvar": "LUCEE_LOG_WEBCONTEXT",
-        "desc": "A boolean value that enables web context identification in log entries when running in single mode. When enabled, log entries include web context labels (e.g., http://localhost:8886|engine) to distinguish which web context generated the log entry. Only active in single mode where all web contexts share the same log directory. In multi mode, this setting has no effect as each web context has its own log directory. Added in Lucee 6.2.2.63"
-    },
-    {
-        "sysprop": "lucee.allow.reflection",
-        "envvar": "LUCEE_ALLOW_REFLECTION",
-        "desc": "A boolean value that enables java reflection, default is false"
-    },
-    {
-        "sysprop": "lucee.fileupload.allow.mimetype.detection",
-        "envvar": "LUCEE_FILEUPLOAD_ALLOW_MIMETYPE_DETECTION",
-        "desc": "A boolean value that enables using tika to detect the mime type for unknown file uploads, default is false"
-    },
-    {
-        "sysprop": "lucee.base.config",
-        "envvar": "LUCEE_BASE_CONFIG",
-        "desc": "Specifies a path to an alternate location for your .CFConfig.json file."
-    }
+	{
+		"sysprop": "felix.log.level",
+		"envvar": "FELIX_LOG_LEVEL",
+		"desc": "Log level for the Felix Framework (OSGi)",
+		"category": "osgi",
+		"type": "string",
+		"default": "error"
+	},
+	{
+		"sysprop": "lucee.admin.enabled",
+		"envvar": "LUCEE_ADMIN_ENABLED",
+		"desc": "Should the Lucee Admin be available or not",
+		"category": "security",
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.admin.password",
+		"envvar": "LUCEE_ADMIN_PASSWORD",
+		"desc": "Password used for the Lucee admin (when you run Lucee in multi mode, the password for the Server admin)",
+		"category": "security",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.allow.compression",
+		"envvar": "LUCEE_ALLOW_COMPRESSION",
+		"desc": "Allows compressing (GZIP) the HTTP response if the client explicitly supports it",
+		"category": "performance",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.allow.reflection",
+		"envvar": "LUCEE_ALLOW_REFLECTION",
+		"desc": "Boolean value that enables Java reflection",
+		"category": "security",
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.application.listener",
+		"envvar": "LUCEE_APPLICATION_LISTENER",
+		"desc": "Which kind of Application Listener is supported? Possible values: `None` - no listener at all, `Classical` - Classic handling. Lucee looks for `Application.cfm` and `OnRequestEnd.cfm`, `Modern` - Modern handling. Lucee only looks for `Application.cfc`, `Mixed` - Mixed handling. Lucee looks for `Application.cfm`/`OnRequestEnd.cfm` as well as `Application.cfc`. This is an alias for lucee.listener.type",
+		"category": "application",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.application.mode",
+		"envvar": "LUCEE_APPLICATION_MODE",
+		"desc": "Where/how does Lucee look for the Application Listener? Possible values: `currenttoroot`, `currentorroot`, `root`, `current`. This is an alias for lucee.listener.mode",
+		"category": "application",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.application.path.cache.timeout",
+		"envvar": "LUCEE_APPLICATION_PATH_CACHE_TIMEOUT",
+		"desc": "Lucee caches the path information to the template; this defines the idle timeout for these cache elements in milliseconds",
+		"category": "performance",
+		"type": "timespan",
+		"default": "20 seconds"
+	},
+	{
+		"sysprop": "lucee.async.request.handle",
+		"envvar": "LUCEE_ASYNC_REQUEST_HANDLE",
+		"desc": "Boolean value to execute requests coming from the servlet engine in a separate thread or not",
+		"category": "request",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.base.config",
+		"envvar": "LUCEE_BASE_CONFIG",
+		"desc": "Specifies a path to an alternate location for your .CFConfig.json file",
+		"category": "deployment",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.cache.variableKeys",
+		"envvar": "LUCEE_CACHE_VARIABLEKEYS",
+		"desc": "Sets the max number of variable names (keys) to cache",
+		"category": "performance",
+		"type": "numeric",
+		"default": 5000
+	},
+	{
+		"sysprop": "lucee.cascade.to.resultset",
+		"envvar": "LUCEE_CASCADE_TO_RESULTSET",
+		"desc": "When a variable has no scope defined (example: `#myVar#` instead of `#variables.myVar#`), Lucee will also search available resultsets (CFML Standard) or not",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.cascading.write.to.variables.log",
+		"envvar": "LUCEE_CASCADING_WRITE_TO_VARIABLES_LOG",
+		"desc": "Enables logging when variables are implicitly written to the variables scope (without an explicit scope definition). When set to a log name (e.g., `application`), Lucee will log details about variables being assigned without explicit scope. The log level can be customized using the LUCEE_CASCADING_WRITE_TO_VARIABLES_LOGLEVEL setting. This helps identify code that could be optimized by using proper variable scoping. This setting excludes certain internal variables (`_cfquery`, `_cflock`, `_thread`) from being logged",
+		"category": "logging",
+		"type": "string",
+		"introduced": "6.2.1.82",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.cascading.write.to.variables.loglevel",
+		"envvar": "LUCEE_CASCADING_WRITE_TO_VARIABLES_LOGLEVEL",
+		"desc": "Specifies the log level for cascading write detection logs. Valid values are: `DEBUG`, `INFO`, `WARN`, `ERROR`",
+		"category": "logging",
+		"type": "string",
+		"introduced": "6.2.1.82",
+		"default": "DEBUG"
+	},
+	{
+		"sysprop": "lucee.cfid.url.allow",
+		"envvar": "LUCEE_CFID_URL_ALLOW",
+		"desc": "Controls whether Lucee accepts CFID values from URL query strings. Set to `false` to enhance security by requiring CFIDs to be passed via cookies only. Setting this to `false` is strongly recommended for all production environments. Replaces lucee.read.cfid.from.url in Lucee 6.2.1.59",
+		"category": "session",
+		"type": "boolean",
+		"introduced": "6.2.1.59",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.cfid.url.log",
+		"envvar": "LUCEE_CFID_URL_LOG",
+		"desc": "When set to a log name, Lucee will log all instances where CFID is read from a URL parameter and used. The log includes URL, IP address, user agent, referrer, and stack trace in JSON format. This helps identify code that needs to be updated before URL-based CFID is disabled for security reasons",
+		"category": "logging",
+		"type": "string",
+		"introduced": "6.2.1.59",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.cfml.writer",
+		"envvar": "LUCEE_CFML_WRITER",
+		"desc": "Specifies the CFML writer type (white-space or regular) for output buffering",
+		"category": "compiler",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.cli.printExceptions",
+		"envvar": "LUCEE_CLI_PRINTEXCEPTIONS",
+		"desc": "Print out exceptions within the CLI interface",
+		"category": "debugging",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.compiler.block.bytecode",
+		"envvar": "LUCEE_COMPILER_BLOCK_BYTECODE",
+		"desc": "Controls whether Lucee blocks the direct execution of precompiled bytecode files (.cfm). When `true`, only source code CFML files are allowed. Bytecode execution is blocked by default in Lucee 7 for security reasons",
+		"category": "security",
+		"type": "boolean",
+		"introduced": "6.1.1.114",
+		"defaultSince": "7.0",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.controller.disabled",
+		"envvar": "LUCEE_CONTROLLER_DISABLED",
+		"desc": "Boolean value to disable the background controller thread that handles periodic tasks",
+		"category": "performance",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.controller.gc",
+		"envvar": "LUCEE_CONTROLLER_GC",
+		"desc": "Controls whether Lucee runs System.GC() every 5 minutes. Previously Lucee always ran GC in the background controller. Available since 6.2",
+		"category": "performance",
+		"type": "boolean",
+		"introduced": "6.2",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.controller.log.threshold",
+		"envvar": "LUCEE_CONTROLLER_LOG_THRESHOLD",
+		"desc": "Enables logging when a step in the background controller thread exceeds a threshold in seconds. Set to 0 to disable. Entries are logged to the application.log file",
+		"category": "logging",
+		"type": "numeric",
+		"default": 20
+	},
+	{
+		"sysprop": "lucee.datasource.mssql.modern",
+		"envvar": "LUCEE_DATASOURCE_MSSQL_MODERN",
+		"desc": "Boolean value to enable modern MSSQL datasource handling",
+		"category": "datasource",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.datasource.pool.validate",
+		"envvar": "LUCEE_DATASOURCE_POOL_VALIDATE",
+		"desc": "If enabled, Lucee will validate existing datasource connections reused from the datasource pool before using them. This protects from exceptions caused by connections dropped by the DB server but creates additional communication between Lucee and the DB server. Removed in 6.2",
+		"category": "datasource",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"deprecated": "6.2",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.datetimeformat.mode",
+		"envvar": "LUCEE_DATETIMEFORMAT_MODE",
+		"desc": "Controls how datetimeFormat() interprets pattern masks such as WW and FF. `classic`: Emulates legacy formatting behavior (like Lucee 5), applying zero-padding and pattern length rules. `modern` (default): Uses Lucee 6+ behavior with precise pattern interpretation, aligned with Java's DateTimeFormatter for consistency and clarity. Use `classic` to maintain compatibility with legacy codebases that depend on padded output from formatting masks",
+		"category": "application",
+		"functions": [ "dateTimeFormat" ],
+		"type": "string",
+		"introduced": "6.2.2.53",
+		"default": "modern"
+	},
+	{
+		"sysprop": "lucee.debugging.maxPageParts",
+		"envvar": "LUCEE_DEBUGGING_MAXPAGEPARTS",
+		"desc": "Maximum number of debugging page parts (executionLogs to output), 0 to disable max limit",
+		"category": "debugging",
+		"type": "numeric",
+		"default": 0
+	},
+	{
+		"sysprop": "lucee.debugging.options",
+		"envvar": "LUCEE_DEBUGGING_OPTIONS",
+		"desc": "Debug options, a comma-separated list of the following possible debug options to enable: `database`, `exception`, `template`, `dump`, `tracing`, `timer`, `implicit-access`, `query-usage`, `max-records-logged`",
+		"category": "debugging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.deserializejson.allowempty",
+		"envvar": "LUCEE_DESERIALIZEJSON_ALLOWEMPTY",
+		"desc": "In Lucee 5, an empty string passed into the function deserializeJson will return an empty string back. In Lucee 6, this is no longer accepted and throws an exception. You can simulate the old behavior by setting this environment variable or SysProp to `true`. By setting the log level of the application log to `warn`, you will receive information in the log when the old behavior is used. This allows you to modify your code for the new behavior without encountering runtime issues with the existing code",
+		"category": "application",
+		"functions": [ "deserializeJson" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.disable.systemProxies",
+		"envvar": "LUCEE_DISABLE_SYSTEMPROXIES",
+		"desc": "Boolean value to disable using system proxies for HTTP connections",
+		"category": "security",
+		"tags": [ "cfhttp" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.dump.threads",
+		"envvar": "LUCEE_DUMP_THREADS",
+		"desc": "Used for debugging, when enabled, it will dump out running threads to the console via the background controller thread",
+		"category": "debugging",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.enable.bundle.download",
+		"envvar": "LUCEE_ENABLE_BUNDLE_DOWNLOAD",
+		"desc": "Controls whether Lucee is allowed to download OSGi bundles (JAR files). Valid values: `true` - Lucee can download required bundles if they're not available locally. `false` - Lucee will not download any OSGi bundles and will only use bundles that are already available locally. `always` - Forces Lucee to download bundles even if they are available locally. This is primarily useful for debugging purposes",
+		"category": "osgi",
+		"type": "string",
+		"introduced": "5.3.5.11",
+		"default": "true"
+	},
+	{
+		"sysprop": "lucee.enable.dialect",
+		"envvar": "LUCEE_ENABLE_DIALECT",
+		"desc": "Boolean value to enable CFML dialect support",
+		"category": "compiler",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.enable.warmup",
+		"envvar": "LUCEE_ENABLE_WARMUP",
+		"desc": "Boolean to enable/disable Lucee warmup on start",
+		"category": "deployment",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.encryption.algorithm",
+		"envvar": "LUCEE_ENCRYPTION_ALGORITHM",
+		"desc": "Default encryption algorithm used when none is specified. The default `cfmx_compat` is not cryptographically secure - strongly recommended to use `AES` instead. Valid values: `CFMX_COMPAT`, `AES`, `BLOWFISH`, `DES`",
+		"category": "security",
+		"functions": [ "encrypt", "decrypt" ],
+		"type": "string",
+		"default": "cfmx_compat"
+	},
+	{
+		"sysprop": "lucee.extensions",
+		"envvar": "LUCEE_EXTENSIONS",
+		"desc": "Defines a comma-separated list of Lucee extensions to install when starting up. The current list of installed extensions is available via the Lucee admin. This can be a simple list of IDs, then whatever the latest version(s) will be installed (SNAPSHOT or STABLE). It's recommended to always specify the exact version for consistent results",
+		"category": "extensions",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.extensions.install",
+		"envvar": "LUCEE_EXTENSIONS_INSTALL",
+		"desc": "A boolean value to enable/disable the installation of extensions",
+		"category": "extensions",
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.fileupload.allow.mimetype.detection",
+		"envvar": "LUCEE_FILEUPLOAD_ALLOW_MIMETYPE_DETECTION",
+		"desc": "Boolean value that enables using Tika to detect the mime type for unknown file uploads",
+		"category": "security",
+		"tags": [ "cffile" ],
+		"functions": [ "fileUpload", "fileUploadAll" ],
+		"type": "boolean",
+		"introduced": "7.0.0.312",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.ftp.debug",
+		"envvar": "LUCEE_FTP_DEBUG",
+		"desc": "Boolean which enables debug logging to the console for FTP",
+		"category": "debugging",
+		"tags": [ "cfftp" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.full.null.support",
+		"envvar": "LUCEE_FULL_NULL_SUPPORT",
+		"desc": "A boolean value to enable/disable full null support",
+		"category": "compiler",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.ignore.scopes",
+		"envvar": "LUCEE_IGNORE_SCOPES",
+		"desc": "Boolean value to ignore scopes when executing in specific contexts like JSR223 or CLI",
+		"category": "application",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.inspect.template",
+		"envvar": "LUCEE_INSPECT_TEMPLATE",
+		"desc": "Controls how often Lucee checks to see if a template has changed",
+		"category": "compiler",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.isdefined.limit",
+		"envvar": "LUCEE_ISDEFINED_LIMIT",
+		"desc": "Alias for lucee.security.limitEvaluation, limits variable evaluation in isDefined",
+		"category": "security",
+		"functions": [ "isDefined" ],
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.jsch.debug",
+		"envvar": "LUCEE_JSCH_DEBUG",
+		"desc": "Boolean which enables debug logging to the console for SFTP",
+		"category": "debugging",
+		"tags": [ "cfftp" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.library.additional.function",
+		"envvar": "LUCEE_LIBRARY_ADDITIONAL_FUNCTION",
+		"desc": "Path to a directory for additional CFML-based functions Lucee should load to make these functions available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.additional.tag",
+		"envvar": "LUCEE_LIBRARY_ADDITIONAL_TAG",
+		"desc": "Path to a directory for additional CFML-based tags Lucee should load as globally available tags following the custom tag interface",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.default.fld",
+		"envvar": "LUCEE_LIBRARY_DEFAULT_FLD",
+		"desc": "Function Library Descriptor files (.fld) Lucee should load to make these functions available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.default.function",
+		"envvar": "LUCEE_LIBRARY_DEFAULT_FUNCTION",
+		"desc": "Path to a directory for CFML-based functions Lucee should load to make these functions available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.default.tag",
+		"envvar": "LUCEE_LIBRARY_DEFAULT_TAG",
+		"desc": "Path to a directory for CFML-based tags Lucee should load as globally available tags following the custom tag interface",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.default.tld",
+		"envvar": "LUCEE_LIBRARY_DEFAULT_TLD",
+		"desc": "Tag Library Descriptor files (.tld or .tldx) Lucee should load to make these tags available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.fld",
+		"envvar": "LUCEE_LIBRARY_FLD",
+		"desc": "Function Library Descriptor files (.fld) Lucee should load to make these functions available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.function",
+		"envvar": "LUCEE_LIBRARY_FUNCTION",
+		"desc": "Path to a directory for CFML-based functions Lucee should load to make these functions available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.tag",
+		"envvar": "LUCEE_LIBRARY_TAG",
+		"desc": "Path to a directory for CFML-based tags Lucee should load as globally available tags following the custom tag interface",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.library.tld",
+		"envvar": "LUCEE_LIBRARY_TLD",
+		"desc": "Tag Library Descriptor files (.tld or .tldx) Lucee should load to make these tags available in the application",
+		"category": "library",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.listener.mode",
+		"envvar": "LUCEE_LISTENER_MODE",
+		"desc": "Where/how does Lucee look for the Application Listener? Possible values: `currenttoroot` - looks for the file `Application.cfc`/`Application.cfm` from the current up to the webroot directory, `currentorroot` - looks for the file `Application.cfc`/`Application.cfm` in the current directory and in the webroot directory, `root` - looks for the file `Application.cfc`/`Application.cfm` only in the webroot, `current` - looks for the file `Application.cfc`/`Application.cfm` only in the current template directory",
+		"category": "application",
+		"type": "string",
+		"default": "current2root"
+	},
+	{
+		"sysprop": "lucee.listener.singleton",
+		"envvar": "LUCEE_LISTENER_SINGLETON",
+		"desc": "Controls how Lucee manages Application.cfc instances (introduced in Lucee 7). When set to `false` (Classic behavior), Lucee creates a new Application.cfc instance for each request and executes the component body constructor every time. When set to `true` (Singleton behavior), the component loads only during startup or when the component template changes. Note: With singleton mode enabled, settings defined in the component body remain persistent between requests. Configuration changes should be made within listener functions like onApplicationStart, onSessionStart or onRequestStart",
+		"category": "application",
+		"type": "boolean",
+		"introduced": "7.0.0.102",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.listener.type",
+		"envvar": "LUCEE_LISTENER_TYPE",
+		"desc": "Which kind of Application Listener is supported? Possible values: `None` - no listener at all, `Classical` - Classic handling. Lucee looks for `Application.cfm` and `OnRequestEnd.cfm`, `Modern` - Modern handling. Lucee only looks for `Application.cfc`, `Mixed` - Mixed handling. Lucee looks for `Application.cfm`/`OnRequestEnd.cfm` as well as `Application.cfc`",
+		"category": "application",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.log.reflection",
+		"envvar": "LUCEE_LOG_REFLECTION",
+		"desc": "Boolean value to enable logging of Java reflection operations",
+		"category": "logging",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.log.webcontext",
+		"envvar": "LUCEE_LOG_WEBCONTEXT",
+		"desc": "A boolean value that enables web context identification in log entries when running in single mode. When enabled, log entries include web context labels (e.g., http://localhost:8886|engine) to distinguish which web context generated the log entry. Only active in single mode where all web contexts share the same log directory. In multi mode, this setting has no effect as each web context has its own log directory. Added in Lucee 6.2.2.63",
+		"category": "logging",
+		"type": "boolean",
+		"introduced": "6.2.2.63",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.logging.force.appender",
+		"envvar": "LUCEE_LOGGING_FORCE_APPENDER",
+		"desc": "If set, override the default log4j appender, which is usually resource (log files), use console to log all logs to console",
+		"category": "logging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.logging.force.level",
+		"envvar": "LUCEE_LOGGING_FORCE_LEVEL",
+		"desc": "If set, override the default log4j log level for all logs, which is usually ERROR",
+		"category": "logging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.logging.main",
+		"envvar": "LUCEE_LOGGING_MAIN",
+		"desc": "Name of the main logger used by Lucee, for example, a non-existing logger is defined",
+		"category": "logging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.loginstorage.iterations",
+		"envvar": "LUCEE_LOGINSTORAGE_ITERATIONS",
+		"desc": "Specifies the number of encryption iterations for loginstorage",
+		"category": "security",
+		"tags": [ "cflogin", "cfloginuser" ],
+		"type": "numeric",
+		"default": 0
+	},
+	{
+		"sysprop": "lucee.loginstorage.privatekey",
+		"envvar": "LUCEE_LOGINSTORAGE_PRIVATEKEY",
+		"desc": "A private key used to encrypt loginstorage. If not defined, a simple base64 encoding is used",
+		"category": "security",
+		"tags": [ "cflogin", "cfloginuser" ],
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.loginstorage.salt",
+		"envvar": "LUCEE_LOGINSTORAGE_SALT",
+		"desc": "The salt used for encrypting loginstorage. If no salt is defined, a hardcoded salt is used",
+		"category": "security",
+		"tags": [ "cflogin", "cfloginuser" ],
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.mail.use.7bit.transfer.encoding.for.html.parts",
+		"envvar": "LUCEE_MAIL_USE_7BIT_TRANSFER_ENCODING_FOR_HTML_PARTS",
+		"desc": "Enabled by default in Lucee 7",
+		"category": "mail",
+		"tags": [ "cfmail", "cfmailpart" ],
+		"type": "boolean",
+		"defaultSince": "7.0",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.mapping.first",
+		"envvar": "LUCEE_MAPPING_FIRST",
+		"desc": "Let's say you have the following code: `<cfinclude template=\"/foo/bar/index.cfm\">` And you have the following mappings defined: `/foo/bar` and `/foo`. Then Lucee will look for `/index.cfm` in `/foo/bar` and for `/bar/index.cfm` in `/foo` and invoke the first `index.cfm` it finds, which could be in both mappings. If this setting is set to `true`, Lucee will only check `/foo/bar` for `index.cfm`",
+		"category": "application",
+		"tags": [ "cfinclude" ],
+		"functions": [ "expandPath" ],
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.maven.default.repositories",
+		"envvar": "LUCEE_MAVEN_DEFAULT_REPOSITORIES",
+		"desc": "Specifies a comma-separated list of Maven repository URLs to use before the default repositories (Maven Central, Sonatype, JCenter). This allows customizing the Maven repositories used by Lucee for downloading dependencies. URL must include a trailing /",
+		"category": "osgi",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.maven.local.repository",
+		"envvar": "LUCEE_MAVEN_LOCAL_REPOSITORY",
+		"desc": "Defines the location in the local filesystem where Lucee stores downloaded Maven artifacts. If not explicitly configured, artifacts will be stored in the default location at lucee-server/mvn/",
+		"category": "osgi",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.mvn.repo.releases",
+		"envvar": "LUCEE_MVN_REPO_RELEASES",
+		"desc": "Maven repository endpoint used by Lucee >= 6 to load release versions",
+		"category": "osgi",
+		"type": "string",
+		"default": "https://oss.sonatype.org/service/local/repositories/releases/content/"
+	},
+	{
+		"sysprop": "lucee.mvn.repo.snapshots",
+		"envvar": "LUCEE_MVN_REPO_SNAPSHOTS",
+		"desc": "Maven repository endpoint used by Lucee >= 6 to load snapshot versions",
+		"category": "osgi",
+		"type": "string",
+		"default": "https://oss.sonatype.org/content/repositories/snapshots/"
+	},
+	{
+		"sysprop": "lucee.pagePool.maxSize",
+		"envvar": "LUCEE_PAGEPOOL_MAXSIZE",
+		"desc": "Maximum size of the template pool (page pool) where Lucee holds loaded .cfm/.cfc files. No number smaller than 1000 is accepted",
+		"category": "performance",
+		"type": "numeric",
+		"default": 10000
+	},
+	{
+		"sysprop": "lucee.password.enc.key",
+		"envvar": "LUCEE_PASSWORD_ENC_KEY",
+		"desc": "The private encryption key used by Lucee to encrypt passwords stored in the configuration, such as for datasources",
+		"category": "security",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.precise.math",
+		"envvar": "LUCEE_PRECISE_MATH",
+		"desc": "A boolean value. If enabled, this improves the accuracy of floating-point calculations but makes them slightly slower",
+		"category": "performance",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.preserve.case",
+		"envvar": "LUCEE_PRESERVE_CASE",
+		"desc": "A boolean value. If `true`, Lucee will not convert variable names used in `dot notation` to UPPER CASE",
+		"category": "compiler",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.qoq.hsqldb.debug",
+		"envvar": "LUCEE_QOQ_HSQLDB_DEBUG",
+		"desc": "Boolean value to enable debug logging for HSQLDB Query of Queries operations",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.qoq.hsqldb.disable",
+		"envvar": "LUCEE_QOQ_HSQLDB_DISABLE",
+		"desc": "Boolean value to disable HSQLDB for Query of Queries, forcing use of alternative QoQ engine",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.qoq.parallelism",
+		"envvar": "LUCEE_QOQ_PARALLELISM",
+		"desc": "Controls the parallelism level for Query of Queries operations",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "numeric",
+		"default": 50
+	},
+	{
+		"sysprop": "lucee.query.allowemptyasnull",
+		"envvar": "LUCEE_QUERY_ALLOWEMPTYASNULL",
+		"desc": "In Lucee 5, an empty string passed into a query parameter with a numeric type was interpreted as null. In Lucee 6, this is no longer accepted and throws an exception. You can simulate the old behavior by setting this environment variable or SysProp to `true`. By setting the log level of the datasource log to `warn`, you will receive information in the log when the old behavior is used. This allows you to modify your code for the new behavior without encountering runtime issues with the existing code",
+		"category": "query",
+		"tags": [ "cfquery", "cfqueryparam" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.query.result.threshold",
+		"envvar": "LUCEE_QUERY_RESULT_THRESHOLD",
+		"desc": "Enables automatic logging of database queries that return large result sets to help proactively identify potential OutOfMemory (OOM) issues. When set to a positive integer, Lucee will log a warning message to the datasource log category whenever a query returns a number of rows greater than or equal to the specified threshold. Set to 0 or leave unset to disable this feature (default behavior). Logs include execution time, row count, column count, threshold value, SQL query, and tag context. Helps identify problematic queries before they cause memory issues in production environments",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "numeric",
+		"introduced": "6.2.3.15",
+		"default": 0
+	},
+	{
+		"sysprop": "lucee.queue.enable",
+		"envvar": "LUCEE_QUEUE_ENABLE",
+		"desc": "Boolean value to enable or disable the Lucee request queue",
+		"category": "request",
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "lucee.queue.max",
+		"envvar": "LUCEE_QUEUE_MAX",
+		"desc": "The maximum concurrent requests that the engine allows to run at the same time before the engine begins to queue the requests",
+		"category": "request",
+		"type": "numeric",
+		"default": 100
+	},
+	{
+		"sysprop": "lucee.queue.timeout",
+		"envvar": "LUCEE_QUEUE_TIMEOUT",
+		"desc": "The time in milliseconds a request is held in the queue. If the time is reached, the request is rejected with an exception. If you set it to 0 seconds, the request timeout is used instead",
+		"category": "request",
+		"type": "timespan",
+		"default": 0
+	},
+	{
+		"sysprop": "lucee.read.cfid.from.url",
+		"envvar": "LUCEE_READ_CFID_FROM_URL",
+		"desc": "Controls whether Lucee accepts CFID values from URL query strings. Set to `false` to enhance security by requiring CFIDs to be passed via cookies only. Setting this to `false` is strongly recommended for all production environments. Replaced by lucee.cfid.url.allow in Lucee 6.2.1.59",
+		"category": "session",
+		"type": "boolean",
+		"deprecated": "6.2.1.59",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.request.limit.concurrent.maxnormprio",
+		"envvar": "LUCEE_REQUEST_LIMIT_CONCURRENT_MAXNORMPRIO",
+		"desc": "Maximum number of normal priority concurrent requests",
+		"category": "request",
+		"type": "numeric",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.request.limit.concurrent.maxnosleep",
+		"envvar": "LUCEE_REQUEST_LIMIT_CONCURRENT_MAXNOSLEEP",
+		"desc": "The maximal number of threads that are allowed to be active on the server. If this is reached, requests get forced into a `nap` (defined by lucee.request.limit.concurrent.sleeptime)",
+		"category": "request",
+		"type": "numeric",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.request.limit.concurrent.sleeptime",
+		"envvar": "LUCEE_REQUEST_LIMIT_CONCURRENT_SLEEPTIME",
+		"desc": "How long a request should `nap` in milliseconds if it reaches the lucee.request.limit.concurrent.maxnosleep",
+		"category": "request",
+		"type": "timespan",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.requesttimeout",
+		"envvar": "LUCEE_REQUESTTIMEOUT",
+		"desc": "A boolean value. If `false`, Lucee will disable request timeouts",
+		"category": "request",
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.requesttimeout.concurrentrequestthreshold",
+		"envvar": "LUCEE_REQUESTTIMEOUT_CONCURRENTREQUESTTHRESHOLD",
+		"desc": "Concurrent request threshold to enforce a request timeout. If a request reaches the timeout, Lucee will only enforce it if this threshold is also reached. For example, setting it to 100 means the timeout is enforced only if there are at least 99 other requests running",
+		"category": "request",
+		"type": "numeric",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.requesttimeout.cputhreshold",
+		"envvar": "LUCEE_REQUESTTIMEOUT_CPUTHRESHOLD",
+		"desc": "A floating-point number between 0 and 1. CPU threshold to enforce a request timeout. If a request reaches the timeout, Lucee will only enforce it if the CPU usage of the current core is at least the specified threshold. For example, setting it to 0.5 enforces the timeout if the CPU is at least 50%",
+		"category": "request",
+		"type": "numeric",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.requesttimeout.memorythreshold",
+		"envvar": "LUCEE_REQUESTTIMEOUT_MEMORYTHRESHOLD",
+		"desc": "A floating-point number between 0 and 1. Memory threshold to enforce a request timeout. If a request reaches the request timeout, Lucee will only enforce that timeout if this threshold is also reached. For example, setting it to 0.5 enforces the timeout if the memory consumption of the server is at least 50%",
+		"category": "request",
+		"type": "numeric",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.resource.charset",
+		"envvar": "LUCEE_RESOURCE_CHARSET",
+		"desc": "Default character set for reading from/writing to various resources (files)",
+		"category": "charset",
+		"tags": [ "cffile", "cfdirectory" ],
+		"functions": [ "fileRead", "fileWrite" ],
+		"type": "string",
+		"default": "system charset"
+	},
+	{
+		"sysprop": "lucee.scope.arguments.capacity",
+		"envvar": "LUCEE_SCOPE_ARGUMENTS_CAPACITY",
+		"desc": "Sets the initial capacity (size) for the arguments scope hashmap",
+		"category": "performance",
+		"type": "numeric",
+		"default": 16
+	},
+	{
+		"sysprop": "lucee.scope.local.capacity",
+		"envvar": "LUCEE_SCOPE_LOCAL_CAPACITY",
+		"desc": "Sets the initial capacity (size) for the local scope hashmap",
+		"category": "performance",
+		"type": "numeric",
+		"default": 16
+	},
+	{
+		"sysprop": "lucee.script.protect",
+		"envvar": "LUCEE_SCRIPT_PROTECT",
+		"desc": "Script protect setting used by default. Consult the Lucee admin page /Settings/Request for details on possible settings",
+		"category": "security",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.security.isdefined",
+		"envvar": "LUCEE_SECURITY_ISDEFINED",
+		"desc": "Alias for lucee.security.limitEvaluation, limits variable evaluation in isDefined and related functions",
+		"category": "security",
+		"functions": [ "isDefined" ],
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.security.limitEvaluation",
+		"envvar": "LUCEE_SECURITY_LIMITEVALUATION",
+		"desc": "Disable evaluating expressions when accessing scopes, Lucee 7 defaults to enabling this setting for security reasons. A boolean value. If enabled, limits variable evaluation in functions/tags. If enabled, you cannot use expressions within [ ] like this: susi[getVariableName()]. This affects the following functions: IsDefined, structGet, structSort (when using pathToSubElement), empty and the following tags: savecontent attribute `variable`",
+		"category": "security",
+		"tags": [ "cfsavecontent" ],
+		"functions": [ "isDefined", "structGet", "structSort", "empty" ],
+		"type": "boolean",
+		"defaultSince": "7.0",
+		"default": "false (Lucee 6), true (Lucee 7)"
+	},
+	{
+		"sysprop": "lucee.sessionCookie.rotate.unknown",
+		"envvar": "LUCEE_SESSIONCOOKIE_ROTATE_UNKNOWN",
+		"desc": "Controls whether unknown CFML session cookies are automatically rotated. When `false`, unknown session cookies will not be rotated",
+		"category": "session",
+		"type": "boolean",
+		"functions": [ "sessionRotate" ],
+		"default": true
+	},
+	{
+		"sysprop": "lucee.ssl.checkserveridentity",
+		"envvar": "LUCEE_SSL_CHECKSERVERIDENTITY",
+		"desc": "A boolean value. If enabled, checks the identity of the SSL certificate with SMTP",
+		"category": "security",
+		"tags": [ "cfmail" ],
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.status.code",
+		"envvar": "LUCEE_STATUS_CODE",
+		"desc": "A boolean value. If disabled, returns a 200 status code to the client even if an uncaught exception occurs",
+		"category": "request",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.store.empty",
+		"envvar": "LUCEE_STORE_EMPTY",
+		"desc": "A boolean value. If enabled, does not store empty sessions to the client or session storage",
+		"category": "session",
+		"type": "boolean",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.suppress.ws.before.arg",
+		"envvar": "LUCEE_SUPPRESS_WS_BEFORE_ARG",
+		"desc": "A boolean value. If enabled, Lucee suppresses whitespace defined between the cffunction starting tag and the last cfargument tag. This setting is ignored when there is different output between these tags as whitespace",
+		"category": "compiler",
+		"tags": [ "cffunction", "cfargument" ],
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.system.err",
+		"envvar": "LUCEE_SYSTEM_ERR",
+		"desc": "Where is the error stream of the JVM sent? Possible values are: `null` (the stream is ignored), `class:<class-name>` - the data is sent to an instance of that class that must implement the java.io.PrintStream interface, `file:<file-path>` - an absolute path to a file name the stream is written to, `log` - stream is written to err.log in context/logs/",
+		"category": "logging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.system.out",
+		"envvar": "LUCEE_SYSTEM_OUT",
+		"desc": "Where is the out stream of the JVM sent? Possible values are: `null` (the stream is ignored), `class:<class-name>` - the data is sent to an instance of that class that must implement the java.io.PrintStream interface, `file:<file-path>` - an absolute path to a file name the stream is written to, `log` - stream is written to out.log in context/logs/",
+		"category": "logging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.tag.populate.localscope",
+		"envvar": "LUCEE_TAG_POPULATE_LOCALSCOPE",
+		"desc": "Controls whether tags like cflock and cfquery populate their default result variables to local scope when inside a function. When `true`, variables go to local scope. When `false`, restores pre LDEV-5416 behavior where variables go to variables scope",
+		"category": "compiler",
+		"tags": [ "cflock", "cfquery", "cffile", "cfthread" ],
+		"type": "boolean",
+		"introduced": "7.0.1.13",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.task.directory",
+		"envvar": "LUCEE_TASK_DIRECTORY",
+		"desc": "Specifies the directory where remote client task files are stored",
+		"category": "deployment",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.tasks.limit",
+		"envvar": "LUCEE_TASKS_LIMIT",
+		"desc": "Defines the maximum number of elements that can be stored in the cfthread scope. Once this limit is reached, the oldest entries are automatically removed to make room for new ones",
+		"category": "performance",
+		"tags": [ "cfthread" ],
+		"type": "numeric",
+		"introduced": "6.0.2.10",
+		"default": 10000
+	},
+	{
+		"sysprop": "lucee.template.charset",
+		"envvar": "LUCEE_TEMPLATE_CHARSET",
+		"desc": "Default character set used to read templates (.cfm and .cfc files)",
+		"category": "charset",
+		"type": "string",
+		"default": "system charset"
+	},
+	{
+		"sysprop": "lucee.threads.maxDefault",
+		"envvar": "LUCEE_THREADS_MAXDEFAULT",
+		"desc": "Sets the maximum number of parallel threads",
+		"category": "performance",
+		"tags": [ "cfthread" ],
+		"type": "numeric",
+		"default": 20
+	},
+	{
+		"sysprop": "lucee.type.checking",
+		"envvar": "LUCEE_TYPE_CHECKING",
+		"desc": "A boolean value. If enabled, Lucee enforces types defined in the code. If `false`, type definitions are ignored",
+		"category": "compiler",
+		"type": "boolean",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.udf.type.checking",
+		"envvar": "LUCEE_UDF_TYPE_CHECKING",
+		"desc": "Alias for lucee.type.checking, enables or disables type checking for user-defined functions",
+		"category": "compiler",
+		"type": "boolean",
+		"tags": [ "cffunction" ],
+		"default": null
+	},
+	{
+		"sysprop": "lucee.upload.blocklist",
+		"envvar": "LUCEE_UPLOAD_BLOCKLIST",
+		"desc": "Default block list for the tag cffile action=`upload`. A comma-separated list of extensions that are allowed when uploading files via forms",
+		"category": "security",
+		"tags": [ "cffile" ],
+		"functions": [ "fileUpload", "fileUploadAll" ],
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.url.encodeAllowPlus",
+		"envvar": "LUCEE_URL_ENCODEALLOWPLUS",
+		"desc": "Enabled by default in Lucee 7, previously Lucee would attempt to re-encode a url param which contained a space. If the url param was already encoded, it would trigger re-encoding the param again, breaking it. This was avoidable previously by using cfhttp encodeurl=`false`, set to `false` to enable previous behaviour",
+		"category": "request",
+		"tags": [ "cfhttp" ],
+		"type": "boolean",
+		"introduced": "6.2.0.171",
+		"defaultSince": "7.0",
+		"default": true
+	},
+	{
+		"sysprop": "lucee.use.lucee.SSL.TrustStore",
+		"envvar": "LUCEE_USE_LUCEE_SSL_TRUSTSTORE",
+		"desc": "Specifies the file location of the trust store that contains trusted Certificate Authorities (CAs) for SSL/TLS connections in Java applications. Lucee 6 uses the JVM trust store by default",
+		"category": "security",
+		"tags": [ "cfhttp", "cfmail" ],
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.version",
+		"envvar": "LUCEE_VERSION",
+		"desc": "Defines the version of Lucee to load. For example, setting it to 6.1.0.0 will load that version. If not available locally, Lucee will automatically download it from Maven",
+		"category": "deployment",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.web.charset",
+		"envvar": "LUCEE_WEB_CHARSET",
+		"desc": "Default character set for output streams, form-, URL-, and CGI scope variables, and reading/writing the header",
+		"category": "charset",
+		"type": "string",
+		"default": "system charset"
+	},
+	{
+		"sysprop": "lucee.xmlfeatures.override.disable",
+		"envvar": "LUCEE_XMLFEATURES_OVERRIDE_DISABLE",
+		"desc": "Boolean value to disable overriding XML parser features for security reasons",
+		"category": "security",
+		"functions": [ "xmlParse" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
+		"sysprop": "startlogdirectory",
+		"envvar": "STARTLOGDIRECTORY",
+		"desc": "Directory for startup log files",
+		"category": "logging",
+		"type": "string",
+		"default": null
+	}
 ]

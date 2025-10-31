@@ -155,7 +155,7 @@ public final class CFMLTransformer {
 		boolean hasWriteLog = false;
 		boolean hasCharset = false;
 		boolean hasUpper = false;
-
+		boolean allowUnknownTags = false;
 		while (true) {
 			PageSourceCode psc = null;
 			try {
@@ -190,7 +190,8 @@ public final class CFMLTransformer {
 					}
 
 				}
-				p = transform(factory, config, sc, tlibs, flibs, ps.getResource().lastModified(), dotUpper, returnValue, ignoreScopes, hasWriteLog, hasUpper, hasCharset);
+				p = transform(factory, config, sc, tlibs, flibs, ps.getResource().lastModified(), dotUpper, returnValue, ignoreScopes, hasWriteLog, hasUpper, hasCharset,
+						allowUnknownTags);
 				break;
 			}
 			catch (ProcessingDirectiveException pde) {
@@ -239,7 +240,8 @@ public final class CFMLTransformer {
 						sc = new PageSourceCode(ps, text, charset, writeLog, sourceOffset);
 					}
 					try {
-						_p = transform(factory, config, sc, tlibs, flibs, ps.getResource().lastModified(), dotUpper, returnValue, ignoreScopes, hasWriteLog, hasUpper, hasCharset);
+						_p = transform(factory, config, sc, tlibs, flibs, ps.getResource().lastModified(), dotUpper, returnValue, ignoreScopes, hasWriteLog, hasUpper, hasCharset,
+								allowUnknownTags);
 						break;
 					}
 					catch (ProcessingDirectiveException pde) {
@@ -314,7 +316,7 @@ public final class CFMLTransformer {
 	 * @throws TemplateException
 	 */
 	public Page transform(Factory factory, ConfigPro config, SourceCode sc, TagLib[] tlibs, FunctionLib flibs, long sourceLastModified, Boolean dotNotationUpperCase,
-			boolean returnValue, boolean ignoreScope, boolean hasWriteLog, boolean hasUpper, boolean hasCharset) throws TemplateException {
+			boolean returnValue, boolean ignoreScope, boolean hasWriteLog, boolean hasUpper, boolean hasCharset, boolean allowUnknownTags) throws TemplateException {
 		boolean dnuc;
 		if (dotNotationUpperCase == null) {
 			if (sc instanceof PageSourceCode) dnuc = ((MappingImpl) ((PageSourceCode) sc).getPageSource().getMapping()).getDotNotationUpperCase();
@@ -338,7 +340,7 @@ public final class CFMLTransformer {
 
 		TransfomerSettings settings = new TransfomerSettings(dnuc, config.getHandleUnQuotedAttrValueAsString(), ignoreScope);
 		Data data = new Data(factory, config, page, sc, new EvaluatorPool(), settings, _tlibs, flibs, config.getCoreTagLib().getScriptTags(), false, hasWriteLog, hasUpper,
-				hasCharset);
+				hasCharset, allowUnknownTags);
 		transform(data, page);
 		return page;
 
@@ -652,6 +654,9 @@ public final class CFMLTransformer {
 			// get taglib
 			if (tagLibTag == null) {
 				tagLibTag = tagLib.getAppendixTag(strName);
+				if (tagLibTag == null && data.ast) {
+					tagLibTag = tagLib.createUnknownTagHandler(strName);
+				}
 				if (tagLibTag == null) {
 					if (tagLib.getIgnoreUnknowTags()) {
 						data.srcCode.setPos(start);
@@ -847,7 +852,7 @@ public final class CFMLTransformer {
 									data.srcCode.setPos(_start);
 								}
 								else throw new TemplateException(data.srcCode, "Start and End Tag do not match [" + tagLib.getNameSpaceAndSeparator() + strName + "-"
-										+ tagLibEnd.getNameSpaceAndSeparator() + strNameEnd + "], mismatched closing Tag at line ["+ closeTagLine + "]");
+										+ tagLibEnd.getNameSpaceAndSeparator() + strNameEnd + "], mismatched closing Tag at line [" + closeTagLine + "]");
 							}
 							else {
 								body.moveStatmentsTo(parent);

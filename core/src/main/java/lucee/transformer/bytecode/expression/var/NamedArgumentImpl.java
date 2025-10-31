@@ -22,6 +22,9 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
 
+import lucee.runtime.type.Struct;
+import lucee.runtime.type.StructImpl;
+import lucee.runtime.type.util.KeyConstants;
 import lucee.transformer.TransformerException;
 import lucee.transformer.bytecode.BytecodeContext;
 import lucee.transformer.bytecode.literal.Null;
@@ -103,5 +106,20 @@ public final class NamedArgumentImpl extends ArgumentImpl implements NamedArgume
 	@Override
 	public Expression getName() {
 		return name;
+	}
+
+	@Override
+	public void dump(Struct sct) {
+		sct.setEL(KeyConstants._type, "NamedArgument");
+
+		// name
+		Struct name = new StructImpl(Struct.TYPE_LINKED);
+		sct.setEL(KeyConstants._name, name);
+		this.name.dump(name);
+
+		// value
+		Struct value = new StructImpl(Struct.TYPE_LINKED);
+		sct.setEL(KeyConstants._value, value);
+		super.dump(value);
 	}
 }

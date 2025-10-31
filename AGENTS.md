@@ -27,33 +27,46 @@ The Lucee code base was forked from the Railo Server Project (Version 4.2) in Ja
 - Build usually is run with Java 21
 - All artifacts are compiled to bytecode targeting Java 11
 
+### Issue Tracking
+
+Lucee tickets are in the style `LDEV-xxxx`, where `xxx` is a number
+
+Test cases for tickets are created under `/test/tickets/LDEVxxxx.cfc`, with any additional files under a folder /`test/tickets/LDEVxxxx/`
+
+To read an issue from jira, rewrite the url `https://luceeserver.atlassian.net/browse/LDEV-5850` to read the xml version using `https://luceeserver.atlassian.net/si/jira.issueviews:issue-xml/LDEV-5850/LDEV-5850.xml`
+
 ## Lucee Ant Script Runner
 
-Lucee Ant Script Runner allows you to run Lucee CFML scripts headless (without a web server) from the command line or CI/CD pipelines.  
+Lucee Ant Script Runner allows you to run Lucee CFML scripts headless (without a web server) from the command line or CI/CD pipelines.
+
 It is ideal for automation, testing, and running scripts with custom Lucee builds.
 
-**Requirements:**  
-- You must have a local copy of the [script-runner repository](https://github.com/lucee/script-runner) checked out.  
-  If you do not have it, please clone it first.  
+**Requirements:**
+- You must have a local copy of the [script-runner repository](https://github.com/lucee/script-runner) checked out.
+  If you do not have it, please clone it first.
   > **Tip:** The script-runner directory may already exist in the parent directory of this repo.
 
 - To use a custom Lucee JAR, first build it by running:
-  ```sh
-  ant fast
-  ```
-  in the `/loader` directory of this repo.  
-  The resulting JAR will be found in `loader/target` and its filename will include the version (e.g., `lucee-7.0.0.1.jar`).
 
-**Example usage:**
 ```sh
-ant -buildfile="..\script-runner\build.xml" -DluceeJar="loader\target\lucee-7.0.0.1.jar" -Dwebroot="D:\work\yourproject" -Dexecute="test.cfm"
+ant fast
 ```
 
-- `-DluceeJar` points to your custom-built Lucee JAR in `loader/target`.
+in the `/loader` directory of this repo.
+The resulting JAR will be found in `loader/target` and its filename will include the version (e.g., `lucee-7.0.0.1.jar`).
+
+**Example usage:**
+
+```sh
+ant -buildfile="..\script-runner\build.xml" -DluceeJar="/full/pathot/loader/target/lucee-{version}.jar" -Dwebroot="D:\work\yourproject" -Dexecute="test.cfm"
+```
+
+
+- `-DluceeJar` being the full path to the built Lucee JAR in `loader/target`, use exact version and full path
 - `-Dwebroot` is your project directory.
 - `-Dexecute` is the script to run (relative to webroot).
 
-See [script-runner README](../script-runner/README.md) for full details and troubleshooting.
+See [script-runner README](https://github.com/lucee/script-runner/blob/main/README.md) for full details and troubleshooting.
 
 ## Contribution Workflow
 
@@ -80,11 +93,14 @@ If your change affects a documented feature, please also submit a pull request t
 
 ## Testing
 
+[Testing Guidelines](test/README.md)
+
 - CFML Tests are written using TestBox [TestBox](https://testbox.ortusbooks.com/)
 - All CFML tests should extend `org.lucee.cfml.test.LuceeTestCase`
 - CFML tests should not use Java unless absolutely required, prefer CFML functionality.
 - Tests should cleanup after themselves and any temporary files should be created under the directory returned from `getTempDirectory()`
 - Test framework code, specifically files in the root of the `/test` directory should be compatible with Lucee 5.4, therefore, do not use newer cfml functionality.
+
 
 ## Security
 
@@ -115,7 +131,7 @@ When updating a Java library
 
 - [Lucee Documentation](https://docs.lucee.org/)
 - [Lucee Mailing List / Forum](https://dev.lucee.org/)
-- [Lucee Bug Tracker](https://luceeserver.atlassian.net/) 
+- [Lucee Bug Tracker](https://luceeserver.atlassian.net/)
 
 ## License
 

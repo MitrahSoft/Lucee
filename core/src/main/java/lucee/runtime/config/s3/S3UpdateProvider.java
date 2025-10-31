@@ -27,11 +27,11 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.config.maven.MavenUpdateProvider;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.date.DateCaster;
@@ -137,24 +137,18 @@ public final class S3UpdateProvider extends DefaultHandler {
 			if (version.equals(e.getVersion())) {
 				Artifact art = e.getLCO();
 				if (art != null) {
-					HTTPResponse rsp = HTTPEngine4Impl.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-					if (rsp != null) {
-						int sc = rsp.getStatusCode();
-						if (sc >= 200 && sc < 300) return rsp.getContentAsStream();
+					try {
+						// Use HTTPDownloader with DEBUG logging for S3 downloads
+						return HTTPDownloader.get( art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, Log.LEVEL_TRACE );
+					}
+					catch (IOException ioe) {
+						// Try JAR fallback
 					}
 				}
 
 				art = e.getJAR();
 				if (art != null) {
-					HTTPResponse rsp = HTTPEngine4Impl.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-					if (rsp != null) {
-						int sc = rsp.getStatusCode();
-						if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + art + "], status code [" + sc + "]");
-					}
-					else {
-						throw new IOException("unable to invoke [" + art + "], no response.");
-					}
-					return MavenUpdateProvider.getFileStreamFromZipStream(rsp.getContentAsStream());
+					return MavenUpdateProvider.getFileStreamFromZipStream( HTTPDownloader.get( art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, Log.LEVEL_TRACE ) );
 				}
 			}
 		}
@@ -170,18 +164,11 @@ public final class S3UpdateProvider extends DefaultHandler {
 		do {
 			if (url == null) url = isTruncated ? new URL(this.url.toExternalForm() + "?marker=" + this.lastKey) : this.url;
 			url = addPrefix(url);
-			HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, S3UpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-			if (rsp != null) {
-				int sc = rsp.getStatusCode();
-				if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + url + "], status code [" + sc + "]");
-			}
-			else {
-				throw new IOException("unable to invoke [" + url + "], no response.");
-			}
-
+			// Use HTTPDownloader with DEBUG logging for S3 update provider list reads
 			Reader r = null;
 			try {
-				init(new InputSource(r = IOUtil.getReader(rsp.getContentAsStream(), (Charset) null)));
+				r = IOUtil.getReader( HTTPDownloader.get( url, null, null, S3UpdateProvider.CONNECTION_TIMEOUT, S3UpdateProvider.CONNECTION_TIMEOUT, null, Log.LEVEL_TRACE ), (Charset) null );
+				init(new InputSource(r));
 			}
 			finally {
 				url = null;

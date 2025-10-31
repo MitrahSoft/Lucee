@@ -39,6 +39,11 @@ public class SourceCode {
 	private final boolean writeLog;
 	private int hash;
 	private SourceCode parent;
+	private int sourceOffset;
+
+	public SourceCode(SourceCode parent, String strText, boolean writeLog) {
+		this(parent, strText, writeLog, 0);
+	}
 
 	/**
 	 * Constructor of the class
@@ -47,10 +52,11 @@ public class SourceCode {
 	 * @param strText
 	 * @param writeLog
 	 */
-	public SourceCode(SourceCode parent, String strText, boolean writeLog) {
+	public SourceCode(SourceCode parent, String strText, boolean writeLog, int sourceOffset) {
 		this.parent = parent;
 		this.text = strText.toCharArray();
 		this.hash = strText.hashCode();
+		this.sourceOffset = sourceOffset;
 		lcText = new char[text.length];
 
 		ArrayList<Integer> arr = new ArrayList<Integer>();
@@ -772,7 +778,7 @@ public class SourceCode {
 
 		int column = pos - posAtStart;
 
-		return new Position(line, column, pos);
+		return new Position(line, column, pos, getSourceOffset());
 	}
 
 	/**
@@ -948,5 +954,9 @@ public class SourceCode {
 	@Override
 	public int hashCode() {
 		return hash;
+	}
+
+	public int getSourceOffset() {
+		return sourceOffset;
 	}
 }

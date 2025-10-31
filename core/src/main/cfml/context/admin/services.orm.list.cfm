@@ -57,9 +57,30 @@ Redirtect to entry  --->
 	<cflocation url="#request.self#?action=#url.action#" addtoken="no">
 </cfif>
 
-<cfoutput> 
+<cfoutput>
 	<!--- Error Output--->
 	<cfset printError(error)>
+
+	<!--- Legacy ORM Warning --->
+	<cfif hasLegacyORM >
+		<cfset extLink = request.self & "?action=ext.applications&action2=detail&id=D062D72F-F8A2-46F0-8CBC91325B2F067B&name=" & URLEncodedFormat( 'Ortus ORM Extension' )>
+		<div class="warning">
+			#stText.Settings.orm.extensionold#
+		</div>
+		<p>
+			<a href="#extLink#">#stText.Settings.orm.extensionoldlink#</a>
+		</p>
+	<cfelseif !hasORMEngine>
+		<cfset extLink = request.self & "?action=ext.applications&action2=detail&id=D062D72F-F8A2-46F0-8CBC91325B2F067B&name=" & URLEncodedFormat( 'Ortus ORM Extension' )>
+		<div class="error">
+			#stText.Settings.orm.extensionmissing#
+		</div>
+		<p>
+			<a href="#extLink#">#stText.Settings.orm.extensionmissinglink#</a>
+		</p>
+
+	</cfif>
+
 	<h2>#stText.Settings.orm.title#</h2>
 	<div class="pageintro">#stText.Settings.orm.desc#</div>
 	<cfformClassic onerror="customError" action="#request.self#?action=#url.action#" method="post">

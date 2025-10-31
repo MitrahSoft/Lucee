@@ -207,7 +207,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	private static final int DEFAULT_MAX_CONNECTION = 100;
 	public static final String DEFAULT_LOCATION = Constants.DEFAULT_UPDATE_URL.toExternalForm();
 	public static final ClassDefinition<DummyORMEngine> DUMMY_ORM_ENGINE = new ClassDefinitionImpl<DummyORMEngine>(DummyORMEngine.class);
-	public static final String[] CONFIG_FILE_NAMES = new String[] { ".CFConfig.json", "config.json" };
+
 	private static String forceLogAppender = SystemUtil.getSystemPropOrEnvVar("lucee.logging.force.appender", null);
 	private static String forceLogLevel = SystemUtil.getSystemPropOrEnvVar("lucee.logging.force.level", null);
 
@@ -322,7 +322,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				else {
 					LogUtil.logGlobal(ThreadLocalPageContext.getConfig(), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(),
 							"create new server context json config file [" + configFileNew + "]");
-					createConfigFile("server", configFileNew);
+					ConfigFile.createConfigFile("server", configFileNew);
 					hasConfigNew = true;
 				}
 			}
@@ -503,7 +503,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return rtn;
 	}
 
-	private static Struct reload(Struct root, ConfigImpl config, ConfigServerImpl cs) throws PageException, IOException, ConverterException {
+	private static Struct reload(Struct root, ConfigImpl config, ConfigServerImpl cs) throws IOException, ConverterException {
 		// store as json
 
 		root = ConfigFile.reload(config.getConfigFile(), root);
@@ -3367,8 +3367,29 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					id = getAttr(child, KeyConstants._id);
 					BundleInfo[] bfsq;
 					try {
-						String res = getAttr(child, KeyConstants._resource, KeyConstants._path, KeyConstants._url);
-						if (StringUtil.isEmpty(id) && StringUtil.isEmpty(res)) continue;
+						String strRes = getAttr(child, KeyConstants._resource, KeyConstants._path, KeyConstants._url);
+						if (StringUtil.isEmpty(id) && StringUtil.isEmpty(strRes)) continue;
+
+						Resource res = null;
+						if (!StringUtil.isEmpty(strRes, true)) {
+							res = ResourceUtil.toResourceExisting(config, strRes, null);
+							if (res == null) {
+								if (!StringUtil.isEmpty(id, true)) {
+									log(config, Log.LEVEL_ERROR, "the resource [" + strRes + "] from the extension [" + id + "] cannot be resolved");
+								}
+								else {
+									log(config, Log.LEVEL_ERROR, "the extension resource [" + strRes + "] cannot be resolved");
+								}
+							}
+							else {
+								if (!StringUtil.isEmpty(id, true)) {
+									log(config, Log.LEVEL_INFO, "the resource [" + strRes + "] from the extension [" + id + "] is valid");
+								}
+								else {
+									log(config, Log.LEVEL_INFO, "the extension resource [" + strRes + "] is valid");
+								}
+							}
+						}
 
 						rhe = RHExtension.installExtension(config, id, getAttr(child, KeyConstants._version), res, false);
 						// startBundles(config, rhe, firstLoad);

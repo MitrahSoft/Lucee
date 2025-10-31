@@ -51,9 +51,9 @@ import lucee.runtime.type.scope.Undefined;
 import lucee.runtime.type.util.ArrayUtil;
 import lucee.runtime.type.util.ComponentUtil;
 import lucee.runtime.type.util.UDFUtil;
+import lucee.transformer.Body;
 import lucee.transformer.Position;
 import lucee.transformer.TransformerException;
-import lucee.transformer.Body;
 import lucee.transformer.bytecode.BodyBase;
 import lucee.transformer.bytecode.FunctionBody;
 import lucee.transformer.bytecode.ScriptBody;
@@ -921,6 +921,32 @@ public abstract class AbstrCFMLScriptTransformer extends AbstrCFMLExprTransforme
 
 	@Override
 	public ArrayList<Argument> getScriptFunctionArguments(Data data) throws TemplateException {
+		ArrayList<Argument> res = _getScriptFunctionArguments(data, null);
+		if (res == null) throw new TemplateException(data.srcCode, "invalid argument definition");
+		return res;
+	}
+
+	@Override
+	public ArrayList<Argument> getScriptFunctionArguments(Data data, ArrayList<Argument> defaultValue) {
+		try {
+			return _getScriptFunctionArguments(data, defaultValue);
+		}
+		catch (Exception e) {
+			return defaultValue;
+		}
+	}
+
+	/**
+	 * this method is half/ half, throws some exception but also return defaultValue, the reason for
+	 * this is performance before this method this create exception that then got cached by the calling
+	 * method and ignored A LOT
+	 * 
+	 * @param data
+	 * @param defaultValue
+	 * @return
+	 * @throws TemplateException
+	 */
+	private ArrayList<Argument> _getScriptFunctionArguments(Data data, ArrayList<Argument> defaultValue) throws TemplateException {
 		// arguments
 		LitBoolean passByRef;
 		Expression displayName;
@@ -948,30 +974,30 @@ public abstract class AbstrCFMLScriptTransformer extends AbstrCFMLExprTransforme
 					idName = idName2;
 					required = true;
 				}
-				if (idName == null) throw new TemplateException(data.srcCode, "invalid argument definition");
+				if (idName == null) return defaultValue;
 			}
 
 			String typeName = "any";
-			if (idName == null) throw new TemplateException(data.srcCode, "invalid argument definition");
+			if (idName == null) return defaultValue;
 			comments(data);
 			if (!data.srcCode.isCurrent(')') && !data.srcCode.isCurrent('=') && !data.srcCode.isCurrent(':') && !data.srcCode.isCurrent(',')) {
 				typeName = idName;
 				idName = identifier(data, false); // MUST was upper case before, is this a problem?
 			}
 			else if (idName.indexOf('.') != -1 || idName.indexOf('[') != -1) {
-				throw new TemplateException(data.srcCode, "invalid argument name [" + idName + "] definition");
+				return defaultValue;
 			}
-			if (idName == null) throw new TemplateException(data.srcCode, "invalid argument definition");
+			if (idName == null) return defaultValue;
 
 			comments(data);
-			Expression defaultValue;
+			Expression defVal;
 
 			if (data.srcCode.isCurrent('=') || data.srcCode.isCurrent(':')) {
 				data.srcCode.next();
 				comments(data);
-				defaultValue = expression(data);
+				defVal = expression(data);
 			}
-			else defaultValue = null;
+			else defVal = null;
 
 			// assign meta data defined in doc comment
 			passByRef = data.factory.TRUE();
@@ -1016,7 +1042,7 @@ public abstract class AbstrCFMLScriptTransformer extends AbstrCFMLExprTransforme
 				}
 			}
 
-			result.add(new Argument(data.factory.createLitString(idName), data.factory.createLitString(typeName), data.factory.createLitBoolean(required), defaultValue, passByRef,
+			result.add(new Argument(data.factory.createLitString(idName), data.factory.createLitString(typeName), data.factory.createLitBoolean(required), defVal, passByRef,
 					displayName, hint, meta));
 
 			comments(data);
@@ -2538,8 +2564,8 @@ public abstract class AbstrCFMLScriptTransformer extends AbstrCFMLExprTransforme
 		return validateAttributeName(id, cfml, args, tag, dynamic, sbType, allowTwiceAttr);
 	}
 
-	private final String validateAttributeName(String idOC, SourceCode cfml, ArrayList<String> args, TagLibTag tag, RefBoolean dynamic, StringBuilder sbType, boolean allowTwiceAttr)
-			throws TemplateException {
+	private final String validateAttributeName(String idOC, SourceCode cfml, ArrayList<String> args, TagLibTag tag, RefBoolean dynamic, StringBuilder sbType,
+			boolean allowTwiceAttr) throws TemplateException {
 		String idLC = idOC.toLowerCase();
 
 		if (args.contains(idLC) && !allowTwiceAttr) throw new TemplateException(cfml, "you can't use the same attribute [" + idOC + "] twice");

@@ -22,16 +22,35 @@ public final class Position {
 	public final int line;
 	public final int column;
 	public final int pos;
+	public final int offset;
 
-	public Position(int line, int column, int position) {
-		// print.e(line+":"+column+":"+position);
+	public Position(int line, int column, int position, int offset) {
+
 		this.line = line;
 		this.column = column;
 		this.pos = position;
+		this.offset = offset;
+	}
+
+	public int displayPosition() {
+		// we need to substract the offset
+		if (offset > 0 && (pos - offset) >= 0) {
+			return pos - offset;
+		}
+		return pos;
+	}
+
+	public int displayColumn() {
+		// we need to substract the offset from the first line for display
+		if (offset > 0 && line == 1 && (column - offset) >= 0) {
+			return column - offset;
+		}
+		return column;
 	}
 
 	@Override
 	public String toString() {
-		return new StringBuilder("line:").append(line).append(";column:").append(column).append(";pos:").append(pos).toString();
+		return new StringBuilder("line:").append(line).append(";column:").append(column).append(";pos:").append(pos).append(";offset:").append(offset).toString();
 	}
+
 }

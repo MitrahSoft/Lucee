@@ -19,8 +19,8 @@
 package lucee.transformer.cfml;
 
 import lucee.runtime.config.Config;
-import lucee.transformer.Factory;
 import lucee.transformer.Body;
+import lucee.transformer.Factory;
 import lucee.transformer.Page;
 import lucee.transformer.cfml.evaluator.EvaluatorPool;
 import lucee.transformer.cfml.expression.SimpleExprTransformer;
@@ -62,9 +62,10 @@ public final class Data {
 	public boolean hasWriteLog;
 	public boolean hasUpper;
 	public boolean hasCharset;
+	public boolean ast;
 
 	public Data(Factory factory, Config config, Page page, SourceCode srcCode, EvaluatorPool ep, TransfomerSettings settings, TagLib[][] tlibs, FunctionLib flibs,
-			TagLibTag[] scriptTags, boolean allowLowerThan, boolean hasWriteLog, boolean hasUpper, boolean hasCharset) {
+			TagLibTag[] scriptTags, boolean allowLowerThan, boolean hasWriteLog, boolean hasUpper, boolean hasCharset, boolean ast) {
 		this.page = page;
 		this.srcCode = srcCode;
 		this.settings = settings;
@@ -78,6 +79,7 @@ public final class Data {
 		this.hasWriteLog = hasWriteLog;
 		this.hasUpper = hasUpper;
 		this.hasCharset = hasCharset;
+		this.ast = ast;
 	}
 
 	public SimpleExprTransformer getSimpleExprTransformer() {

@@ -192,7 +192,7 @@ public final class Loop extends EvaluatorSupport {
 				ConfigPro config = (ConfigPro) page.getConfig();
 				Data data = new Data(BytecodeFactory.getInstance(config), config, page, new SourceCode(null, text, false), new EvaluatorPool(),
 						new TransfomerSettings(config.getDotNotationUpperCase(), config.getHandleUnQuotedAttrValueAsString(), page.ignoreScopes), null, flibs,
-						config.getCoreTagLib().getScriptTags(), false, false, false, false);
+						config.getCoreTagLib().getScriptTags(), false, false, false, false, false);
 				Expression expr = transformer.transform(data);
 
 				tag.addAttribute(new Attribute(false, "condition", page.getFactory().toExprBoolean(expr), "boolean"));

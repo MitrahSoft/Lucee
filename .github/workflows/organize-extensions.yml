@@ -25,6 +25,7 @@ on:
           - hibernate.extension
           - hibernate-orm
           - image-extension
+          - jtds
           - lucee.extension.couchbase
           - lucee.image.extension
           - lucene-search
@@ -65,6 +66,7 @@ on:
           - git-extension
           - hibernate-extension
           - image-extension
+          - jtds-jdbc-extension
           - kinesis-extension
           - lucene-search-extension
           - memcached-extension

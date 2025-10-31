@@ -1,7 +1,6 @@
 package lucee.runtime.mvn;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,6 +22,7 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.SerializableObject;
 import lucee.commons.lang.StringUtil;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.tree.TreeNode;
 import lucee.runtime.mvn.POMReader.Dependency;
 import lucee.runtime.op.Caster;
@@ -502,19 +502,18 @@ public final class POM {
 
 		URL url = null;
 		Exception cause = null;
+
 		for (Repository r: repos) {
-			HttpURLConnection connection = null;
-			int responseCode = 0;
 			try {
 				url = new URL(r.getUrl() + scriptName);
-				connection = (HttpURLConnection) url.openConnection();
 
-				// Use GET instead of HEAD, but request zero bytes
-				connection.setRequestMethod("GET");
-				connection.setRequestProperty("Range", "bytes=0-0"); // Request just the first byte
-				connection.setConnectTimeout(CONNECTION_TIMEOUT);
-				connection.setReadTimeout(READ_TIMEOUT_HEAD);
-				responseCode = connection.getResponseCode();
+				if (HTTPDownloader.exists(url, CONNECTION_TIMEOUT, READ_TIMEOUT_HEAD)) {
+					return url;
+				}
+
+				if (sb == null) sb = new StringBuilder();
+				else sb.append(", ");
+				sb.append(url.toExternalForm());
 			}
 			catch (Exception e) {
 				cause = e;
@@ -523,37 +522,7 @@ public final class POM {
 					else sb.append(", ");
 					sb.append(url.toExternalForm());
 				}
-				continue;
 			}
-			// Close the connection immediately to avoid downloading content
-			connection.disconnect();
-
-			if (responseCode == 200 || responseCode == 206) { // 206 is Partial Content response
-				return url;
-			}
-			int max = 3;
-			while ((responseCode == 301 || responseCode == 302) && --max > 0) {
-
-				String newUrl = connection.getHeaderField("Location");
-
-				if (!StringUtil.isEmpty(newUrl, true)) {
-					url = new URL(newUrl);
-					connection = (HttpURLConnection) url.openConnection();
-					connection.setRequestMethod("GET");
-					connection.setRequestProperty("Range", "bytes=0-0");
-					connection.setConnectTimeout(CONNECTION_TIMEOUT);
-					connection.setReadTimeout(READ_TIMEOUT_HEAD);
-					responseCode = connection.getResponseCode();
-					connection.disconnect();
-					if (responseCode == 200 || responseCode == 206) {
-						return url;
-					}
-				}
-			}
-
-			if (sb == null) sb = new StringBuilder();
-			else sb.append(", ");
-			sb.append(url.toExternalForm());
 		}
 
 		IOException ioe = new IOException("Failed to download java artifact [" + toString() + "] for type [" + type + "], attempted endpoint(s): [" + sb + "]");

@@ -223,43 +223,240 @@ public final class SelectParser {
 	}
 
 	private void tableList(ParserString raw, Select select) throws SQLParserException {
-		Column column = null;
-		Expression exp = null;
-		do {
-			raw.removeSpace();
+		// Parse first table
+		raw.removeSpace();
+		Column column = parseTableWithAlias(raw, false);
+		select.addFromExpression(column);
+		raw.removeSpace();
 
-			exp = column(raw);
-			if (!(exp instanceof Column)) throw new SQLParserException("invalid table definition");
-			column = (Column) exp;
-			raw.removeSpace();
-			if (raw.forwardIfCurrent("as ")) {
-				String alias = identifier(raw, new RefBooleanImpl(false));
-				if (alias == null) throw new SQLParserException("missing alias in select part");
-				column.setAlias(alias);
+		// Parse additional tables (comma-separated or JOINs)
+		while (!raw.isAfterLast()) {
+			// Check for comma-separated table
+			if (raw.forwardIfCurrent(',')) {
+				raw.removeSpace();
+				column = parseTableWithAlias(raw, false);
+				select.addFromExpression(column);
+				raw.removeSpace();
+			}
+			// Check for JOIN keywords
+			else if (matchJoinKeyword(raw)) {
+				raw.removeSpace();
+
+				// Parse joined table
+				column = parseTableWithAlias(raw, true);
+				select.addFromExpression(column);
+				raw.removeSpace();
+
+				// Skip ON clause (we don't need to parse it for table extraction)
+				if (raw.forwardIfCurrentAndNoWordNumberAfter("on")) {
+					skipOnClause(raw);
+					raw.removeSpace();
+				}
 			}
 			else {
-				int start = raw.getPos();
-				RefBoolean hasBracked = new RefBooleanImpl(false);
-				String alias = identifier(raw, hasBracked);// TODO having usw
-				if (!hasBracked.toBooleanValue()) {
-					if ("where".equalsIgnoreCase(alias)) raw.setPos(start);
-					else if ("group".equalsIgnoreCase(alias)) raw.setPos(start);
-					else if ("having".equalsIgnoreCase(alias)) raw.setPos(start);
-					else if ("union".equalsIgnoreCase(alias)) raw.setPos(start);
-					else if ("order".equalsIgnoreCase(alias)) raw.setPos(start);
-					else if ("limit".equalsIgnoreCase(alias)) raw.setPos(start);
-					else if (alias != null) column.setAlias(alias);
+				// No more tables
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Parse a table reference with optional alias.
+	 *
+	 * @param raw the parser string
+	 * @param isJoin true if this is part of a JOIN clause (affects stop words)
+	 * @return Column expression with table name and alias
+	 * @throws SQLParserException if table is invalid
+	 */
+	private Column parseTableWithAlias(ParserString raw, boolean isJoin) throws SQLParserException {
+		Expression exp = column(raw);
+		if (!(exp instanceof Column)) throw new SQLParserException("invalid table definition");
+		Column column = (Column) exp;
+		raw.removeSpace();
+
+		// Try to parse alias
+		String alias = parseOptionalAlias(raw, isJoin);
+		if (alias != null) {
+			column.setAlias(alias);
+		}
+
+		return column;
+	}
+
+	/**
+	 * Parse an optional table alias, handling both "AS alias" and implicit alias syntax.
+	 * Checks for SQL keywords that indicate the end of the alias position.
+	 *
+	 * @param raw the parser string
+	 * @param isJoin true if parsing in a JOIN context (adds "ON" as stop word)
+	 * @return the alias string, or null if no alias found
+	 * @throws SQLParserException if alias syntax is invalid
+	 */
+	private String parseOptionalAlias(ParserString raw, boolean isJoin) throws SQLParserException {
+		// Explicit AS keyword
+		if (raw.forwardIfCurrent("as ")) {
+			String alias = identifier(raw, new RefBooleanImpl(false));
+			if (alias == null) throw new SQLParserException("missing alias after AS keyword");
+			return alias;
+		}
+
+		// Try implicit alias
+		int start = raw.getPos();
+		RefBoolean hasBracked = new RefBooleanImpl(false);
+		String alias = identifier(raw, hasBracked);
+
+		if (alias == null) return null;
+
+		// Bracketed identifiers are always valid aliases
+		if (hasBracked.toBooleanValue()) {
+			return alias;
+		}
+
+		// Check if this is a SQL keyword (not a valid alias)
+		String lowerAlias = alias.toLowerCase();
+		if (isEndOfFromClause(lowerAlias) || isJoinKeywordStart(lowerAlias)) {
+			raw.setPos(start);
+			return null;
+		}
+
+		// In JOIN context, "ON" is also a stop word
+		if (isJoin && "on".equals(lowerAlias)) {
+			raw.setPos(start);
+			return null;
+		}
+
+		return alias;
+	}
+
+	private boolean isEndOfFromClause(String keyword) {
+		if (keyword == null) return false;
+		return "where".equalsIgnoreCase(keyword)
+			|| "group".equalsIgnoreCase(keyword)
+			|| "having".equalsIgnoreCase(keyword)
+			|| "union".equalsIgnoreCase(keyword)
+			|| "order".equalsIgnoreCase(keyword)
+			|| "limit".equalsIgnoreCase(keyword);
+	}
+
+	private boolean isJoinKeywordStart(String keyword) {
+		if (keyword == null) return false;
+		return "cross".equalsIgnoreCase(keyword)
+			|| "inner".equalsIgnoreCase(keyword)
+			|| "left".equalsIgnoreCase(keyword)
+			|| "right".equalsIgnoreCase(keyword)
+			|| "full".equalsIgnoreCase(keyword)
+			|| "join".equalsIgnoreCase(keyword);
+	}
+
+	/**
+	 * Check if the current position matches a JOIN keyword and consume it if found.
+	 *
+	 * @param raw the parser string
+	 * @return true if a JOIN keyword was matched and consumed
+	 */
+	private boolean matchJoinKeyword(ParserString raw) {
+		// Try to match JOIN keywords in order of specificity (longest first)
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("cross", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("inner", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("left", "outer", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("left", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("right", "outer", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("right", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("full", "outer", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("full", "join")) return true;
+		if (raw.forwardIfCurrentAndNoWordNumberAfter("join")) return true;
+
+		return false;
+	}
+
+	/**
+	 * Skip over the ON clause of a JOIN by tracking parentheses depth and string literals.
+	 * Stops when we hit the next JOIN keyword, end-of-FROM keyword, or run out of input.
+	 *
+	 * @param raw the parser string
+	 * @throws SQLParserException if there's a syntax error
+	 */
+	private void skipOnClause(ParserString raw) throws SQLParserException {
+		raw.removeSpace();
+		int parenDepth = 0;
+		boolean inString = false;
+
+		while (!raw.isAfterLast()) {
+			char current = raw.getCurrent();
+
+			// Handle string literals to avoid false positives with parentheses or keywords inside strings
+			if (current == '\'' && !inString) {
+				inString = true;
+				raw.next();
+				// Skip until we find the closing quote, handling escaped quotes ''
+				while (!raw.isAfterLast()) {
+					if (raw.isCurrent('\'')) {
+						if (raw.isNext('\'')) {
+							// Escaped quote, skip both
+							raw.next();
+							raw.next();
+						}
+						else {
+							// End of string
+							raw.next();
+							inString = false;
+							break;
+						}
+					}
+					else {
+						raw.next();
+					}
+				}
+				continue;
+			}
+
+			// Only process structure when not inside a string literal
+			if (!inString) {
+				if (current == '(') {
+					parenDepth++;
+					raw.next();
+				}
+				else if (current == ')') {
+					parenDepth--;
+					if (parenDepth < 0) {
+						// Hit a closing paren that doesn't belong to the ON clause
+						raw.previous();
+						break;
+					}
+					raw.next();
+				}
+				else if (parenDepth == 0) {
+					// Only check for keywords at parenthesis depth 0
+					int start = raw.getPos();
+					RefBoolean hasBracked = new RefBooleanImpl(false);
+					String keyword = identifier(raw, hasBracked);
+
+					// If we found a keyword that ends the ON clause, rewind and stop
+					if (keyword != null && !hasBracked.toBooleanValue()) {
+						String lowerKeyword = keyword.toLowerCase();
+						if (isEndOfFromClause(lowerKeyword) || isJoinKeywordStart(lowerKeyword)) {
+							raw.setPos(start);
+							break;
+						}
+					}
+
+					// Not a stop keyword, continue (but stay at current position if we didn't read an identifier)
+					if (keyword == null) {
+						raw.next();
+					}
+					// else: identifier() already advanced the position
 				}
 				else {
-					if (alias != null) column.setAlias(alias);
+					// Inside parentheses, just advance
+					raw.next();
 				}
-
 			}
-			select.addFromExpression(column);
-			raw.removeSpace();
 		}
-		while (raw.forwardIfCurrent(','));
 
+		// If we ended inside a string, that's a syntax error
+		if (inString) {
+			throw new SQLParserException("Unclosed string literal in ON clause");
+		}
 	}
 
 	// { (selectStatement) [AS] label | tableName [AS] label}

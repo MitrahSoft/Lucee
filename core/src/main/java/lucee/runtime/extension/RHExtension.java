@@ -70,6 +70,7 @@ import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.Constants;
 import lucee.runtime.config.DeployHandler;
 import lucee.runtime.config.ResetFilter;
+import lucee.runtime.config.maven.ExtensionProvider;
 import lucee.runtime.converter.ConverterException;
 import lucee.runtime.engine.ThreadLocalConfig;
 import lucee.runtime.engine.ThreadLocalPageContext;
@@ -79,6 +80,7 @@ import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.functions.conversion.DeserializeJSON;
 import lucee.runtime.mvn.MavenUtil;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
 import lucee.runtime.osgi.BundleFile;
@@ -271,7 +273,7 @@ public final class RHExtension implements Serializable {
 		}
 	}
 
-	public static RHExtension installExtension(ConfigPro config, String id, String version, String resource, boolean force) throws PageException, IOException {
+	public static RHExtension installExtension(ConfigPro config, String id, String version, Resource resource, boolean force) throws PageException, IOException {
 
 		// get installed res
 		Resource res = StringUtil.isEmpty(version) ? null : getExtensionInstalledFile(config, id, version, false);
@@ -279,8 +281,9 @@ public final class RHExtension implements Serializable {
 		ResetFilter filter = new ResetFilter();
 		if (!installed) {
 			try {
-				if (!StringUtil.isEmpty(resource) && (res = ResourceUtil.toResourceExisting(config, resource, null)) != null) {
-					return DeployHandler.deployExtension(config, new ExtensionDefintion(id, version).setSource(config, res), filter, null, false, true, true, new RefBooleanImpl());
+				if (resource != null) {
+					return DeployHandler.deployExtension(config, new ExtensionDefintion(id, version).setSource(config, resource), filter, null, false, true, true,
+							new RefBooleanImpl());
 				}
 				else if (!StringUtil.isEmpty(id)) {
 					return DeployHandler.deployExtension(config, new ExtensionDefintion(id, version), filter, null, false, true, true, new RefBooleanImpl()); // MUSTT
@@ -1290,6 +1293,7 @@ public final class RHExtension implements Serializable {
 		String name;
 		Resource res;
 		Config c = ThreadLocalPageContext.getConfig();
+		GAVSO gavso = null;
 		for (String ss: arrr) {
 			res = null;
 			index = ss.indexOf('=');
@@ -1299,6 +1303,11 @@ public final class RHExtension implements Serializable {
 				if ("path".equalsIgnoreCase(name) && c != null) {
 					res = ResourceUtil.toResourceExisting(c, ss.substring(index + 1).trim(), null);
 				}
+			}
+			// gradle style maven
+			else if (ed.getId() == null && (gavso = MavenUtil.toGAVSO(ss, null)) != null) {
+				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, false, null);
+				if (tmp != null) ed = tmp;
 			}
 			else if (ed.getId() == null || Decision.isUUId(ed.getId())) {
 				if (c == null || Decision.isUUId(ss) || (res = ResourceUtil.toResourceExisting(ThreadLocalPageContext.getConfig(), ss.trim(), null)) == null) ed.setId(ss);
@@ -1327,7 +1336,7 @@ public final class RHExtension implements Serializable {
 			}
 
 		}
-		return ed;
+		return StringUtil.isEmpty(ed.getId(), true) ? null : ed;
 	}
 
 	public static ExtensionDefintion toExtensionDefinition(Config config, String id, Map<String, String> data) {
@@ -1348,26 +1357,28 @@ public final class RHExtension implements Serializable {
 			if (!"id".equalsIgnoreCase(name)) ed.setParam(name, entry.getValue().trim());
 			if ("path".equalsIgnoreCase(name) || "url".equalsIgnoreCase(name) || "resource".equalsIgnoreCase(name)) {
 				res = ResourceUtil.toResourceExisting(config, entry.getValue().trim(), null);
+				if (res != null && res.isFile()) {
+					ed.setSource(config, res);
+					if (ed.getId() == null) {
 
-				if (ed.getId() == null && res != null && res.isFile()) {
-
-					Resource trgDir = config.getLocalExtensionProviderDirectory();
-					Resource trg = trgDir.getRealResource(res.getName());
-					if (!res.equals(trg) && !trg.isFile()) {
-						try {
-							IOUtil.copy(res, trg);
+						Resource trgDir = config.getLocalExtensionProviderDirectory();
+						Resource trg = trgDir.getRealResource(res.getName());
+						if (!res.equals(trg) && !trg.isFile()) {
+							try {
+								IOUtil.copy(res, trg);
+							}
+							catch (IOException e) {
+								e.printStackTrace();
+							}
 						}
-						catch (IOException e) {
+						if (!trg.isFile()) continue;
+
+						try {
+							return getInstance(config, trg).toExtensionDefinition();
+						}
+						catch (Exception e) {
 							e.printStackTrace();
 						}
-					}
-					if (!trg.isFile()) continue;
-
-					try {
-						return getInstance(config, trg).toExtensionDefinition();
-					}
-					catch (Exception e) {
-						e.printStackTrace();
 					}
 				}
 			}

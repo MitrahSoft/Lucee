@@ -112,7 +112,14 @@ public final class ChildThreadImpl extends ChildThread implements Serializable {
 
 	private final boolean separateScopes;
 
+	// Spawn offset for execution log (only set when exec logging enabled)
+	private long spawnOffsetNano;
+
 	public ChildThreadImpl(PageContextImpl parent, Page page, String tagName, int threadIndex, Struct attrs, boolean serializable, boolean separateScopes) {
+		// Capture spawn offset only if execution logging is enabled
+		if (parent != null && ((ConfigPro) parent.getConfig()).getExecutionLogEnabled()) {
+			this.spawnOffsetNano = System.nanoTime() - parent.getStartTimeNS();
+		}
 		this.serializable = serializable;
 		this.tagName = tagName;
 		this.threadIndex = threadIndex;
@@ -331,6 +338,15 @@ public final class ChildThreadImpl extends ChildThread implements Serializable {
 
 	public void setScope(ThreadsImpl scope) {
 		this.scope = scope;
+	}
+
+	// Execution log metadata getters
+	public PageContext getParentPageContext() {
+		return this.pc != null ? this.pc.getParentPageContext() : null;
+	}
+
+	public long getSpawnOffsetNano() {
+		return spawnOffsetNano;
 	}
 
 }

@@ -127,6 +127,13 @@ public class Component extends EvaluatorSupport {
 
 		// Attributes
 
+		// Check for unsupported initMethod attribute
+		Attribute initMethodAttr = tag.getAttribute("initmethod");
+		if (initMethodAttr == null) initMethodAttr = tag.getAttribute("initMethod");
+		if (initMethodAttr != null) {
+			throw new EvaluatorException("Attribute [initMethod] is not supported in Lucee. Refactor your code to use the default init() method.");
+		}
+
 		// Name
 		String name = null;
 		if (!main) {
