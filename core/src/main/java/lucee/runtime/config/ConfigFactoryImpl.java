@@ -162,7 +162,7 @@ import lucee.runtime.monitor.RequestMonitorProImpl;
 import lucee.runtime.monitor.RequestMonitorWrap;
 import lucee.runtime.net.http.ReqRspUtil;
 import lucee.runtime.net.mail.Server;
-// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
+import lucee.runtime.net.mail.ServerImpl;
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
@@ -3025,13 +3025,12 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					try {
 						el = Caster.toStruct(it.next(), null);
 						if (el == null) continue;
-						// Mail functionality removed
-						// i++;
-						// servers.add(i,
-						// 		new ServerImpl(Caster.toIntValue(getAttr(el, "id"), i + 1), getAttr(el, "smtp"), Caster.toIntValue(getAttr(el, "port"), 25),
-						// 				getAttr(el, "username"), ConfigUtil.decrypt(getAttr(el, "password")), toLong(getAttr(el, "life"), 1000 * 60 * 5),
-						// 				toLong(getAttr(el, "idle"), 1000 * 60 * 1), toBoolean(getAttr(el, "tls"), false), toBoolean(getAttr(el, "ssl"), false),
-						// 				toBoolean(getAttr(el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL));
+						i++;
+						servers.add(i,
+								new ServerImpl(Caster.toIntValue(getAttr(el, "id"), i + 1), getAttr(el, "smtp"), Caster.toIntValue(getAttr(el, "port"), 25),
+										getAttr(el, "username"), ConfigUtil.decrypt(getAttr(el, "password")), toLong(getAttr(el, "life"), 1000 * 60 * 5),
+										toLong(getAttr(el, "idle"), 1000 * 60 * 1), toBoolean(getAttr(el, "tls"), false), toBoolean(getAttr(el, "ssl"), false),
+										toBoolean(getAttr(el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL));
 
 					}
 					catch (Throwable t) {

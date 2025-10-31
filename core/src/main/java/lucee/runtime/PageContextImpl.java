@@ -4126,8 +4126,25 @@ public final class PageContextImpl extends PageContext {
 
 	@Override
 	public lucee.runtime.net.mail.Server[] getMailServers() {
-		// Mail functionality removed
-		return new lucee.runtime.net.mail.Server[0];
+		lucee.runtime.net.mail.Server[] appms = applicationContext == null ? null : getApplicationContext().getMailServers();
+		if (ArrayUtil.isEmpty(appms)) return config.getMailServers();
+
+		lucee.runtime.net.mail.Server[] cms = config.getMailServers();
+		if (ArrayUtil.isEmpty(cms)) return appms;
+
+		ArrayList<lucee.runtime.net.mail.Server> result = new ArrayList<lucee.runtime.net.mail.Server>();
+
+		// first we fill it with the left array
+		for (lucee.runtime.net.mail.Server appm: appms) {
+			result.add(appm);
+		}
+
+		// Now we fill the second array, but only the one not existing yet
+		for (lucee.runtime.net.mail.Server cm: cms) {
+			if (!result.contains(cm)) result.add(cm);
+		}
+		return result.toArray(new lucee.runtime.net.mail.Server[result.size()]);
+
 	}
 
 	@Override

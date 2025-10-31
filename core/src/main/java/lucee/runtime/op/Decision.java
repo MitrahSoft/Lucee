@@ -869,7 +869,9 @@ public final class Decision {
 	 * @return
 	 */
 	public static boolean isEmail(Object value) {
-		// TODO: Mail functionality removed - basic email validation only
+
+		// TODO Mail functionality removed - basic email validation only call return
+		// MailUtil.isValidEmail(value); if mail extension is installed
 		String str = Caster.toString(value, null);
 		if (str == null) return false;
 		return str.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");

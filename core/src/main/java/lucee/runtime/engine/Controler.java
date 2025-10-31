@@ -449,18 +449,6 @@ public final class Controler extends ParentThreasRefThread {
 				}
 				checkStopWatch(config, stopwatch, "checkMappings");
 
-				if (doit) {
-					stopwatch.start();
-					try {
-						doClearMailConnections();
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						if (log != null) log.error("controler", t);
-					}
-					checkStopWatch(config, stopwatch, "clearMailConnections");
-				}
-
 				// clean LockManager
 				stopwatch.start();
 				if (cfmlFactory.getUsedPageContextLength() == 0) try {
@@ -540,10 +528,6 @@ public final class Controler extends ParentThreasRefThread {
 		if (factories == null || factories.length != contextes.size()) factories = (CFMLFactoryImpl[]) contextes.values().toArray(new CFMLFactoryImpl[contextes.size()]);
 
 		return factories;
-	}
-
-	private void doClearMailConnections() {
-		// SMTPConnectionPool.closeSessions(); // removed with mail functionality
 	}
 
 	private void checkOldClientFile(ConfigWeb config, Log log) {
