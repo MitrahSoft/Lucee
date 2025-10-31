@@ -66,7 +66,7 @@ on:
           - git-extension
           - hibernate-extension
           - image-extension
-          - jtds-extension
+          - jtds-jdbc-extension
           - kinesis-extension
           - lucene-search-extension
           - memcached-extension
