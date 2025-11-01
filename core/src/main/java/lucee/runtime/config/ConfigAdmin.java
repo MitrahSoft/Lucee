@@ -75,8 +75,8 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.IPRange;
-import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.URLEncoder;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPEngine;
 import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
@@ -3823,13 +3823,7 @@ public final class ConfigAdmin {
 		// copy it to local directory
 		if (newLucee.createNewFile()) {
 			try {
-				HTTPDownloader.downloadToFile(
-					updateUrl,
-					newLucee,
-					DOWNLOAD_CONNECT_TIMEOUT,
-					DOWNLOAD_READ_TIMEOUT,
-					DOWNLOAD_USER_AGENT
-				);
+				HTTPDownloader.downloadToFile(updateUrl, newLucee, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 
 				// when it is a loader extract the core from it
 				File tmp = CFMLEngineFactory.extractCoreIfLoader(newLucee);
@@ -6397,7 +6391,7 @@ public final class ConfigAdmin {
 			el = Caster.toStruct(children.get(key, null), null);
 			if (el == null) continue;
 
-			id = Caster.toString(el.get(KeyConstants._id), null);
+			id = Caster.toString(el.get(KeyConstants._id, null), null);
 			if (extensionID.equalsIgnoreCase(id)) {
 				bundles = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
 

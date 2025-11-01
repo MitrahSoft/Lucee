@@ -84,7 +84,7 @@ public final class VersionRange implements Serializable {
 		@Override
 		public String toString() {
 			if (from != null && to != null && from.equals(to)) return from.toString();
-			return (from == null ? "" : from.toString()) + "-" + (to == null ? "" : to.toString());
+			return "(" + ((from == null ? "" : from.toString()) + " - " + (to == null ? "" : to.toString())) + ")";
 		}
 
 		/**
