@@ -1,5 +1,12 @@
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="mail" skip=true { 
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="mail"  javaSettings='{
+		"maven": [
+			"com.icegreen:greenmail:2.1.7"
+		]
+	}'  { 
 	
+	import "com.icegreen.greenmail.util.ServerSetup";
+	import "com.icegreen.greenmail.util.GreenMail";
+
 	processingdirective pageencoding="UTF-8";
 
 
@@ -11,10 +18,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mail" skip=true {
 
 	function beforeAll() {
 		if(isNull(application.testSMTP)) {
-			var ServerSetup=createObject("java","com.icegreen.greenmail.util.ServerSetup","org.lucee.greenmail","1.6.15");
-			var GreenMail=createObject("java","com.icegreen.greenmail.util.GreenMail","org.lucee.greenmail","1.6.15");
-			variables.utils = createObject("java","com.icegreen.greenmail.util.GreenMailUtil","org.lucee.greenmail","1.6.15");
-			application.testSMTP = GreenMail.init(ServerSetup.init(variables.port, nullValue(), ServerSetup.PROTOCOL_SMTP));
+			application.testSMTP=new GreenMail(new ServerSetup(variables.port, nullValue(), ServerSetup::PROTOCOL_SMTP));
 			application.testSMTP.start();
 		}
 		else {
