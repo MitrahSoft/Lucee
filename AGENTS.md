@@ -58,7 +58,7 @@ The resulting JAR will be found in `loader/target` and its filename will include
 **Example usage:**
 
 ```sh
-ant -buildfile="..\script-runner\build.xml" -DluceeJar="/full/pathot/loader/target/lucee-{version}.jar" -Dwebroot="D:\work\yourproject" -Dexecute="test.cfm"
+ant -buildfile "..\script-runner\build.xml" -DluceeJar="/full/pathot/loader/target/lucee-{version}.jar" -Dwebroot="D:\work\yourproject" -Dexecute="test.cfm"
 ```
 
 
