@@ -5155,6 +5155,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDotNotationUpperCase")) {
 				if (dotNotationUpperCase == null) {
 					Boolean tmp = Caster.toBoolean(SystemUtil.getSystemPropOrEnvVar("lucee.preserve.case", null), null);
+					if (tmp != null) tmp = !tmp; // invert: lucee.preserve.case=true means dotNotationUpperCase=false
 					if (tmp == null) tmp = Caster.toBoolean(ConfigFactoryImpl.getAttr(root, "dotNotationUpperCase"), null);
 					if (tmp == null) {
 						tmp = Caster.toBoolean(ConfigFactoryImpl.getAttr(root, "preserveCase"), null);
