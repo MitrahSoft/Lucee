@@ -208,7 +208,7 @@
 	
 	<target name="check-mssql" depends="check-cache" unless="mssql.present">
 		<get 
-			src="${extURLCDN}${extMssqlJdbcExtensionGroupPath}/${extMssqlJdbcExtensionArtifact}/${extMssqlJdbcExtensionVersion}/${extMssqlJdbcExtensionArtifact}-${extMssqlJdbcExtensionVersion}.lex" 
+			src="${extURLMaven}${extMssqlJdbcExtensionGroupPath}/${extMssqlJdbcExtensionArtifact}/${extMssqlJdbcExtensionVersion}/${extMssqlJdbcExtensionArtifact}-${extMssqlJdbcExtensionVersion}.lex" 
 			dest="${cache}/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex"/>
 	</target> 
 
