@@ -35,6 +35,7 @@ on:
           - org.lucee.axis.extension
           - org.lucee.exasol
           - org.lucee.mssql
+          - org.lucee.oracle
           - org.postgresql.postgresql
           - org.h2.h2
           - org.mongodb.mongo-java-driver
@@ -73,6 +74,7 @@ on:
           - mongodb-extension
           - mssql-jdbc-extension
           - mysql-jdbc-extension
+          - oracle-jdbc-extension
           - postgresql-jdbc-extension
           - pdf-extension
           - quartz-extension
