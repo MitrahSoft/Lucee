@@ -621,10 +621,10 @@
 	{
 		"sysprop": "lucee.preserve.case",
 		"envvar": "LUCEE_PRESERVE_CASE",
-		"desc": "A boolean value. If `true`, Lucee will not convert variable names used in `dot notation` to UPPER CASE",
+		"desc": "A boolean value. If `true`, Lucee will preserve the original case of variable names used in `dot notation` (i.e., will NOT convert to UPPER CASE). If `false` or not set, variable names will be converted to uppercase (default behavior).",
 		"category": "compiler",
 		"type": "boolean",
-		"default": null
+		"default": false
 	},
 	{
 		"sysprop": "lucee.qoq.hsqldb.debug",
