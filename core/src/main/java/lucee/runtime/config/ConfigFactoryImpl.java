@@ -3468,7 +3468,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 								else {
 									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
 											+ "] in the installed folder that is in a different version in the configuraton, so we delete that extension file.");
-									r.delete();
+									ConfigAdmin.deleteExtensionFile(ext, r);
 								}
 
 							}
