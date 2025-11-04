@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.cert.X509Certificate;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -127,6 +128,7 @@ import lucee.runtime.engine.ExecutionLogFactory;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.CasterException;
+import lucee.runtime.exp.DatabaseException;
 import lucee.runtime.exp.DeprecatedException;
 import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.PageException;
@@ -1612,7 +1614,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doUpdateDefaultSecurityManager() throws PageException {
-		admin.updateDefaultSecurity( SecurityManagerImpl.toShortAccessValue(getString("admin", action,	"file")), getFileAcces(), fb("direct_java_access"), fb("cfx_usage"), fb("tag_execute"), fb("tag_import"), fb("tag_object"), fb("tag_registry"), fb2("access_read"), fb2("access_write") );
+		admin.updateDefaultSecurity(SecurityManagerImpl.toShortAccessValue(getString("admin", action, "file")), getFileAcces(), fb("direct_java_access"), fb("cfx_usage"),
+				fb("tag_execute"), fb("tag_import"), fb("tag_object"), fb("tag_registry"), fb2("access_read"), fb2("access_write"));
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetDefaultSecurityManager();
 		adminSync.broadcast(attributes, config);
@@ -2685,9 +2688,9 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		// config.getDatasourceConnectionPool().remove(name);
 		DataSourcePro ds = null;
 		try {
-			ds = new DataSourceImpl(config, name, cd, host, dsn, bundleName, bundleVersion, database, port, username, password, null, connLimit, idleTimeout, liveTimeout, minIdle, maxIdle, maxTotal,
-					metaCacheTimeout, blob, clob, allow, custom, false, validate, storage, null, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
-					alwaysResetConnections, ThreadLocalPageContext.getLog(pageContext, "application"));
+			ds = new DataSourceImpl(config, name, cd, host, dsn, bundleName, bundleVersion, database, port, username, password, null, connLimit, idleTimeout, liveTimeout, minIdle,
+					maxIdle, maxTotal, metaCacheTimeout, blob, clob, allow, custom, false, validate, storage, null, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout,
+					requestExclusive, alwaysResetConnections, ThreadLocalPageContext.getLog(pageContext, "application"));
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);
@@ -2695,8 +2698,9 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		if (verify) _doVerifyDatasource(ds, username, password);
 		// print.out("limit:"+connLimit);
-		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, metaCacheTimeout, blob, clob, allow,
-				validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive, alwaysResetConnections);
+		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout,
+				metaCacheTimeout, blob, clob, allow, validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
+				alwaysResetConnections);
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetDataSources();
 		adminSync.broadcast(attributes, config);
@@ -2911,7 +2915,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private void _doVerifyDatasource(DataSourcePro ds, String username, String password) throws PageException {
 		try {
-			DatasourceConnectionImpl dc = new DatasourceConnectionImpl(null, ds.getConnection(config, username, password), ds, username, password);
+			Connection conn = ds.getConnection(config, username, password);
+			if (conn == null) {
+				throw new DatabaseException("Could not create connection to [" + ds.getConnectionStringTranslated() + "], verify your connection settings.", null, null, null);
+			}
+			DatasourceConnectionImpl dc = new DatasourceConnectionImpl(null, conn, ds, username, password);
 			dc.getConnection().close();
 		}
 		catch (Exception e) {
