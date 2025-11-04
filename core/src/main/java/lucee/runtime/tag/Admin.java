@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.cert.X509Certificate;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -127,6 +128,7 @@ import lucee.runtime.engine.ExecutionLogFactory;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.CasterException;
+import lucee.runtime.exp.DatabaseException;
 import lucee.runtime.exp.DeprecatedException;
 import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.PageException;
@@ -1635,10 +1637,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private void doUpdateDefaultSecurityManager() throws PageException {
 		if (singleMode) {
-			admin.updateDefaultSecurity( SecurityManagerImpl.toShortAccessValue(getString("admin", action, "file")),
-				getFileAcces(), fb("direct_java_access"),fb("cfx_usage"), 
-				fb("tag_execute"), fb("tag_import"), fb("tag_object"), fb("tag_registry"),  
-				fb2("access_read"), fb2("access_write"));
+			admin.updateDefaultSecurity(SecurityManagerImpl.toShortAccessValue(getString("admin", action, "file")), getFileAcces(), fb("direct_java_access"), fb("cfx_usage"),
+					fb("tag_execute"), fb("tag_import"), fb("tag_object"), fb("tag_registry"), fb2("access_read"), fb2("access_write"));
 		}
 		else {
 			admin.updateDefaultSecurity(fb("setting"), SecurityManagerImpl.toShortAccessValue(getString("admin", action, "file")), getFileAcces(), fb("direct_java_access"),
@@ -2919,7 +2919,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private void _doVerifyDatasource(DataSourcePro ds, String username, String password) throws PageException {
 		try {
-			DatasourceConnectionImpl dc = new DatasourceConnectionImpl(null, ds.getConnection(config, username, password), ds, username, password);
+			Connection conn = ds.getConnection(config, username, password);
+			if (conn == null) {
+				throw new DatabaseException("Could not create connection to [" + ds.getConnectionStringTranslated() + "], verify your connection settings.", null, null, null);
+			}
+			DatasourceConnectionImpl dc = new DatasourceConnectionImpl(null, conn, ds, username, password);
 			dc.close();
 		}
 		catch (Exception e) {
