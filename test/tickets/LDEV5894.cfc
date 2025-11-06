@@ -21,7 +21,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" javaSettings='{
 						return com.icegreen.greenmail.util.ServerSetup::PROTOCOL_SMTP;
 					}
 				};
-				expect(x()).toBe("smtp");
+				expect(x()()).toBe("smtp");
 			});
 
 			it(title = "call private function", body = function( currentSpec ) {
@@ -31,7 +31,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" javaSettings='{
 						return priv();
 					}
 				};
-				expect(x()).toBeTrue();
+				expect(x()()).toBeTrue();
 			});
 
 		});
