@@ -62,8 +62,8 @@ try {
 		inspect="never";
 
 	systemOutput("set /test mapping #dateTimeFormat(now())#", true);
-	systemOutput("testFolder: #testFolder#", true);
-	systemOutput(directoryList(path:testFolder,listInfo:"name"), true);
+	systemOutput("testFolder: #request.testFolder#", true);
+	systemOutput(directoryList(path:request.testFolder,listInfo:"name"), true);
 
 	param name="testDebug" default="false";
 	if ( len( testDebug ) eq 0 )
