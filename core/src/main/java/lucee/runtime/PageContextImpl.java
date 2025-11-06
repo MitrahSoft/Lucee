@@ -3309,9 +3309,11 @@ public final class PageContextImpl extends PageContext {
 		this.variables = variables;
 		undefinedScope().setVariableScope(variables);
 
-		if (variables instanceof ClosureScope) {
+		// we have a while here for closures in closures
+		while (variables instanceof ClosureScope) {
 			variables = ((ClosureScope) variables).getVariables();
 		}
+
 		if (variables instanceof StaticScope) {
 			activeComponent = ((StaticScope) variables).getComponent();
 		}
