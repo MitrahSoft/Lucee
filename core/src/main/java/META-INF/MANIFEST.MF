@@ -373,4 +373,5 @@ Require-Extension: org.lucee:mysql-jdbc-extension:9.5.0,
  org.lucee:image-extension:3.0.0.6,
  org.lucee:esapi-extension:2.6.0.1,
  org.lucee:scheduler-classic-extension:1.0.0.0,
- org.lucee:compress-extension:2.0.0.3
+ org.lucee:compress-extension:2.0.0.3,
+ org.lucee:mail-extension:1.0.0.17-BETA

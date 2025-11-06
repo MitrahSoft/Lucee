@@ -226,6 +226,14 @@
         </or>
     </condition>
 </fail>
+<fail message="Missing Mail data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extMailExtension"/></not>
+            <not><isset property="extMailExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
 
 <echo level="info">  
 
