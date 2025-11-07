@@ -103,7 +103,7 @@ public final class StructUtil {
 	}
 
 	public static Set<Entry<String, Object>> entrySet(Struct sct) {
-		boolean linked = sct instanceof StructImpl && ((StructImpl) sct).getType() == Struct.TYPE_LINKED;
+		boolean linked = sct instanceof StructImpl && (((StructImpl) sct).getType() == Struct.TYPE_LINKED || ((StructImpl) sct).getType() == StructImpl.TYPE_LINKED_NOT_SYNC);
 		Iterator<Entry<Key, Object>> it = sct.entryIterator();
 		Entry<Key, Object> e;
 		Set<Entry<String, Object>> set = linked ? new LinkedHashSet<Entry<String, Object>>() : new HashSet<Entry<String, Object>>();
@@ -115,7 +115,7 @@ public final class StructUtil {
 	}
 
 	public static Set<String> keySet(Struct sct) {
-		boolean linked = sct instanceof StructSupport && ((StructSupport) sct).getType() == Struct.TYPE_LINKED;
+		boolean linked = sct instanceof StructSupport && (((StructSupport) sct).getType() == Struct.TYPE_LINKED || ((StructSupport) sct).getType() == StructImpl.TYPE_LINKED_NOT_SYNC);
 
 		Iterator<Key> it = sct.keyIterator();
 		Set<String> set = linked ? new LinkedHashSet<String>() : new HashSet<String>();
@@ -127,7 +127,7 @@ public final class StructUtil {
 
 	public static DumpTable toDumpTable(Struct sct, String title, PageContext pageContext, int maxlevel, DumpProperties dp) {
 		Key[] keys = CollectionUtil.keys(sct);
-		if (!(sct instanceof StructSupport) || ((StructSupport) sct).getType() != Struct.TYPE_LINKED) keys = order(sct, CollectionUtil.keys(sct));
+		if (!(sct instanceof StructSupport) || (((StructSupport) sct).getType() != Struct.TYPE_LINKED && ((StructSupport) sct).getType() != StructImpl.TYPE_LINKED_NOT_SYNC)) keys = order(sct, CollectionUtil.keys(sct));
 		DumpTable table = new DumpTable("struct", "#468faf", "#89c2d9", "#000000");// "#9999ff","#ccccff","#000000"
 
 		int maxkeys = dp.getMaxKeys();
@@ -170,7 +170,7 @@ public final class StructUtil {
 	}
 
 	private static Key[] order(Struct sct, Key[] keys) {
-		if (sct instanceof StructImpl && ((StructImpl) sct).getType() == Struct.TYPE_LINKED) return keys;
+		if (sct instanceof StructImpl && (((StructImpl) sct).getType() == Struct.TYPE_LINKED || ((StructImpl) sct).getType() == StructImpl.TYPE_LINKED_NOT_SYNC)) return keys;
 
 		TextComparator comp = new TextComparator(true, true);
 		Arrays.sort(keys, comp);
