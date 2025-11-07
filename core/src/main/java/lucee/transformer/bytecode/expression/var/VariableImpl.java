@@ -1130,7 +1130,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 		// Build from left to right
 		for (int i = 0; i < members.size(); i++) {
 			Member member = members.get(i);
-			Struct newNode = new StructImpl(Struct.TYPE_LINKED);
+			Struct newNode = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 
 			if (member instanceof FunctionMember) {
 				// Function call
@@ -1144,7 +1144,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				// Set callee to current chain (or base identifier)
 				if (current == null) {
 					// First element - base identifier
-					Struct callee = new StructImpl(Struct.TYPE_LINKED);
+					Struct callee = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 					callee.setEL(KeyConstants._type, "Identifier");
 					callee.setEL(KeyConstants._name, getName((FunctionMember) member));
 					newNode.setEL(KeyConstants._callee, callee);
@@ -1154,11 +1154,11 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				}
 
 				// Add arguments
-				Array arrArgs = new ArrayImpl();
+				Array arrArgs = new ArrayImpl(8, false);
 				newNode.setEL(KeyConstants._arguments, arrArgs);
 				FunctionMember fm = (FunctionMember) member;
 				for (Argument arg: fm.getArguments()) {
-					Struct sctArg = new StructImpl(Struct.TYPE_LINKED);
+					Struct sctArg = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 					arrArgs.appendEL(sctArg);
 					arg.dump(sctArg);
 				}
@@ -1177,7 +1177,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 					newNode.setEL(KeyConstants._computed, false);
 					newNode.setEL(KeyConstants._object, current);
 
-					Struct property = new StructImpl(Struct.TYPE_LINKED);
+					Struct property = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 					property.setEL(KeyConstants._type, "Identifier");
 					property.setEL(KeyConstants._name, getName((DataMember) member));
 					newNode.setEL(KeyConstants._property, property);
@@ -1195,7 +1195,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 		if (dm.getName() instanceof Literal) {
 			return dm.getName().toString();
 		}
-		Struct name = new StructImpl(Struct.TYPE_LINKED);
+		Struct name = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 		dm.getName().dump(name);
 		return name;
 	}

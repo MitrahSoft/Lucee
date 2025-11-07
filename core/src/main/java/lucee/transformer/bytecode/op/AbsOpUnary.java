@@ -237,13 +237,13 @@ public abstract class AbsOpUnary extends ExpressionBase {
 		sct.setEL(KeyConstants._prefix, (type == Factory.OP_UNARY_PRE) ? Boolean.TRUE : Boolean.FALSE);
 		// variable
 		{
-			Struct sctVar = new StructImpl(Struct.TYPE_LINKED);
+			Struct sctVar = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			var.dump(sctVar);
 			sct.setEL(KeyConstants._variable, sctVar);
 		}
 		// value
 		{
-			Struct sctVal = new StructImpl(Struct.TYPE_LINKED);
+			Struct sctVal = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			value.dump(sctVal);
 			sct.setEL(KeyConstants._value, sctVal);
 		}
