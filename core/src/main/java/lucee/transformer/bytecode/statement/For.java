@@ -131,19 +131,19 @@ public final class For extends StatementBaseNoFinal implements FlowControlBreak,
 		sct.setEL(KeyConstants._type, "ForStatement");
 
 		// init
-		{
+		if ( this.init != null ) {
 			Struct init = new StructImpl(Struct.TYPE_LINKED);
 			this.init.dump(init);
 			sct.setEL(KeyConstants._init, init);
 		}
 		// test
-		{
+		if ( condition != null ) {
 			Struct test = new StructImpl(Struct.TYPE_LINKED);
 			condition.dump(test);
 			sct.setEL(KeyConstants._test, test);
 		}
 		// alternate
-		{
+		if ( this.update != null ) {
 			Struct update = new StructImpl(Struct.TYPE_LINKED);
 			this.update.dump(update);
 			sct.setEL(KeyConstants._update, update);
