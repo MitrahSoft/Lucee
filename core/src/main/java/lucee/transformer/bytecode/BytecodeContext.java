@@ -21,6 +21,7 @@ package lucee.transformer.bytecode;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.GeneratorAdapter;
@@ -61,11 +62,15 @@ public class BytecodeContext implements Context {
 	private int rtn = -1;
 	private final boolean returnValue;
 
-	private static long _id = 0;
+	private static final AtomicLong _id = new AtomicLong(0);
 
-	private synchronized static String id() {
-		if (_id < 0) _id = 0;
-		return StringUtil.addZeros(++_id, 4);
+	private static String id() {
+		long id = _id.incrementAndGet();
+		if (id < 0) {
+			_id.set(0);
+			id = 0;
+		}
+		return StringUtil.addZeros(id, 4);
 	}
 
 	private String id = id();
