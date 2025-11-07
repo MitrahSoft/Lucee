@@ -18,8 +18,6 @@
  */
 package lucee.runtime.config;
 
-import static lucee.runtime.db.DatasourceManagerImpl.QOQ_DATASOURCE_NAME;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1665,19 +1663,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// When set to true, makes JDBC use a representation for DATE data that
 			// is compatible with the Oracle8i database.
 			System.setProperty("oracle.jdbc.V8Compatible", "true");
-
-			// Default query of query DB
-			try {
-				setDatasource(config, datasources, QOQ_DATASOURCE_NAME,
-						new ClassDefinitionImpl("org.hsqldb.jdbcDriver", "org.lucee.hsqldb", "2.7.2.jdk8", config.getIdentification()), "hypersonic-hsqldb", "", -1,
-						"jdbc:hsqldb:mem:tempQoQ;sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;", "sa", "", null, null, null,
-						DEFAULT_MAX_CONNECTION, -1, -1, 60000, 0, 0, 0, true, true, DataSource.ALLOW_ALL, false, false, null, new StructImpl(), "", ParamSyntaxImpl.DEFAULT, false,
-						false, false, false);
-			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				log(config, t);
-			}
 
 			SecurityManager sm = config.getSecurityManager();
 			short access = sm.getAccess(SecurityManager.TYPE_DATASOURCE);
