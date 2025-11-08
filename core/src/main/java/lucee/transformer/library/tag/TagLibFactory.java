@@ -80,6 +80,9 @@ public final class TagLibFactory extends DefaultHandler {
 	private TagLibTagAttr att;
 	private boolean insideAtt = false;
 
+	private TagLibTagAttrGroup attrGroup; // LDEV-5901
+	private boolean insideAttrGroup = false; // LDEV-5901
+
 	private String inside;
 	private StringBuilder content = new StringBuilder();
 	private TagLibTagScript script;
@@ -197,9 +200,11 @@ public final class TagLibFactory extends DefaultHandler {
 
 		inside = qName;
 		this.attributes = SaxUtil.toMap(attributes);
+
 		if (qName.equals("tag")) startTag();
 		else if (qName.equals("attribute")) startAtt();
 		else if (qName.equals("script")) startScript();
+		else if (qName.equals("group")) startAttrGroup(); // LDEV-5901
 
 	}
 
@@ -217,12 +222,13 @@ public final class TagLibFactory extends DefaultHandler {
 		/*
 		 * if(tag!=null && tag.getName().equalsIgnoreCase("input")) {
 		 * print.ln(tag.getName()+"-"+att.getName()+":"+inside+"-"+insideTag+"-"+insideAtt);
-		 * 
+		 *
 		 * }
 		 */
 		if (qName.equals("tag")) endTag();
 		else if (qName.equals("attribute")) endAtt();
 		else if (qName.equals("script")) endScript();
+		else if (qName.equals("group")) endAttrGroup(); // LDEV-5901
 
 	}
 
@@ -281,6 +287,13 @@ public final class TagLibFactory extends DefaultHandler {
 				if (inside.equals("rtexprvalue")) script.setRtexpr(Caster.toBooleanValue(value, false));
 				if (inside.equals("context")) script.setContext(value);
 
+			}
+			// LDEV-5901: Handle attribute group elements
+			else if (insideAttrGroup) {
+				if (inside.equals("name")) attrGroup.setName(value);
+				else if (inside.equals("label")) attrGroup.setLabel(value);
+				else if (inside.equals("description")) attrGroup.setDescription(value);
+				else if (inside.equals("attributes")) attrGroup.setAttributes(value);
 			}
 			// Tag Args
 			else {
@@ -439,6 +452,22 @@ public final class TagLibFactory extends DefaultHandler {
 	private void endAtt() {
 		tag.setAttribute(att);
 		insideAtt = false;
+	}
+
+	/**
+	 * LDEV-5901: Called when <group> element starts
+	 */
+	private void startAttrGroup() {
+		attrGroup = new TagLibTagAttrGroup();
+		insideAttrGroup = true;
+	}
+
+	/**
+	 * LDEV-5901: Called when <group> element ends
+	 */
+	private void endAttrGroup() {
+		tag.setAttributeGroup(attrGroup);
+		insideAttrGroup = false;
 	}
 
 	/**
