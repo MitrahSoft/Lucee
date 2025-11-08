@@ -1789,7 +1789,7 @@ public abstract class AbstrCFMLExprTransformer {
 			}
 		}
 		while (data.srcCode.isValidIndex());
-		return data.srcCode.substring(start, data.srcCode.getPos() - start);
+		return data.srcCode.substring( start, data.srcCode.getPos() - start ).toLowerCase();
 	}
 
 	/**
