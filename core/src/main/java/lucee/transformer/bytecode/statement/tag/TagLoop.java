@@ -234,6 +234,7 @@ public final class TagLoop extends TagGroup implements FlowControlBreak, FlowCon
 		adapter.storeLocal(times);
 
 		ForVisitor fiv = new ForVisitor();
+		loopVisitor = fiv;
 		fiv.visitBegin(adapter, 1, false);
 		getBody().writeOut(bc);
 		fiv.visitEnd(bc, times, true, getStart());

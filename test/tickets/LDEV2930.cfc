@@ -1,4 +1,4 @@
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="syntax" skip=true {
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="syntax" {
 	function run( testResults , testBox ) {
 		describe( "Test suite for LDEV-2930", function() {
 			it(title="break should work inside a times loop LDEV-2930", body = function( currentSpec ) {
@@ -14,7 +14,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="syntax" skip=true 
 				var result = _InternalRequest(
 					template:uri
 				);
-				expect(result.filecontent.trim()).toBe("");
+				expect(result.filecontent.trim()).toBe("Lucee Lucee Lucee");
 			});
 		});
 	}
