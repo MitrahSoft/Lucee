@@ -1014,7 +1014,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 						mapping.getInspectTemplateRaw(), mapping.getInspectTemplateAutoIntervalRaw(true), mapping.getInspectTemplateAutoIntervalRaw(false), mapping.isTopLevel(),
 						mapping.getListenerMode(), mapping.getListenerType(), mapping.getListenerSingelton(), mapping.isReadonly());
 				store();
-				config.resetMappings();
+				ConfigUtil.getConfigWebIfPossible(config).resetMappings();
 			}
 
 		}
@@ -2052,7 +2052,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	private void doRemoveMapping() throws PageException {
 		admin.removeMapping(getString("admin", action, "virtual"));
 		store();
-		config.resetMappings();
+		ConfigUtil.getConfigWebIfPossible(config).resetMappings();
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -2086,7 +2086,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		);
 		store();
-		config.resetMappings();
+		ConfigUtil.getConfigWebIfPossible(config).resetMappings();
 		adminSync.broadcast(attributes, config);
 	}
 

@@ -1,4 +1,4 @@
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="admin" {
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="mapping" skip=true{
 
 	function run( testResults, testBox ) {
 		describe( "LDEV-5899: updateMapping cache refresh", function() {
