@@ -61,7 +61,7 @@ the expression language of this Tag Library (required)
 <!--
 The tag defines a unique tag in this tag library. 
 -->
-<!ELEMENT tag (name, appendix?, tag-class, tte-class?, tdbt-class?, body-content?, body-rtexprvalue?, display-name?, description?, attribute-type?, attribute-min?, attribute-max?, attribute*)>
+<!ELEMENT tag (name, appendix?, tag-class, tte-class?, tdbt-class?, body-content?, body-rtexprvalue?, display-name?, description?, attribute-groups?, attribute-type?, attribute-min?, attribute-max?, attribute*)>
 <!--
 definition if name of tag has an append name
 
@@ -193,3 +193,10 @@ type of the attribute (query, struct, string, number, datetime, boolean)
 #PCDATA ::= NMTOKEN
 -->
 <!ELEMENT type (#PCDATA)>
+<!--
+LDEV-5901: attribute-groups element for grouping related attributes by action/mode
+-->
+<!ELEMENT attribute-groups (group+)>
+<!ELEMENT group (name, label, description, attributes)>
+<!ELEMENT label (#PCDATA)>
+<!ELEMENT attributes (#PCDATA)>

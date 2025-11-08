@@ -21,9 +21,11 @@ package lucee.transformer.library.tag;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -105,6 +107,7 @@ public final class TagLibTag {
 	private Map<String, String> setters = new HashMap<String, String>();
 	private TagLibTagAttr attrFirst;
 	private TagLibTagAttr attrLast;
+	private List<TagLibTagAttrGroup> attributeGroups = new ArrayList<TagLibTagAttrGroup>(); // LDEV-5901
 
 	private ClassDefinition<? extends AttributeEvaluator> cdAttributeEvaluator;
 	private boolean handleException;
@@ -208,9 +211,27 @@ public final class TagLibTag {
 	}
 
 	/**
+	 * LDEV-5901: Returns attribute groups for documentation purposes
+	 *
+	 * @return List of attribute groups
+	 */
+	public List<TagLibTagAttrGroup> getAttributeGroups() {
+		return attributeGroups;
+	}
+
+	/**
+	 * LDEV-5901: Adds an attribute group
+	 *
+	 * @param group The attribute group to add
+	 */
+	public void setAttributeGroup(TagLibTagAttrGroup group) {
+		attributeGroups.add(group);
+	}
+
+	/**
 	 * Gibt ein bestimmtes Attribut anhand seines Namens zurueck, falls dieses Attribut nicht existiert
 	 * wird null zurueckgegeben.
-	 * 
+	 *
 	 * @param name Name des Attribut das zurueckgegeben werden soll.
 	 * @return Attribute das angfragt wurde oder null.
 	 */
