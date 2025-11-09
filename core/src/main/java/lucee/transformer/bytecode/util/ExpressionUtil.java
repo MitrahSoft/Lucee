@@ -154,7 +154,7 @@ public final class ExpressionUtil {
 	}
 
 	private static void call_Log(BytecodeContext bc, Method method, Position pos, String id) {
-		if (!bc.writeLog() || pos == null || (StringUtil.indexOfIgnoreCase(bc.getMethod().getName(), "call") == -1)) return;
+		if (!bc.writeLog() || pos == null || (StringUtil.indexOfIgnoreCaseNoCheck(bc.getMethod().getName(), "call") == -1)) return;
 		try {
 			GeneratorAdapter adapter = bc.getAdapter();
 			adapter.loadArg(0);
@@ -170,6 +170,6 @@ public final class ExpressionUtil {
 	}
 
 	public static boolean doLog(BytecodeContext bc) {
-		return bc.writeLog() && StringUtil.indexOfIgnoreCase(bc.getMethod().getName(), "call") != -1;
+		return bc.writeLog() && StringUtil.indexOfIgnoreCaseNoCheck(bc.getMethod().getName(), "call") != -1;
 	}
 }
