@@ -62,7 +62,7 @@ public final class FunctionLibFunction {
 	private String name;
 	private String nameWithCase;
 	private String alias;
-	private ArrayList<FunctionLibFunctionArg> argument = new ArrayList<FunctionLibFunctionArg>();
+	private ArrayList<FunctionLibFunctionArg> argument = new ArrayList<>(4);
 
 	private int argMin = 0;
 	private int argMax = -1;
@@ -127,7 +127,7 @@ public final class FunctionLibFunction {
 		dbl.functionCD = functionCD;
 		dbl.introduced = introduced;
 
-		dbl.argument = new ArrayList<FunctionLibFunctionArg>();
+		dbl.argument = new ArrayList<>(argument.size());
 		for (FunctionLibFunctionArg arg: argument) {
 			dbl.argument.add(arg.duplicate(dbl));
 		}

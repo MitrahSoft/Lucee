@@ -38,7 +38,7 @@ import lucee.transformer.library.Lib;
  */
 public final class FunctionLib implements Lib {
 
-	private volatile Map<String, FunctionLibFunction> functions = new HashMap<String, FunctionLibFunction>();
+	private volatile Map<String, FunctionLibFunction> functions = new HashMap<String, FunctionLibFunction>(1024);
 	private String version = "";
 	private String shortName = "";
 	private URI uri;
@@ -115,7 +115,8 @@ public final class FunctionLib implements Lib {
 	 */
 	public synchronized void setFunction(FunctionLibFunction function) {
 		// Copy-on-write: copy map, modify copy, swap atomically
-		Map<String, FunctionLibFunction> newFunctions = new HashMap<>(functions);
+		Map<String, FunctionLibFunction> newFunctions = new HashMap<>(functions.size() + 2);
+		newFunctions.putAll(functions);
 
 		// alias
 		if (function.getAlias() != null) {
@@ -258,7 +259,7 @@ public final class FunctionLib implements Lib {
 
 		Iterator<Entry<String, FunctionLibFunction>> it = funcs.entrySet().iterator();
 		Entry<String, FunctionLibFunction> entry;
-		Map<String, FunctionLibFunction> cm = new HashMap<String, FunctionLibFunction>();
+		Map<String, FunctionLibFunction> cm = new HashMap<>(funcs.size());
 		while (it.hasNext()) {
 			entry = it.next();
 			cm.put(entry.getKey(), deepCopy ? entry.getValue() : // TODO add support for deepcopy ((FunctionLibFunction)entry.getValue()).duplicate(deepCopy):
