@@ -167,6 +167,11 @@ public class LitStringImpl extends ExpressionBase implements LitString, ExprStri
 	}
 
 	@Override
+	public int hashCode() {
+		return str.hashCode();
+	}
+
+	@Override
 	public String toString() {
 		return str;
 	}

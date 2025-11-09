@@ -18,6 +18,7 @@
 package lucee.transformer.bytecode;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.objectweb.asm.ClassWriter;
@@ -33,7 +34,7 @@ public final class ConstrBytecodeContext extends BytecodeContext {
 
 	private List<Data> properties = new ArrayList<Data>();
 
-	public ConstrBytecodeContext(Config config, PageSource ps, PageImpl page, List<LitString> keys, ClassWriter classWriter, String className, GeneratorAdapter adapter,
+	public ConstrBytecodeContext(Config config, PageSource ps, PageImpl page, LinkedHashMap<LitString, Integer> keys, ClassWriter classWriter, String className, GeneratorAdapter adapter,
 			Method method, boolean writeLog, boolean suppressWSbeforeArg, boolean output, boolean returnValue, int sourceOffset) {
 		super(config, ps, null, page, keys, classWriter, className, adapter, method, writeLog, suppressWSbeforeArg, output, returnValue, sourceOffset);
 	}
