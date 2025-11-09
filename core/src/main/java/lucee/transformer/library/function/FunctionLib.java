@@ -114,10 +114,6 @@ public final class FunctionLib implements Lib {
 	 * @param function
 	 */
 	public synchronized void setFunction(FunctionLibFunction function) {
-		// Copy-on-write: copy map, modify copy, swap atomically
-		Map<String, FunctionLibFunction> newFunctions = new HashMap<>(functions.size() + 2);
-		newFunctions.putAll(functions);
-
 		// alias
 		if (function.getAlias() != null) {
 			FunctionLibFunction dbl = function.duplicate();
@@ -125,14 +121,11 @@ public final class FunctionLib implements Lib {
 			dbl.setAlias(null);
 
 			dbl.setFunctionLib(this);
-			newFunctions.put(dbl.getName(), dbl);
+			functions.put(dbl.getName(), dbl);
 		}
 
 		function.setFunctionLib(this);
-		newFunctions.put(function.getName(), function);
-
-		// Atomic swap via volatile write
-		functions = newFunctions;
+		functions.put(function.getName(), function);
 	}
 
 	/**
