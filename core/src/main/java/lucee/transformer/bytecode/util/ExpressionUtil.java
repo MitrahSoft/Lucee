@@ -77,12 +77,14 @@ public final class ExpressionUtil {
 
 	private void visitLine(BytecodeContext bc, int line) {
 		if (line > 0) {
-			if (!("" + line).equals(last.get(bc.getClassName() + ":" + bc.getId()))) {
+			String lineStr = Integer.toString(line);
+			String key = bc.getClassName() + ":" + bc.getId();
+			if (!lineStr.equals(last.get(key))) {
 				synchronized (SystemUtil.createToken("ExpressionUtil", bc.getClassName())) {
-					if (!("" + line).equals(last.get(bc.getClassName() + ":" + bc.getId()))) {
+					if (!lineStr.equals(last.get(key))) {
 						bc.visitLineNumber(line);
-						last.put(bc.getClassName() + ":" + bc.getId(), "" + line);
-						last.put(bc.getClassName(), "" + line);
+						last.put(key, lineStr);
+						last.put(bc.getClassName(), lineStr);
 					}
 				}
 			}
