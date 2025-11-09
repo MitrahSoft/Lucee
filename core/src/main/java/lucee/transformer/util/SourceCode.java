@@ -42,6 +42,10 @@ public class SourceCode {
 	private SourceCode parent;
 	private int sourceOffset;
 
+	// Position cache - reduces allocations during parsing
+	private Position cachedPosition;
+	private int cachedPos = -1;
+
 	public SourceCode(SourceCode parent, String strText, boolean writeLog) {
 		this(parent, strText, writeLog, 0);
 	}
@@ -792,11 +796,20 @@ public class SourceCode {
 	}
 
 	public Position getPosition(int pos) {
+		// Check cache first
+		if( pos == cachedPos && cachedPosition != null ) {
+			return cachedPosition;
+		}
+
 		// Fast path: if asking for current position, use cached line
 		if( pos == this.pos ) {
 			int posAtStart = (currentLine > 1) ? lines[currentLine - 2] : 0;
 			int column = pos - posAtStart;
-			return new Position(currentLine, column, pos, getSourceOffset());
+			Position position = new Position(currentLine, column, pos, getSourceOffset());
+			// Cache this position
+			cachedPos = pos;
+			cachedPosition = position;
+			return position;
 		}
 
 		// Linear search with currentLine hint for forward scanning
@@ -817,7 +830,11 @@ public class SourceCode {
 		if( line == 0 ) throw new RuntimeException( "syntax error" );
 
 		int column = pos - posAtStart;
-		return new Position( line, column, pos, getSourceOffset() );
+		Position position = new Position( line, column, pos, getSourceOffset() );
+		// Cache this position
+		cachedPos = pos;
+		cachedPosition = position;
+		return position;
 	}
 
 	/**
