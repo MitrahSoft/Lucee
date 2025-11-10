@@ -17,6 +17,10 @@
  **/
 package lucee.transformer.bytecode.statement.tag;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
@@ -33,25 +37,17 @@ import lucee.transformer.expression.Expression;
 import lucee.transformer.statement.tag.Attribute;
 import lucee.transformer.statement.tag.Tag;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 /**
- * Optimized bytecode generation for cfproperty tags.
- * Bypasses tag lifecycle overhead by calling ComponentUtil.registerProperty directly.
+ * Optimized bytecode generation for cfproperty tags. Bypasses tag lifecycle overhead by calling
+ * ComponentUtil.registerProperty directly.
  */
 public final class TagProperty extends TagBase {
 
-	private static final Method REGISTER_PROPERTY = new Method("registerProperty", Type.VOID_TYPE, new Type[] {
-		Types.PAGE_CONTEXT, Types.STRING, Types.STRING, Types.OBJECT,
-		Types.STRING, Types.STRING, Types.STRING, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE
-	});
+	private static final Method REGISTER_PROPERTY = new Method("registerProperty", Type.VOID_TYPE, new Type[] { Types.PAGE_CONTEXT, Types.STRING, Types.STRING, Types.OBJECT,
+			Types.STRING, Types.STRING, Types.STRING, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE });
 
-	private static final Method REGISTER_PROPERTY_WITH_DYNAMIC = new Method("registerProperty", Type.VOID_TYPE, new Type[] {
-		Types.PAGE_CONTEXT, Types.STRING, Types.STRING, Types.OBJECT,
-		Types.STRING, Types.STRING, Types.STRING, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE, Types.STRUCT
-	});
+	private static final Method REGISTER_PROPERTY_WITH_DYNAMIC = new Method("registerProperty", Type.VOID_TYPE, new Type[] { Types.PAGE_CONTEXT, Types.STRING, Types.STRING,
+			Types.OBJECT, Types.STRING, Types.STRING, Types.STRING, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE, Type.BOOLEAN_TYPE, Types.STRUCT });
 
 	public TagProperty(Factory f, Position start, Position end) {
 		super(f, start, end);
@@ -65,7 +61,7 @@ public final class TagProperty extends TagBase {
 	@Override
 	public void _writeOut(BytecodeContext bc) throws TransformerException {
 		final GeneratorAdapter adapter = bc.getAdapter();
-		Tag tag = (Tag) this;
+		Tag tag = this;
 
 		bc.visitLine(tag.getStart());
 
@@ -177,11 +173,11 @@ public final class TagProperty extends TagBase {
 				adapter.dup();
 				adapter.invokeConstructor(Types.STRUCT_IMPL, new Method("<init>", Type.VOID_TYPE, new Type[] {}));
 
-				for (Attribute dynAttr : dynamicAttrs) {
+				for (Attribute dynAttr: dynamicAttrs) {
 					adapter.dup();
 					adapter.push(dynAttr.getName());
 					dynAttr.getValue().writeOut(bc, Expression.MODE_REF);
-					adapter.invokeInterface(Types.STRUCT, new Method("setEL", Types.OBJECT, new Type[] {Types.STRING, Types.OBJECT}));
+					adapter.invokeInterface(Types.STRUCT, new Method("setEL", Types.OBJECT, new Type[] { Types.STRING, Types.OBJECT }));
 					adapter.pop();
 				}
 
@@ -190,7 +186,7 @@ public final class TagProperty extends TagBase {
 					adapter.dup();
 					adapter.push("required");
 					adapter.push(required ? "yes" : "no");
-					adapter.invokeInterface(Types.STRUCT, new Method("setEL", Types.OBJECT, new Type[] {Types.STRING, Types.OBJECT}));
+					adapter.invokeInterface(Types.STRUCT, new Method("setEL", Types.OBJECT, new Type[] { Types.STRING, Types.OBJECT }));
 					adapter.pop();
 				}
 
@@ -202,7 +198,8 @@ public final class TagProperty extends TagBase {
 
 			bc.visitLine(tag.getEnd());
 
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			if (e instanceof TransformerException) throw (TransformerException) e;
 			throw new TransformerException(bc, e, tag.getStart());
 		}
