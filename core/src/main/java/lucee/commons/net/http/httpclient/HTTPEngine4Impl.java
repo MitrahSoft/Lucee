@@ -307,13 +307,25 @@ public final class HTTPEngine4Impl {
 	}
 
 	public static void setTimeout(HttpClientBuilder builder, TimeSpan timeout) {
-		if (timeout == null || timeout.getMillis() <= 0) return;
+		int ms = -1;
+		if (timeout != null && timeout.getMillis() > 0) {
+			ms = (int) timeout.getMillis();
+			// if overflow occurred (value was > Integer.MAX_VALUE), use 0 which means infinite timeout in HttpClient
+			if (ms < 0) ms = 0;
 
-		int ms = (int) timeout.getMillis();
-		if (ms < 0) ms = Integer.MAX_VALUE;
+			SocketConfig sc = SocketConfig.custom().setSoTimeout(ms).build();
+			builder.setDefaultSocketConfig(sc);
+		}
 
-		SocketConfig sc = SocketConfig.custom().setSoTimeout(ms).build();
-		builder.setDefaultSocketConfig(sc);
+		// Set RequestConfig with timeout values (if provided) and cookie spec
+		// This ensures the timeout is enforced during the actual data transfer, not just connection
+		RequestConfig.Builder rcBuilder = RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD); // LDEV-2321
+		if (ms > 0) {
+			rcBuilder.setSocketTimeout(ms)
+				.setConnectTimeout(ms)
+				.setConnectionRequestTimeout(ms);
+		}
+		builder.setDefaultRequestConfig(rcBuilder.build());
 	}
 
 	private static Registry<ConnectionSocketFactory> createRegistry() throws GeneralSecurityException {
@@ -382,15 +394,13 @@ public final class HTTPEngine4Impl {
 
 		HttpClientBuilder builder = getHttpClientBuilder(pooling, null, null, String.valueOf(redirect));
 
-		// LDEV-2321
-		builder.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).build());
-
 		HttpHost hh = new HttpHost(url.getHost(), url.getPort());
 		setHeader(request, headers);
 		if (CollectionUtil.isEmpty(formfields)) setContentType(request, charset);
 		setFormFields(request, formfields, charset);
 		setUserAgent(request, useragent);
-		if (timeout > 0) Http.setTimeout(builder, TimeSpanImpl.fromMillis(timeout));
+		// Always call setTimeout to ensure RequestConfig is set properly (includes LDEV-2321 cookie spec fix)
+		Http.setTimeout(builder, timeout > 0 ? TimeSpanImpl.fromMillis(timeout) : null);
 		HttpContext context = setCredentials(builder, hh, username, password, false);
 		setProxy(url.getHost(), builder, request, proxy);
 		client = builder.build();
