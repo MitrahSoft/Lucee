@@ -44,6 +44,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -3349,9 +3350,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				log(config, t);
 			}
 
-			List<RHExtension> extensions = new ArrayList<RHExtension>();
-			Set<Resource> installedFiles = new HashSet<>();
-			Set<String> installedIds = new HashSet<>();
+			Map<String, RHExtension> extensionsConfig = new ConcurrentHashMap<>();
+
 			{
 				String strBundles;
 				RHExtension rhe;
@@ -3392,7 +3392,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 						rhe = RHExtension.installExtension(config, id, getAttr(child, KeyConstants._version), res, false);
 						// startBundles(config, rhe, firstLoad);
-						extensions.add(rhe);
+						extensionsConfig.put(rhe.getExtensionInstalledName(), rhe);
 						// installedFiles.add(rhe.getExtensionFile());
 						// installedIds.add(rhe.getId());
 					}
@@ -3405,17 +3405,13 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			}
 
 			// start bundles in parallel but wait for them to finish
-			CountDownLatch latch = new CountDownLatch(extensions.size());
+			CountDownLatch latch = new CountDownLatch(extensionsConfig.size());
 			ExecutorService executor = ThreadUtil.createExecutorService();
 			try {
 
-				for (RHExtension ext: extensions) {
+				for (RHExtension ext: extensionsConfig.values()) {
 					executor.submit(() -> {
 						try {
-							// Add extension info to thread-safe collections
-							installedFiles.add(ext.getExtensionFile());
-							installedIds.add(ext.getId());
-
 							// Call the startBundles method for each extension
 							startBundles(config, ext, firstLoad);
 						}
@@ -3450,28 +3446,42 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// uninstall extensions no longer used
 			Boolean cleanupExtension = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.cleanup.extension", null), true);
 			if (cleanupExtension) {
-				Resource[] installed = RHExtension.getExtensionInstalledDir(config).listResources(new ExtensionResourceFilter("lex"));
+				Map<String, Resource> installed = RHExtension.loadExtensionInstalledFiles(config);
 				if (installed != null) {
 					ResetFilter filter = new ResetFilter();
 					try {
-						for (Resource r: installed) {
-							if (!installedFiles.contains(r)) {
 
-								// is maybe a diff version installed?
+						for (Resource r: installed.values()) {
+
+							// is this extension file not in the config
+							if (!extensionsConfig.containsKey(r.getName())) {
 								RHExtension ext = RHExtension.getInstance(config, r);
-								if (!installedIds.contains(ext.getId())) {
+
+								RHExtension match = null;
+								for (RHExtension e: extensionsConfig.values()) {
+									if (e.getId().equals(ext.getId())) {
+										match = e;
+										break;
+									}
+								}
+
+								// maybe it got updated and the extension file was not removed
+								if (match != null) {
+
+									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
+											+ "] in the installed folder that is in a different version in the configuraton [" + match + "], so we delete that extension file.");
+									RHExtension.removeExtensionInstalledFile(config, r.getName());
+								}
+								// the extension no longer configured, sowe remove it
+								else {
 									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
 											+ "] in the installed folder that is not present in the configuration in any version, so we will uninstall it");
 									ConfigAdmin._removeRHExtension(config, ext, null, filter, true);
 									if (deployLog != null) deployLog.info("extension", "removed extension [" + ext + "]");
 								}
-								else {
-									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
-											+ "] in the installed folder that is in a different version in the configuraton, so we delete that extension file.");
-									ConfigAdmin.deleteExtensionFile(ext, r);
-								}
 
 							}
+
 						}
 					}
 					finally {
@@ -3480,7 +3490,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				}
 			}
 			// set
-			config.setExtensions(extensions.toArray(new RHExtension[extensions.size()]), md5);
+			config.setExtensions(extensionsConfig.values().toArray(new RHExtension[extensionsConfig.size()]), md5);
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);

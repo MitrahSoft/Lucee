@@ -6347,12 +6347,6 @@ public final class ConfigAdmin {
 		}
 	}
 
-	protected static void deleteExtensionFile(RHExtension ext, Resource r) throws IOException {
-		synchronized (SystemUtil.createToken("updateExtension", ext.getId())) {
-			r.remove(true);
-		}
-	}
-
 	public static void removeRHExtensions(ConfigPro config, Log log, String[] extensionIDs, boolean removePhysical)
 			throws IOException, PageException, BundleException, ConverterException {
 		ConfigAdmin admin = new ConfigAdmin(config, null);
@@ -6455,8 +6449,7 @@ public final class ConfigAdmin {
 				String version = Caster.toString(el.get(KeyConstants._version, null), null);
 				Resource file = RHExtension.getMetaDataFile(config, id, version);
 				if (file.isFile()) file.delete();
-				file = RHExtension.getExtensionInstalledFile(config, id, version, false);
-				if (file.isFile()) file.delete();
+				RHExtension.removeExtensionInstalledFile(config, id, version);
 
 				return bundles;
 			}

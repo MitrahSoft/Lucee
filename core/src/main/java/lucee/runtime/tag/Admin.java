@@ -50,7 +50,6 @@ import org.osgi.framework.Version;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.jsp.tagext.Tag;
 import lucee.VersionInfo;
-import lucee.commons.collection.MapFactory;
 import lucee.commons.digest.Base64Encoder;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.IOUtil;
@@ -1092,7 +1091,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				// Build error message from all collected errors
 				StringBuilder sb = new StringBuilder();
 				sb.append("Compilation failed with ").append(errors.size()).append(" error(s):\n");
-				for (Key key : errors.keys()) {
+				for (Key key: errors.keys()) {
 					Struct errorInfo = (Struct) errors.get(key, null);
 					sb.append("\n").append(key.getString()).append(": ");
 					sb.append(errorInfo.get("message", "Unknown error"));
