@@ -1,7 +1,6 @@
 package lucee.runtime.functions.query;
 
 import lucee.commons.lang.StringUtil;
-import lucee.commons.math.MathUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.exp.FunctionException;
 import lucee.runtime.exp.PageException;
@@ -30,7 +29,7 @@ public final class QueryToStruct extends BIF {
 		int rows = qry.getRecordcount();
 		if (rows == 0) return sct;
 		Key[] columns = qry.getColumnNames();
-		int colCount = MathUtil.nextPowerOfTwo(columns.length, 0);
+		int colCount = StructImpl.optimalCapacity(columns.length, 4);
 		Key colKey = Caster.toKey(columnKey);
 		Struct tmp;
 		for (int r = 1; r <= rows; r++) {
