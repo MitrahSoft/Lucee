@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(jfr print:*)",
+      "Bash(/d/work/lucee7/test-output/ldev5063-physicalclassloader.diff)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
