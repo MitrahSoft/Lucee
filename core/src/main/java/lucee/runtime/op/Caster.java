@@ -4658,8 +4658,20 @@ public final class Caster {
 				FunctionValueImpl value = (FunctionValueImpl) args[i];
 				sct.setEL(value.getNameAsKey(), value.getValue());
 			}
-			else throw new ExpressionException(
-					"Missing argument name, when using named parameters to a function, every parameter must have a name [" + i + ":" + args[i].getClass().getName() + "].");
+			else {
+				String valueStr;
+				try {
+					valueStr = args[i] != null ? args[i].toString() : "null";
+				}
+				catch (Exception e) {
+					valueStr = args[i].getClass().getName();
+				}
+				if (valueStr.length() > 50) valueStr = valueStr.substring(0, 50) + "...";
+				throw new ExpressionException(
+						"Missing argument name, when using named parameters to a function, all parameters must be named. "
+								+ "Argument at position " + (i - offset + 1) + " [" + valueStr + "] is missing a name. "
+								+ "Either name all arguments (e.g., argumentName=value) or use positional arguments only.");
+			}
 		}
 		return sct;
 	}
