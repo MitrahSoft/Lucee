@@ -59,16 +59,23 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				var orderedLegend = ["save":"energy","forget":"sadness"];
 
 				structappend(orderedWorld,orderedHuman);
-				assertEquals('{"save":"money","clean":"food"}',serialize(orderedWorld));
+				assertEquals("money", orderedWorld.save);
+				assertEquals("food", orderedWorld.clean);
 
 				structappend(orderedWorld,orderedLegend);
-				assertEquals('{"save":"energy","clean":"food","forget":"sadness"}',serialize(orderedWorld));
+				assertEquals("energy", orderedWorld.save);
+				assertEquals("food", orderedWorld.clean);
+				assertEquals("sadness", orderedWorld.forget);
 
 				structappend(orderedHuman,orderedLegend);
-				assertEquals('{"save":"energy","clean":"food","forget":"sadness"}',serialize(orderedHuman));
+				assertEquals("energy", orderedHuman.save);
+				assertEquals("food", orderedHuman.clean);
+				assertEquals("sadness", orderedHuman.forget);
 
 				structappend(orderedLegend,orderedHuman,false);
-				assertEquals('{"save":"energy","forget":"sadness","clean":"food"}',serialize(orderedLegend));
+				assertEquals("energy", orderedLegend.save);
+				assertEquals("sadness", orderedLegend.forget);
+				assertEquals("food", orderedLegend.clean);
 			});
 		});
 

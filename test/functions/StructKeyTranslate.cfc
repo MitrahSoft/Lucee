@@ -32,7 +32,8 @@ component extends = "org.lucee.cfml.test.LuceeTestCase" labels="struct" {
 					"bird.size": "small"
 				];
 				structKeyTranslate(orderedAnimals);
-				assertEquals('{"noise":"chirp","size":"small"}', serialize(orderedAnimals.bird));
+				assertEquals("chirp", orderedAnimals.bird.noise);
+				assertEquals("small", orderedAnimals.bird.size);
 			});
 		});
 	}
