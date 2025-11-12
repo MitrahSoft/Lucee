@@ -60,6 +60,10 @@ public final class InstrumentationFactory {
 	private static final String SEP = File.separator;
 	private static final String TOOLS_VERSION = "7u25";
 	private static final String AGENT_CLASS_NAME = "lucee.runtime.instrumentation.ExternalAgent";
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+	private static final boolean IS_LINUX = SystemUtil.isLinux();
+	private static final boolean IS_SOLARIS = SystemUtil.isSolaris();
+	private static final boolean IS_MACOSX = SystemUtil.isMacOSX();
 
 	private static Instrumentation _instr;
 
@@ -199,13 +203,13 @@ public final class InstrumentationFactory {
 		Resource dir = getDeployDirectory(config);
 
 		String os = "bsd"; // used for Mac OS X
-		if (SystemUtil.isWindows()) {
+		if (IS_WINDOWS) {
 			os = "windows";
 		}
-		else if (SystemUtil.isLinux()) { // not MacOSX
+		else if (IS_LINUX) { // not MacOSX
 			os = "linux";
 		}
-		else if (SystemUtil.isSolaris()) {
+		else if (IS_SOLARIS) {
 			os = "solaris";
 		}
 		String name = "tools-" + os + "-" + TOOLS_VERSION + ".jar";
@@ -346,22 +350,22 @@ public final class InstrumentationFactory {
 		String archBits = (SystemUtil.getJREArch() == SystemUtil.ARCH_64) ? "64" : "32";
 
 		// Windows
-		if (SystemUtil.isWindows()) {
+		if (IS_WINDOWS) {
 			trgName = "attach.dll";
 			srcName = "windows" + archBits + "/" + trgName;
 		}
 		// Linux
-		else if (SystemUtil.isLinux()) {
+		else if (IS_LINUX) {
 			trgName = "libattach.so";
 			srcName = "linux" + archBits + "/" + trgName;
 		}
 		// Solaris
-		else if (SystemUtil.isSolaris()) {
+		else if (IS_SOLARIS) {
 			trgName = "libattach.so";
 			srcName = "solaris" + archBits + "/" + trgName;
 		}
 		// Mac OSX
-		else if (SystemUtil.isMacOSX()) {
+		else if (IS_MACOSX) {
 			trgName = "libattach.dylib";
 			srcName = "macosx" + archBits + "/" + trgName;
 		}

@@ -64,6 +64,8 @@ public final class FileResource extends File implements Resource {
 
 	private static final long serialVersionUID = -6856656594615376447L;
 	private static final CopyOption[] COPY_OPTIONS = new CopyOption[] { StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES };
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+	private static final boolean IS_UNIX = SystemUtil.isUnix();
 
 	private final FileResourceProvider provider;
 
@@ -461,7 +463,7 @@ public final class FileResource extends File implements Resource {
 	@Override
 	public int getMode() {
 		if (!exists()) return 0;
-		if (SystemUtil.isUnix()) {
+		if (IS_UNIX) {
 			try {
 				PosixFileAttributes attrs = Files.readAttributes(toPath(), PosixFileAttributes.class);
 				Set<PosixFilePermission> permissions = attrs.permissions();
@@ -472,7 +474,7 @@ public final class FileResource extends File implements Resource {
 			}
 
 		}
-		int mode = SystemUtil.isWindows() && exists() ? 0111 : 0;
+		int mode = IS_WINDOWS && exists() ? 0111 : 0;
 		if (super.canRead()) mode += 0444;
 		if (super.canWrite()) mode += 0222;
 		return mode;
@@ -480,7 +482,7 @@ public final class FileResource extends File implements Resource {
 
 	public static int getMode(Path path) {
 		if (!Files.exists(path)) return 0;
-		if (SystemUtil.isUnix()) {
+		if (IS_UNIX) {
 			try {
 				PosixFileAttributes attrs = Files.readAttributes(path, PosixFileAttributes.class);
 				Set<PosixFilePermission> permissions = attrs.permissions();
@@ -491,7 +493,7 @@ public final class FileResource extends File implements Resource {
 			}
 
 		}
-		int mode = SystemUtil.isWindows() ? 0111 : 0;
+		int mode = IS_WINDOWS ? 0111 : 0;
 		if (Files.isReadable(path)) mode += 0444;
 		if (Files.isWritable(path)) mode += 0222;
 		return mode;
@@ -500,7 +502,7 @@ public final class FileResource extends File implements Resource {
 	@Override
 	public void setMode(int mode) throws IOException {
 		// TODO for windows do it with help of NIO functions
-		if (!SystemUtil.isUnix()) return;
+		if (!IS_UNIX) return;
 		mode = ModeUtil.extractPermissions(mode, true); // we only need the permission part
 		try {
 			provider.lock(this);
@@ -536,7 +538,7 @@ public final class FileResource extends File implements Resource {
 	@Override
 
 	public boolean setReadable(boolean value) {
-		if (!SystemUtil.isUnix()) return false;
+		if (!IS_UNIX) return false;
 		try {
 			setMode(ModeUtil.setReadable(getMode(), value));
 			return true;
@@ -563,7 +565,7 @@ public final class FileResource extends File implements Resource {
 			return true;
 		}
 
-		if (SystemUtil.isUnix()) {
+		if (IS_UNIX) {
 			// need no lock because get/setmode has one
 			try {
 				setMode(ModeUtil.setWritable(getMode(), value));
@@ -794,7 +796,7 @@ public final class FileResource extends File implements Resource {
 
 	@Override
 	public boolean getAttribute(short attribute) {
-		if (!SystemUtil.isWindows()) return false;
+		if (!IS_WINDOWS) return false;
 
 		try {
 			provider.lock(this);
@@ -822,7 +824,7 @@ public final class FileResource extends File implements Resource {
 
 	@Override
 	public void setAttribute(short attribute, boolean value) throws IOException {
-		if (!SystemUtil.isWindows()) return;
+		if (!IS_WINDOWS) return;
 
 		provider.lock(this);
 		try {

@@ -88,6 +88,7 @@ public final class Directory extends TagImpl {
 	private static final Key ATTRIBUTES = KeyConstants._attributes;
 	private static final Key DIRECTORY = KeyConstants._directory;
 	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+	private static final boolean IS_UNIX = SystemUtil.isUnix();
 
 	public static final int LIST_INFO_QUERY_ALL = 1;
 	public static final int LIST_INFO_QUERY_NAME = 2;
@@ -537,8 +538,8 @@ public final class Directory extends TagImpl {
 		sct.setEL(KeyConstants._size, Long.valueOf(directory.length()));
 		sct.setEL("isReadable", directory.isReadable());
 		sct.setEL(KeyConstants._path, directory.getAbsolutePath());
-		
-		if (SystemUtil.isUnix()) sct.setEL(KeyConstants._mode, new ModeObjectWrap(directory));
+
+		if (IS_UNIX) sct.setEL(KeyConstants._mode, new ModeObjectWrap(directory));
 		File file = new File(Caster.toString(directory));
 		BasicFileAttributes attr;
 		try {

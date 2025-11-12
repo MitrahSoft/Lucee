@@ -52,11 +52,13 @@ public final class COMObject implements Objects, Iteratorable {
 
 	private static boolean setup;
 	private String name;
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+
 	private Dispatch dispatch;
 	private Variant parent;
 
 	public static void setupWindowsDLL(Config config) {
-		if (SystemUtil.isWindows()) {
+		if (IS_WINDOWS) {
 			Resource binDir = config.getConfigDir().getRealResource("bin");
 			if (binDir != null) {
 				String name = (SystemUtil.getJREArch() == SystemUtil.ARCH_64) ? "jacob-x64.dll" : "jacob-i586.dll";

@@ -23,6 +23,8 @@ import lucee.commons.io.res.Resource;
 
 public final class WildcardPatternFilter implements ResourceAndResourceNameFilter {
 
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+
 	private final WildcardPattern matcher;
 
 	public WildcardPatternFilter(String patt, boolean ignoreCase, String patternDelimiters) {
@@ -32,7 +34,7 @@ public final class WildcardPatternFilter implements ResourceAndResourceNameFilte
 
 	public WildcardPatternFilter(String pattern, String patternDelimiters) {
 
-		this(pattern, SystemUtil.isWindows(), patternDelimiters);
+		this(pattern, IS_WINDOWS, patternDelimiters);
 	}
 
 	@Override
