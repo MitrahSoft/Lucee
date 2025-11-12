@@ -4651,8 +4651,8 @@ public final class Caster {
 	}
 
 	public static Struct toFunctionValues(Object[] args, int offset, int len) throws ExpressionException {
-		// TODO nicht sehr optimal
-		Struct sct = new StructImpl(StructImpl.TYPE_LINKED);
+		// LDEV-5907 use unsynchronized struct with optimal capacity to avoid resize
+		Struct sct = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, StructImpl.optimalCapacity(len, 4));
 		for (int i = offset; i < offset + len; i++) {
 			if (args[i] instanceof FunctionValueImpl) {
 				FunctionValueImpl value = (FunctionValueImpl) args[i];

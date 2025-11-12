@@ -33,7 +33,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.math.MathUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageSource;
 import lucee.runtime.config.NullSupportHelper;
@@ -77,7 +76,7 @@ public final class CGIImplReadOnly extends ReadOnlyStruct implements CGI, Script
 			KeyConstants._local_addr, KeyConstants._local_host };
 	private static Struct staticKeys;
 	static {
-		staticKeys = new StructImpl(StructImpl.DEFAULT_TYPE, MathUtil.nextPowerOfTwo(keys.length, StructImpl.DEFAULT_INITIAL_CAPACITY));
+		staticKeys = new StructImpl(StructImpl.DEFAULT_TYPE, StructImpl.optimalCapacity(keys.length, StructImpl.DEFAULT_INITIAL_CAPACITY));
 		for (int i = 0; i < keys.length; i++) {
 			staticKeys.setEL(keys[i], "");
 		}

@@ -139,6 +139,22 @@ public class StructImpl extends StructSupport {
 		return false;
 	}
 
+	/**
+	 * Calculate optimal initial capacity for a struct with known size.
+	 * Accounts for HashMap's default load factor (0.75) to avoid resize operations.
+	 *
+	 * @param size expected number of entries
+	 * @param min minimum capacity (should be power of 2)
+	 * @return optimal capacity as power of 2
+	 */
+	public static int optimalCapacity(int size, int min) {
+		// HashMap resizes when size exceeds capacity * loadFactor (0.75)
+		// So we need: capacity * 0.75 >= size
+		// Therefore: capacity >= size / 0.75
+		int needed = (int) (size / 0.75f) + 1;
+		return MathUtil.nextPowerOfTwo(needed, min);
+	}
+
 	@Override
 	public int getType() {
 		return type;
@@ -277,7 +293,7 @@ public class StructImpl extends StructSupport {
 	}
 
 	public static Struct copy(Struct src, boolean deepCopy) {
-		return copy(src, new StructImpl(StructImpl.TYPE_SYNC, MathUtil.nextPowerOfTwo(src.size(), StructImpl.DEFAULT_INITIAL_CAPACITY)), deepCopy);
+		return copy(src, new StructImpl(StructImpl.TYPE_SYNC, optimalCapacity(src.size(), StructImpl.DEFAULT_INITIAL_CAPACITY)), deepCopy);
 	}
 
 	public static Struct copy(Struct src, Struct trg, boolean deepCopy) {
