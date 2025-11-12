@@ -49,6 +49,14 @@ public final class ExpressionUtil {
 
 	public static final Method CURRENT_LINE = new Method("currentLine", Types.VOID, new Type[] { Types.INT_VALUE });
 
+	// Cache for line number strings to avoid repeated Integer.toString() allocations
+	private static final String[] LINE_CACHE = new String[10000];
+	static {
+		for (int i = 0; i < LINE_CACHE.length; i++) {
+			LINE_CACHE[i] = Integer.toString(i);
+		}
+	}
+
 	private Map<String, String> last = new HashMap<String, String>();
 
 	public static void writeOutExpressionArray(BytecodeContext bc, Type arrayType, Expression[] array) throws TransformerException {
@@ -65,7 +73,7 @@ public final class ExpressionUtil {
 
 	/**
 	 * visit line number
-	 * 
+	 *
 	 * @param bc
 	 * @param pos
 	 */
@@ -75,9 +83,13 @@ public final class ExpressionUtil {
 		}
 	}
 
+	private static String lineToString(int line) {
+		return (line >= 0 && line < LINE_CACHE.length) ? LINE_CACHE[line] : Integer.toString(line);
+	}
+
 	private void visitLine(BytecodeContext bc, int line) {
 		if (line > 0) {
-			String lineStr = Integer.toString(line);
+			String lineStr = lineToString(line);
 			String key = bc.getClassName() + ":" + bc.getId();
 			if (!lineStr.equals(last.get(key))) {
 				synchronized (SystemUtil.createToken("ExpressionUtil", bc.getClassName())) {
