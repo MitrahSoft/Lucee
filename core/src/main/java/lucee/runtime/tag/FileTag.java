@@ -858,7 +858,7 @@ public final class FileTag extends BodyTagImpl {
 		catch (Exception e) {
 		}
 		sct.setEL(KeyConstants._dateLastModified, new DateTimeImpl(file.lastModified()));
-		sct.setEL(KeyConstants._attributes, getFileAttribute(file));
+		sct.setEL(KeyConstants._attributes, Directory.getFileAttribute(file));
 		if (SystemUtil.isUnix()) sct.setEL(KeyConstants._mode, new ModeObjectWrap(file));
 
 		try {
@@ -875,10 +875,6 @@ public final class FileTag extends BodyTagImpl {
 		 * } } catch(Exception e) {}
 		 */
 		return sct;
-	}
-
-	private static String getFileAttribute(Resource file) {
-		return file.exists() && !file.isWriteable() ? "R".concat(file.isHidden() ? "H" : "") : file.isHidden() ? "H" : "";
 	}
 
 	/**
