@@ -130,6 +130,22 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		return rpccl;
 	}
 
+	public static boolean closePhysicalClassLoader(Config c, Resource directory) {
+		if (directory == null) return false;
+		String key = HashUtil.create64BitHashAsString(directory.getAbsolutePath());
+
+		PhysicalClassLoader existing = classLoaders.get(key);
+		if (existing != null) {
+			synchronized (SystemUtil.createToken("PhysicalClassLoader", key)) {
+				existing = classLoaders.remove(key);
+				if (existing != null) {
+					existing.clear();
+				}
+			}
+		}
+		return existing != null;
+	}
+
 	public static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, boolean reload, ClassLoader parent) throws IOException {
 		String key = js == null ? "orphan" : ((JavaSettingsImpl) js).id();
 		if (parent != null) {

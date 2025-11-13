@@ -383,9 +383,11 @@ public final class MappingImpl implements Mapping {
 	@Override
 	public Resource getClassRootDirectory() {
 		if (classRootDirectory == null) {
-			String path = getPhysical() != null ? getPhysical().getAbsolutePath() : getArchive().getAbsolutePath();
-
-			classRootDirectory = config.getClassDirectory().getRealResource(StringUtil.toIdentityVariableName(path));
+			Resource tmp = getPhysical();
+			if (tmp == null) tmp = getArchive();
+			if (tmp != null) {
+				classRootDirectory = config.getClassDirectory().getRealResource(StringUtil.toIdentityVariableName(tmp.getAbsolutePath()));
+			}
 		}
 		return classRootDirectory;
 	}
@@ -668,6 +670,7 @@ public final class MappingImpl implements Mapping {
 
 	public void close() {
 		pageSourcePool.clearPages(null);
+		PhysicalClassLoader.closePhysicalClassLoader(config, getClassRootDirectory());
 	}
 
 	public SerMapping toSerMapping() {

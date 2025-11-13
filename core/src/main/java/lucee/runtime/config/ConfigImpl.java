@@ -813,8 +813,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	protected void setMappings(Mapping[] mappings) {
-		close(this.uncheckedMappings);
-		this.mappings = initMappings(this.uncheckedMappings = ConfigWebUtil.sort(mappings));
+		mappings = ConfigWebUtil.sort(mappings);
+		if (changed(this.uncheckedMappings, mappings)) {
+			close(this.uncheckedMappings);
+			this.mappings = initMappings(this.uncheckedMappings = ConfigWebUtil.sort(mappings));
+		}
 	}
 
 	@Override
@@ -823,8 +826,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	protected void setCustomTagMappings(Mapping[] customTagMappings) {
-		close(this.uncheckedCustomTagMappings);
-		this.customTagMappings = initMappings(this.uncheckedCustomTagMappings = customTagMappings);
+		if (changed(this.uncheckedCustomTagMappings, customTagMappings)) {
+			close(this.uncheckedCustomTagMappings);
+			this.customTagMappings = initMappings(this.uncheckedCustomTagMappings = customTagMappings);
+		}
 	}
 
 	@Override
@@ -833,8 +838,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	protected void setComponentMappings(Mapping[] componentMappings) {
-		close(this.uncheckedComponentMappings);
-		this.componentMappings = initMappings(this.uncheckedComponentMappings = componentMappings);
+		if (changed(this.uncheckedComponentMappings, componentMappings)) {
+			close(this.uncheckedComponentMappings);
+			this.componentMappings = initMappings(this.uncheckedComponentMappings = componentMappings);
+		}
 	}
 
 	public void checkMappings() {
@@ -864,6 +871,18 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 				if (m instanceof MappingImpl) ((MappingImpl) m).close();
 			}
 		}
+	}
+
+	protected boolean changed(Mapping[] oldmappings, Mapping[] newmappings) {
+		if (oldmappings == null) return true;
+		if (newmappings == null) return true;
+		if (oldmappings.length != newmappings.length) return true;
+
+		// we not care if the order changed
+		for (int i = 0; i < oldmappings.length; i++) {
+			if (!oldmappings[i].equals(newmappings[i])) return true;
+		}
+		return false;
 	}
 
 	@Override
