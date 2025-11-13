@@ -93,6 +93,30 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			});
 		});
 
+		describe( title="Component size tests", body=function(){
+			xit( title="Check size of the component with no accessors", body=function( currentSpec ){
+				local.result = _InternalRequest(
+					template : "#uri#\test.cfm",
+					FORM : { scene : 1 }
+				);
+				expect(trim(result.fileContent)).toBeLT(1000);
+			});
+			xit( title="Check size of the component with manual setters/getters", body=function( currentSpec ){
+				local.result = _InternalRequest(
+					template : "#uri#\test.cfm",
+					FORM : { scene : 2 }
+				);
+				expect(trim(result.fileContent)).toBeLT(5000);
+			});
+			xit( title="Check size of the component with accessors", body=function( currentSpec ){
+				local.result = _InternalRequest(
+					template : "#uri#\test.cfm",
+					FORM : { scene : 3 }
+				);
+				expect(trim(result.fileContent)).toBeLT(5000);
+			});
+		});
+
 		describe( title="Static scope inheritance tests", body=function(){
 			it( title="Access static method on base component", body=function( currentSpec ){
 				var result = LDEV3335.BaseComponent::baseStaticMethod();
