@@ -76,8 +76,6 @@ import lucee.commons.io.res.type.ftp.FTPResourceProvider;
 import lucee.commons.io.res.type.http.HTTPResourceProvider;
 import lucee.commons.io.res.type.http.HTTPSResourceProvider;
 import lucee.commons.io.res.type.s3.DummyS3ResourceProvider;
-import lucee.commons.io.res.type.tar.TarResourceProvider;
-import lucee.commons.io.res.type.tgz.TGZResourceProvider;
 import lucee.commons.io.res.type.zip.ZipResourceProvider;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.io.retirement.RetireOutputStream;
@@ -556,8 +554,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Array providers = ConfigUtil.getAsArray("resourceProviders", root);
 			// Resource Provider
 			boolean hasFTP = false;
-			boolean hasTGZ = false;
-			boolean hasTAR = false;
 			boolean hasHTTP = false;
 			boolean hasHTTPs = false;
 			boolean hasRAM = false;
@@ -590,8 +586,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 							else if ("ftp".equalsIgnoreCase(strProviderScheme)) hasFTP = true;
 							else if ("ram".equalsIgnoreCase(strProviderScheme)) hasRAM = true;
 							else if ("s3".equalsIgnoreCase(strProviderScheme)) hasS3 = true;
-							else if ("tar".equalsIgnoreCase(strProviderScheme)) hasTAR = true;
-							else if ("tgz".equalsIgnoreCase(strProviderScheme)) hasTGZ = true;
 							else if ("zip".equalsIgnoreCase(strProviderScheme)) hasZip = true;
 
 						}
@@ -636,18 +630,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				args.put("lock-timeout", "1000");
 				args.put("case-sensitive", "true");
 				config.addResourceProvider("tar", new ClassDefinitionImpl<>(CacheResourceProvider.class), args);
-			}
-			if (!hasTGZ) {
-				Map<String, String> args = new HashMap<>();
-				args.put("lock-timeout", "1000");
-				args.put("case-sensitive", "true");
-				config.addResourceProvider("tgz", new ClassDefinitionImpl<>(TGZResourceProvider.class), args);
-			}
-			if (!hasTAR) {
-				Map<String, String> args = new HashMap<>();
-				args.put("lock-timeout", "1000");
-				args.put("case-sensitive", "true");
-				config.addResourceProvider("tar", new ClassDefinitionImpl<>(TarResourceProvider.class), args);
 			}
 			if (!hasS3) {
 				ClassDefinition s3Class = new ClassDefinitionImpl(DummyS3ResourceProvider.class);

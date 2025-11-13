@@ -59,7 +59,6 @@ import lucee.commons.io.res.Resources;
 import lucee.commons.io.res.ResourcesImpl;
 import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
 import lucee.commons.io.res.filter.ExtensionResourceFilter;
-import lucee.commons.io.res.type.compress.Compress;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ByteSizeParser;
 import lucee.commons.lang.CharSet;
@@ -4963,11 +4962,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 */
 	protected void setComponentRootSearch(boolean componentRootSearch) {
 		this.componentRootSearch = componentRootSearch;
-	}
-
-	@Override
-	public Compress getCompressInstance(Resource zipFile, int format, boolean caseSensitive) throws IOException {
-		return Compress.getInstance(zipFile, format, caseSensitive);
 	}
 
 	@Override

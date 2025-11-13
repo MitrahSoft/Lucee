@@ -16,47 +16,47 @@
  * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
  * 
  **/
-package lucee.commons.io.res.type.tar;
+package lucee.commons.io.res.type.zip;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
-import lucee.commons.io.res.Resource;
-import lucee.commons.io.res.type.compress.Compress;
-import lucee.commons.io.res.type.compress.CompressResourceProvider;
+final class ZipOutputStreamSynchronizer extends OutputStream {
 
-public final class TarResourceProvider extends CompressResourceProvider {
+	private final OutputStream os;
+	private final ZipUtil zip;
+	private final boolean async;
 
-	public TarResourceProvider() {
-		scheme = "tar";
+	public ZipOutputStreamSynchronizer(OutputStream os, ZipUtil zip, boolean async) {
+		this.os = os;
+		this.zip = zip;
+		this.async = async;
 	}
 
 	@Override
-	public Compress getCompress(Resource file) throws IOException {
-		return Compress.getInstance(file, Compress.FORMAT_TAR, caseSensitive);
+	public void close() throws IOException {
+		os.close();
+		zip.synchronize(async);
 	}
 
 	@Override
-	public boolean isAttributesSupported() {
-		return false;
+	public void flush() throws IOException {
+		os.flush();
 	}
 
 	@Override
-	public boolean isCaseSensitive() {
-		return caseSensitive;
+	public void write(int b) throws IOException {
+		os.write(b);
 	}
 
 	@Override
-	public boolean isModeSupported() {
-		return true;
+	public void write(byte[] b, int off, int len) throws IOException {
+		os.write(b, off, len);
 	}
 
 	@Override
-	public char getSeparator() {
-		return '/';
+	public void write(byte[] b) throws IOException {
+		os.write(b);
 	}
 
-	@Override
-	public boolean allowMatching() {
-		return false;
-	}
 }
