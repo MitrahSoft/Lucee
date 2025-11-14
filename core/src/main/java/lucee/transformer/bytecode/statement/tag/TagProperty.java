@@ -78,9 +78,9 @@ public final class TagProperty extends TagBase {
 				adapter.loadArg(0); // Load PageContext pc
 				adapter.invokeVirtual(Types.PAGE_CONTEXT, new Method("variablesScope", Types.VARIABLES, new Type[] {}));
 				adapter.push(propName);
-				adapter.invokeStatic(Type.getType("Llucee/runtime/type/KeyImpl;"), new Method("init", Types.COLLECTION_KEY, new Type[] { Types.STRING }));
+t			adapter.invokeStatic(Type.getType("Llucee/runtime/type/KeyImpl;"), new Method("init", Types.COLLECTION_KEY, new Type[] {Types.STRING}));
 				adapter.loadLocal(defaultLocal);
-				adapter.invokeInterface(Types.SCOPE, new Method("setEL", Types.OBJECT, new Type[] { Types.COLLECTION_KEY, Types.OBJECT }));
+				adapter.invokeInterface(Types.SCOPE, new Method("setEL", Types.OBJECT, new Type[] {Types.COLLECTION_KEY, Types.OBJECT}));
 				adapter.pop(); // Pop return value
 			}
 		}
