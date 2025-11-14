@@ -63,6 +63,7 @@ import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Md5;
 import lucee.commons.lang.PhysicalClassLoader;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.SerializableObject;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.types.RefBoolean;
@@ -2268,12 +2269,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public ClassLoader getRPCClassLoader(boolean reload) throws IOException {
-		return PhysicalClassLoader.getRPCClassLoader(this, getJavaSettings(), reload, null);
+		return PhysicalClassLoaderFactory.getRPCClassLoader(this, getJavaSettings(), reload, null);
 	}
 
 	@Override
 	public ClassLoader getRPCClassLoader(boolean reload, JavaSettings js, ClassLoader parent) throws IOException {
-		return PhysicalClassLoader.getRPCClassLoader(this, js != null ? js : getJavaSettings(), reload, parent);
+		return PhysicalClassLoaderFactory.getRPCClassLoader(this, js != null ? js : getJavaSettings(), reload, parent);
 	}
 
 	private static final Object dclt = new SerializableObject();
@@ -2288,7 +2289,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					if (!dir.exists()) {
 						ResourceUtil.createDirectoryEL(dir, true);
 					}
-					directClassLoader = PhysicalClassLoader.getPhysicalClassLoader(this, dir, reload);
+					directClassLoader = PhysicalClassLoaderFactory.getPhysicalClassLoader(this, dir, reload);
 				}
 			}
 		}

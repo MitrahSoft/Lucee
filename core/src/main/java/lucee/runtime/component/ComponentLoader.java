@@ -28,7 +28,7 @@ import lucee.commons.io.res.filter.OrResourceFilter;
 import lucee.commons.io.res.filter.ResourceFilter;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.MappingUtil;
-import lucee.commons.lang.PhysicalClassLoader;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.CIObject;
 import lucee.runtime.CIPage;
@@ -537,7 +537,7 @@ public class ComponentLoader {
 
 		CIPage[] subs = page.getSubPages();
 		for (int i = 0; i < subs.length; i++) {
-			if (PhysicalClassLoader.substractAppendix(subs[i].getClass().getName()).equals(subClassName)) {
+			if (PhysicalClassLoaderFactory.substractAppendix(subs[i].getClass().getName()).equals(subClassName)) {
 				return subs[i];
 			}
 		}

@@ -134,7 +134,7 @@ public final class MemoryClassLoader extends ClassLoader implements ExtendableCl
 	}
 
 	private Class<?> rename(Class<?> clazz, byte[] barr) {
-		String newName = clazz.getName() + "$" + PhysicalClassLoader.uid();
+		String newName = clazz.getName() + "$" + PhysicalClassLoaderFactory.uid();
 		return _loadClass(newName, ClassRenamer.rename(barr, newName));
 	}
 
