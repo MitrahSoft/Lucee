@@ -688,7 +688,6 @@ public final class MappingImpl implements Mapping {
 
 	public void close() {
 		pageSourcePool.clearPages(null);
-		PhysicalClassLoader.closePhysicalClassLoader(config, getClassRootDirectory());
 	}
 
 	public SerMapping toSerMapping() {
