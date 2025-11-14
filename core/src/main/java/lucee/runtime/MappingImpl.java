@@ -42,6 +42,7 @@ import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.MappingUtil;
 import lucee.commons.lang.PhysicalClassLoader;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.loader.engine.CFMLEngine;
 import lucee.runtime.config.Config;
@@ -261,14 +262,14 @@ public final class MappingImpl implements Mapping {
 	}
 
 	private Class<?> loadClass(String className, byte[] code) throws IOException, ClassNotFoundException {
-		PhysicalClassLoader pcl = PhysicalClassLoader.getPhysicalClassLoader(config, getClassRootDirectory(), false);
+		PhysicalClassLoader pcl = PhysicalClassLoaderFactory.getPhysicalClassLoader(config, getClassRootDirectory(), false);
 
 		if (code != null) {
 			try {
 				return pcl.loadClass(className, code);
 			}
 			catch (UnmodifiableClassException e) {
-				pcl = PhysicalClassLoader.getPhysicalClassLoader(config, getClassRootDirectory(), true);
+				pcl = PhysicalClassLoaderFactory.getPhysicalClassLoader(config, getClassRootDirectory(), true);
 				try {
 					return pcl.loadClass(className, code);
 				}

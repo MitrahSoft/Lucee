@@ -48,6 +48,7 @@ import lucee.commons.lang.DirectoryProvider;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.ExtendableClassLoader;
 import lucee.commons.lang.PhysicalClassLoader;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -504,7 +505,7 @@ public final class JavaProxyFactory {
 				return cl;
 			}
 			else if (cl instanceof BundleClassLoader) {
-				return PhysicalClassLoader.getRPCClassLoader(pc.getConfig(), (BundleClassLoader) cl, false);
+				return PhysicalClassLoaderFactory.getRPCClassLoader(pc.getConfig(), (BundleClassLoader) cl, false);
 			}
 		}
 		return null;
