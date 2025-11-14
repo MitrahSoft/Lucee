@@ -29,8 +29,6 @@ import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
 import lucee.runtime.PageSource;
 import lucee.runtime.component.MemberSupport;
-import lucee.runtime.component.Property;
-import lucee.runtime.component.PropertyImpl;
 import lucee.runtime.dump.DumpData;
 import lucee.runtime.dump.DumpProperties;
 import lucee.runtime.engine.ThreadLocalPageContext;
@@ -59,7 +57,6 @@ public abstract class UDFGSProperty extends MemberSupport implements UDFPlus {
 	protected final FunctionArgument[] arguments;
 	protected final String name;
 	protected Component srcComponent;
-	protected Property prop; // Property reference for flyweight UDFs
 	private UDFPropertiesBase properties;
 	private String id;
 
@@ -75,11 +72,6 @@ public abstract class UDFGSProperty extends MemberSupport implements UDFPlus {
 
 	private static UDFPropertiesBase UDFProperties(Page page, PageSource pageSource, FunctionArgument[] arguments, String functionName, short returnType) {
 		return new UDFPropertiesLight(page, pageSource, arguments, functionName, returnType);
-	}
-
-	@Override
-	protected final int hash() {
-		return java.util.Objects.hash(name, getPageSource());
 	}
 
 	@Override
@@ -346,11 +338,6 @@ public abstract class UDFGSProperty extends MemberSupport implements UDFPlus {
 		if (srcComponent != null) {
 			return srcComponent.getPageSource();
 		}
-		// For flyweight UDFs, get PageSource from the property's owner
-		if (prop != null && prop instanceof PropertyImpl) {
-			PageSource ps = ((PropertyImpl) prop).getOwnerPageSource();
-			if (ps != null) return ps;
-		}
 		// Fall back to properties PageSource
 		return this.properties.getPageSource();
 	}
@@ -358,10 +345,6 @@ public abstract class UDFGSProperty extends MemberSupport implements UDFPlus {
 	@Override
 	public boolean getBufferOutput(PageContext pc) {
 		return pc.getApplicationContext().getBufferOutput();
-	}
-
-	public Property getProperty() {
-		return prop;
 	}
 
 	public Component getComponent(PageContext pc) {
