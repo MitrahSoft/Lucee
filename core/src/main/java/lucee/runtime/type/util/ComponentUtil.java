@@ -94,6 +94,7 @@ import lucee.runtime.type.SimpleValue;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.UDF;
+import lucee.runtime.type.UDFGSProperty;
 import lucee.runtime.type.UDFPropertiesBase;
 import lucee.runtime.type.dt.DateTime;
 import lucee.transformer.bytecode.BytecodeContext;
@@ -911,7 +912,16 @@ public final class ComponentUtil {
 
 		if (udfProps.getLocalMode() != null) func.set("localMode", AppListenerUtil.toLocalMode(udfProps.getLocalMode().intValue(), ""));
 
-		if (udfProps.getPageSource() != null) func.set(KeyConstants._owner, udfProps.getPageSource().getDisplayPath());
+		if (udf instanceof UDFGSProperty) {
+			UDFGSProperty gsProp = (UDFGSProperty) udf;
+			PageSource ps = gsProp.getPageSource();
+			if (ps != null) {
+				func.set(KeyConstants._owner, ps.getDisplayPath());
+			}
+		}
+		else if (udfProps.getPageSource() != null) {
+			func.set(KeyConstants._owner, udfProps.getPageSource().getDisplayPath());
+		}
 
 		if (udfProps.getStartLine() > 0 && udfProps.getEndLine() > 0) {
 			Struct pos = new StructImpl();
@@ -1002,6 +1012,11 @@ public final class ComponentUtil {
 	}
 
 	private static class ReturnFormatValue implements Castable, SimpleValue, CharSequence, Dumpable {
+
+		/**
+		 *
+		 */
+		private static final long serialVersionUID = 1L;
 
 		@Override
 		public Boolean castToBoolean(Boolean defaultValue) {
@@ -1178,7 +1193,11 @@ public final class ComponentUtil {
 			}
 
 			comp.setProperty(property);
-			property.setOwnerName(comp.getAbsName());
+			// Only set owner for properties defined in this component, not inherited ones
+			// If already set (inherited from parent), don't overwrite
+			if (property.getOwnerPageSource() == null) {
+				property.setOwnerName(comp.getAbsName(), comp.getPageSource());
+			}
 		}
 	}
 
