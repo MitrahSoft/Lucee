@@ -53,7 +53,6 @@ import lucee.commons.lang.types.RefBooleanImpl;
 import lucee.runtime.component.AbstractFinal;
 import lucee.runtime.component.AbstractFinal.UDFB;
 import lucee.runtime.component.ComponentLoader;
-import lucee.runtime.component.ComponentPageRef;
 import lucee.runtime.component.DataMember;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.component.Member;
@@ -145,7 +144,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	ComponentImpl top = this;
 	ComponentImpl base;
 	private PageSource pageSource;
-	private ComponentPageRef cpRef;
+	private ComponentPageImpl cp;
 	private ComponentScope scope;
 
 	// for all the same
@@ -179,7 +178,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	/**
 	 * Constructor of the Component, USED ONLY FOR DESERIALIZE
 	 */
-	public ComponentImpl() {}
+	public ComponentImpl() {
+	}
 
 	/**
 	 * constructor of the class
@@ -207,7 +207,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		this.properties = new ComponentProperties(componentPage.getComponentName(), dspName, extend.trim(), implement, hint, output, callPath + appendix, realPath,
 				componentPage.getSubname(), _synchronized, null, persistent, accessors, modifier, meta);
 
-		this.cpRef = new ComponentPageRef(componentPage);
+		this.cp = componentPage;
 		this.pageSource = componentPage.getPageSource();
 		this.importDefintions = componentPage.getImportDefintions();
 		// if(modifier!=0)
@@ -217,19 +217,12 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	}
 
 	public JavaSettings getJavaSettings(PageContext pc) throws IOException {
-		ComponentPageImpl cp;
-		try {
-			cp = this.cpRef.get(pc);
-		}
-		catch (PageException e) {
-			throw ExceptionUtil.toIOException(e);
-		}
-		boolean is = cp.isJavaSettingsInitialized();
+
+		boolean is = this.cp.isJavaSettingsInitialized();
 		if (!is) {
 			synchronized (cp) {
-				is = cp.isJavaSettingsInitialized();
+				is = this.cp.isJavaSettingsInitialized();
 				if (!is) {
-					boolean mergeConfig = false;
 					JavaSettings js = null;
 
 					// implements
@@ -237,21 +230,18 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						Iterator<InterfaceImpl> it = absFin.getInterfaceIt();
 						InterfaceImpl i;
 						Map tmp;
-						Struct sct;
 						while (it.hasNext()) {
 							i = it.next();
 							try {
 								tmp = i.meta;
 								if (tmp != null) {
-									sct = Caster.toStruct(tmp, false);
-									if (JavaSettingsImpl.doMerge(sct, false)) mergeConfig = true;
 									js = JavaSettingsImpl.merge(
 
 											pc.getConfig(),
 
 											js,
 
-											JavaSettingsImpl.readJavaSettings(pc, sct)
+											JavaSettingsImpl.readJavaSettings(pc, Caster.toStruct(tmp, false))
 
 									);
 								}
@@ -269,19 +259,11 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 					// current
 					js = JavaSettingsImpl.merge(pc.getConfig(), js, JavaSettingsImpl.readJavaSettings(pc, properties.meta));
-					if (mergeConfig) js = JavaSettingsImpl.merge(pc.getConfig(), ((ConfigPro) pc.getConfig()).getJavaSettings(), js);
-					;
-
-					return cp.setJavaSettings(js);
+					return this.cp.setJavaSettings(js);
 				}
 			}
 		}
-		return cp.getJavaSettings();
-	}
-
-	@Override
-	public final int hashCode() {
-		return java.util.Objects.hash(base, _data, pageSource);
+		return this.cp.getJavaSettings();
 	}
 
 	public boolean hasJavaSettings(PageContext pc) {
@@ -311,7 +293,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		try {
 			// attributes
 			trg.pageSource = pageSource;
-			trg.cpRef = cpRef;
+			trg.cp = cp;
 			// trg._triggerDataMember=_triggerDataMember;
 			trg.useShadow = useShadow;
 			trg._static = _static;
@@ -485,7 +467,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		if (base != null) {
 			this.dataMemberDefaultAccess = base.dataMemberDefaultAccess;
-			this._static = new StaticScope(base._static, this, cpRef, dataMemberDefaultAccess);
+			this._static = new StaticScope(base._static, this, componentPage, dataMemberDefaultAccess);
 			this.absFin = base.absFin;
 			_data = base._data;
 			_udfs = isRestEnabled ? new LinkedHashMap<Key, UDF>(base._udfs) : new HashMap<Key, UDF>(base._udfs);
@@ -496,7 +478,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		}
 		else {
 			this.dataMemberDefaultAccess = pageContext.getConfig().getComponentDataMemberDefaultAccess();
-			this._static = new StaticScope(null, this, cpRef, dataMemberDefaultAccess);
+			this._static = new StaticScope(null, this, componentPage, dataMemberDefaultAccess);
 			// TODO get per CFC setting
 			// this._triggerDataMember=pageContext.getConfig().getTriggerComponentDataMember();
 			_udfs = isRestEnabled ? new LinkedHashMap<Key, UDF>() : new HashMap<Key, UDF>();
@@ -511,7 +493,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		long indexBase = 0;
 		if (base != null) {
-			indexBase = base.cpRef.get(pageContext).getStaticStruct().index();
+			indexBase = base.cp.getStaticStruct().index();
 		}
 
 		// scope
@@ -759,11 +741,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			return Reflector.componentToClass(pc, this).getClass();
 		}
 
-		// When calling via super, use public access for error message since super calls should access
-		// inherited methods
-		int errorAccess = superAccess ? ACCESS_PUBLIC : access;
-		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, errorAccess);
-		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), errorAccess);
+		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, access);
+		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), access);
 	}
 
 	Object _call(PageContext pc, Collection.Key calledName, UDF udf, Struct namedArgs, Object[] args) throws PageException {
@@ -990,21 +969,21 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		if (_udfs.isEmpty() && _data.isEmpty()) {
 			return new Collection.Key[0];
 		}
-
+		
 		List<Key> orderedKeys = new ArrayList<Key>(_udfs.size() + _data.size());
-
-		for (Entry<Key, UDF> entry: _udfs.entrySet()) {
+		
+		for (Entry<Key, UDF> entry : _udfs.entrySet()) {
 			if (entry.getValue().getAccess() <= access) {
 				orderedKeys.add(entry.getKey());
 			}
 		}
-		for (Entry<Key, Member> entry: _data.entrySet()) {
+		for (Entry<Key, Member> entry : _data.entrySet()) {
 			Member member = entry.getValue();
 			if (member.getAccess() <= access && !(member instanceof UDF)) {
 				orderedKeys.add(entry.getKey());
 			}
 		}
-
+		
 		return orderedKeys.toArray(new Collection.Key[orderedKeys.size()]);
 	}
 
@@ -1044,7 +1023,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	public Member getMember(int access, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && access == ACCESS_PRIVATE && key.equalsIgnoreCase(KeyConstants._super)) {
-			Component ac = ComponentUtil.getCurrentComponent(ThreadLocalPageContext.get(), this);
+			Component ac = ComponentUtil.getActiveComponent(ThreadLocalPageContext.get(), this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 			// return SuperComponent . superMember(base);
 		}
@@ -1079,7 +1058,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	protected Member getMember(PageContext pc, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && key.equalsIgnoreCase(KeyConstants._super) && isPrivate(pc)) {
-			Component ac = ComponentUtil.getCurrentComponent(pc, this);
+			Component ac = ComponentUtil.getActiveComponent(pc, this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 		}
 		if (superAccess) {
@@ -1194,7 +1173,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 					try {
 						return DumpUtil.toDumpData(_call(pageContext, KeyConstants.__toDumpData, udf, null, new Object[0]), pageContext, maxlevel, dp);
 					}
-					catch (PageException e) {}
+					catch (PageException e) {
+					}
 				}
 			}
 		}
@@ -1392,8 +1372,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		return pageSource;
 	}
 
-	public ComponentPageImpl _getComponentPageImpl(PageContext pc) throws PageException {
-		return cpRef.get(pc);
+	public ComponentPageImpl _getComponentPageImpl() {
+		return cp;
 	}
 
 	public ImportDefintion[] _getImportDefintions() {
@@ -1728,7 +1708,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		if (!StringUtil.isEmpty(displayname)) sct.set(KeyConstants._displayname, displayname);
 
 		sct.set(KeyConstants._persistent, comp.properties.persistent);
-		// sct.set(KeyConstants._hashCode, comp.hashCode());
+		sct.set(KeyConstants._hashCode, comp.hashCode());
 		sct.set(KeyConstants._accessors, comp.properties.accessors);
 		sct.set(KeyConstants._synchronized, comp.properties._synchronized);
 		sct.set(KeyConstants._inline, comp.properties.inline);
@@ -1988,14 +1968,9 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						"enable [trigger data member] in administrator to also invoke getters and setters");
 			if (existing != null) {
 				if (existing.getModifier() == Member.MODIFIER_FINAL) {
-					ComponentPageImpl tmp = cpRef.get(pc, null);
-					String componentName = tmp != null ? tmp.getComponentName() : "";
-
-					tmp = base.cpRef.get(pc, null);
-					String baseComponentName = tmp != null ? tmp.getComponentName() : "";
-
-					throw new ExpressionException("Attempt to modify a 'final' member [" + key + "] within the 'this' scope of the component [" + componentName
-							+ "]. This member is declared as 'final' in the base component [" + baseComponentName + "] or a component extended by it, and cannot be overridden.");
+					throw new ExpressionException("Attempt to modify a 'final' member [" + key + "] within the 'this' scope of the component [" + cp.getComponentName()
+							+ "]. This member is declared as 'final' in the base component [" + base.cp.getComponentName()
+							+ "] or a component extended by it, and cannot be overridden.");
 				}
 
 			}
@@ -2404,28 +2379,17 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 	@Override
 	public void setProperty(Property property) throws PageException {
-		// LDEV-3335: Handle property inheritance and overrides
+		// LDEV-3335: If property is inherited (has ownerPageSource set to a different component),
+		// duplicate it so each component has its own PropertyImpl instance
 		PropertyImpl propImpl = (PropertyImpl) property;
 		PageSource propOwnerPS = propImpl.getOwnerPageSource();
-
-		// Check if this property is overriding an existing property (same name already registered)
-		String propNameLower = StringUtil.toLowerCase(propImpl.getName());
-		PropertyImpl existing = (PropertyImpl) top.properties.properties.get(propNameLower);
-		boolean isOverride = existing != null && propOwnerPS == null;
-
 		boolean isInherited = propOwnerPS != null && !propOwnerPS.equals(getPageSource());
-
-		if (isInherited && !isOverride) {
+		if (isInherited) {
 			// Property is from a parent component - duplicate it to avoid sharing/mutation
 			propImpl = (PropertyImpl) propImpl.duplicate(false);
 		}
-		else if (propOwnerPS == null) {
-			// LDEV-3335: Property doesn't have owner set yet - set it to this component
-			// This happens for properties from __staticProperties that haven't been initialized
-			propImpl.setOwnerName(getAbsName(), getPageSource());
-		}
 
-		top.properties.properties.put(propNameLower, propImpl);
+		top.properties.properties.put(StringUtil.toLowerCase(propImpl.getName()), propImpl);
 		if (propImpl.getDefaultAsObject() != null) {
 			scope.setEL(propImpl.getNameAsKey(), propImpl.getDefaultAsObject());
 		}
@@ -2433,9 +2397,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		// 1. Component has accessors enabled, OR
 		// 2. Component is persistent, OR
 		// 3. Property is inherited and has accessors (need to create new UDFs with duplicated property)
-		// 4. Property is an override with accessors (child re-declaring parent property)
-		if (top.properties.persistent || top.properties.accessors || (isInherited && (propImpl.getGetter() || propImpl.getSetter()))
-				|| (isOverride && (propImpl.getGetter() || propImpl.getSetter()))) {
+		if (top.properties.persistent || top.properties.accessors || (isInherited && (propImpl.getGetter() || propImpl.getSetter()))) {
 			PropertyFactory.createPropertyUDFs(this, propImpl);
 		}
 	}
@@ -2473,11 +2435,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 				while (it.hasNext()) {
 					p = it.next().getValue();
 					if (p.isPeristent()) {
-						// LDEV-87: Don't override properties that child component has already declared
-						String propNameLower = StringUtil.toLowerCase(p.getName());
-						if (!top.properties.properties.containsKey(propNameLower)) {
-							setProperty(p);
-						}
+
+						setProperty(p);
 					}
 				}
 			}

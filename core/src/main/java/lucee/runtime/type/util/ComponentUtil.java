@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -178,7 +177,7 @@ public final class ComponentUtil {
 		// null);
 		// fv.visitEnd();
 
-		LinkedHashMap<LitString, Integer> _keys = new LinkedHashMap<LitString, Integer>();
+		java.util.List<LitString> _keys = new ArrayList<LitString>();
 
 		// remote methods
 		Collection.Key[] keys = component.keys(Component.ACCESS_REMOTE);
@@ -579,7 +578,7 @@ public final class ComponentUtil {
 		return cl.loadClass(className);
 	}
 
-	private static int createMethod(PageContext pc, ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, String className, Object member, int max,
+	private static int createMethod(PageContext pc, ConstrBytecodeContext constr, java.util.List<LitString> keys, ClassWriter cw, String className, Object member, int max,
 			boolean writeLog, boolean suppressWSbeforeArg, boolean output, boolean returnValue) throws PageException {
 
 		boolean hasOptionalArgs = false;
@@ -784,44 +783,13 @@ public final class ComponentUtil {
 		}
 	}
 
-	public static Component getCurrentComponent(PageContext pc, Component current) {
+	public static Component getActiveComponent(PageContext pc, Component current) {
+		if (pc.getActiveComponent() == null) return current;
+		if (pc.getActiveUDF() != null && (pc.getActiveComponent()).getPageSource() == (pc.getActiveUDF().getOwnerComponent()).getPageSource()) {
 
-		// where are we (getCurrentPageSource) and use the matching component
-		PageSource currPS = pc.getCurrentPageSource(null);
-		if (currPS != null) {
-
-			// current component
-			Component curr = current;
-			while (curr != null) {
-				if (currPS.equals(((ComponentImpl) curr)._getPageSource())) {
-					return curr;
-				}
-				curr = curr.getBaseComponent();
-			}
-
-			// active component
-			curr = pc.getActiveComponent();
-			while (curr != null) {
-				if (currPS.equals(((ComponentImpl) curr)._getPageSource())) {
-					return curr;
-				}
-				curr = curr.getBaseComponent();
-			}
-
-			// owner component
-			if (pc.getActiveUDF() != null) {
-				curr = pc.getActiveUDF().getOwnerComponent();
-				while (curr != null) {
-					if (currPS.equals(((ComponentImpl) curr)._getPageSource())) {
-						return curr;
-					}
-					curr = curr.getBaseComponent();
-				}
-			}
+			return pc.getActiveUDF().getOwnerComponent();
 		}
-
-		if (pc.getActiveComponent() != null) return pc.getActiveComponent();
-		return current;
+		return pc.getActiveComponent();
 	}
 
 	public static long getCompileTime(PageContext pc, PageSource ps, long defaultValue) {
@@ -914,19 +882,7 @@ public final class ComponentUtil {
 
 		if (udf instanceof UDFGSProperty) {
 			UDFGSProperty gsProp = (UDFGSProperty) udf;
-			PageSource ps = null;
-
-			// LDEV-3335: For inherited accessors, use the property's original owner
-			Property prop = gsProp.getProperty();
-			if (prop instanceof PropertyImpl) {
-				ps = ((PropertyImpl) prop).getOwnerPageSource();
-			}
-
-			// Fallback to the UDF's PageSource if property owner not available
-			if (ps == null) {
-				ps = gsProp.getPageSource();
-			}
-
+			PageSource ps = gsProp.getPageSource();
 			if (ps != null) {
 				func.set(KeyConstants._owner, ps.getDisplayPath());
 			}
@@ -1204,14 +1160,12 @@ public final class ComponentUtil {
 				StructUtil.copy(dynamicAttributes, property.getDynamicAttributes(), true);
 			}
 
-			// LDEV-3335: Set owner BEFORE setProperty() so inherited properties have the correct owner
+			comp.setProperty(property);
 			// Only set owner for properties defined in this component, not inherited ones
 			// If already set (inherited from parent), don't overwrite
 			if (property.getOwnerPageSource() == null) {
 				property.setOwnerName(comp.getAbsName(), comp.getPageSource());
 			}
-
-			comp.setProperty(property);
 		}
 	}
 
