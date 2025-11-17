@@ -37,8 +37,8 @@ import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourcesImpl;
-import lucee.commons.io.res.type.compress.CompressResource;
-import lucee.commons.io.res.type.compress.CompressResourceProvider;
+import lucee.commons.io.res.type.zip.ZipResource;
+import lucee.commons.io.res.type.zip.ZipResourceProvider;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.URLDecoder;
@@ -1353,9 +1353,10 @@ public final class ConfigUtil {
 						}
 					}
 					// Archive
-					if (m.hasArchive() && res.getResourceProvider() instanceof CompressResourceProvider) {
+					if (m.hasArchive() && res.getResourceProvider() instanceof ZipResourceProvider) {
 						Resource archive = m.getArchive();
-						CompressResource cr = ((CompressResource) res);
+
+						ZipResource cr = ((ZipResource) res);
 						if (archive.equals(cr.getCompressResource())) {
 							return m.getPageSource(cr.getCompressPath());
 						}
@@ -1374,9 +1375,9 @@ public final class ConfigUtil {
 					}
 				}
 				// Archive
-				if (m.hasArchive() && res.getResourceProvider() instanceof CompressResourceProvider) {
+				if (m.hasArchive() && res.getResourceProvider() instanceof ZipResourceProvider) {
 					Resource archive = m.getArchive();
-					CompressResource cr = ((CompressResource) res);
+					ZipResource cr = ((ZipResource) res);
 					if (archive.equals(cr.getCompressResource())) {
 						return m.getPageSource(cr.getCompressPath());
 					}
@@ -1404,9 +1405,9 @@ public final class ConfigUtil {
 					}
 				}
 				// Archive
-				if (mapping.hasArchive() && res.getResourceProvider() instanceof CompressResourceProvider) {
+				if (mapping.hasArchive() && res.getResourceProvider() instanceof ZipResourceProvider) {
 					Resource archive = mapping.getArchive();
-					CompressResource cr = ((CompressResource) res);
+					ZipResource cr = ((ZipResource) res);
 					if (archive.equals(cr.getCompressResource())) {
 						return mapping.getPageSource(cr.getCompressPath());
 					}
@@ -1426,9 +1427,9 @@ public final class ConfigUtil {
 				}
 			}
 			// Archive
-			if (mapping.hasArchive() && res.getResourceProvider() instanceof CompressResourceProvider) {
+			if (mapping.hasArchive() && res.getResourceProvider() instanceof ZipResourceProvider) {
 				Resource archive = mapping.getArchive();
-				CompressResource cr = ((CompressResource) res);
+				ZipResource cr = ((ZipResource) res);
 				if (archive.equals(cr.getCompressResource())) {
 					return mapping.getPageSource(cr.getCompressPath());
 				}

@@ -52,7 +52,6 @@ import lucee.runtime.config.DatasourceConnPool;
 import lucee.runtime.config.DeployHandler;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.lock.LockManagerImpl;
-import lucee.runtime.net.smtp.SMTPConnectionPool;
 import lucee.runtime.op.Caster;
 import lucee.runtime.schedule.Scheduler;
 import lucee.runtime.schedule.SchedulerImpl;
@@ -450,18 +449,6 @@ public final class Controler extends ParentThreasRefThread {
 				}
 				checkStopWatch(config, stopwatch, "checkMappings");
 
-				if (doit) {
-					stopwatch.start();
-					try {
-						doClearMailConnections();
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						if (log != null) log.error("controler", t);
-					}
-					checkStopWatch(config, stopwatch, "clearMailConnections");
-				}
-
 				// clean LockManager
 				stopwatch.start();
 				if (cfmlFactory.getUsedPageContextLength() == 0) try {
@@ -541,10 +528,6 @@ public final class Controler extends ParentThreasRefThread {
 		if (factories == null || factories.length != contextes.size()) factories = (CFMLFactoryImpl[]) contextes.values().toArray(new CFMLFactoryImpl[contextes.size()]);
 
 		return factories;
-	}
-
-	private void doClearMailConnections() {
-		SMTPConnectionPool.closeSessions();
 	}
 
 	private void checkOldClientFile(ConfigWeb config, Log log) {

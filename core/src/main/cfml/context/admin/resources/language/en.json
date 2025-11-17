@@ -756,7 +756,7 @@
         "mail": "Mail",
         "orm": "ORM",
         "restart": "Restart",
-        "schedule": "Scheduled tasks",
+        "schedule": "Scheduled tasks (classic)",
         "search": "Search",
         "tasks": "Tasks",
         "update": "Update"

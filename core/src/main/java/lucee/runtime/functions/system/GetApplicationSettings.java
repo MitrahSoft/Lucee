@@ -46,9 +46,9 @@ import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.BIF;
 import lucee.runtime.i18n.LocaleFactory;
 import lucee.runtime.listener.AppListenerUtil;
-import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.listener.ApplicationContext;
 import lucee.runtime.listener.ApplicationContextSupport;
+import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.listener.ClassicApplicationContext;
 import lucee.runtime.listener.JavaSettings;
 import lucee.runtime.listener.JavaSettingsImpl;
@@ -58,6 +58,7 @@ import lucee.runtime.listener.SessionCookieDataImpl;
 import lucee.runtime.mvn.POM;
 import lucee.runtime.net.mail.Server;
 import lucee.runtime.net.mail.ServerImpl;
+// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.s3.Properties;
 import lucee.runtime.op.Caster;
@@ -97,10 +98,9 @@ public final class GetApplicationSettings extends BIF {
 		if (ac instanceof ModernApplicationContext) cfc = ((ModernApplicationContext) ac).getComponent();
 
 		Struct sct = new StructImpl(Struct.TYPE_LINKED);
-		sct.setEL(KeyConstants._name, ac.getName());		// adminMode
+		sct.setEL(KeyConstants._name, ac.getName()); // adminMode
 		sct.setEL("singleContext", Boolean.TRUE);
 		sct.setEL("applicationTimeout", ac.getApplicationTimeout());
-
 
 		sct.setEL("sessionCluster", Caster.toBoolean(ac.getSessionCluster()));
 		sct.setEL("sessionManagement", Caster.toBoolean(ac.isSetSessionManagement()));
@@ -128,7 +128,7 @@ public final class GetApplicationSettings extends BIF {
 		sct.setEL("clientStorage", ac.getClientstorage());
 		sct.setEL("clientTimeout", ac.getClientTimeout());
 		sct.setEL("setClientCookies", Caster.toBoolean(ac.isSetClientCookies()));
-		
+
 		ProxyData ProxyData = acs.getProxyData();
 		if (ProxyData != null) {
 			Struct sc = new StructImpl(Struct.TYPE_LINKED);
@@ -186,10 +186,10 @@ public final class GetApplicationSettings extends BIF {
 
 		sct.setEL("customTagPaths", toArray(ac.getCustomTagMappings()));
 		sct.setEL("componentPaths", toArray(ac.getComponentMappings()));
-		
+
 		sct.setEL("componentPathCache", Caster.toBoolean(((ConfigPro) pc.getConfig()).useComponentPathCache()));
 		sct.setEL("componentLocalSearch", Caster.toBoolean(((ConfigPro) pc.getConfig()).getComponentLocalSearch()));
-		sct.setEL("componentDeepSearch", Caster.toBoolean(((ConfigPro) pc.getConfig()).doComponentDeepSearch()));		
+		sct.setEL("componentDeepSearch", Caster.toBoolean(((ConfigPro) pc.getConfig()).doComponentDeepSearch()));
 		sct.setEL("componentDataMemberAccess", ComponentUtil.toStringAccess((pc.getConfig()).getComponentDataMemberDefaultAccess()));
 		sct.setEL("invokeImplicitAccessor", Caster.toBoolean(ac.getTriggerComponentDataMember()));
 		sct.setEL("triggerDataMember", Caster.toBoolean(ac.getTriggerComponentDataMember()));
@@ -208,7 +208,7 @@ public final class GetApplicationSettings extends BIF {
 		sct.setEL("secureJsonPrefix", ac.getSecureJsonPrefix());
 		sct.setEL("serverSideFormValidation", Boolean.FALSE); // TODO impl
 		sct.setEL("typeChecking", Caster.toBoolean(ac.getTypeChecking()));
-		
+
 		sct.setEL(KeyConstants._locale, LocaleFactory.toString(ThreadLocalPageContext.getLocale(pc)));
 		sct.setEL(KeyConstants._timezone, TimeZoneUtil.toString(ThreadLocalPageContext.getTimeZone(pc)));
 		// sct.setEL(KeyConstants._timeout,TimeZoneUtil.toString(pc.getRequestTimeout()));
@@ -222,7 +222,7 @@ public final class GetApplicationSettings extends BIF {
 		// scope cascading
 		sct.setEL("localMode", ac.getLocalMode() == Undefined.MODE_LOCAL_OR_ARGUMENTS_ALWAYS ? Boolean.TRUE : Boolean.FALSE);
 		sct.setEL("scopeCascading", ConfigUtil.toScopeCascading(ac.getScopeCascading(), null));
-		
+
 		if (ac.getScopeCascading() != Config.SCOPE_SMALL) {
 			sct.setEL("searchImplicitScopes", ac.getScopeCascading() == Config.SCOPE_STANDARD);
 		}
@@ -240,7 +240,7 @@ public final class GetApplicationSettings extends BIF {
 		Struct re = new StructImpl(Struct.TYPE_LINKED);
 		if (ac instanceof ModernApplicationContext) re.setEL("type", ((ModernApplicationContext) ac).getRegex().getTypeName());
 		sct.setEL("regex", re);
-		
+
 		Object ds = ac.getDefDataSource();
 		if (ds instanceof DataSource) ds = _call((DataSource) ds);
 		else ds = Caster.toString(ds, null);

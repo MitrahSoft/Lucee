@@ -16,7 +16,7 @@
  * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
  * 
  **/
-package lucee.commons.io.res.type.compress;
+package lucee.commons.io.res.type.zip;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,10 +28,12 @@ import lucee.commons.io.res.util.ResourceSupport;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.StringUtil;
 
-public final class CompressResource extends ResourceSupport {
+public final class ZipResource extends ResourceSupport {
 
-	private final CompressResourceProvider provider;
-	private final Compress zip;
+	private static final long serialVersionUID = -6181392030253654811L;
+
+	private final ZipResourceProvider provider;
+	private final ZipUtil zip;
 	private final String path;
 	private final String name;
 	private final String parent;
@@ -45,7 +47,7 @@ public final class CompressResource extends ResourceSupport {
 	 * @param path
 	 * @param caseSensitive
 	 */
-	CompressResource(CompressResourceProvider provider, Compress zip, String path, boolean caseSensitive) {
+	ZipResource(ZipResourceProvider provider, ZipUtil zip, String path, boolean caseSensitive) {
 		if (StringUtil.isEmpty(path)) path = "/";
 		this.provider = provider;
 		this.zip = zip;
@@ -111,7 +113,7 @@ public final class CompressResource extends ResourceSupport {
 	@Override
 	public Resource getParentResource() {
 		if (StringUtil.isEmpty(parent)) return null;
-		return new CompressResource(provider, zip, parent, caseSensitive);
+		return new ZipResource(provider, zip, parent, caseSensitive);
 	}
 
 	@Override
@@ -123,7 +125,7 @@ public final class CompressResource extends ResourceSupport {
 	public Resource getRealResource(String realpath) {
 		realpath = ResourceUtil.merge(path, realpath);
 		if (realpath.startsWith("../")) return null;
-		return new CompressResource(provider, zip, realpath, caseSensitive);
+		return new ZipResource(provider, zip, realpath, caseSensitive);
 	}
 
 	@Override
@@ -172,7 +174,7 @@ public final class CompressResource extends ResourceSupport {
 		if (names == null) return null;
 		Resource[] children = new Resource[names.length];
 		for (int i = 0; i < children.length; i++) {
-			children[i] = new CompressResource(provider, zip, path.concat("/").concat(names[i]), caseSensitive);
+			children[i] = new ZipResource(provider, zip, path.concat("/").concat(names[i]), caseSensitive);
 		}
 		return children;
 	}
@@ -228,12 +230,12 @@ public final class CompressResource extends ResourceSupport {
 		// Resource res = getRamResource();
 		// Resource p = res.getParentResource();
 		// if(p!=null && !p.exists())p.mkdirs();
-		return new CompressOutputStreamSynchronizer(getRamResource().getOutputStream(), zip, provider.async);
+		return new ZipOutputStreamSynchronizer(getRamResource().getOutputStream(), zip, provider.async);
 	}
 
 	@Override
 	public OutputStream getOutputStream(boolean append) throws IOException {
-		return new CompressOutputStreamSynchronizer(getRamResource().getOutputStream(append), zip, provider.async);
+		return new ZipOutputStreamSynchronizer(getRamResource().getOutputStream(append), zip, provider.async);
 	}
 
 	@Override

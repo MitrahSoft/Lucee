@@ -22,7 +22,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="ORM" {
 
 	function run( testResults, testBox ) {
 		describe("Testcase for LDEV4017", function() {
-			it( title="Access the lazy-loaded ORM entity after the transaction ends", skip="#notHasH2()#", body=function( currentSpec ) {
+			it( title="Access the lazy-loaded ORM entity after the transaction ends", skip=(noOrm() || notHasH2()), body=function( currentSpec ) {
 				var result = _InternalRequest(
 					template : "#variables.uri#/LDEV4017.cfm",
 					forms : { uuid : createUUID(), dbfile : variables.dbfile }
@@ -40,5 +40,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="ORM" {
 	private string function createURI(string calledName) {
 		var baseURI = "/test/#listLast(getDirectoryFromPath(getCurrenttemplatepath()),"\/")#/";
 		return baseURI&""&calledName;
+	}
+
+	private function noOrm() {
+		return ( structCount( server.getTestService("orm") ) eq 0 );
 	}
 }

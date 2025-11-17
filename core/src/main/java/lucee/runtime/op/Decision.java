@@ -54,7 +54,7 @@ import lucee.runtime.ext.function.Function;
 import lucee.runtime.functions.conversion.IsJSON;
 import lucee.runtime.image.ImageUtil;
 import lucee.runtime.java.JavaObject;
-import lucee.runtime.net.mail.MailUtil;
+// import lucee.runtime.net.mail.MailUtil; // removed with mail functionality
 import lucee.runtime.op.date.DateCaster;
 import lucee.runtime.op.validators.ValidateCreditCard;
 import lucee.runtime.text.xml.XMLCaster;
@@ -870,7 +870,11 @@ public final class Decision {
 	 */
 	public static boolean isEmail(Object value) {
 
-		return MailUtil.isValidEmail(value);
+		// TODO Mail functionality removed - basic email validation only call return
+		// MailUtil.isValidEmail(value); if mail extension is installed
+		String str = Caster.toString(value, null);
+		if (str == null) return false;
+		return str.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
 	}
 
 	/**

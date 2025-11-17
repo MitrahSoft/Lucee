@@ -2661,67 +2661,6 @@ The returned AST uses **neutral, language-agnostic node types** following ESTree
 		</return>
 	</function>
 	
-	<!-- compress -->
-	<function>
-		<name>compress</name>
-		<class>lucee.runtime.functions.system.Compress</class>
-		<description>Compress given source to different formats.</description>
-		<argument>
-			<name>format</name>
-			<type>string</type>
-			<required>Yes</required>
-			<description>
-			Formats to compress the files:
-			- bzip
-			- bzip2
-			- gzip
-			- tar 
-			- tbz (same as tar.bz)
-			- tbz2
-			- tgz (same as tar.gz)
-			- zip
-			</description>
-		</argument>
-		<argument>
-			<name>source</name>
-			<type>string</type>
-			<required>Yes</required>
-			<description>
-			Path (relative or absolute) to source file or directory to compress.
-			For **gzip / bzip / bzip2** (single file format) must use path including the name of the file
-			</description>
-		</argument>
-		<argument>
-			<name>target</name>
-			<type>string</type>
-			<required>Yes</required>
-			<description>
-			Path (relative or absolute) including the name, where you want to save the compressed output-file
-			</description>
-		</argument>
-		<argument>
-			<name>includeBaseFolder</name>
-			<type>boolean</type>
-			<required>No</required>
-			<default>true</default>
-			<description>
-			Compress the directory or just the content of the directory
-			</description>
-		</argument>
-		<argument>
-			<name>mode</name>
-			<type>string</type>
-			<required>no</required>
-			<default>777</default>
-			<description>
-			Mode to store the files, pass 0 preserve the source file modes
-			</description>
-		</argument>
-		<return>
-			<type>boolean</type>
-		</return>
-	</function>
-
 	<!-- cos -->
 	<function>
 		<name>cos</name>
@@ -4965,48 +4904,6 @@ EntitySave(entity, [forceInsert])</description>
 		</return>
 	</function>
 
-	<!-- extract -->
-	<function>
-		<name>extract</name>
-		<class>lucee.runtime.functions.system.Extract</class>
-		<description>Extract the data of a compressed file</description>
-		<argument>
-			<name>format</name>
-			<type>string</type>
-			<required>Yes</required>
-			<description>
-			Format of the compressed file:
-			- bzip
-			- bzip2
-			- gzip
-			- tar 
-			- tbz (same as tar.bz)
-			- tbz2
-			- tgz (same as tar.gz)
-			- zip
-			</description>
-		</argument>
-		<argument>
-			<name>source</name>
-			<type>string</type>
-			<required>Yes</required>
-			<description>
-			Path (relative or absolute) to the source file or a directory with compressed files to extract
-			</description>
-		</argument>
-		<argument>
-			<name>target</name>
-			<type>string</type>
-			<required>Yes</required>
-			<description>
-			Path (relative or absolute) to the directory, where you want to extract the data.
-			For **gzip / bzip / bzip2** (single file format) must use path including the name of the file
-			</description>
-		</argument>
-		<return>
-			<type>boolean</type>
-		</return>
-	</function>
 
 		<!-- FileAppend -->
 	<function>

@@ -18,8 +18,6 @@
  */
 package lucee.runtime.config;
 
-import static lucee.runtime.db.DatasourceManagerImpl.QOQ_DATASOURCE_NAME;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -79,8 +77,6 @@ import lucee.commons.io.res.type.ftp.FTPResourceProvider;
 import lucee.commons.io.res.type.http.HTTPResourceProvider;
 import lucee.commons.io.res.type.http.HTTPSResourceProvider;
 import lucee.commons.io.res.type.s3.DummyS3ResourceProvider;
-import lucee.commons.io.res.type.tar.TarResourceProvider;
-import lucee.commons.io.res.type.tgz.TGZResourceProvider;
 import lucee.commons.io.res.type.zip.ZipResourceProvider;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.io.retirement.RetireOutputStream;
@@ -559,8 +555,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Array providers = ConfigUtil.getAsArray("resourceProviders", root);
 			// Resource Provider
 			boolean hasFTP = false;
-			boolean hasTGZ = false;
-			boolean hasTAR = false;
 			boolean hasHTTP = false;
 			boolean hasHTTPs = false;
 			boolean hasRAM = false;
@@ -593,8 +587,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 							else if ("ftp".equalsIgnoreCase(strProviderScheme)) hasFTP = true;
 							else if ("ram".equalsIgnoreCase(strProviderScheme)) hasRAM = true;
 							else if ("s3".equalsIgnoreCase(strProviderScheme)) hasS3 = true;
-							else if ("tar".equalsIgnoreCase(strProviderScheme)) hasTAR = true;
-							else if ("tgz".equalsIgnoreCase(strProviderScheme)) hasTGZ = true;
 							else if ("zip".equalsIgnoreCase(strProviderScheme)) hasZip = true;
 
 						}
@@ -639,18 +631,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				args.put("lock-timeout", "1000");
 				args.put("case-sensitive", "true");
 				config.addResourceProvider("tar", new ClassDefinitionImpl<>(CacheResourceProvider.class), args);
-			}
-			if (!hasTGZ) {
-				Map<String, String> args = new HashMap<>();
-				args.put("lock-timeout", "1000");
-				args.put("case-sensitive", "true");
-				config.addResourceProvider("tgz", new ClassDefinitionImpl<>(TGZResourceProvider.class), args);
-			}
-			if (!hasTAR) {
-				Map<String, String> args = new HashMap<>();
-				args.put("lock-timeout", "1000");
-				args.put("case-sensitive", "true");
-				config.addResourceProvider("tar", new ClassDefinitionImpl<>(TarResourceProvider.class), args);
 			}
 			if (!hasS3) {
 				ClassDefinition s3Class = new ClassDefinitionImpl(DummyS3ResourceProvider.class);
@@ -1666,19 +1646,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// When set to true, makes JDBC use a representation for DATE data that
 			// is compatible with the Oracle8i database.
 			System.setProperty("oracle.jdbc.V8Compatible", "true");
-
-			// Default query of query DB
-			try {
-				setDatasource(config, datasources, QOQ_DATASOURCE_NAME,
-						new ClassDefinitionImpl("org.hsqldb.jdbcDriver", "org.lucee.hsqldb", "2.7.2.jdk8", config.getIdentification()), "hypersonic-hsqldb", "", -1,
-						"jdbc:hsqldb:mem:tempQoQ;sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;", "sa", "", null, null, null,
-						DEFAULT_MAX_CONNECTION, -1, -1, 60000, 0, 0, 0, true, true, DataSource.ALLOW_ALL, false, false, null, new StructImpl(), "", ParamSyntaxImpl.DEFAULT, false,
-						false, false, false);
-			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				log(config, t);
-			}
 
 			SecurityManager sm = config.getSecurityManager();
 			short access = sm.getAccess(SecurityManager.TYPE_DATASOURCE);

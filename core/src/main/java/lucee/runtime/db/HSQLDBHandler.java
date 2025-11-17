@@ -33,16 +33,23 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.osgi.framework.BundleException;
+
 import lucee.commons.db.DBUtil;
 import lucee.commons.io.SystemUtil;
+import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
+import lucee.commons.lang.ClassException;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.SerializableObject;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.SystemOut;
 import lucee.runtime.PageContext;
+import lucee.runtime.PageContextImpl;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.DatasourceConnPool;
 import lucee.runtime.engine.ThreadLocalPageContext;
+import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.DatabaseException;
 import lucee.runtime.exp.IllegalQoQException;
 import lucee.runtime.exp.PageException;
@@ -61,6 +68,7 @@ import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.dt.TimeSpan;
 import lucee.runtime.type.util.CollectionUtil;
+import lucee.transformer.library.ClassDefinitionImpl;
 
 /**
  * class to reexecute queries on the resultset object inside the cfml environment
@@ -552,8 +560,61 @@ public final class HSQLDBHandler {
 		}
 	}
 
+	private static DataSource QOQ_DATASOURCE = null;
+
+	private static DataSource getHSQLDBDatasource(PageContext pc, SQL sql) throws ClassException, BundleException, SQLException, ApplicationException {
+
+		DataSource ds = pc.getDataSource("qoq", null);
+		if (ds != null) return ds;
+
+		ConfigPro config = (ConfigPro) pc.getConfig();
+		Log log = ((PageContextImpl) pc).getLog("datasource");
+
+		if (LogUtil.doesWarn(log)) {
+			log.warn("query-of-query", "Query-of-query statement could not be processed by the native SQL parser and is falling back to HSQLDB datasource. " + "Statement: [" + sql
+					+ "]. " + "This fallback mechanism is deprecated and will be removed in a future version. "
+					+ "To avoid this warning, either: (1) simplify your QoQ syntax to use supported SQL features, or (2) define a custom HSQLDB datasource named 'qoq' in your Lucee administrator.");
+		}
+
+		// do we already have a __datasource__?
+		if (QOQ_DATASOURCE == null) {
+			if (LogUtil.doesDebug(log)) {
+				log.debug("query-of-query", "No custom 'qoq' datasource found. Creating default HSQLDB in-memory datasource for query-of-query fallback. "
+						+ "For better control, define an HSQLDB datasource named 'qoq' in your Lucee administrator.");
+			}
+
+			// if the HSQLDB extension is installed, we will have a driver for it
+			JDBCDriver driver = config.getJDBCDriverById("hsqldb", null);
+			ClassDefinition cd;
+			if (driver != null) {
+				cd = driver.cd;
+			}
+			else {
+				if (LogUtil.doesDebug(log)) {
+					log.debug("query-of-query", "HSQLDB extension not installed. Attempting to download and use embedded HSQLDB driver (org.lucee.hsqldb:2.7.2.jdk11).");
+				}
+				cd = new ClassDefinitionImpl("org.hsqldb.jdbcDriver", "org.lucee.hsqldb", "2.7.2.jdk11", config.getIdentification());
+				try {
+					cd.getClass();// this will load the class, may download it if not available locally
+				}
+				catch (Exception e) {
+					ApplicationException ae = new ApplicationException("Failed to load HSQLDB driver for query-of-query fallback. " + "Please install the HSQLDB extension "
+							+ "or define a custom 'qoq' datasource to resolve this issue.");
+					ExceptionUtil.initCauseEL(ae, e);
+					throw ae;
+				}
+			}
+
+			QOQ_DATASOURCE = new DataSourceImpl(config, QOQ_DATASOURCE_NAME, cd, "hypersonic-hsqldb",
+					"jdbc:hsqldb:mem:tempQoQ;sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;", null, null, "", -1, "sa", "", null, 100, -1, -1,
+					60000, 0, 0, 0, true, true, DataSource.ALLOW_ALL, new StructImpl(), false, false, false, null, "", ParamSyntaxImpl.DEFAULT, false, false, false, false, log);
+		}
+		return QOQ_DATASOURCE;
+	}
+
 	public static QueryImpl __execute(PageContext pc, SQL sql, int maxrows, int fetchsize, TimeSpan timeout, Stopwatch stopwatch, Set<String> tables, boolean doSimpleTypes)
 			throws PageException {
+
 		ArrayList<String> qoqTables = new ArrayList<String>();
 		QueryImpl nqr = null;
 		ConfigPro config = (ConfigPro) pc.getConfig();
@@ -562,7 +623,7 @@ public final class HSQLDBHandler {
 		// TODO this is currently single threaded
 		synchronized (lock) {
 			try {
-				DatasourceConnPool pool = config.getDatasourceConnectionPool(config.getDataSource(QOQ_DATASOURCE_NAME), "sa", "");
+				DatasourceConnPool pool = config.getDatasourceConnectionPool(getHSQLDBDatasource(pc, sql), null, null);
 				dc = pool.borrowObject();
 				conn = dc.getConnection();
 				// executeStatement(conn, "CONNECT"); // TODO create a new HSQLDB session for temp tables

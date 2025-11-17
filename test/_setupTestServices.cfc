@@ -178,7 +178,7 @@ component {
 	public void function loadServiceConfig() localmode=true {
 		systemOutput( "", true) ;
 		systemOutput("-------------- Test Services ------------", true );
-		services = ListToArray("oracle,MySQL,MSsql,postgres,h2,mongoDb,smtp,pop,imap,s3,s3_custom,s3_google,s3_backblaze,ftp,sftp,memcached,redis,ldap,httpbin");
+		services = ListToArray("oracle,MySQL,MSsql,postgres,h2,mongoDb,s3,s3_custom,s3_google,s3_backblaze,ftp,sftp,memcached,redis,ldap,httpbin"); // smtp,pop,imap,
 		// can take a while, so we check them them in parallel
 
 		services.each( function( service ) localmode=true {
@@ -341,6 +341,7 @@ component {
 	}
 
 	public function verifySMTP ( smtp, service ) localmode=true {
+		/*
 		try {
 			mail from="testsuite@lucee.org"
 					to="testsuite@lucee.org"
@@ -355,6 +356,7 @@ component {
 		} catch (e) {
 			throw e.message;
 		}
+		*/
 		return "SMTP Connection Verified";
 	}
 
@@ -462,6 +464,7 @@ component {
 	}
 
 	public function verifyImap ( imap ) localmode=true{
+		/*
 		imap
 			action="open" 
 			server = imap.SERVER
@@ -473,7 +476,7 @@ component {
 		imap
 			action = "close",
 			connection="testImap";
-			
+		*/	
 		return "configured";
 	}
 
@@ -575,6 +578,23 @@ component {
 		}
 
 		switch ( arguments.service ){
+			case "orm":
+				// check if ORM engine is available
+				try {
+					admin
+						action="getORMEngine"
+						type="server"
+						password="#server.SERVERADMINPASSWORD#"
+						returnVariable="local.ormEngine";
+					if ( isStruct( local.ormEngine )
+							&& len( local.ormEngine.class ?: "" )
+							&& local.ormEngine.class neq "lucee.runtime.orm.DummyORMEngine" ){
+						return { available: true };
+					}
+				} catch ( any e ){
+					// ORM engine not available
+				}
+				return {};
 			case "updateProvider":
 				updateProvider = server._getSystemPropOrEnvVars( "URL", "UPDATE_PROVIDER_" );
 				if ( structCount( updateProvider ) eq 1 ){

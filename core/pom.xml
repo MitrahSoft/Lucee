@@ -133,11 +133,6 @@
       <version>4.4</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
-      <version>1.26.1</version>
-    </dependency>
 	<dependency>
         <groupId>org.lucee</groupId>
         <artifactId>commons-email-all</artifactId>
@@ -205,16 +200,16 @@
       <version>2.0.8</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.lucee</groupId>
-      <artifactId>log4j-core</artifactId>
-      <version>2.20.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.lucee</groupId>
-      <artifactId>log4j-api</artifactId>
-      <version>2.20.0</version>
-    </dependency>
+  <dependency>
+    <groupId>org.lucee</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.25.1</version>
+  </dependency>
+  <dependency>
+    <groupId>org.lucee</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>2.25.1</version>
+  </dependency>
     <dependency>
     	<groupId>org.lucee</groupId>
     	<artifactId>portlet</artifactId>
@@ -257,12 +252,7 @@
     	<version>4.5.13</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-        <groupId>org.lucee</groupId>
-        <artifactId>hsqldb</artifactId>
-        <version>2.7.2.jdk8</version>
-        <scope>provided</scope>
-    </dependency>
+
     <dependency>
       <groupId>jacob</groupId>
       <artifactId>jacob</artifactId>

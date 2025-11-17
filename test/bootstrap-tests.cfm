@@ -23,26 +23,12 @@
 	if ( len( baseDir ) eq 0 )
 		basedir=test; // allow running test suite via browser
 
-	request.WEBADMINPASSWORD = "webweb";
 	request.SERVERADMINPASSWORD = "webweb";
-	server.WEBADMINPASSWORD = request.WEBADMINPASSWORD;
 	server.SERVERADMINPASSWORD = request.SERVERADMINPASSWORD;
 
 	oldpassword="admin";
 
 	systemOutput( "set web admin password", true);
-
-	// set a password for the admin
-	try {
-		admin
-			action="updatePassword"
-			type="web"
-			oldPassword="#oldpassword#"
-			newPassword="#request.WEBADMINPASSWORD#";
-	}
-	catch(e){
-		systemOutput( cfcatch.message, true);
-	}	// may exist from previous execution
 
 	systemOutput( "set server admin password", true );
 	try {
@@ -59,8 +45,8 @@
 	// create "/test" mapping
 	admin
 		action="updateMapping"
-		type="web"
-		password="#request.WEBADMINPASSWORD#"
+		type="server"
+		password="#request.SERVERADMINPASSWORD#"
 		virtual="/test"
 		physical="#test#"
 		toplevel="true"
@@ -74,8 +60,8 @@
 		directoryCreate( empty_webroot );
 	admin
 		action="updateMapping"
-		type="web"
-		password="#request.WEBADMINPASSWORD#"
+		type="server"
+		password="#request.SERVERADMINPASSWORD#"
 		virtual="/"
 		physical="#empty_webroot#"
 		toplevel="true"
@@ -98,8 +84,8 @@
 
 		admin
 			action="updateMapping"
-			type="web"
-			password="#request.WEBADMINPASSWORD#"
+			type="server"
+			password="#request.SERVERADMINPASSWORD#"
 			virtual="/testbox"
 			physical="#testboxdir#"
 			toplevel="true"

@@ -198,6 +198,7 @@
 		<available file="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex" property="esapi.present"/>
 		<available file="${cache}/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex" property="scheduler.present"/>
 		<available file="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex" property="compress.present"/>
+		<available file="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" property="mail.present"/>
 	</target>
 
 	<target name="check-mysql" depends="check-cache" unless="mysql.present">
@@ -262,6 +263,13 @@
 			src="${extURLMaven}${extCompressExtensionGroupPath}/${extCompressExtensionArtifact}/${extCompressExtensionVersion}/${extCompressExtensionArtifact}-${extCompressExtensionVersion}.lex" 
 			dest="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex"/>
 	</target>
+	<target name="check-mail" depends="check-cache" unless="mail.present">
+		<get 
+			src="${extURLMaven}${extMailExtensionGroupPath}/${extMailExtensionArtifact}/${extMailExtensionVersion}/${extMailExtensionArtifact}-${extMailExtensionVersion}.lex" 
+			dest="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex"/>
+	</target>
+
+
 	<target name="check-testbox" depends="check-cache" unless="testbox.present">
 		<get src="${testboxURL}" dest="${cache}/testbox-${testboxVersion}.zip"/>
 	</target> 
@@ -414,6 +422,18 @@
 			tofile="${goal}/extensions/${ext_compress.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_compress.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_compress.filename};</echo>
+
+		<!-- add extension Mail -->
+		<loadmf jar="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" prefix="ext_mail."/>
+		<toFileName id="${ext_mail.id}" name="${ext_mail.name}" version="${ext_mail.version}" property="ext_mail.filename"/>
+		<copy 
+			file="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" 
+			todir="${goal}/extensions/"/>
+		<move 
+			file="${goal}/extensions/${extMailExtension}-${extMailExtensionVersion}.lex" 
+			tofile="${goal}/extensions/${ext_mail.filename}"/>
+		<echo level="info">add:${goal}/extensions/${ext_mail.filename}</echo>
+		<echo file="${goal}/extensions/.index" append="true">${ext_mail.filename};</echo>
 
 	</target>
 

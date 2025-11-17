@@ -33,7 +33,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      DO_DEPLOY: "${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/7.0') }}"
+      DO_DEPLOY: "${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/7.1') }}"
       LUCEE_BUILD_JAVA_VERSION: 21
       LUCEE_TEST_JAVA_VERSION: ''
     services:
@@ -235,6 +235,9 @@ jobs:
         elif [[ "$VERSION" == *-SNAPSHOT ]]; then
           echo "------- Maven Deploy SNAPSHOT on ${{ github.event_name }} ---------";
           mvn -B -e -f loader/pom.xml clean deploy -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
+        elif [[ "$VERSION" == *-ALPHA ]]; then
+          echo "------- Maven Install ALPHA (no deplyment) on ${{ github.event_name }} ---------";
+          mvn -B -e -f loader/pom.xml clean install -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
         else
           echo "------- Maven Deploy RELEASE on ${{ github.event_name }} -------";
           mvn -B -e -f loader/pom.xml clean deploy --settings maven-settings.xml -DperformRelease=true -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}";

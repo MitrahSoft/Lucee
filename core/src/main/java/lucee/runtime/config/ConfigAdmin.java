@@ -6407,7 +6407,7 @@ public final class ConfigAdmin {
 			el = Caster.toStruct(children.get(key, null), null);
 			if (el == null) continue;
 
-			id = Caster.toString(el.get(KeyConstants._id), null);
+			id = Caster.toString(el.get(KeyConstants._id, null), null);
 			if (extensionID.equalsIgnoreCase(id)) {
 				bundles = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
 

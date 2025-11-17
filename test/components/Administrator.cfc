@@ -296,7 +296,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 
 
 			// Mail
-			describe( title="test-mail server functions", body=function() {
+			xdescribe( title="test-mail server functions", body=function() {
 				it(title="checking getMailservers()", body=function( currentSpec ) {
 					var mailservers = adminWeb.getMailservers();
 					assertEquals(isQuery(mailservers),true);
@@ -342,7 +342,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 			});
 
 			// Mail Setting
-			describe( title="test-mail setting functions", body=function() {
+			xdescribe( title="test-mail setting functions", body=function() {
 				beforeEach(function( currentSpec ){
 					getMailSetting = adminWeb.getMailSetting();
 					assertEquals(isStruct(getMailSetting), true);

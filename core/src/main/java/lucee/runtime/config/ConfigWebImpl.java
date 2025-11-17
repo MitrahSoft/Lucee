@@ -34,7 +34,6 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourceProvider;
 import lucee.commons.io.res.ResourcesImpl;
 import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
-import lucee.commons.io.res.type.compress.Compress;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.CharSet;
 import lucee.commons.lang.ClassException;
@@ -1097,11 +1096,6 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	@Override
 	public boolean getComponentRootSearch() {
 		return cs.getComponentRootSearch();
-	}
-
-	@Override
-	public Compress getCompressInstance(Resource zipFile, int format, boolean caseSensitive) throws IOException {
-		return cs.getCompressInstance(zipFile, format, caseSensitive);
 	}
 
 	@Override

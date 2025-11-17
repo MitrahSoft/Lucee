@@ -55,6 +55,7 @@ import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.net.mail.Server;
 import lucee.runtime.net.mail.ServerImpl;
+// import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
 import lucee.runtime.net.s3.Properties;
 import lucee.runtime.net.s3.PropertiesImpl;
 import lucee.runtime.op.Caster;
@@ -114,8 +115,7 @@ public final class AppListenerUtil {
 		else if (mode == ApplicationListener.MODE_ROOT) p = getApplicationPageRoot(pc, filename);
 		else p = getApplicationPageCurr2Root(pc, requestedPage, filename);
 
-		if (res != null && p != null)
-			((ConfigPro) pc.getConfig()).putApplicationPageSource(dir, p.getPageSource(), filename, mode, isCFC(type));
+		if (res != null && p != null) ((ConfigPro) pc.getConfig()).putApplicationPageSource(dir, p.getPageSource(), filename, mode, isCFC(type));
 		return p;
 	}
 
@@ -253,7 +253,8 @@ public final class AppListenerUtil {
 			int idle = Caster.toIntValue(data.get(IDLE_TIMEOUT, null), -1);
 			if (idle == -1) idle = Caster.toIntValue(data.get(CONNECTION_TIMEOUT, null), 1);
 
-			return new DataSourceImpl(config, name, dbt.classDefinition, Caster.toString(data.get(KeyConstants._host)), dbt.connectionString, Caster.toString(data.get(KeyConstants._BUNDLENAME, null), null), Caster.toString(data.get(KeyConstants._BUNDLEVERSION, null), null),
+			return new DataSourceImpl(config, name, dbt.classDefinition, Caster.toString(data.get(KeyConstants._host)), dbt.connectionString,
+					Caster.toString(data.get(KeyConstants._BUNDLENAME, null), null), Caster.toString(data.get(KeyConstants._BUNDLEVERSION, null), null),
 					Caster.toString(data.get(KeyConstants._database)), Caster.toIntValue(data.get(KeyConstants._port, null), -1), user, pass, listener,
 					Caster.toIntValue(data.get(CONNECTION_LIMIT, null), -1), idle, Caster.toIntValue(data.get(LIVE_TIMEOUT, null), 1),
 					Caster.toIntValue(data.get("minIdle", null), 0), Caster.toIntValue(data.get("maxIdle", null), 0), Caster.toIntValue(data.get("maxTotal", null), 0),
@@ -818,10 +819,7 @@ public final class AppListenerUtil {
 		if (value == null) value = data.get("useSsl", null);
 		boolean ssl = Caster.toBooleanValue(value, false);
 
-		return new ServerImpl(-1, hostName, port, username, password, lifeTimespan.getMillis(), idleTimespan.getMillis(), tls, ssl, false, ServerImpl.TYPE_LOCAL); // MUST improve
-		// store
-		// connection
-		// somehow
+		return new ServerImpl(-1, hostName, port, username, password, lifeTimespan.getMillis(), idleTimespan.getMillis(), tls, ssl, false, ServerImpl.TYPE_LOCAL);
 	}
 
 	public static FTPConnectionData toFTP(Struct sct) {

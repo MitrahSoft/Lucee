@@ -16,18 +16,14 @@
  * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
  * 
  */
-package lucee.commons.io.res.type.compress;
+package lucee.commons.io.res.type.zip;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipOutputStream;
-
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.IOUtil;
@@ -40,14 +36,11 @@ import lucee.runtime.config.Config;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.op.Caster;
 
-public final class Compress {
+final class ZipUtil {
 
 	public static final int FORMAT_ZIP = CompressUtil.FORMAT_ZIP;
-	public static final int FORMAT_TAR = CompressUtil.FORMAT_TAR;
-	public static final int FORMAT_TGZ = CompressUtil.FORMAT_TGZ;
-	public static final int FORMAT_TBZ2 = CompressUtil.FORMAT_TBZ2;
 
-	private static final Map<String, SoftReference<Compress>> compressResources = new ConcurrentHashMap<String, SoftReference<Compress>>();
+	private static final Map<String, SoftReference<ZipUtil>> compressResources = new ConcurrentHashMap<String, SoftReference<ZipUtil>>();
 	private static final long CHECK_TIMEOUT = 5000;
 	private static final long ONE_HOUR = 60L * 60L * 1000L;
 
@@ -74,7 +67,7 @@ public final class Compress {
 	 * @param caseSensitive
 	 * @throws IOException
 	 */
-	private Compress(Resource file, int format, boolean caseSensitive) throws IOException {
+	private ZipUtil(Resource file, int format, boolean caseSensitive) throws IOException {
 		this.ffile = file;
 		this.format = format;
 		load(this.caseSensitive = caseSensitive);
@@ -89,17 +82,17 @@ public final class Compress {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Compress getInstance(Resource zipFile, int format, boolean caseSensitive) throws IOException {
+	public static ZipUtil getInstance(Resource zipFile, int format, boolean caseSensitive) throws IOException {
 		String key = zipFile.getAbsolutePath() + ":" + caseSensitive;
-		SoftReference<Compress> tmp = compressResources.get(key);
-		Compress compress = tmp == null ? null : tmp.get();
+		SoftReference<ZipUtil> tmp = compressResources.get(key);
+		ZipUtil compress = tmp == null ? null : tmp.get();
 		if (compress == null) {
 			synchronized (SystemUtil.createToken("compress", key)) {
 				tmp = compressResources.get(key);
 				compress = tmp == null ? null : tmp.get();
 				if (compress == null) {
-					compress = new Compress(zipFile, format, caseSensitive);
-					compressResources.put(key, new SoftReference<Compress>(compress));
+					compress = new ZipUtil(zipFile, format, caseSensitive);
+					compressResources.put(key, new SoftReference<ZipUtil>(compress));
 				}
 			}
 		}
@@ -206,70 +199,19 @@ public final class Compress {
 	}
 
 	class Synchronizer extends Thread {
-		private Compress zip;
+		private ZipUtil zip;
 		private int interval;
 		private boolean running = true;
 
-		public Synchronizer(Compress zip, int interval) {
+		public Synchronizer(ZipUtil zip, int interval) {
 			this.zip = zip;
 			this.interval = interval;
 		}
 
 		@Override
 		public void run() {
-			if (FORMAT_TAR == format) runTar(ffile);
-			if (FORMAT_TGZ == format) runTGZ(ffile);
-			else runZip(ffile);
+			runZip(ffile);
 
-		}
-
-		private void runTGZ(Resource res) {
-			GZIPOutputStream gos = null;
-			InputStream tmpis = null;
-			Resource tmp = SystemUtil.getTempDirectory().getRealResource(System.currentTimeMillis() + "_.tgz");
-			try {
-				gos = new GZIPOutputStream(res.getOutputStream());
-				// wait for sync
-				while (true) {
-					SystemUtil.sleep(interval);
-					if (zip.syn + interval <= System.currentTimeMillis()) break;
-				}
-				// sync
-				tmpis = tmp.getInputStream();
-				CompressUtil.compressTar(root.listResources(), tmp, -1);
-				CompressUtil.compressGZip(tmpis, gos);
-			}
-			catch (IOException e) {
-				LogUtil.warn("compress", e);
-			}
-			finally {
-				IOUtil.closeEL(gos);
-				IOUtil.closeEL(tmpis);
-				tmp.delete();
-				running = false;
-			}
-		}
-
-		private void runTar(Resource res) {
-			TarArchiveOutputStream tos = null;
-			try {
-				tos = new TarArchiveOutputStream(res.getOutputStream());
-				tos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
-				// wait for sync
-				while (true) {
-					SystemUtil.sleep(interval);
-					if (zip.syn + interval <= System.currentTimeMillis()) break;
-				}
-				// sync
-				CompressUtil.compressTar(root.listResources(), tos, -1);
-			}
-			catch (IOException e) {
-				LogUtil.warn("compress", e);
-			}
-			finally {
-				IOUtil.closeEL(tos);
-				running = false;
-			}
 		}
 
 		private void runZip(Resource res) {

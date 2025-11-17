@@ -1,64 +1,5 @@
 <cfscript>
 
-/*thread {
-	try {
-		Thread=createObject("java","java.lang.Thread");
-		threads=Thread.getAllStackTraces().keySet();
-		ignores=[
-			"org.apache.tomcat.util.net.NioEndpoint.serverSocketAccept"
-			,"java.lang.Thread.getStackTrace(Thread.java:1559)"
-			,"org.apache.tomcat.util.net.NioBlockingSelector$BlockPoller.run"
-			,"org.apache.tomcat.util.net.NioEndpoint$Poller.run"
-			,"org.apache.catalina.startup.Bootstrap.start"
-		];
-		
-		
-		while(true) {
-			NL="
-	";	
-			data="";
-			// loop threads
-			loop collection=threads index="k" item="t" label="outer" {
-				
-				st=t.getStackTrace();
-				state=t.getState().toString();
-				str="";
-				// loop stacktraces
-				loop array=st item="ste" {
-					str&=ste;
-					str&=NL&"	";
-				}
-
-				loop array=ignores item="ignore" {
-					if(find(ignore,str))continue "outer";
-				}
-				if(isEmpty(str)) continue;
-				index=find("_testRunner.cfc",str);
-				if(index==0) continue;
-				if(isEmpty(str) || find("_testRunner.cfc",str)==0) continue;
-				data&="#t.name# (#state#)#NL##mid(str,1,index)##NL##NL#";
-			}
-			dir=getDirectoryFromPath(getCurrentTemplatePath()) ;
-			path=dir & "/threads.txt";
-			// compare with old one
-			if(fileExists(path)) {
-				old=fileRead(path);
-				old=mid(old,find("<<<<",old)+4);
-				if(trim(old)==trim(data)) 	{
-					fileWrite(dir & "/threads-#dateTimeFormat(now(),"yyyy-mm-dd-hh-nn-ss")#.txt",">>>>#now()#<<<<#NL##data#");
-				}
-			}
-			if(len(trim(data)))
-				fileWrite(path,">>>>#now()#<<<<#NL##data#");
-			sleep(3000);
-		}
-	}
-	catch(e) {
-		systemOutput("**************",1,1);
-		systemOutput(e,1,1);
-	}
-}*/
-
 request._start = getTickCount();
 if (execute) {
 
@@ -66,9 +7,7 @@ request.basedir = basedir;
 request.srcall = srcall;
 request.testFolder = test;
 
-request.WEBADMINPASSWORD = "webweb";
 request.SERVERADMINPASSWORD = "webweb";
-server.WEBADMINPASSWORD = request.WEBADMINPASSWORD;
 server.SERVERADMINPASSWORD = request.SERVERADMINPASSWORD;
 
 NL = "
@@ -89,8 +28,8 @@ try {
 	// create "/test" mapping
 	admin
 		action="updateMapping"
-		type="web"
-		password="#request.WEBADMINPASSWORD#"
+		type="server"
+		password="#request.SERVERADMINPASSWORD#"
 		virtual="/test"
 		physical="#request.testFolder#"
 		toplevel="true"
@@ -100,8 +39,8 @@ try {
 
 	admin
 		action="updateMapping"
-		type="web"
-		password="#request.WEBADMINPASSWORD#"
+		type="server"
+		password="#request.SERVERADMINPASSWORD#"
 		virtual="/test-once"
 		physical="#request.testFolder#"
 		toplevel="true"
@@ -112,8 +51,8 @@ try {
 	
 	admin
 		action="updateMapping"
-		type="web"
-		password="#request.WEBADMINPASSWORD#"
+		type="server"
+		password="#request.SERVERADMINPASSWORD#"
 		virtual="/test-never"
 		physical="#request.testFolder#"
 		toplevel="true"
@@ -123,6 +62,8 @@ try {
 		inspect="never";
 
 	systemOutput("set /test mapping #dateTimeFormat(now())#", true);
+	systemOutput("testFolder: #request.testFolder#", true);
+	systemOutput(directoryList(path:request.testFolder,listInfo:"name"), true);
 
 	param name="testDebug" default="false";
 	if ( len( testDebug ) eq 0 )
@@ -174,16 +115,6 @@ try {
 
 	// you can also provide a json file with your environment variables, i.e. just set LUCEE_BUILD_ENV="c:\work\lucee\loader\env.json"
 	setupTestServices = new test._setupTestServices().setup();
-
-	// set a password for the admin
-	try {
-		admin
-			action="updatePassword"
-			type="web"
-			oldPassword=""
-			newPassword="#request.WEBADMINPASSWORD#";
-	}
-	catch(e){}	// may exist from previous execution
 
 	try {
 		admin
@@ -303,8 +234,8 @@ try {
 		} else {
 			admin
 				action="updateMapping"
-				type="web"
-				password="#request.WEBADMINPASSWORD#"
+				type="server"
+				password="#request.SERVERADMINPASSWORD#"
 				virtual="/testAdditional"
 				physical="#request.testAdditional#"
 				toplevel="true"
@@ -347,13 +278,13 @@ try {
 
 	admin
 		action="getMappings"
-		type="web"
-		password="#request.WEBADMINPASSWORD#"
+		type="server"
+		password="#request.SERVERADMINPASSWORD#"
 		returnVariable="mappings";
 
 	systemOutput("-------------- Mappings --------------", true);
 	loop query="mappings" {
-		systemOutput("#mappings.virtual# #TAB# #mappings.strPhysical# "
+		systemOutput("- #mappings.virtual# #TAB# #mappings.strPhysical# "
 			& (len(mappings.strArchive) ? "[#mappings.strArchive#] " : "")
 			& (len(mappings.inspect) ? "(#mappings.inspect#)" : ""), true);
 	}
@@ -557,7 +488,7 @@ try {
 		createObject( "java", "java.lang.System" ).exit( 1 );
 	}
 
-} catch( e ){
+} catch( e ) {
 	systemOutput( "-------------------------------------------------------", true );
 	// systemOutput( "Testcase failed:", true );
 	systemOutput( e.message, true, true );
