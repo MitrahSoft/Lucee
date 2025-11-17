@@ -17458,6 +17458,16 @@ You can find a list of all available timezones in the Lucee administrator (Setti
 		</return>
 	</function>
 	
+	<!-- pagePoolInfo -->
+	<function>
+		<name>pagePoolInfo</name>
+		<class>lucee.runtime.functions.system.PagePoolInfo</class>
+		<description>list all pages in pools</description>
+		<return>
+			<type>query</type>
+		</return>
+	</function>
+	
 	<!-- pagePoolList -->
 	<function>
 		<name>pagePoolList</name>

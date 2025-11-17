@@ -57,6 +57,7 @@ import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.op.Caster;
 import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.type.Array;
+import lucee.runtime.type.Query;
 import lucee.runtime.type.util.ArrayUtil;
 
 /**
@@ -288,6 +289,11 @@ public final class MappingImpl implements Mapping {
 			}
 		}
 		return pcl.loadClass(className);
+	}
+
+	public void populateClassInfo(Query coll) throws IOException {
+		PhysicalClassLoader pcl = PhysicalClassLoaderFactory.getPhysicalClassLoader(config, getClassRootDirectory(), false);
+		pcl.populate(coll);
 	}
 
 	public void cleanLoaders() {
