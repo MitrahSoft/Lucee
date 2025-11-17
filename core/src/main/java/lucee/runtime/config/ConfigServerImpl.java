@@ -500,10 +500,12 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLabels")) {
 				if (labels == null) {
 					labels = ConfigFactoryImpl.loadLabel(null, root);
+					// Only create empty map if loadLabel returns null
+					if (labels == null) {
+						labels = new HashMap<String, String>();
+					}
 				}
 			}
-
-			labels = new HashMap<String, String>();
 		}
 		return labels;
 	}
