@@ -764,7 +764,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 
 			// log
 			Log log = ThreadLocalPageContext.getLog(pageContext, "datasource");
-			if (log.getLogLevel() >= Log.LEVEL_INFO) {
+			if (LogUtil.doesInfo(log)) {
 				log.info("query tag", "executed [" + sqlQuery.toString().trim() + "] in " + DecimalFormat.call(pageContext, exe / 1000000D) + " ms");
 			}
 		}

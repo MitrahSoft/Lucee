@@ -68,6 +68,7 @@ import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
@@ -1649,12 +1650,13 @@ public final class Http extends BodyTagImpl {
 		Log log = ThreadLocalPageContext.getLog(pc, "http");
 		if (log == null) log = ThreadLocalPageContext.getLog(pc, "application");
 		if (log != null) {
-			String msg = "httpRequest [" + method + "] to [" + url + "], returned [" + data.get(STATUSCODE) + "] in " + (executionTimeNS / 1000000) + "ms, "
-					+ (cached ? "(cached response)" : "") + " at " + CallStackGet.call(pc, "text");
+			if (t != null || LogUtil.doesInfo(log)) {
+				String msg = "httpRequest [" + method + "] to [" + url + "], returned [" + data.get(STATUSCODE) + "] in " + (executionTimeNS / 1000000) + "ms, "
+						+ (cached ? "(cached response)" : "") + " at " + CallStackGet.call(pc, "text");
 
-			if (t != null) log.error("cfhttp", msg, t);
-			else log.info("cfhttp", msg);
-
+				if (t != null) log.error("cfhttp", msg, t);
+				else log.info("cfhttp", msg);
+			}
 		}
 	}
 

@@ -118,13 +118,15 @@ class ExecutionThread extends ParentThreasRefThread {
 		HTTPResponse rsp = null;
 
 		// execute
-		log.info(logName, "calling URL ->[" + url + "]");
+		if (LogUtil.doesInfo(log)) log.info(logName, "calling URL ->[" + url + "]");
 		try {
 			rsp = HTTPEngine4Impl.get(new URL(url), user, pass, task.getTimeout(), true, charset, null, proxy, headers.toArray(new Header[headers.size()]));
 			if (rsp != null) {
 				int sc = rsp.getStatusCode();
 
-				if (sc >= 200 && sc < 300) log.info(logName, "successfully called URL [" + url + "], response code " + sc);
+				if (sc >= 200 && sc < 300) {
+					if (LogUtil.doesInfo(log)) log.info(logName, "successfully called URL [" + url + "], response code " + sc);
+				}
 				else log.warn(logName, "called URL [" + url + "] returned response code " + sc);
 			}
 			else log.error(logName, "called URL [" + url + "] with no response!");
