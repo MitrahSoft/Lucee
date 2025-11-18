@@ -63,7 +63,7 @@ public final class ListGetDuplicates extends BIF {
 		if (args.length == 1) return call(pc, Caster.toString(args[0]));
 		if (args.length == 2) return call(pc, Caster.toString(args[0]), Caster.toString(args[1]));
 		if (args.length == 3) return call(pc, Caster.toString(args[0]), Caster.toString(args[1]), Caster.toBooleanValue(args[2]));
-		if (args.length == 3) return call(pc, Caster.toString(args[0]), Caster.toString(args[1]), Caster.toBooleanValue(args[2]), Caster.toBooleanValue(args[3]));
+		if (args.length == 4) return call(pc, Caster.toString(args[0]), Caster.toString(args[1]), Caster.toBooleanValue(args[2]), Caster.toBooleanValue(args[3]));
 
 		throw new FunctionException(pc, "ListGetDuplicates", 1, 4, args.length);
 	}
