@@ -15,7 +15,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "can put and get null values", function() {
 				withNullSupport( false, function() {
 					var sct = {};
-					sct.key = javacast( 'null', '' );
+					sct.key = nullValue();
 					// Without FNS, key with null value doesn't "exist" in CFML terms
 					expect( structKeyExists( sct, "key" ) ).toBeFalse();
 				});
@@ -24,7 +24,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "can put and get null values - FNS", function() {
 				withNullSupport( true, function() {
 					var sct = {};
-					sct.key = javacast( 'null', '' );
+					sct.key = nullValue();
 					expect( structKeyExists( sct, "key" ) ).toBeTrue();
 					// With FNS, isNull properly detects null
 					expect( isNull( sct.key ) ).toBeTrue();
@@ -33,7 +33,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structKeyExists returns false for keys with null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ) };
+					var sct = { a: "value", b: nullValue() };
 					expect( structKeyExists( sct, "a" ) ).toBeTrue();
 					// Without FNS, null value means key doesn't exist
 					expect( structKeyExists( sct, "b" ) ).toBeFalse();
@@ -43,7 +43,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structKeyExists returns true for keys with null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ) };
+					var sct = { a: "value", b: nullValue() };
 					expect( structKeyExists( sct, "a" ) ).toBeTrue();
 					expect( structKeyExists( sct, "b" ) ).toBeTrue();
 					expect( structKeyExists( sct, "missing" ) ).toBeFalse();
@@ -53,8 +53,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "can store and retrieve multiple null values", function() {
 				withNullSupport( false, function() {
 					var sct = {};
-					sct.null1 = javacast( 'null', '' );
-					sct.null2 = javacast( 'null', '' );
+					sct.null1 = nullValue();
+					sct.null2 = nullValue();
 					sct.value = "test";
 
 					// Without FNS, keys with null values don't exist
@@ -68,8 +68,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "can store and retrieve multiple null values - FNS", function() {
 				withNullSupport( true, function() {
 					var sct = {};
-					sct.null1 = javacast( 'null', '' );
-					sct.null2 = javacast( 'null', '' );
+					sct.null1 = nullValue();
+					sct.null2 = nullValue();
 					sct.value = "test";
 
 					expect( structKeyExists( sct, "null1" ) ).toBeTrue();
@@ -82,7 +82,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "can remove keys with null values", function() {
 				withNullSupport( false, function() {
-					var sct = { key: javacast( 'null', '' ) };
+					var sct = { key: nullValue() };
 					// Without FNS, key with null doesn't exist
 					expect( structKeyExists( sct, "key" ) ).toBeFalse();
 
@@ -94,7 +94,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "can remove keys with null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { key: javacast( 'null', '' ) };
+					var sct = { key: nullValue() };
 					expect( structKeyExists( sct, "key" ) ).toBeTrue();
 
 					structDelete( sct, "key" );
@@ -107,33 +107,32 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structEach iterates over entries including null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ), c: "another" };
+					var sct = { a: "value", b: nullValue(), c: "another" };
 					var keys = [];
 					var foundNull = false;
 
 					structEach( sct, function( key, value ) {
-						arrayAppend( keys, key );
-						// isNull CAN detect null in callback even
-						if ( isNull( value ) ) {
+						arrayAppend( keys, arguments.key );
+						// With explicit arguments scope, isNull works correctly
+						if ( isNull( arguments.value ) ) {
 							foundNull = true;
 						}
 					});
 
 					expect( arrayLen( keys ) ).toBe( 3 );
-					// Actually isNull DOES work in callbacks even
 					expect( foundNull ).toBeTrue();
 				});
 			});
 
 			it( "structEach iterates over entries including null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ), c: "another" };
+					var sct = { a: "value", b: nullValue(), c: "another" };
 					var keys = [];
 					var foundNull = false;
 
 					structEach( sct, function( key, value ) {
-						arrayAppend( keys, key );
-						if ( isNull( value ) ) {
+						arrayAppend( keys, arguments.key );
+						if ( isNull( arguments.value ) ) {
 							foundNull = true;
 						}
 					});
@@ -145,24 +144,22 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structMap handles null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: 1, b: javacast( 'null', '' ), c: 3 };
+					var sct = { a: 1, b: nullValue(), c: 3 };
 					var result = structMap( sct, function( key, value ) {
-						return isNull( value ) ? 0 : value * 2;
+						return isNull( arguments.value ) ? 0 : arguments.value * 2;
 					});
 
 					expect( result.a ).toBe( 2 );
-					// Without FNS, isNull returns false, so tries to multiply null which fails
-					// Just check that b key exists
-					expect( structKeyExists( result, "b" ) ).toBeTrue();
+					expect( result.b ).toBe( 0 );
 					expect( result.c ).toBe( 6 );
 				});
 			});
 
 			it( "structMap handles null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: 1, b: javacast( 'null', '' ), c: 3 };
+					var sct = { a: 1, b: nullValue(), c: 3 };
 					var result = structMap( sct, function( key, value ) {
-						return isNull( value ) ? 0 : value * 2;
+						return isNull( arguments.value ) ? 0 : arguments.value * 2;
 					});
 
 					expect( result.a ).toBe( 2 );
@@ -173,7 +170,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "for-in loop iterates over keys with null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ) };
+					var sct = { a: "value", b: nullValue() };
 					var count = 0;
 					var foundBKey = false;
 
@@ -193,7 +190,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "for-in loop iterates over keys with null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ) };
+					var sct = { a: "value", b: nullValue() };
 					var count = 0;
 					var foundNullKey = false;
 
@@ -211,7 +208,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structKeyArray includes keys with null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ), c: "another" };
+					var sct = { a: "value", b: nullValue(), c: "another" };
 					var keys = structKeyArray( sct );
 
 					expect( arrayLen( keys ) ).toBe( 3 );
@@ -228,7 +225,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structKeyArray includes keys with null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ), c: "another" };
+					var sct = { a: "value", b: nullValue(), c: "another" };
 					var keys = structKeyArray( sct );
 
 					expect( arrayLen( keys ) ).toBe( 3 );
@@ -248,7 +245,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "elvis operator with null value vs missing key", function() {
 				withNullSupport( false, function() {
-					var sct = { nullKey: javacast( 'null', '' ) };
+					var sct = { nullKey: nullValue() };
 
 					// Missing key uses default
 					var result1 = sct.missing ?: "default";
@@ -262,7 +259,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "elvis operator with null value vs missing key - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { nullKey: javacast( 'null', '' ) };
+					var sct = { nullKey: nullValue() };
 
 					// Missing key uses default
 					var result1 = sct.missing ?: "default";
@@ -277,7 +274,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "structAppend handles null values", function() {
 				withNullSupport( false, function() {
 					var sct1 = { a: "value1" };
-					var sct2 = { b: javacast( 'null', '' ), c: "value2" };
+					var sct2 = { b: nullValue(), c: "value2" };
 
 					structAppend( sct1, sct2 );
 
@@ -291,7 +288,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "structAppend handles null values - FNS", function() {
 				withNullSupport( true, function() {
 					var sct1 = { a: "value1" };
-					var sct2 = { b: javacast( 'null', '' ), c: "value2" };
+					var sct2 = { b: nullValue(), c: "value2" };
 
 					structAppend( sct1, sct2 );
 
@@ -303,7 +300,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structCopy preserves null values", function() {
 				withNullSupport( false, function() {
-					var original = { a: "value", b: javacast( 'null', '' ) };
+					var original = { a: "value", b: nullValue() };
 					var copy = structCopy( original );
 
 					expect( structKeyExists( copy, "a" ) ).toBeTrue();
@@ -315,7 +312,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structCopy preserves null values - FNS", function() {
 				withNullSupport( true, function() {
-					var original = { a: "value", b: javacast( 'null', '' ) };
+					var original = { a: "value", b: nullValue() };
 					var copy = structCopy( original );
 
 					expect( structKeyExists( copy, "a" ) ).toBeTrue();
@@ -330,7 +327,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					var sct = { key: "value" };
 					expect( sct.key ).toBe( "value" );
 
-					structUpdate( sct, "key", javacast( 'null', '' ) );
+					structUpdate( sct, "key", nullValue() );
 					// Without FNS, after setting to null, key doesn't exist
 					expect( structKeyExists( sct, "key" ) ).toBeFalse();
 				});
@@ -341,7 +338,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					var sct = { key: "value" };
 					expect( sct.key ).toBe( "value" );
 
-					structUpdate( sct, "key", javacast( 'null', '' ) );
+					structUpdate( sct, "key", nullValue() );
 					expect( structKeyExists( sct, "key" ) ).toBeTrue();
 					expect( isNull( sct.key ) ).toBeTrue();
 				});
@@ -352,7 +349,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "handles comparison with null values", function() {
 				withNullSupport( false, function() {
-					var sct = { key: javacast( 'null', '' ) };
+					var sct = { key: nullValue() };
 
 					// Without FNS, key with null doesn't exist
 					expect( structKeyExists( sct, "key" ) ).toBeFalse();
@@ -361,19 +358,19 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "handles comparison with null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { key: javacast( 'null', '' ) };
+					var sct = { key: nullValue() };
 					var value = sct.key;
 
 					expect( isNull( value ) ).toBeTrue();
 					// Comparing null with == in CFML
-					expect( value == javacast( 'null', '' ) ).toBeTrue();
+					expect( value == nullValue() ).toBeTrue();
 				});
 			});
 
 			it( "LDEV-622: can iterate over Java Map with null values", function() {
 				withNullSupport( false, function() {
 					// Create a struct that mimics the LDEV-622 scenario
-					var sct = { validKey: "value", nullKey: javacast( 'null', '' ) };
+					var sct = { validKey: "value", nullKey: nullValue() };
 					var hasError = false;
 
 					try {
@@ -394,7 +391,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( "LDEV-622: can iterate over Java Map with null values - FNS", function() {
 				withNullSupport( true, function() {
 					// Create a struct that mimics the LDEV-622 scenario
-					var sct = { validKey: "value", nullKey: javacast( 'null', '' ) };
+					var sct = { validKey: "value", nullKey: nullValue() };
 					var hasError = false;
 
 					try {
@@ -414,35 +411,35 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "structCount includes entries with null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ), c: "another" };
+					var sct = { a: "value", b: nullValue(), c: "another" };
 					expect( structCount( sct ) ).toBe( 3 );
 				});
 			});
 
 			it( "structCount includes entries with null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ), c: "another" };
+					var sct = { a: "value", b: nullValue(), c: "another" };
 					expect( structCount( sct ) ).toBe( 3 );
 				});
 			});
 
 			it( "structIsEmpty returns false when struct has null values", function() {
 				withNullSupport( false, function() {
-					var sct = { key: javacast( 'null', '' ) };
+					var sct = { key: nullValue() };
 					expect( structIsEmpty( sct ) ).toBeFalse();
 				});
 			});
 
 			it( "structIsEmpty returns false when struct has null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { key: javacast( 'null', '' ) };
+					var sct = { key: nullValue() };
 					expect( structIsEmpty( sct ) ).toBeFalse();
 				});
 			});
 
 			it( "can clear struct containing null values", function() {
 				withNullSupport( false, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ) };
+					var sct = { a: "value", b: nullValue() };
 					structClear( sct );
 
 					expect( structIsEmpty( sct ) ).toBeTrue();
@@ -452,7 +449,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			it( "can clear struct containing null values - FNS", function() {
 				withNullSupport( true, function() {
-					var sct = { a: "value", b: javacast( 'null', '' ) };
+					var sct = { a: "value", b: nullValue() };
 					structClear( sct );
 
 					expect( structIsEmpty( sct ) ).toBeTrue();
