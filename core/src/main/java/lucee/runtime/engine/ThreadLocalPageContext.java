@@ -49,10 +49,20 @@ public final class ThreadLocalPageContext {
 
 	/**
 	 * register a pagecontext for he current thread
-	 * 
+	 *
 	 * @param pc PageContext to register
 	 */
 	public static void register(PageContext pc) {// print.ds(Thread.currentThread().getName());
+		register(pc, false);
+	}
+
+	/**
+	 * register a pagecontext for he current thread
+	 *
+	 * @param pc PageContext to register
+	 * @param isChild whether this is a child PageContext
+	 */
+	public static void register(PageContext pc, boolean isChild) {
 		if (pc == null) {
 			return; // TODO happens with Gateway, but should not!
 		}
@@ -61,7 +71,10 @@ public final class ThreadLocalPageContext {
 		t.setContextClassLoader(((ConfigPro) pc.getConfig()).getClassLoaderEnv());
 		((PageContextImpl) pc).setThread(t);
 		pcThreadLocal.set(pc);
-		pcThreadLocalInheritable.set(pc);
+		// Only parent PageContexts write to inheritable - reduces ThreadLocal writes by ~50% for child contexts
+		if (!isChild) {
+			pcThreadLocalInheritable.set(pc);
+		}
 	}
 
 	public static PageContext get() {

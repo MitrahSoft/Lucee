@@ -280,7 +280,7 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 		PageContext beforePC = ThreadLocalPageContext.get();
 		boolean tmpRegister = false;
 		if (beforePC != pc) {
-			ThreadLocalPageContext.register(pc);
+			ThreadLocalPageContext.register(pc, false);
 			tmpRegister = true;
 		}
 		boolean reuse = true;
