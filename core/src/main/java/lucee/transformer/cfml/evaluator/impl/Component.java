@@ -259,6 +259,19 @@ public class Component extends EvaluatorSupport {
 						"Value [" + ls.getString() + "] from attribute [modifier] of the tag [" + tlt.getFullName() + "] is invalid, valid values are [none, abstract, final]");
 			}
 		}
+
+		// javasettings - validate it's not empty (catches misparsing of struct literals)
+		attr = tag.getAttribute("javasettings");
+		if (attr != null) {
+			Expression expr = attr.getValue();
+			if (expr instanceof LitString) {
+				String val = ((LitString) expr).getString();
+				if (StringUtil.isEmpty(val, true)) {
+					throw new EvaluatorException(
+							"Invalid javasettings attribute. Struct literal syntax is not supported for javasettings, use a json string: javasettings='{maven:[\"groupId:artifactId:version\"]}'");
+				}
+			}
+		}
 	}
 
 	private String toString(Set<String> set) {
