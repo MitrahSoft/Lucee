@@ -1508,8 +1508,15 @@ public final class XMLUtil {
 		}
 		// xml link
 		pc = ThreadLocalPageContext.get(pc);
-		Resource res = ResourceUtil.toResourceExisting(pc, xml);
-		return toInputSource(pc, res);
+		try {
+			Resource res = ResourceUtil.toResourceExisting(pc, xml);
+			return toInputSource(pc, res);
+		}
+		catch (ExpressionException cause) {
+			ExpressionException ee = new ExpressionException("Failed to convert the string [" + StringUtil.max(xml, 100, "...") + "] to XML");
+			ExceptionUtil.initCauseEL(ee, cause);
+			throw ee;
+		}
 	}
 
 	public static boolean isPath(String xml) {
