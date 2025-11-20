@@ -29,6 +29,7 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageSource;
 import lucee.runtime.config.Constants;
+import lucee.runtime.interpreter.JSONExpressionInterpreter;
 import lucee.runtime.type.util.ComponentUtil;
 import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.Page;
@@ -269,6 +270,14 @@ public class Component extends EvaluatorSupport {
 				if (StringUtil.isEmpty(val, true)) {
 					throw new EvaluatorException(
 							"Invalid javasettings attribute. Struct literal syntax is not supported for javasettings, use a json string: javasettings='{maven:[\"groupId:artifactId:version\"]}'");
+				}
+				// Validate JSON syntax at compile time (LDEV-5927)
+				try {
+					new JSONExpressionInterpreter().interpret(null, val);
+				}
+				catch (Exception e) {
+					throw new EvaluatorException("Invalid JSON in javasettings attribute: " + e.getMessage()
+							+ ". Ensure the JSON is valid: javasettings='{maven:[\"groupId:artifactId:version\"]}'");
 				}
 			}
 		}
