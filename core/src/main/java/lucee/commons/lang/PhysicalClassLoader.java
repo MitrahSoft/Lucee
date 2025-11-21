@@ -18,14 +18,12 @@
  */
 package lucee.commons.lang;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,15 +31,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.ClassUtil.ClassLoading;
 import lucee.runtime.PageSourcePool;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
+import lucee.runtime.op.Caster;
 import lucee.runtime.osgi.OSGiUtil;
 import lucee.transformer.bytecode.util.ASMUtil;
 import lucee.transformer.bytecode.util.ClassRenamer;
+import lucee.transformer.dynamic.DynamicInvoker;
+import lucee.transformer.dynamic.meta.dynamic.ClazzDynamic;
 
 /**
  * Directory ClassLoader
@@ -52,14 +54,17 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		boolean res = registerAsParallelCapable();
 	}
 
+	private static final double CLASSLOADER_INSPECTION_SIZE = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.template.classloader.inspection.size", null), 2000);
+	private static final double CLASSLOADER_INSPECTION_RATIO = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.template.classloader.inspection.ratio", null), 3);
+
 	private final Resource directory;
 	private ConfigPro config;
 	private final ClassLoader addionalClassLoader;
-	private final Collection<Resource> resources;
+	private final List<Resource> resources;
 
-	private Map<String, byte[]> loadedClasses = new ConcurrentHashMap<String, byte[]>();
-	private Map<String, byte[]> allLoadedClasses = new ConcurrentHashMap<String, byte[]>(); // this includes all renames
-	private Map<String, String> unavaiClasses = new ConcurrentHashMap<String, String>();
+	private Map<String, String> loadedClasses = new ConcurrentHashMap<>();
+	private Map<String, String> allLoadedClasses = new ConcurrentHashMap<>(); // this includes all renames
+	private Map<String, String> unavaiClasses = new ConcurrentHashMap<>();
 
 	private PageSourcePool pageSourcePool;
 
@@ -71,21 +76,55 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
 			PageSourcePool pageSourcePool, boolean rpc) throws IOException {
-		super(PhysicalClassLoaderFactory.doURLs(resources), parentClassLoader == null ? (parentClassLoader = SystemUtil.getCoreClassLoader()) : parentClassLoader);
-		this.resources = resources;
-
-		config = (ConfigPro) c;
-		this.addionalClassLoader = addionalClassLoader;
-		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
-		this.pageSourcePool = pageSourcePool;
+		this(key, c, PhysicalClassLoaderFactory.doURLs(resources), resources, directory,
+				parentClassLoader == null ? (parentClassLoader = SystemUtil.getCoreClassLoader()) : parentClassLoader, addionalClassLoader, pageSourcePool, rpc);
 
 		// check directory
 		if (!directory.exists()) directory.mkdirs();
 		if (!directory.isDirectory()) throw new IOException("Resource [" + directory + "] is not a directory");
 		if (!directory.canRead()) throw new IOException("Access denied to [" + directory + "] directory");
+	}
+
+	private PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
+			PageSourcePool pageSourcePool, boolean rpc) {
+		super(urls, parentClassLoader);
+		this.resources = resources;
+		config = (ConfigPro) c;
+		this.addionalClassLoader = addionalClassLoader;
+		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
+		this.pageSourcePool = pageSourcePool;
+
 		this.directory = directory;
 		this.rpc = rpc;
 		id = key;
+	}
+
+	public static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
+		if (existing.pageSourcePool != null) existing.pageSourcePool.clearPages(existing);
+		PhysicalClassLoader clone = new PhysicalClassLoader(existing.id, config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(),
+				existing.addionalClassLoader, null, existing.rpc);
+		DynamicInvoker instance = DynamicInvoker.getExistingInstance();
+		int count = 0;
+		if (instance != null) count += instance.remove(existing);
+		count += ClazzDynamic.remove(existing);
+		int all = existing.allLoadedClasses.size();
+		int unique = existing.loadedClasses.size();
+		LogUtil.log(Log.LEVEL_INFO, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] because we reached the size limit (all loaded classes: "
+				+ all + "; unique loaded classes: " + unique + "; ratio: " + (all / unique) + "), removed " + count + " cache elements from dynamic invoker");
+
+		return clone;
+	}
+
+	public static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
+		double all;
+
+		// check size
+		if ((all = existing.allLoadedClasses.size()) > CLASSLOADER_INSPECTION_SIZE) {
+			if ((all / existing.loadedClasses.size()) > CLASSLOADER_INSPECTION_RATIO) {
+				return flush(existing, config);
+			}
+		}
+		return null;
 	}
 
 	public String getBirthplace() {
@@ -311,8 +350,8 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			Class<?> clazz = defineClass(name, barr, 0, barr.length);
 
 			if (clazz != null) {
-				if (!rename) loadedClasses.put(name, barr);
-				allLoadedClasses.put(name, barr);
+				if (!rename) loadedClasses.put(name, name);
+				allLoadedClasses.put(name, name);
 
 				resolveClass(clazz);
 			}
@@ -350,11 +389,21 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		InputStream is = super.getResourceAsStream(name);
 		if (is != null) return is;
 
-		if (name.endsWith(".class")) {
-			// MUST store the barr in a less memory intensive way
-			String className = name.substring(0, name.length() - 6).replace('/', '.').replace('\\', '.');
-			byte[] barr = allLoadedClasses.get(className);
-			if (barr != null) return new ByteArrayInputStream(barr);
+		/*
+		 * if (name.endsWith(".class")) { // MUST store the barr in a less memory intensive way String
+		 * className = name.substring(0, name.length() - 6).replace('/', '.').replace('\\', '.'); byte[]
+		 * barr = allLoadedClasses.get(className); if (barr != null) return new ByteArrayInputStream(barr);
+		 * }
+		 */
+
+		Resource f = _getResource(name);
+		if (f != null) {
+			try {
+				return IOUtil.toBufferedInputStream(f.getInputStream());
+			}
+			catch (IOException e) {
+				LogUtil.trace("physical-classloader", e);
+			}
 		}
 
 		URL url = super.getResource(name);
@@ -367,15 +416,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			}
 		}
 
-		Resource f = _getResource(name);
-		if (f != null) {
-			try {
-				return IOUtil.toBufferedInputStream(f.getInputStream());
-			}
-			catch (IOException e) {
-				LogUtil.trace("physical-classloader", e);
-			}
-		}
 		return null;
 	}
 
@@ -411,11 +451,11 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		return directory;
 	}
 
-	public void clear() {
+	private void clear() {
 		clear(true);
 	}
 
-	public void clear(boolean clearPagePool) {
+	private void clear(boolean clearPagePool) {
 		if (clearPagePool && pageSourcePool != null) pageSourcePool.clearPages(this);
 		this.loadedClasses.clear();
 		this.allLoadedClasses.clear();

@@ -83,28 +83,28 @@ public class PhysicalClassLoaderFactory {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
 						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) existing.clear();
+						if (existing != null) PhysicalClassLoader.flush(existing, c);
 					}
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(key, c, new ArrayList<Resource>(), directory, SystemUtil.getCoreClassLoader(), null, null, false));
+					return rpccl;
 				}
 			}
+		}
+
+		// at this point we know we had an existing one
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		if (flushed != null) {
+			classLoaders.put(key, rpccl = flushed);
 		}
 		return rpccl;
 	}
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, BundleClassLoader bcl, boolean reload) throws IOException {
 		return getRPCClassLoader(c, null, bcl, SystemUtil.getCoreClassLoader(), reload);
-		// return CombinedClassLoader.getInstance(getRPCClassLoader(c, null, bcl,
-		// SystemUtil.getLoaderClassLoader(), reload),
-		// getRPCClassLoader(c, null, bcl, SystemUtil.getCoreClassLoader(), reload), reload);
 	}
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, boolean reload) throws IOException {
 		return getRPCClassLoader(c, js, null, SystemUtil.getCoreClassLoader(), reload);
-
-		// return CombinedClassLoader.getInstance(getRPCClassLoader(c, js, null,
-		// SystemUtil.getLoaderClassLoader(), reload),
-		// getRPCClassLoader(c, js, null, SystemUtil.getCoreClassLoader(), reload), reload);
 	}
 
 	private static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, BundleClassLoader bcl, ClassLoader parent, boolean reload) throws IOException {
@@ -131,7 +131,7 @@ public class PhysicalClassLoaderFactory {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
 						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) existing.clear();
+						if (existing != null) PhysicalClassLoader.flush(existing, c);
 					}
 					List<Resource> resources;
 					if (js == null) {
@@ -141,10 +141,16 @@ public class PhysicalClassLoaderFactory {
 						resources = toSortedList(((JavaSettingsImpl) js).getAllResources());
 					}
 					Resource dir = storeResourceMeta(c, key, js, resources);
-					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(key, c, resources, dir, parent, bcl, null, true));
+					return rpccl;
 				}
 			}
+		}
+
+		// at this point we know we had an existing one
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		if (flushed != null) {
+			classLoaders.put(key, rpccl = flushed);
 		}
 		return rpccl;
 	}

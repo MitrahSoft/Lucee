@@ -31,7 +31,7 @@ import lucee.runtime.type.util.ArrayUtil;
 public final class MetadataUtil {
 
 	public static Page getPageWhenMetaDataStillValid(PageContext pc, ComponentImpl comp, boolean ignoreCache) throws PageException {
-		Page page = comp._getComponentPageImpl();
+		Page page = comp._getComponentPageImpl(pc);
 		if (page == null) page = getPage(pc, comp._getPageSource());
 		if (ignoreCache) return page;
 
