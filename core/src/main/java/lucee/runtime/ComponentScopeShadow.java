@@ -139,7 +139,7 @@ public final class ComponentScopeShadow extends StructSupport implements Compone
 	@Override
 	public Object get(PageContext pc, Key key, Object defaultValue) {
 		if (key.equalsIgnoreCase(KeyConstants._SUPER)) {
-			Component ac = ComponentUtil.getActiveComponent(ThreadLocalPageContext.get(pc), component);
+			Component ac = ComponentUtil.getCurrentComponent(ThreadLocalPageContext.get(pc), component);
 			return SuperComponent.superInstance((ComponentImpl) ac.getBaseComponent());
 		}
 		if (key.equalsIgnoreCase(KeyConstants._THIS)) return component.top;

@@ -1030,7 +1030,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	public Member getMember(int access, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && access == ACCESS_PRIVATE && key.equalsIgnoreCase(KeyConstants._super)) {
-			Component ac = ComponentUtil.getActiveComponent(ThreadLocalPageContext.get(), this);
+			Component ac = ComponentUtil.getCurrentComponent(ThreadLocalPageContext.get(), this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 			// return SuperComponent . superMember(base);
 		}
@@ -1065,7 +1065,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	protected Member getMember(PageContext pc, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && key.equalsIgnoreCase(KeyConstants._super) && isPrivate(pc)) {
-			Component ac = ComponentUtil.getActiveComponent(pc, this);
+			Component ac = ComponentUtil.getCurrentComponent(pc, this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 		}
 		if (superAccess) {
