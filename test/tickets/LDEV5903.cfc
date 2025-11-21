@@ -1,4 +1,4 @@
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory" skip=true {
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory" {
 
 	function run( testResults, testBox ) {
 		describe( "LDEV-5903 - Per-class classloader regression (memory leak)", function() {
