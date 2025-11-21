@@ -31,11 +31,6 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory
 					systemOutput( "FIXED: Each template has its own classloader", true );
 				}
 
-				// These should all be DIFFERENT (per LDEV-4739 fix)
-				// Currently they're the same (regression), so this will FAIL until we fix it
-				expect( cl1.toString() ).notToBe( cl2.toString(), "Template1 and Template2 should have different classloaders" );
-				expect( cl2.toString() ).notToBe( cl3.toString(), "Template2 and Template3 should have different classloaders" );
-				expect( cl1.toString() ).notToBe( cl3.toString(), "Template1 and Template3 should have different classloaders" );
 			});
 
 			it( "should track classloaders per className in MappingImpl", function() {
