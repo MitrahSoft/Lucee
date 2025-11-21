@@ -54,6 +54,7 @@ import lucee.commons.lang.types.RefBooleanImpl;
 import lucee.runtime.component.AbstractFinal;
 import lucee.runtime.component.AbstractFinal.UDFB;
 import lucee.runtime.component.ComponentLoader;
+import lucee.runtime.component.ComponentPageRef;
 import lucee.runtime.component.DataMember;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.component.Member;
@@ -141,7 +142,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	ComponentImpl top = this;
 	ComponentImpl base;
 	private PageSource pageSource;
-	private ComponentPageImpl cp;
+	private ComponentPageRef cpRef;
 	private ComponentScope scope;
 
 	// for all the same
@@ -202,7 +203,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		this.properties = new ComponentProperties(componentPage.getComponentName(), dspName, extend.trim(), implement, hint, output, callPath + appendix, realPath,
 				componentPage.getSubname(), _synchronized, null, persistent, accessors, modifier, meta);
 
-		this.cp = componentPage;
+		this.cpRef = new ComponentPageRef(componentPage);
 		this.pageSource = componentPage.getPageSource();
 		this.importDefintions = componentPage.getImportDefintions();
 		// if(modifier!=0)
@@ -212,14 +213,19 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	}
 
 	public JavaSettings getJavaSettings(PageContext pc) throws IOException {
-		return this.cp.getJavaSettings(pc, properties);
+		try {
+			return this.cpRef.get(pc).getJavaSettings(pc, properties);
+		}
+		catch (PageException e) {
+			throw ExceptionUtil.toIOException(e);
+		}
 	}
 
 	public boolean hasJavaSettings(PageContext pc) {
 		try {
-			return this.cp.getJavaSettings(pc, properties) != null;
+			return getJavaSettings(pc) != null;
 		}
-		catch (IOException ioe) {
+		catch (Exception ioe) {
 			return false;
 		}
 	}
@@ -238,7 +244,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		try {
 			// attributes
 			trg.pageSource = pageSource;
-			trg.cp = cp;
+			trg.cpRef = cpRef;
 			// trg._triggerDataMember=_triggerDataMember;
 			trg.useShadow = useShadow;
 			trg._static = _static;
@@ -430,7 +436,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		long indexBase = 0;
 		if (base != null) {
-			indexBase = base.cp.getStaticStruct().index();
+			indexBase = base.cpRef.get(pageContext).getStaticStruct().index();
 		}
 
 		// scope
@@ -1836,9 +1842,15 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						"enable [trigger data member] in administrator to also invoke getters and setters");
 			if (existing != null) {
 				if (existing.getModifier() == Member.MODIFIER_FINAL) {
-					throw new ExpressionException("Attempt to modify a 'final' member [" + key + "] within the 'this' scope of the component [" + cp.getComponentName()
-							+ "]. This member is declared as 'final' in the base component [" + base.cp.getComponentName()
-							+ "] or a component extended by it, and cannot be overridden.");
+
+					ComponentPageImpl tmp = cpRef.get(pc, null);
+					String componentName = tmp != null ? tmp.getComponentName() : "";
+
+					tmp = base.cpRef.get(pc, null);
+					String baseComponentName = tmp != null ? tmp.getComponentName() : "";
+
+					throw new ExpressionException("Attempt to modify a 'final' member [" + key + "] within the 'this' scope of the component [" + componentName
+							+ "]. This member is declared as 'final' in the base component [" + baseComponentName + "] or a component extended by it, and cannot be overridden.");
 				}
 
 			}

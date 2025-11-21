@@ -52,11 +52,18 @@ public class PhysicalClassLoaderFactory {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
 						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) existing.clear();
+						if (existing != null) PhysicalClassLoader.flush(existing, c);
 					}
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, new ArrayList<Resource>(), directory, SystemUtil.getCombinedClassLoader(), null, null, false));
+					return rpccl;
 				}
 			}
+		}
+
+		// at this point we know we had an existing one
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		if (flushed != null) {
+			classLoaders.put(key, rpccl = flushed);
 		}
 		return rpccl;
 	}
@@ -76,7 +83,7 @@ public class PhysicalClassLoaderFactory {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
 						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) existing.clear();
+						if (existing != null) PhysicalClassLoader.flush(existing, c);
 					}
 					List<Resource> resources;
 					if (js == null) {
@@ -88,8 +95,15 @@ public class PhysicalClassLoaderFactory {
 					Resource dir = storeResourceMeta(c, key, js, resources);
 					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, resources, dir, parent != null ? parent : SystemUtil.getCombinedClassLoader(), null, null, true));
+					return rpccl;
 				}
 			}
+		}
+
+		// at this point we know we had an existing one
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		if (flushed != null) {
+			classLoaders.put(key, rpccl = flushed);
 		}
 		return rpccl;
 	}
@@ -104,15 +118,22 @@ public class PhysicalClassLoaderFactory {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
 						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) existing.clear();
+						if (existing != null) PhysicalClassLoader.flush(existing, c);
 					}
 					Resource dir = c.getClassDirectory().getRealResource("RPC/" + key);
 					if (!dir.exists()) ResourceUtil.createDirectoryEL(dir, true);
 					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, new ArrayList<Resource>(), dir, SystemUtil.getCombinedClassLoader(), bcl, null, true));
+					return rpccl;
 				}
 			}
 		}
+		// at this point we know we had an existing one
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		if (flushed != null) {
+			classLoaders.put(key, rpccl = flushed);
+		}
+
 		return rpccl;
 	}
 
