@@ -410,9 +410,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			}
 		}
 
+		// componentPage provided here should be the same we already got in the constructor, so we ignore it
 		if (base != null) {
 			this.dataMemberDefaultAccess = base.dataMemberDefaultAccess;
-			this._static = new StaticScope(base._static, this, componentPage, dataMemberDefaultAccess);
+			this._static = new StaticScope(base._static, this, cpRef, dataMemberDefaultAccess);
 			// this._triggerDataMember=base._triggerDataMember;
 			this.absFin = base.absFin;
 			_data = base._data;
@@ -421,7 +422,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		}
 		else {
 			this.dataMemberDefaultAccess = pageContext.getConfig().getComponentDataMemberDefaultAccess();
-			this._static = new StaticScope(null, this, componentPage, dataMemberDefaultAccess);
+			this._static = new StaticScope(null, this, cpRef, dataMemberDefaultAccess);
 			// TODO get per CFC setting
 			// this._triggerDataMember=pageContext.getConfig().getTriggerComponentDataMember();
 			_udfs = new HashMap<Key, UDF>();

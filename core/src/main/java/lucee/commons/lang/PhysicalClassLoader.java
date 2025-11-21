@@ -118,7 +118,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		count += ClazzDynamic.remove(existing);
 		int all = existing.allLoadedClasses.size();
 		int unique = existing.loadedClasses.size();
-		LogUtil.log(Log.LEVEL_ERROR, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] because we reached the size limit (all loaded classes: "
+		LogUtil.log(Log.LEVEL_INFO, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] because we reached the size limit (all loaded classes: "
 				+ all + "; unique loaded classes: " + unique + "; ratio: " + (all / unique) + "), removed " + count + " cache elements from dynamic invoker");
 
 		return clone;
