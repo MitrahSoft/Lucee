@@ -100,6 +100,7 @@ import lucee.runtime.rest.RestSettings;
 import lucee.runtime.schedule.Scheduler;
 import lucee.runtime.search.SearchEngine;
 import lucee.runtime.security.SecurityManager;
+import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.spooler.SpoolerEngine;
 import lucee.runtime.tag.TagHandlerPool;
 import lucee.runtime.type.Collection.Key;
@@ -618,7 +619,12 @@ class SingleContextConfigWeb extends ConfigBase implements ConfigWebInner {
 
 	@Override
 	public SecurityManager getSecurityManager() {
-		return cs.getSecurityManager();
+		SecurityManager sm = cs.getSecurityManager();
+		// Set the root directory for local file access checks
+		if (sm instanceof SecurityManagerImpl) {
+			((SecurityManagerImpl) sm).setRootDirectory(getRootDirectory());
+		}
+		return sm;
 	}
 
 	@Override
