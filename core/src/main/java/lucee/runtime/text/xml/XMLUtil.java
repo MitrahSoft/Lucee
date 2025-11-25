@@ -258,7 +258,8 @@ public final class XMLUtil {
 			}
 			catch (Throwable t) {
 				ExceptionUtil.rethrowIfNecessary(t);
-				LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+				Log log = ThreadLocalPageContext.getLog("application");
+				if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 			}
 		}
 		return TransformerFactory.newInstance();
@@ -271,6 +272,7 @@ public final class XMLUtil {
 
 					Thread.currentThread().setContextClassLoader(EnvClassLoader.getInstance((ConfigPro) ThreadLocalPageContext.getConfig()));
 					Class<TransformerFactory> clazz = null;
+					Log log = ThreadLocalPageContext.getLog("application");
 
 					try {
 						Class c = ClassUtil.loadClass("com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl");
@@ -279,7 +281,7 @@ public final class XMLUtil {
 					}
 					catch (Throwable t) {
 						ExceptionUtil.rethrowIfNecessary(t);
-						LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+						if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 					}
 
 					if (clazz == null) {
@@ -290,7 +292,7 @@ public final class XMLUtil {
 						}
 						catch (Throwable t) {
 							ExceptionUtil.rethrowIfNecessary(t);
-							LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+							if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 						}
 					}
 
@@ -493,7 +495,8 @@ public final class XMLUtil {
 			}
 			catch (Throwable t) {
 				ExceptionUtil.rethrowIfNecessary(t);
-				LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+				Log log = ThreadLocalPageContext.getLog("application");
+				if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 			}
 		}
 		return DocumentBuilderFactory.newInstance();
@@ -506,6 +509,7 @@ public final class XMLUtil {
 
 					Thread.currentThread().setContextClassLoader(EnvClassLoader.getInstance((ConfigPro) ThreadLocalPageContext.getConfig()));
 					Class<DocumentBuilderFactory> clazz = null;
+					Log log = ThreadLocalPageContext.getLog("application");
 
 					try {
 						Class c = ClassUtil.loadClass("com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl");
@@ -514,7 +518,7 @@ public final class XMLUtil {
 					}
 					catch (Throwable t) {
 						ExceptionUtil.rethrowIfNecessary(t);
-						LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+						if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 					}
 
 					if (clazz == null) {
@@ -525,7 +529,7 @@ public final class XMLUtil {
 						}
 						catch (Throwable t) {
 							ExceptionUtil.rethrowIfNecessary(t);
-							LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+							if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 						}
 					}
 
@@ -565,12 +569,13 @@ public final class XMLUtil {
 
 	public static XMLReader createXMLReader() throws SAXException {
 		Thread.currentThread().setContextClassLoader(EnvClassLoader.getInstance((ConfigPro) ThreadLocalPageContext.getConfig()));
+		Log log = ThreadLocalPageContext.getLog("application");
 		try {
 			return XMLReaderFactory.createXMLReader("com.sun.org.apache.xerces.internal.parsers.SAXParser");
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
-			LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+			if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 		}
 
 		try {
@@ -578,7 +583,7 @@ public final class XMLUtil {
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
-			LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+			if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 		}
 
 		try {
@@ -586,7 +591,7 @@ public final class XMLUtil {
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
-			LogUtil.log(Log.LEVEL_DEBUG, "application", "xml", ExceptionUtil.getStacktrace(t, true));
+			if (LogUtil.doesDebug(log)) log.debug("xml", ExceptionUtil.getStacktrace(t, true));
 		}
 
 		try {
