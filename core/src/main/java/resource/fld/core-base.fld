@@ -16579,6 +16579,23 @@ you can use tag cfadmin instead. we will add support for this function in a futu
 		<return>
 			<type>struct</type>
 		</return>
+	</function>	
+	
+	<!-- structInfo -->
+	<function>
+		<name>luceeStructInfo</name>
+		<class>lucee.runtime.functions.struct.StructInfo</class>
+		<status>hidden</status>
+		<description></description>
+		<argument>
+			<name>struct</name>
+			<type>struct</type>
+			<required>Yes</required>
+		<description></description>
+    </argument>
+		<return>
+			<type>struct</type>
+		</return>
 	</function>
 	
 	<!-- componentCacheClear -->
