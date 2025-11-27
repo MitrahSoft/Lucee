@@ -893,6 +893,7 @@ public final class ScopeContext {
 
 		boolean hasClientManagement = appContext.isSetClientManagement();
 		boolean hasSessionManagement = appContext.isSetSessionManagement();
+		boolean isJ2EESession = pc.getSessionType() == Config.SESSION_TYPE_JEE;
 
 		// get in memory scopes
 		UserScope oldClient = null;
@@ -920,6 +921,21 @@ public final class ScopeContext {
 		// remove Scopes completely
 		if (hasSessionManagement) removeCFSessionScope(pc);
 		if (hasClientManagement) removeClientScope(pc);
+
+		// For J2EE sessions, handle the servlet container's session (JSESSIONID)
+		if (isJ2EESession && hasSessionManagement) {
+			HttpSession httpSession = pc.getSession();
+			if (httpSession != null) {
+				if (migrateSessionData) {
+					// sessionRotate: rotate to a new session ID but keep session alive
+					pc.getHttpServletRequest().changeSessionId();
+				}
+				else {
+					// sessionInvalidate: completely destroy the JEE session (LDEV-3248)
+					httpSession.invalidate();
+				}
+			}
+		}
 
 		pc.resetIdAndToken();
 		pc.resetSession();
