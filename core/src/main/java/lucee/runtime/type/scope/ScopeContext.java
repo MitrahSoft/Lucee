@@ -902,8 +902,20 @@ public final class ScopeContext {
 		}
 		UserScope oldSession = null;
 		if (hasSessionManagement) {
-			Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
-			oldSession = (UserScope) sessionContext.get(pc.getCFID());
+			if (isJ2EESession) {
+				// For J2EE sessions, get the JSession from the HttpSession attribute
+				HttpSession httpSession = pc.getSession();
+				if (httpSession != null) {
+					Object session = httpSession.getAttribute(appContext.getName());
+					if (session instanceof JSession) {
+						oldSession = (JSession) session;
+					}
+				}
+			}
+			else {
+				Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
+				oldSession = (UserScope) sessionContext.get(pc.getCFID());
+			}
 		}
 
 		if (hasSessionManagement) {
@@ -937,16 +949,30 @@ public final class ScopeContext {
 		}
 
 		pc.resetIdAndToken();
-		pc.resetSession();
+		// For J2EE sessionRotate, don't reset session - we already called changeSessionId() and want to keep the data
+		if (!(isJ2EESession && migrateSessionData)) {
+			pc.resetSession();
+		}
 		pc.resetClient();
 
-		if (oldSession != null) migrate(pc, oldSession, (UserScope) getCFScope(pc, true, Scope.SCOPE_SESSION), migrateSessionData);
+		if (oldSession != null) {
+			UserScope newSession;
+			if (isJ2EESession) {
+				newSession = getSessionScope(pc);
+			}
+			else {
+				newSession = (UserScope) getCFScope(pc, true, Scope.SCOPE_SESSION);
+			}
+			migrate(pc, oldSession, newSession, migrateSessionData);
+		}
 		if (oldClient != null) migrate(pc, oldClient, (UserScope) getCFScope(pc, true, Scope.SCOPE_CLIENT), migrateClientData);
 
 	}
 
 	private static void migrate(PageContextImpl pc, UserScope oldScope, UserScope newScope, boolean migrate) {
 		if (oldScope == null || newScope == null) return;
+		// For J2EE sessions with changeSessionId(), old and new are the same object - no migration needed
+		if (oldScope == newScope) return;
 		if (!migrate) oldScope.clear();
 		oldScope.resetEnv(pc);
 		Iterator<Entry<Key, Object>> it = oldScope.entryIterator();
@@ -959,7 +985,13 @@ public final class ScopeContext {
 			}
 			if (newScope instanceof StorageScope) {
 				((StorageScope) newScope).store(pc.getConfig());
-				((StorageScope) newScope).setTokens(((StorageScope) oldScope).getTokens());
+				if (oldScope instanceof StorageScope) {
+					((StorageScope) newScope).setTokens(((StorageScope) oldScope).getTokens());
+				}
+			}
+			else if (newScope instanceof JSession && oldScope instanceof JSession) {
+				// JSession doesn't implement StorageScope but has its own token handling
+				((JSession) newScope).setTokens(((JSession) oldScope).getTokens());
 			}
 
 		}
