@@ -903,13 +903,18 @@ public final class ScopeContext {
 		UserScope oldSession = null;
 		if (hasSessionManagement) {
 			if (isJ2EESession) {
-				// For J2EE sessions, get the JSession from the HttpSession attribute
+				// For J2EE sessions, try the HttpSession attribute first
 				HttpSession httpSession = pc.getSession();
 				if (httpSession != null) {
 					Object session = httpSession.getAttribute(appContext.getName());
 					if (session instanceof JSession) {
 						oldSession = (JSession) session;
 					}
+				}
+				// Fall back to cfSessionContexts (used by JSR-223/script-runner where httpSession is null)
+				if (oldSession == null) {
+					Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
+					oldSession = (UserScope) sessionContext.get(pc.getCFID());
 				}
 			}
 			else {
@@ -949,8 +954,10 @@ public final class ScopeContext {
 		}
 
 		pc.resetIdAndToken();
-		// For J2EE sessionRotate, don't reset session - we already called changeSessionId() and want to keep the data
-		if (!(isJ2EESession && migrateSessionData)) {
+		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called changeSessionId() and want to keep the data
+		// But for JSR-223 (where httpSession is null), we need to reset to create a new session
+		HttpSession httpSessionForReset = pc.getSession();
+		if (!(isJ2EESession && migrateSessionData && httpSessionForReset != null)) {
 			pc.resetSession();
 		}
 		pc.resetClient();
