@@ -5,7 +5,6 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="session" {
 
 			it( title="sessionRotate() rotates JSESSIONID for J2EE sessions", skip=isJsr223(), body=function( currentSpec ) {
 				var result = test( template: "/jee-session/rotate.cfm" );
-				// dumpResult( result );
 				var data = deserializeJSON( result.filecontent );
 				expect( data.success ).toBeTrue( data.message ?: "no message" );
 				expect( data.oldSessionId ).notToBe( data.newSessionId, "JSESSIONID should change after sessionRotate()" );
@@ -17,6 +16,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="session" {
 				expect( data.success ).toBeTrue( data.message ?: "no message" );
 				expect( data.oldSessionId ).notToBe( data.newSessionId, "JSESSIONID should change after sessionRotate()" );
 				expect( data.dataPreserved ).toBeTrue( "Session data should be preserved after rotation" );
+			});
+
+		});
+
+		describe( "LDEV-3248: sessionInvalidate() should invalidate JSESSIONID for J2EE sessions", function() {
+
+			it( title="sessionInvalidate() invalidates JSESSIONID for J2EE sessions", skip=isJsr223(), body=function( currentSpec ) {
+				var result = test( template: "/jee-session/invalidate.cfm" );
+				var data = deserializeJSON( result.filecontent );
+				expect( data.success ).toBeTrue( data.message ?: "no message" );
+				expect( data.sessionInvalidated ).toBeTrue( "HttpSession should be invalidated after sessionInvalidate()" );
 			});
 
 		});
