@@ -1,18 +1,21 @@
 component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory" {
  
 	function beforeAll() {
-		variables.curr=getDirectoryFromPath(getCurrentTemplatePath());
+		variables.testPrefix="_LDEV5903_tmp";
+		variables.curr=getDirectoryFromPath(getCurrentTemplatePath()) 
+			& "/" & variables.testPrefix & "/";
+		if ( directoryExists( variables.curr ) ) {
+			directoryDelete( variables.curr, true );
+		}	
+		directoryCreate( variables.curr );
+		// write a .gitignore file to avoid polluting git status
+		fileWrite( variables.curr & ".gitignore", "*" & chr(10) & "!.gitignore" );
 	}
 
 	function afterAll() {
-		directoryList(path:"/Users/mic/Projects/Lucee/Lucee6/test/tickets/",filter:function(path,type,ext){
-			var prefix="_LDEV5903Test";
-			var name=listLast(arguments.path,"\/");
-			if(left(name,len(prefix))==prefix) {
-				fileDelete(arguments.path);
-			}
-			return false;
-		});
+		if ( directoryExists( variables.curr ) ) {
+			directoryDelete( variables.curr, true );
+		}	
 	}
 
 	function run( testResults, testBox ) {
@@ -28,7 +31,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory
 					var content=repeatString("#prefix#cfscript>variables.ldev5903_1='#createUUID()#';#prefix#/cfscript>",20);
 					fileWrite(templatePath,content);
 					inspecttemplates(); // force Lucee to check for changes
-					include templateName;
+					include variables.testPrefix & "/" & templateName;
 				}
 				// force the garbage collector to clean up
 				java.lang.System::gc();
@@ -53,7 +56,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory
 					var content="component {#content# }";
 					fileWrite(templatePath,content);
 					inspecttemplates(); // force Lucee to check for changes
-					createObject("component",componentName);
+					createObject("component",variables.testPrefix & "." & componentName);
 				}
 				// force the garbage collector to clean up
 				java.lang.System::gc();
@@ -75,7 +78,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory
 					var templatePath=variables.curr&templateName;
 					// write cfml template
 					fileWrite(templatePath,content);
-					include templateName;
+					include variables.testPrefix & "/" & templateName;
 				}
 				// force the garbage collector to clean up
 				java.lang.System::gc();
@@ -98,7 +101,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="classloader,memory
 					var templatePath=variables.curr&templateName;
 					// write cfml template
 					fileWrite(templatePath,content);
-					createObject("component",componentName);
+					createObject("component",variables.testPrefix & "." & componentName);
 				}
 				// force the garbage collector to clean up
 				java.lang.System::gc();
