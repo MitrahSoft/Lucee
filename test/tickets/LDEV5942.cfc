@@ -11,10 +11,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="session" {
 				expect( data.oldSessionId ).notToBe( data.newSessionId, "JSESSIONID should change after sessionRotate()" );
 			});
 
-			// LDEV-5730: JSession cannot be cast to StorageScope during migration
-			it( title="sessionRotate() preserves session data for J2EE sessions", skip=true, body=function( currentSpec ) {
+			it( title="sessionRotate() preserves session data for J2EE sessions", skip=isJsr223(), body=function( currentSpec ) {
 				var result = test( template: "/jee-session/rotate-with-data.cfm" );
-				// dumpResult( result );
 				var data = deserializeJSON( result.filecontent );
 				expect( data.success ).toBeTrue( data.message ?: "no message" );
 				expect( data.oldSessionId ).notToBe( data.newSessionId, "JSESSIONID should change after sessionRotate()" );
