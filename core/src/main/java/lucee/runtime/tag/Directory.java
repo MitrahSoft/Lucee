@@ -107,6 +107,7 @@ public final class Directory extends TagImpl {
 
 	/** The name of the directory to perform the action against. */
 	private Resource directory;
+	private String strDirectory;
 
 	/** Defines the action to be taken with directory(ies) specified in directory. */
 	private String action = "list";
@@ -165,6 +166,7 @@ public final class Directory extends TagImpl {
 		filter = null;
 		destination = null;
 		directory = null;
+		strDirectory = null;
 		action = "list";
 		sort = null;
 		mode = -1;
@@ -285,9 +287,8 @@ public final class Directory extends TagImpl {
 	 * @param directory value to set
 	 **/
 	public void setDirectory(String directory) {
-
+		this.strDirectory = directory;
 		this.directory = ResourceUtil.toResourceNotExisting(pageContext, directory);
-		// print.ln(this.directory);
 	}
 
 	/**
@@ -383,9 +384,16 @@ public final class Directory extends TagImpl {
 			if (!StringUtil.isEmpty(name) && res != null) pageContext.setVariable(name, res);
 		}
 		else if (action.equals("create")) actionCreate(pageContext, directory, serverPassword, createPath, mode, acl, storage, nameconflict);
-		else if (action.equals("delete")) actionDelete(pageContext, directory, recurse, serverPassword);
-		else if (action.equals("forcedelete")) actionDelete(pageContext, directory, true, serverPassword);
+		else if (action.equals("delete")) {
+			if (StringUtil.isEmpty(strDirectory, true)) throw new ApplicationException("The attribute [directory] is required for action [delete]");
+			actionDelete(pageContext, directory, recurse, serverPassword);
+		}
+		else if (action.equals("forcedelete")) {
+			if (StringUtil.isEmpty(strDirectory, true)) throw new ApplicationException("The attribute [directory] is required for action [forcedelete]");
+			actionDelete(pageContext, directory, true, serverPassword);
+		}
 		else if (action.equals("rename")) {
+			if (StringUtil.isEmpty(strDirectory, true)) throw new ApplicationException("The attribute [directory] is required for action [rename]");
 			String res = actionRename(pageContext, directory, strNewdirectory, serverPassword, createPath, acl, storage);
 			if (!StringUtil.isEmpty(name) && res != null) pageContext.setVariable(name, res);
 		}
