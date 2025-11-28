@@ -418,7 +418,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private String mainLoggerName;
 
 	private short compileType = -1;
-	private short inspectTemplate = INSPECT_AUTO;
+	private short inspectTemplate = -1;
 	private int inspectTemplateAutoIntervalSlow = ConfigPro.INSPECT_INTERVAL_UNDEFINED;
 	private int inspectTemplateAutoIntervalFast = ConfigPro.INSPECT_INTERVAL_UNDEFINED;
 
