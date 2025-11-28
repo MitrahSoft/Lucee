@@ -315,7 +315,7 @@ public final class PageImpl extends BodyBase implements Page {
 		// not exists in any case, so every usage must have a plan b for not existence
 		PageSource optionalPS = sourceCode instanceof PageSourceCode ? ((PageSourceCode) sourceCode).getPageSource() : null;
 
-		LinkedHashMap<LitString, Integer> keys = new LinkedHashMap<LitString, Integer>();
+		Map<LitString, Integer> keys = new LinkedHashMap<>();
 		ClassWriter cw = ASMUtil.getClassWriter();
 
 		ArrayList<String> imports = new ArrayList<String>();
@@ -914,7 +914,7 @@ public final class PageImpl extends BodyBase implements Page {
 		return _writeLog && !isInterface();
 	}
 
-	public static void registerFields(BytecodeContext bc, LinkedHashMap<LitString, Integer> keys) throws TransformerException {
+	public static void registerFields(BytecodeContext bc, Map<LitString, Integer> keys) throws TransformerException {
 		// if(keys.size()==0) return;
 		GeneratorAdapter ga = bc.getAdapter();
 
@@ -989,7 +989,7 @@ public final class PageImpl extends BodyBase implements Page {
 		cv.visitAfter(bc);
 	}
 
-	private void writeOutStatic(PageSource optionalPS, ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, TagCIObject component, String name) {
+	private void writeOutStatic(PageSource optionalPS, ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, TagCIObject component, String name) {
 
 		boolean addStatic = isComponent() || isInterface();
 
@@ -1039,7 +1039,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 	}
 
-	private void writeOutStaticConstructor(ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, TagCIObject component, String name) throws TransformerException {
+	private void writeOutStaticConstructor(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, TagCIObject component, String name) throws TransformerException {
 
 		List<StaticBody> staticBodies = component.getStaticBodies();
 		if (ArrayUtil.isEmpty(staticBodies)) return;
@@ -1160,7 +1160,7 @@ public final class PageImpl extends BodyBase implements Page {
 		return localBC;
 	}
 
-	private List<IFunction> writeOutInitComponent(ConstrBytecodeContext constr, Function[] functions, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, Tag component, String name)
+	private List<IFunction> writeOutInitComponent(ConstrBytecodeContext constr, Function[] functions, Map<LitString, Integer> keys, ClassWriter cw, Tag component, String name)
 			throws TransformerException {
 
 		boolean hasStatements = ASMUtil.countNoneFunctionsStatements(component.getBody()) > 0;
@@ -1269,7 +1269,7 @@ public final class PageImpl extends BodyBase implements Page {
 		return funcs;
 	}
 
-	private List<IFunction> writeOutInitInterface(ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, Tag interf, String name) throws TransformerException {
+	private List<IFunction> writeOutInitInterface(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, Tag interf, String name) throws TransformerException {
 		GeneratorAdapter adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, INIT_INTERFACE, null, new Type[] { Types.PAGE_EXCEPTION }, cw);
 		BytecodeContext bc = new BytecodeContext(config, null, constr, this, keys, cw, name, adapter, INIT_INTERFACE, writeLog(), suppressWSbeforeArg, output, returnValue,
 				sourceCode.getSourceOffset());
@@ -1359,7 +1359,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 	}
 
-	private void writeOutNewComponent(ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, Tag component, String name) throws TransformerException {
+	private void writeOutNewComponent(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, Tag component, String name) throws TransformerException {
 		GeneratorAdapter adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, NEW_COMPONENT_IMPL_INSTANCE, null, new Type[] { Types.PAGE_EXCEPTION }, cw);
 		BytecodeContext bc = new BytecodeContext(config, null, constr, this, keys, cw, name, adapter, NEW_COMPONENT_IMPL_INSTANCE, writeLog(), suppressWSbeforeArg, output,
 				returnValue, sourceCode.getSourceOffset());
@@ -1486,7 +1486,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 	}
 
-	private void writeOutNewInterface(ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, Tag interf, String name) throws TransformerException {
+	private void writeOutNewInterface(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, Tag interf, String name) throws TransformerException {
 		GeneratorAdapter adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, NEW_INTERFACE_IMPL_INSTANCE, null, new Type[] { Types.PAGE_EXCEPTION }, cw);
 		BytecodeContext bc = new BytecodeContext(config, null, constr, this, keys, cw, name, adapter, NEW_INTERFACE_IMPL_INSTANCE, writeLog(), suppressWSbeforeArg, output,
 				returnValue, sourceCode.getSourceOffset());
@@ -1608,7 +1608,7 @@ public final class PageImpl extends BodyBase implements Page {
 		}
 	}
 
-	private List<IFunction> writeOutCall(ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, String name) throws TransformerException {
+	private List<IFunction> writeOutCall(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, String name) throws TransformerException {
 		// GeneratorAdapter adapter = bc.getAdapter();
 		GeneratorAdapter adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, CALL1, null, new Type[] { Types.THROWABLE }, cw);
 		Label methodBegin = new Label();

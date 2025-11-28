@@ -19,8 +19,8 @@
 package lucee.transformer.bytecode;
 
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -46,7 +46,7 @@ public class BytecodeContext implements Context {
 	private ClassWriter classWriter;
 	private GeneratorAdapter adapter;
 	private String className;
-	private LinkedHashMap<LitString, Integer> keys;
+	private Map<LitString, Integer> keys;
 	private int count = 0;
 	private Method method;
 	private boolean doSubFunctions = true;
@@ -81,7 +81,7 @@ public class BytecodeContext implements Context {
 	protected final ExpressionUtil expressionUtil;
 	private int sourceOffset;
 
-	public BytecodeContext(Config config, PageSource ps, ConstrBytecodeContext constr, PageImpl page, LinkedHashMap<LitString, Integer> keys, ClassWriter classWriter, String className,
+	public BytecodeContext(Config config, PageSource ps, ConstrBytecodeContext constr, PageImpl page, Map<LitString, Integer> keys, ClassWriter classWriter, String className,
 			GeneratorAdapter adapter, Method method, boolean writeLog, boolean suppressWSbeforeArg, boolean output, boolean returnValue, int sourceOffset) {
 		this.config = ThreadLocalPageContext.getConfig(config);
 		this.classWriter = classWriter;
@@ -109,7 +109,7 @@ public class BytecodeContext implements Context {
 
 	}
 
-	public BytecodeContext(ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, BytecodeContext bc, GeneratorAdapter adapter, Method method) {
+	public BytecodeContext(ConstrBytecodeContext constr, Map<LitString, Integer> keys, BytecodeContext bc, GeneratorAdapter adapter, Method method) {
 		this.classWriter = bc.getClassWriter();
 		this.className = bc.getClassName();
 		this.writeLog = bc.writeLog();
@@ -215,7 +215,7 @@ public class BytecodeContext implements Context {
 		this.page.registerJavaFunction(jbc);
 	}
 
-	public LinkedHashMap<LitString, Integer> getKeys() {
+	public Map<LitString, Integer> getKeys() {
 		return keys;
 	}
 
