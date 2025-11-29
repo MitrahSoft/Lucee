@@ -2897,6 +2897,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 */
 	@Override
 	public short getInspectTemplate() {
+		if (inspectTemplate == -1) return INSPECT_AUTO;
 		return inspectTemplate;
 	}
 
