@@ -378,7 +378,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	protected Mapping defaultTagMapping;
 	protected Map<String, Mapping> tagMappings = new ConcurrentHashMap<String, Mapping>();
 
-	private short inspectTemplate = INSPECT_AUTO;
+	private short inspectTemplate = -1;
 	private boolean typeChecking = true;
 	private String cacheMD5;
 	private boolean executionLogEnabled;
