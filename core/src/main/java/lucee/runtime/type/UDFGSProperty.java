@@ -73,6 +73,11 @@ public abstract class UDFGSProperty extends MemberSupport implements UDFPlus {
 	}
 
 	@Override
+	protected final int hash() {
+		return java.util.Objects.hash(name, getPageSource());
+	}
+
+	@Override
 	public FunctionArgument[] getFunctionArguments() {
 		return arguments;
 	}

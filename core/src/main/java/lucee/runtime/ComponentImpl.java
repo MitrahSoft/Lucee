@@ -273,6 +273,11 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		return cp.getJavaSettings();
 	}
 
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(base, _data, pageSource);
+	}
+
 	public boolean hasJavaSettings(PageContext pc) {
 		try {
 			return getJavaSettings(pc) != null;
@@ -1715,7 +1720,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		if (!StringUtil.isEmpty(displayname)) sct.set(KeyConstants._displayname, displayname);
 
 		sct.set(KeyConstants._persistent, comp.properties.persistent);
-		sct.set(KeyConstants._hashCode, comp.hashCode());
+		// sct.set(KeyConstants._hashCode, comp.hashCode());
 		sct.set(KeyConstants._accessors, comp.properties.accessors);
 		sct.set(KeyConstants._synchronized, comp.properties._synchronized);
 		sct.set(KeyConstants._inline, comp.properties.inline);

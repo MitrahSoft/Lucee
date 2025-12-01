@@ -18,9 +18,11 @@
  */
 package lucee.runtime.type.scope;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import jakarta.servlet.http.HttpSession;
 import lucee.commons.collection.MapFactory;
@@ -48,6 +50,7 @@ import lucee.runtime.interpreter.VariableInterpreter;
 import lucee.runtime.listener.ApplicationContext;
 import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.op.Caster;
+import lucee.runtime.op.Decision;
 import lucee.runtime.type.Collection.Key;
 import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
@@ -80,6 +83,26 @@ public final class ScopeContext {
 	private static final int MINUTE = 60 * 1000;
 	private static final long CLIENT_MEMORY_TIMESPAN = 1 * MINUTE;
 	private static final long SESSION_MEMORY_TIMESPAN = 1 * MINUTE;
+
+	private final static Set<Key> IGNORE_SESSION = new HashSet<>();
+	private final static Set<Key> IGNORE_CLIENT = new HashSet<>();
+	static {
+		IGNORE_SESSION.add(KeyConstants._csrf_token);
+		IGNORE_SESSION.add(KeyConstants._cfid);
+		IGNORE_SESSION.add(KeyConstants._cftoken);
+		IGNORE_SESSION.add(KeyConstants._urltoken);
+		IGNORE_SESSION.add(KeyConstants._timecreated);
+		IGNORE_SESSION.add(KeyConstants._lastvisit);
+		IGNORE_SESSION.add(KeyConstants._sessionid);
+
+		IGNORE_CLIENT.add(KeyConstants._csrf_token);
+		IGNORE_CLIENT.add(KeyConstants._cfid);
+		IGNORE_CLIENT.add(KeyConstants._cftoken);
+		IGNORE_CLIENT.add(KeyConstants._urltoken);
+		IGNORE_CLIENT.add(KeyConstants._timecreated);
+		IGNORE_CLIENT.add(KeyConstants._lastvisit);
+		IGNORE_CLIENT.add(KeyConstants._hitcount);
+	}
 
 	private Map<String, Map<String, Scope>> cfSessionContexts = MapFactory.<String, Map<String, Scope>>getConcurrentMap();
 	private Map<String, Map<String, Scope>> cfClientContexts = MapFactory.<String, Map<String, Scope>>getConcurrentMap();
@@ -251,8 +274,13 @@ public final class ScopeContext {
 					else {
 						DataSource ds = pc.getDataSource(storage, null);
 						if (ds != null && ds.isStorage()) {
-							scope = (StorageScope) IKStorageScopeSupport.getInstance(scopeType, new IKHandlerDatasource(), appContext.getName(), storage, pc, existing,
-									createIfNeeded, getLog());
+							try {
+								scope = (StorageScope) IKStorageScopeSupport.getInstance(scopeType, new IKHandlerDatasource(), appContext.getName(), storage, pc, existing,
+										createIfNeeded, getLog());
+							}
+							catch (Exception ex) {
+								LogUtil.log("scope-context", ex);
+							}
 						}
 						else {
 							scope = (StorageScope) IKStorageScopeSupport.getInstance(scopeType, new IKHandlerCache(), appContext.getName(), storage, pc, existing, createIfNeeded,
@@ -437,24 +465,27 @@ public final class ScopeContext {
 		return getJSessionScope(pc);
 	}
 
-	public boolean hasExistingSessionScope(PageContext pc) {
+	public Object getExistingSessionScope(PageContext pc) {
 		if (pc.getSessionType() == Config.SESSION_TYPE_APPLICATION) {
 			try {
-				return getCFScope(pc, false, Scope.SCOPE_SESSION) != null;
+				return getCFScope(pc, false, Scope.SCOPE_SESSION);
 			}
 			catch (Exception e) {
-				return false;
+				return null;
 			}
 		}
 		return hasExistingJSessionScope(pc);
 	}
 
-	private boolean hasExistingJSessionScope(PageContext pc) {
+	private Object hasExistingJSessionScope(PageContext pc) {
 		HttpSession httpSession = ((PageContextImpl) pc).getHttpServletRequest().getSession(false);
-		if (httpSession == null) return false;
+		if (httpSession == null) return null;
 
 		Session session = (Session) httpSession.getAttribute(pc.getApplicationContext().getName());
-		return session instanceof JSession && !session.isExpired();
+		if (session instanceof JSession && !session.isExpired()) {
+			return session;
+		}
+		return null;
 	}
 
 	public Session getExistingCFSessionScope(String applicationName, String cfid) {
@@ -779,6 +810,20 @@ public final class ScopeContext {
 		return !(map.containsKey(KeyConstants._cfid) && map.containsKey(KeyConstants._cftoken) && map.containsKey(KeyConstants._urltoken)
 				&& map.containsKey(KeyConstants._timecreated) && map.containsKey(KeyConstants._lastvisit)
 				&& (type == Scope.SCOPE_CLIENT ? map.containsKey(KeyConstants._hitcount) : map.containsKey(KeyConstants._sessionid)));
+	}
+
+	public static int hash(Map<Key, IKStorageScopeItem> map, int type, boolean ignoreSimpleValues) {
+		int result = 1;
+		for (Entry<Key, IKStorageScopeItem> e: map.entrySet()) {
+			if (type == Scope.SCOPE_CLIENT ? IGNORE_CLIENT.contains(e.getKey()) : IGNORE_SESSION.contains(e.getKey())) {
+				continue;
+			}
+			if (ignoreSimpleValues && Decision.isSimpleValue(e.getValue().getValue())) {
+				continue;
+			}
+			result = 31 * result + (e.getValue() == null ? 0 : e.getValue().hashCode());
+		}
+		return result;
 	}
 
 	/**

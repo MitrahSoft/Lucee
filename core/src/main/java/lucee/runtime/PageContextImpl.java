@@ -1718,7 +1718,12 @@ public final class PageContextImpl extends PageContext {
 	public boolean hasCFSession() {
 		if (session != null) return true;
 		if (!getApplicationContext().hasName() || !getApplicationContext().isSetSessionManagement()) return false;
-		return scopeContext.hasExistingSessionScope(this);
+		Object tmp = scopeContext.getExistingSessionScope(this);
+		if (tmp instanceof Session) {
+			session = (Session) tmp;
+			return true;
+		}
+		return false;
 	}
 
 	public void invalidateUserScopes(boolean migrateSessionData, boolean migrateClientData) throws PageException {
@@ -3579,24 +3584,35 @@ public final class PageContextImpl extends PageContext {
 		}
 
 		// Session
-		initSession = getApplicationContext().isSetSessionManagement() && listener.hasOnSessionStart(this) && !scopeContext.hasExistingSessionScope(this);
+		initSession = getApplicationContext().isSetSessionManagement() && listener.hasOnSessionStart(this);
 		if (initSession) {
-			String token = name + ":" + getCFID();
-			Lock tokenLock = lock.lock(token, getRequestTimeout());
-			try {
+			Object tmp = scopeContext.getExistingSessionScope(this);
+			if (tmp != null) {
+				initSession = false;
+				if (session == null && tmp instanceof Session) session = (Session) tmp;
+			}
+		}
+
+		if (initSession) {
+			synchronized (SystemUtil.createToken("PageContext", name + ":" + getCFID())) {
+
 				// we need to check it again within the lock, to make sure the call is exclusive
-				initSession = getApplicationContext().isSetSessionManagement() && listener.hasOnSessionStart(this) && !scopeContext.hasExistingSessionScope(this);
+				initSession = getApplicationContext().isSetSessionManagement() && listener.hasOnSessionStart(this);
+
+				if (initSession) {
+					Object tmp = scopeContext.getExistingSessionScope(this);
+					if (tmp != null) {
+						initSession = false;
+						if (session == null && tmp instanceof Session) session = (Session) tmp;
+					}
+				}
 
 				// init session
 				if (initSession) {
 					// session must be initlaized here
-					listener.onSessionStart(this, scopeContext.getSessionScope(this));
+					listener.onSessionStart(this, sessionScope());
 
 				}
-			}
-			finally {
-				// print.o("outer-unlock:"+token);
-				lock.unlock(tokenLock);
 			}
 		}
 		return true;

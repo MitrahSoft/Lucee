@@ -396,4 +396,9 @@ public final class ComponentScopeShadow extends StructSupport implements Compone
 	public boolean isBind() {
 		return true;
 	}
+
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(component, shadow);
+	}
 }

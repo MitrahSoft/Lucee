@@ -52,7 +52,6 @@ import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.TemplateException;
 import lucee.runtime.functions.system.GetDirectoryFromPath;
 import lucee.runtime.op.Caster;
-import lucee.runtime.type.dt.DateTimeImpl;
 import lucee.runtime.type.util.ArrayUtil;
 import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.util.PageSourceCode;
@@ -75,6 +74,7 @@ public final class PageSourceImpl implements PageSource {
 
 	private boolean isOutSide;
 
+	private String dspPath;
 	private String relPath;
 	private String packageName;
 	private String javaName;
@@ -111,38 +111,6 @@ public final class PageSourceImpl implements PageSource {
 		this.isOutSide = isOutSide;
 		this.relPath = relPath;
 		// if (logAccessDirectory != null) dump();
-	}
-
-	private void dump() {
-		Resource res = getResource();
-		if (res != null && res.isFile()) {
-			try {
-				File file = createPath();
-				IOUtil.write(file, new DateTimeImpl() + " " + res.getAbsolutePath() + "\n", "UTF-8", true);
-			}
-			catch (IOException ioe) {
-				ioe.printStackTrace();
-			}
-		}
-	}
-
-	private static File createPath() throws IOException {
-		File log = new File(logAccessDirectory, "access.log");
-
-		if (log.isFile()) {
-			if (log.length() > MAX) {
-				File backup;
-				int count = 0;
-				do {
-					backup = new File(logAccessDirectory, "access-" + (++count) + ".log");
-				}
-				while (backup.isFile());
-				log.renameTo(backup);
-				(log = new File(logAccessDirectory, "access.log")).createNewFile();
-			}
-		}
-		else log.createNewFile();
-		return log;
 	}
 
 	/**
@@ -531,27 +499,29 @@ public final class PageSourceImpl implements PageSource {
 	 */
 	@Override
 	public String getDisplayPath() {
+		if (dspPath != null) return dspPath;
+
 		if (!mapping.hasArchive()) {
-			return StringUtil.toString(getPhyscalFile(), null);
+			return dspPath = StringUtil.toString(getPhyscalFile(), null);
 		}
 		else if (isLoad(LOAD_PHYSICAL)) {
-			return StringUtil.toString(getPhyscalFile(), null);
+			return dspPath = StringUtil.toString(getPhyscalFile(), null);
 		}
 		else if (isLoad(LOAD_ARCHIVE)) {
-			return StringUtil.toString(getArchiveSourcePath(), null);
+			return dspPath = StringUtil.toString(getArchiveSourcePath(), null);
 		}
 		else {
 			boolean pse = physcalExists();
 			boolean ase = archiveExists();
 
 			if (mapping.isPhysicalFirst()) {
-				if (pse) return getPhyscalFile().toString();
-				else if (ase) return getArchiveSourcePath();
-				return getPhyscalFile().toString();
+				if (pse) return dspPath = getPhyscalFile().toString();
+				else if (ase) return dspPath = getArchiveSourcePath();
+				return dspPath = getPhyscalFile().toString();
 			}
-			if (ase) return getArchiveSourcePath();
-			else if (pse) return getPhyscalFile().toString();
-			return getArchiveSourcePath();
+			if (ase) return dspPath = getArchiveSourcePath();
+			else if (pse) return dspPath = getPhyscalFile().toString();
+			return dspPath = getArchiveSourcePath();
 		}
 	}
 
@@ -1148,4 +1118,8 @@ public final class PageSourceImpl implements PageSource {
 		if (p != null) p.setLoadType((byte) 0);
 	}
 
+	@Override
+	public final int hashCode() {
+		return getDisplayPath().hashCode();
+	}
 }

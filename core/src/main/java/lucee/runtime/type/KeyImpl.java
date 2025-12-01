@@ -47,7 +47,7 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	private static final long HSTART = 0xBB40E64DA205B064L;
 	private static final long HMULT = 7664345821815920749L;
 
-	private static final int MAX = Caster.toInteger(SystemUtil.getSystemPropOrEnvVar("lucee.cache.variableKeys", null), 5000);
+	private static final int MAX = Caster.toInteger(SystemUtil.getSystemPropOrEnvVar("lucee.cache.variableKeys", null), 50000);
 
 	// private boolean intern;
 	private String key;
@@ -56,18 +56,29 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	private transient int wjh;
 	private transient int sfm = -1;
 	private transient long h64;
+	private transient int hash;
 	private static Map<String, Key> keys = new HashMap<String, Key>();
+	// private static Map<String, RefInteger> keysx = new HashMap<>();
 
 	public KeyImpl() {
 		// DO NOT USE, JUST FOR UNSERIALIZE
-
 	}
 
 	public KeyImpl(String key) {
 		this.key = key;
 		this.ucKey = key.toUpperCase();
 		h64 = createHash64(ucKey);
-		// print.e(key + ":" + (++count) + ":" + keys.size());
+		hash = ucKey.hashCode();
+
+		/*
+		 * RefInteger ref = keysx.get(key); if (ref == null) { keysx.put(key, new RefIntegerImpl(0)); } else
+		 * { ref.plus(1); if (ref.toInt() > 10000 && ref.toInt() % 1000 == 0) { if
+		 * (key.equals("aroundEach")) { print.e(keys.containsKey(key));
+		 * print.e(KeyConstants.getKeys().containsKey(key)); print.ds(); System.exit(0); }
+		 * 
+		 * if (!key.startsWith("test")) print.e("KeyImpl: " + key + ":" + ref.toInt() + ":" + keys.size());
+		 * } }
+		 */
 	}
 
 	public static Map<String, Key> getKeys() {
@@ -135,6 +146,7 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 		key = (String) in.readObject();
 		ucKey = key.toUpperCase();
 		h64 = createHash64(ucKey);
+		hash = ucKey.hashCode();
 	}
 
 	/**
@@ -143,7 +155,7 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	 * @param key
 	 * @return
 	 */
-	public static Collection.Key _const(Map<String, Key> keys, String key) {
+	public final static Collection.Key _const(Map<String, Key> keys, String key) {
 		Key k = new KeyImpl(key);
 		keys.put(key, k);
 		return k;
@@ -155,12 +167,12 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	 * @param key
 	 * @return
 	 */
-	public static Collection.Key getInstance(String key) {
+	public final static Collection.Key getInstance(String key) {
 		return initKeys(key);
 	}
 
 	// this method is only used by old lucee archives byte code loading their keys via this method
-	public static Collection.Key intern(String key) {
+	public final static Collection.Key intern(String key) {
 		// log(key);
 		return new KeyImpl(key);
 	}
@@ -169,7 +181,7 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	 * 
 	 * used to create the keys for the method initKeys()
 	 */
-	public static Collection.Key initKeys(String key) {
+	public final static Collection.Key initKeys(String key) {
 		Key k = keys.get(key);
 		if (k == null) {
 			keys.put(key, k = new KeyImpl(key));
@@ -183,7 +195,7 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	 * @param string
 	 * @return
 	 */
-	public static Collection.Key init(String key) {
+	public final static Collection.Key init(String key) {
 		return source(key);
 	}
 
@@ -191,11 +203,13 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 	 * 
 	 * used to inside the rest of the source created, can be dynamic values, so a lot
 	 */
-	public static Collection.Key source(String key) {
+	public final static Collection.Key source(String key) {
 		if (MAX == 0) return new KeyImpl(key);
 		Key k = keys.get(key);
 		if (k == null) {
-			if (keys.size() > MAX) return new KeyImpl(key);
+			if (keys.size() > MAX) {
+				return new KeyImpl(key);
+			}
 			keys.put(key, k = new KeyImpl(key));
 		}
 		return k;
@@ -262,9 +276,14 @@ public class KeyImpl implements Collection.Key, Castable, Comparable, Externaliz
 		return ucKey.equalsIgnoreCase(other.getLowerString());
 	}
 
+	// private static int hh = 0;
+
 	@Override
 	public int hashCode() {
-		return ucKey.hashCode();
+		/*
+		 * hh++; if (hh % 50000 == 0) { print.e("instances: " + hh); }
+		 */
+		return hash;
 	}
 
 	@Override

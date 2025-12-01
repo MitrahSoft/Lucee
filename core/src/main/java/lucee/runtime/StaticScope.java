@@ -69,7 +69,6 @@ public final class StaticScope extends StructSupport implements Variables, Objec
 	}
 
 	@Override
-
 	public int size() {
 		ComponentPageImpl cp = cpr.get(null, null);
 		int s = cp == null ? 0 : cp.getStaticStruct().size();
@@ -551,5 +550,10 @@ public final class StaticScope extends StructSupport implements Variables, Objec
 		catch (PageException e) {
 			throw new PageRuntimeException(e);
 		}
+	}
+
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(c);
 	}
 }
