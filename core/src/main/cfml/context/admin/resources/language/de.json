@@ -1341,7 +1341,7 @@
 					"pre_release": "Pre Releases",
 					"release": "Releases",
 					"snapshot": "Snapshots",
-					"alphas": "Alphas",
+					"alphas": "Alphas"
 				},
 				"snapShot": "SnapShot",
 				"snapShotDesc": "Snapshots are generated automatically with every push to the repository, when all bundled test cases pass successfully. Snapshots are NOT recommended for production environments.",
