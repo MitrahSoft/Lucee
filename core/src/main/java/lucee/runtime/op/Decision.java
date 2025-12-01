@@ -50,7 +50,6 @@ import lucee.runtime.coder.Base64Util;
 import lucee.runtime.converter.WDDXConverter;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ExpressionException;
-import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.Function;
 import lucee.runtime.functions.conversion.IsJSON;
 import lucee.runtime.image.ImageUtil;
@@ -93,13 +92,13 @@ public final class Decision {
 	 * @return is value a simple value
 	 */
 	public static boolean isSimpleValue(Object value) {
-		return (value instanceof Number) || (value instanceof Locale) || (value instanceof TimeZone) || (value instanceof String) || (value instanceof Character)
-				|| (value instanceof Boolean) || (value instanceof Date) || ((value instanceof Castable) && !(value instanceof Objects) && !(value instanceof Collection));
+		return (value instanceof CharSequence) || (value instanceof Number) || (value instanceof Boolean) || (value instanceof Date) || (value instanceof Locale)
+				|| ((value instanceof Castable) && !(value instanceof Objects) && !(value instanceof Collection)) || (value instanceof TimeZone) || (value instanceof Character);
 	}
 
 	public static boolean isSimpleValueLimited(Object value) {
-		return (value instanceof Number) || (value instanceof Locale) || (value instanceof TimeZone) || (value instanceof String) || (value instanceof Boolean)
-				|| (value instanceof Date);
+		return (value instanceof CharSequence) || (value instanceof Number) || (value instanceof Boolean) || (value instanceof Date) || (value instanceof Locale)
+				|| (value instanceof TimeZone);
 	}
 
 	public static boolean isCastableToNumeric(Object o) {

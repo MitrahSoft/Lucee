@@ -482,8 +482,23 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 	/**
 	 * @return the hasChanges
 	 */
-	public boolean hasChanges() {
-		return hasChanges;
+	public boolean hasChanges(Log log) {
+		if (hasChanges) {
+			return true;
+		}
+		// if we have complex values we cannot tell if there are changes, so we simply assume there are,
+		// that is the downside to use complex object in storage scopes.
+		for (IKStorageScopeItem val: data0.values()) {
+			if (!Decision.isSimpleValue(val.getValue())) {
+				if (LogUtil.doesWarn(log)) {
+					ScopeContext.warn(log, "the " + (type == Scope.SCOPE_SESSION ? "session" : "client")
+							+ " scope contains complex values, Lucee cannot proper detect changes in the values and because of that updates the storage with every request.");
+				}
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	@Override

@@ -52,7 +52,7 @@ public class IKHandlerCache implements IKHandler {
 	@Override
 	public void store(IKStorageScopeSupport storageScope, PageContext pc, String appName, String name, Map<Collection.Key, IKStorageScopeItem> data, String strType, int type,
 			Log log) {
-		if (!storageScope.hasChanges()) return;
+		if (!storageScope.hasChanges(log)) return;
 		try {
 			Cache cache = getCache(ThreadLocalPageContext.get(pc), name);
 			String key = getKey(pc.getCFID(), appName, storageScope.getTypeAsString());

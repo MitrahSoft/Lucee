@@ -118,7 +118,7 @@ public class IKHandlerDatasource implements IKHandler {
 
 	@Override
 	public void store(IKStorageScopeSupport storageScope, PageContext pc, String appName, final String name, Map<Key, IKStorageScopeItem> data, String strType, int type, Log log) {
-		if (!storageScope.hasChanges()) return;
+		if (!storageScope.hasChanges(log)) return;
 
 		DatasourceConnection dc = null;
 		ConfigPro ci = (ConfigPro) ThreadLocalPageContext.getConfig(pc);
@@ -136,9 +136,11 @@ public class IKHandlerDatasource implements IKHandler {
 				IKStorageValue sv = new IKStorageValue(
 						IKStorageScopeSupport.prepareToStore(data, existingVal, storageScope.lastModified(), storageScope.lastModifiedAtInit(), log, type));
 				executor.update(ci, pc.getCFID(), appName, dc, storageScope.getType(), sv, storageScope.getTimeSpan(), log);
+				ScopeContext.info(log, "Store scope for [" + pc.getApplicationContext().getName() + "/" + pc.getCFID() + "] in datasource [" + name + "]");
 			}
 			else if (existingVal != null) {
 				executor.delete(ci, pc.getCFID(), appName, dc, storageScope.getType(), log);
+				ScopeContext.info(log, "Remove scope for [" + pc.getApplicationContext().getName() + "/" + pc.getCFID() + "] from datasource [" + name + "]");
 			}
 		}
 		catch (Exception e) {

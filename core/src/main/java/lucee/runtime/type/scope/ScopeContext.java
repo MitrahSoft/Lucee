@@ -131,6 +131,10 @@ public final class ScopeContext {
 		if (LogUtil.doesInfo(log)) log.log(Log.LEVEL_INFO, "scope-context", msg + "; " + ExceptionUtil.getTagContextLine(null));
 	}
 
+	public static void warn(Log log, String msg) {
+		if (LogUtil.doesWarn(log)) log.log(Log.LEVEL_WARN, "scope-context", msg + "; " + ExceptionUtil.getTagContextLine(null));
+	}
+
 	public static void error(Log log, String msg) {
 		if (LogUtil.doesError(log)) log.log(Log.LEVEL_ERROR, "scope-context", msg + "; " + ExceptionUtil.getTagContextLine(null));
 	}
@@ -955,7 +959,8 @@ public final class ScopeContext {
 		}
 
 		pc.resetIdAndToken();
-		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called changeSessionId() and want to keep the data
+		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called
+		// changeSessionId() and want to keep the data
 		// But for JSR-223 (where httpSession is null), we need to reset to create a new session
 		HttpSession httpSessionForReset = pc.getSession();
 		if (!(isJ2EESession && migrateSessionData && httpSessionForReset != null)) {
