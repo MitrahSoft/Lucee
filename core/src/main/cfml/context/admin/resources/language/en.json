@@ -461,8 +461,7 @@
       "upDown": "Update / Downgrade / Uninstall",
       "upDownDesc": "Update or downgrade your already installed version.",
       "upload": "upload",
-      "uploadextension": "Upload new extension
-      ",
+      "uploadextension": "Upload new extension",
       "uploadextensiondesc": "If you downloaded an extension, you can add the extension here.",
       "version": "Version",
       "viewdetails": "View details"
