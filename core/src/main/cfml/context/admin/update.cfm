@@ -53,23 +53,28 @@
 				<!--- no update available --->
 			<cfelseif server.lucee.state EQ "stable">
 				<cfset get_stable = []>
+				<cfif NOT isArray( updateInfo.otherVersions )>
+					<cfset updateInfo.otherVersions = []>
+				</cfif>
 				<cfloop index="stableList" array="#updateInfo.otherVersions#">
-					<cfif ( !listContainsNoCase(stableList,"-SNAPSHOT") EQ 1 ) AND ( !listContainsNoCase(stableList,"-BETA") EQ 1 AND (!listContainsNoCase(stableList,"-RC") EQ 1) )>
+					<cfif findNoCase("-SNAPSHOT", stableList) 
+						OR findNoCase("-ALPHA", stableList) 
+						OR findNoCase("-BETA", stableList) 
+						OR findNoCase("-RC", stableList)>
+						<!--- skip non-stable --->
+					<cfelse>
 						<cfset arrayAppend(get_stable,stableList)>
 					</cfif>
 				</cfloop>
-				<cfset available = Arraylast(get_stable)>
-				<cfset hasUpdate = server.lucee.version LT available>
-			<cfelse>
-				<cfset ava_ver = listfirst(updateInfo.available,"-")>
-				<cfif curr neq ava_ver>
-					<!-- only show updates for the current major version, ie on 5.4, not show 6.0 snapshots -->
-					<cfset curr=listFirst(server.lucee.version,".")>
-					<cfset available = getUpdateForMajorVersion(updateInfo.otherVersions, curr )>
-					<cfset ava_ver = listfirst(updateInfo.available,"-")>
-				<cfelse>
-					<cfset available = updateInfo.available>
+				<cfif arrayLen( get_stable )>
+					<cfset available = ArrayLast( get_stable )>
+					<cfset hasUpdate = server.lucee.version LT available>
 				</cfif>
+			<cfelse>
+				<!--- for non-stable: find latest version for current major, excluding ALPHA --->
+				<cfset curr=listFirst(server.lucee.version,".")>
+				<cfset available = getUpdateForMajorVersion(updateInfo.otherVersions, curr )>
+				<cfset ava_ver = listfirst(available,"-")>
 				<cfif len(available) eq 0 or server.lucee.version eq available>
 					<cfset hasUpdate = false>
 				<cfelse>
