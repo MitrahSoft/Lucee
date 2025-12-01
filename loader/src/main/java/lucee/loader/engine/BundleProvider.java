@@ -807,7 +807,7 @@ public final class BundleProvider {
 			index = q.indexOf('-');
 			String qra = index == -1 ? "" : q.substring(index + 1).trim();
 			String qrn = index == -1 ? q : q.substring(0, index);
-			int qr = Util.isEmpty(qln) ? Integer.MIN_VALUE : Integer.parseInt(qrn);
+			int qr = Util.isEmpty(qrn) ? Integer.MIN_VALUE : Integer.parseInt(qrn);
 
 			if (ql > qr) return 5;
 			if (ql < qr) return -5;
