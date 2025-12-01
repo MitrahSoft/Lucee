@@ -937,6 +937,7 @@ public final class ScopeContext {
 
 		boolean hasClientManagement = appContext.isSetClientManagement();
 		boolean hasSessionManagement = appContext.isSetSessionManagement();
+		boolean isJ2EESession = pc.getSessionType() == Config.SESSION_TYPE_JEE;
 
 		// get in memory scopes
 		UserScope oldClient = null;
@@ -946,8 +947,25 @@ public final class ScopeContext {
 		}
 		UserScope oldSession = null;
 		if (hasSessionManagement) {
-			Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
-			oldSession = (UserScope) sessionContext.get(pc.getCFID());
+			if (isJ2EESession) {
+				// For J2EE sessions, try the HttpSession attribute first
+				HttpSession httpSession = pc.getSession();
+				if (httpSession != null) {
+					Object session = httpSession.getAttribute(appContext.getName());
+					if (session instanceof JSession) {
+						oldSession = (JSession) session;
+					}
+				}
+				// Fall back to cfSessionContexts (used by JSR-223/script-runner where httpSession is null)
+				if (oldSession == null) {
+					Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
+					oldSession = (UserScope) sessionContext.get(pc.getCFID());
+				}
+			}
+			else {
+				Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
+				oldSession = (UserScope) sessionContext.get(pc.getCFID());
+			}
 		}
 
 		if (hasSessionManagement) {
@@ -965,17 +983,48 @@ public final class ScopeContext {
 		if (hasSessionManagement) removeCFSessionScope(pc);
 		if (hasClientManagement) removeClientScope(pc);
 
+		// For J2EE sessions, handle the servlet container's session (JSESSIONID)
+		if (isJ2EESession && hasSessionManagement) {
+			HttpSession httpSession = pc.getSession();
+			if (httpSession != null) {
+				if (migrateSessionData) {
+					// sessionRotate: rotate to a new session ID but keep session alive
+					pc.getHttpServletRequest().changeSessionId();
+				}
+				else {
+					// sessionInvalidate: completely destroy the JEE session (LDEV-3248)
+					httpSession.invalidate();
+				}
+			}
+		}
+
 		pc.resetIdAndToken();
-		pc.resetSession();
+		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called changeSessionId() and want to keep the data
+		// But for JSR-223 (where httpSession is null), we need to reset to create a new session
+		HttpSession httpSessionForReset = pc.getSession();
+		if (!(isJ2EESession && migrateSessionData && httpSessionForReset != null)) {
+			pc.resetSession();
+		}
 		pc.resetClient();
 
-		if (oldSession != null) migrate(pc, oldSession, (UserScope) getCFScope(pc, true, Scope.SCOPE_SESSION), migrateSessionData);
+		if (oldSession != null) {
+			UserScope newSession;
+			if (isJ2EESession) {
+				newSession = getSessionScope(pc);
+			}
+			else {
+				newSession = (UserScope) getCFScope(pc, true, Scope.SCOPE_SESSION);
+			}
+			migrate(pc, oldSession, newSession, migrateSessionData);
+		}
 		if (oldClient != null) migrate(pc, oldClient, (UserScope) getCFScope(pc, true, Scope.SCOPE_CLIENT), migrateClientData);
 
 	}
 
 	private static void migrate(PageContextImpl pc, UserScope oldScope, UserScope newScope, boolean migrate) {
 		if (oldScope == null || newScope == null) return;
+		// For J2EE sessions with changeSessionId(), old and new are the same object - no migration needed
+		if (oldScope == newScope) return;
 		if (!migrate) oldScope.clear();
 		oldScope.resetEnv(pc);
 		Iterator<Entry<Key, Object>> it = oldScope.entryIterator();
@@ -988,7 +1037,13 @@ public final class ScopeContext {
 			}
 			if (newScope instanceof StorageScope) {
 				((StorageScope) newScope).store(pc.getConfig());
-				((StorageScope) newScope).setTokens(((StorageScope) oldScope).getTokens());
+				if (oldScope instanceof StorageScope) {
+					((StorageScope) newScope).setTokens(((StorageScope) oldScope).getTokens());
+				}
+			}
+			else if (newScope instanceof JSession && oldScope instanceof JSession) {
+				// JSession doesn't implement StorageScope but has its own token handling
+				((JSession) newScope).setTokens(((JSession) oldScope).getTokens());
 			}
 
 		}

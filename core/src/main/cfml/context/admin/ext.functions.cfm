@@ -316,6 +316,7 @@
 			loop query="#locals#" {
 				var row=queryAddRow(qry);
 				qry.setCell("provider","local",row);
+				qry.setCell("otherVersions",[],row);
 				loop list="#locals.columnlist()#" item="local.k" {
             		qry.setCell(k,locals[k],row);
             	}
