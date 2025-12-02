@@ -698,7 +698,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 						}
 						if (data.result != null) {
 							long time = System.nanoTime() - start;
-							Struct sct = new StructImpl();
+							Struct sct = new StructImpl(Struct.TYPE_REGULAR, 8);
 							sct.setEL(KeyConstants._cached, Boolean.FALSE);
 							sct.setEL(KeyConstants._executionTime, Caster.toDouble(time / 1000000));
 							sct.setEL(KeyConstants._executionTimeNano, Caster.toDouble(time));
@@ -801,7 +801,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 	private static Struct createMetaData(PageContext pageContext, QueryBean data, QueryResult queryResult, SQL sqlQuery, boolean setVars, long exe) throws PageException {
 		Struct meta;
 		if (data.result != null && queryResult != null) {
-			meta = new StructImpl();
+			meta = new StructImpl(Struct.TYPE_REGULAR, 16);
 			boolean fns = ((PageContextImpl) pageContext).getFullNullSupport();
 
 			meta.setEL(KeyConstants._cached, Caster.toBoolean(queryResult.isCached()));
@@ -848,7 +848,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			if (sqlQuery != null) {
 				SQLItem[] params = sqlQuery.getItems();
 				if (params != null && params.length > 0) {
-					Array arr = new ArrayImpl();
+					Array arr = new ArrayImpl(params.length);
 					meta.setEL(KeyConstants._sqlparameters, arr);
 					for (int i = 0; i < params.length; i++) {
 						if (fns) arr.append(params[i].isNulls() ? null : params[i].getValue());
@@ -875,8 +875,8 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 	}
 
 	private static Struct createArgStruct(PageContext pc, QueryBean data, String strSQL, TemplateLine tl) throws PageException {
-		Struct rtn = new StructImpl(Struct.TYPE_LINKED);
-		Struct args = new StructImpl(Struct.TYPE_LINKED);
+		Struct rtn = new StructImpl(Struct.TYPE_LINKED, 4);
+		Struct args = new StructImpl(Struct.TYPE_LINKED, 32);
 
 		boolean fns = ((PageContextImpl) pc).getFullNullSupport();
 
@@ -905,7 +905,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			set(args, "params", data.params);
 		}
 		else if (data.items != null) {
-			Array params = new ArrayImpl();
+			Array params = new ArrayImpl(data.items.size());
 			Iterator<SQLItem> it = data.items.iterator();
 			SQLItem item;
 			while (it.hasNext()) {
@@ -1051,7 +1051,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 	}
 
 	private static Struct setExecutionTime(PageContext pc, long exe) {
-		Struct sct = new StructImpl();
+		Struct sct = new StructImpl(Struct.TYPE_REGULAR, 2);
 		sct.setEL(KeyConstants._executionTime, Double.valueOf(exe));
 		if (USE_LOCAL_SCOPE && pc.undefinedScope().getCheckArguments()) pc.localScope().setEL(KeyConstants._cfquery, sct);
 		else pc.undefinedScope().setEL(KeyConstants._cfquery, sct);
@@ -1060,14 +1060,14 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 
 	private static Object executeORM(PageContext pageContext, QueryBean data, SQL sql, int returnType, Struct ormoptions) throws PageException {
 		ORMSession session = ORMUtil.getSession(pageContext);
-		if (ormoptions == null) ormoptions = new StructImpl();
+		if (ormoptions == null) ormoptions = new StructImpl(Struct.TYPE_REGULAR, 4);
 		String dsn = null;
 		if (ormoptions != null) dsn = Caster.toString(ormoptions.get(KeyConstants._datasource, null), null);
 		if (StringUtil.isEmpty(dsn, true)) dsn = ORMUtil.getDefaultDataSource(pageContext).getName();
 
 		// params
 		SQLItem[] _items = sql.getItems();
-		Array params = new ArrayImpl();
+		Array params = new ArrayImpl(_items.length);
 		for (int i = 0; i < _items.length; i++) {
 			params.appendEL(_items[i]);
 		}

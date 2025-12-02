@@ -109,7 +109,7 @@ public final class QueryParamConverter {
 	}
 
 	public static Struct toStruct(SQLItem item, boolean fns) {
-		Struct sct = new StructImpl();
+		Struct sct = new StructImpl(Struct.TYPE_REGULAR, 8);
 		if (item instanceof NamedSQLItem) {
 			NamedSQLItem nsi = (NamedSQLItem) item;
 			sct.setEL(KeyConstants._name, nsi.getName());
