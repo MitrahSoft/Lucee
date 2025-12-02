@@ -34,7 +34,6 @@ import lucee.runtime.db.JDBCDriver;
 import lucee.runtime.engine.ExecutionLogFactory;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
-import lucee.runtime.exp.TemplateException;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.extension.RHExtensionProvider;
@@ -330,7 +329,7 @@ public interface ConfigPro extends Config {
 
 	public void putCTInitFile(String key, InitFile initFile);
 
-	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws TemplateException;
+	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws PageException;
 
 	public void putCachedPageSource(String pathWithCFC, PageSource ps);
 

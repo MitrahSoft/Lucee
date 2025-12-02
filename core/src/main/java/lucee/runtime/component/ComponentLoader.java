@@ -256,15 +256,17 @@ public final class ComponentLoader {
 		// CACHE
 		// check local in cache
 		String localCacheName = null;
-		if (searchLocal == null) searchLocal = Caster.toBoolean(rawPath.indexOf('.') == -1 ? true : config.getComponentLocalSearch());
-		if (searchLocal && isRealPath && currPS != null) {
-			localCacheName = currPS.getDisplayPath().replace('\\', '/');
-			localCacheName = localCacheName.substring(0, localCacheName.lastIndexOf('/') + 1).concat(pathWithCFC);
-			if (doCache) {
-				page = config.getCachedPage(pc, localCacheName);
-				if (page != null) {
-					return returnType == RETURN_TYPE_PAGE ? page
-							: load(pc, page, trim(path.replace('/', '.')), sub, isRealPath, returnType, isExtendedComponent, executeConstr, validate);
+		if (isRealPath && currPS != null) {
+			if (searchLocal == null) searchLocal = Caster.toBoolean(rawPath.indexOf('.') == -1 ? true : config.getComponentLocalSearch());
+			if (searchLocal.booleanValue()) {
+				localCacheName = currPS.getDisplayPath().replace('\\', '/');
+				localCacheName = localCacheName.substring(0, localCacheName.lastIndexOf('/') + 1).concat(pathWithCFC);
+				if (doCache) {
+					page = config.getCachedPage(pc, localCacheName);
+					if (page != null) {
+						return returnType == RETURN_TYPE_PAGE ? page
+								: load(pc, page, trim(path.replace('/', '.')), sub, isRealPath, returnType, isExtendedComponent, executeConstr, validate);
+					}
 				}
 			}
 		}

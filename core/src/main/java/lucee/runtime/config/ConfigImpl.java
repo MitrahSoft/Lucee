@@ -109,7 +109,6 @@ import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.SecurityException;
-import lucee.runtime.exp.TemplateException;
 import lucee.runtime.extension.Extension;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.ExtensionProvider;
@@ -4752,7 +4751,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private Map<String, SoftReference<UDF>> udfCache = new ConcurrentHashMap<String, SoftReference<UDF>>();
 
 	@Override
-	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws TemplateException {
+	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws PageException {
 		return componentPathCache.getPage(pc, pathWithCFC);
 	}
 
