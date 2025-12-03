@@ -232,6 +232,14 @@
 		"default": null
 	},
 	{
+		"sysprop": "lucee.debugger.enabled",
+		"envvar": "LUCEE_DEBUGGER_ENABLED",
+		"desc": "Enables debugger stack frame capture for external debuggers (e.g., VS Code DAP). When enabled, Lucee maintains a stack of CFML frames with captured scopes (local, arguments, variables) that external debuggers can inspect. Zero cost when disabled. Requires JVM restart to take effect.",
+		"category": "debugging",
+		"type": "boolean",
+		"default": false
+	},
+	{
 		"sysprop": "lucee.deserializejson.allowempty",
 		"envvar": "LUCEE_DESERIALIZEJSON_ALLOWEMPTY",
 		"desc": "In Lucee 5, an empty string passed into the function deserializeJson will return an empty string back. In Lucee 6, this is no longer accepted and throws an exception. You can simulate the old behavior by setting this environment variable or SysProp to `true`. By setting the log level of the application log to `warn`, you will receive information in the log when the old behavior is used. This allows you to modify your code for the new behavior without encountering runtime issues with the existing code",

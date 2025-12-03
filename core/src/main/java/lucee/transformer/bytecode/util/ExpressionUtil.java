@@ -44,8 +44,8 @@ import lucee.transformer.statement.Statement;
 
 public final class ExpressionUtil {
 
-	public static final Method START = new Method("exeLogStart", Types.VOID, new Type[] { Types.INT_VALUE, Types.STRING });
-	public static final Method END = new Method("exeLogEnd", Types.VOID, new Type[] { Types.INT_VALUE, Types.STRING });
+	public static final Method START = new Method("exeLogStart", Types.VOID, new Type[] { Types.INT_VALUE, Types.INT_VALUE, Types.STRING });
+	public static final Method END = new Method("exeLogEnd", Types.VOID, new Type[] { Types.INT_VALUE, Types.INT_VALUE, Types.STRING });
 
 	public static final Method CURRENT_LINE = new Method("currentLine", Types.VOID, new Type[] { Types.INT_VALUE });
 
@@ -173,6 +173,7 @@ public final class ExpressionUtil {
 			// adapter.checkCast(Types.PAGE_CONTEXT_IMPL);
 			int off = bc.getSourceOffset();
 			adapter.push(pos.pos - off);
+			adapter.push(pos.line);
 			adapter.push(id);
 			adapter.invokeVirtual(Types.PAGE_CONTEXT, method);
 		}

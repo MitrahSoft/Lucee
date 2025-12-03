@@ -981,7 +981,11 @@ public abstract class PageContext extends jakarta.servlet.jsp.PageContext {
 
 	public abstract void exeLogStart(int position, String id);
 
+	public abstract void exeLogStart(int position, int line, String id);
+
 	public abstract void exeLogEnd(int position, String id);
+
+	public abstract void exeLogEnd(int position, int line, String id);
 
 	/**
 	 * sets state of cfoutput only

@@ -338,6 +338,11 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 			if (ps != null) pci.addPageSource(ps, psInc);
 			pci.addUDF(this);
 
+			// Debugger frame support - capture scopes for external debuggers
+			if (PageContextImpl.DEBUGGER_ENABLED) {
+				pci.pushDebuggerFrame(newLocal, newArgs, pc.variablesScope(), ps, getFunctionName());
+			}
+
 			//////////////////////////////////////////
 			BodyContent bc = null;
 			Boolean wasSilent = null;
@@ -389,6 +394,10 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 		}
 		finally {
 			if (ps != null) pc.removeLastPageSource(psInc != null);
+			// Debugger frame support - pop before removeUDF to maintain consistency
+			if (PageContextImpl.DEBUGGER_ENABLED) {
+				pci.popDebuggerFrame();
+			}
 			pci.removeUDF();
 			pci.setFunctionScopes(oldLocal, oldArgs);
 			pci.setActiveUDFCalledName(oldCalledName);

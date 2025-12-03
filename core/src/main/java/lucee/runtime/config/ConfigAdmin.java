@@ -5044,6 +5044,11 @@ public final class ConfigAdmin {
 						filter.add("resetStartups");
 						reloadNecessary = true;
 						logger.info("extension", "Update Startup Hook [" + cfc + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
+					} 
+					// neither valid class nor component - log error
+					else {
+						logger.error("extension", "Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion()
+								+ "] could not be registered: class definition [" + cd + "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
 					}
 					// neither valid class nor component - log error
 					else {
@@ -5180,7 +5185,7 @@ public final class ConfigAdmin {
 			reloadNecessary = true;
 			storeAndReload(false, true, reload && reloadNecessary, false);
 
-			// Trigger startup hooks if they were added/updated
+			// Trigger startup hooks if they were added/updated (LDEV-5955)
 			if (filter.allow("resetStartups")) {
 				((ConfigImpl) config).resetStartups().getStartups();
 			}

@@ -109,6 +109,8 @@ import lucee.runtime.debug.DebugCFMLWriter;
 import lucee.runtime.debug.DebugEntryTemplate;
 import lucee.runtime.debug.Debugger;
 import lucee.runtime.debug.DebuggerImpl;
+import lucee.runtime.debug.DebuggerListener;
+import lucee.runtime.debug.DebuggerRegistry;
 import lucee.runtime.dump.DumpUtil;
 import lucee.runtime.dump.DumpWriter;
 import lucee.runtime.engine.ExecutionLog;
@@ -238,6 +240,12 @@ public final class PageContextImpl extends PageContext {
 	private static final boolean JAVA_SETTING_CLASSIC_MODE = false;
 	private static int counter = 0;
 	private static final boolean LINKED_REQUEST = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.request.linked", null), true);
+
+	/**
+	 * Debugger stack frame support - captures CFML call stack with scopes for external debuggers.
+	 * Zero cost when disabled (default). Enable via -Dlucee.debugger.enabled=true
+	 */
+	public static final boolean DEBUGGER_ENABLED = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
 
 	/**
 	 * Field <code>pathList</code>
@@ -568,6 +576,12 @@ public final class PageContextImpl extends PageContext {
 		}
 		fdEnabled = !config.allowRequestTimeout();
 		if (config.getExecutionLogEnabled()) this.execLog = config.getExecutionLogFactory().getInstance(this);
+		// When debugger is enabled, use DebuggerExecutionLog for line tracking
+		else if (DEBUGGER_ENABLED) {
+			lucee.runtime.engine.DebuggerExecutionLog debugExecLog = new lucee.runtime.engine.DebuggerExecutionLog();
+			debugExecLog.init(this, new java.util.HashMap<>());
+			this.execLog = debugExecLog;
+		}
 		if (debugger != null) debugger.init(config);
 		if (clone) {
 			((UndefinedImpl) undefined).initialize(this, tmplPC.getScopeCascadingType(), tmplPC.hasDebugOptions(ConfigPro.DEBUG_IMPLICIT_ACCESS));
@@ -3491,6 +3505,176 @@ public final class PageContextImpl extends PageContext {
 		if (!udfs.isEmpty()) udfs.removeLast();
 	}
 
+	// ==================== Debugger Stack Frame Support ====================
+
+	/**
+	 * Represents a captured CFML stack frame for external debugger inspection.
+	 * Stores references to scopes at the time of function entry so debuggers can
+	 * inspect variables in any frame, not just the current one.
+	 */
+	public static final class DebuggerFrame {
+		public final lucee.runtime.type.scope.Local local;
+		public final lucee.runtime.type.scope.Argument arguments;
+		public final lucee.runtime.type.scope.Variables variables;
+		public final PageSource pageSource;
+		public final String functionName;
+		private volatile int line;
+
+		DebuggerFrame(lucee.runtime.type.scope.Local local, lucee.runtime.type.scope.Argument arguments,
+					lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName) {
+			this.local = local;
+			this.arguments = arguments;
+			this.variables = variables;
+			this.pageSource = pageSource;
+			this.functionName = functionName;
+			this.line = 0;
+		}
+
+		public int getLine() { return line; }
+		public void setLine(int line) { this.line = line; }
+		public String getFile() { return pageSource != null ? pageSource.getDisplayPath() : null; }
+	}
+
+	private final LinkedList<DebuggerFrame> debuggerFrames = DEBUGGER_ENABLED ? new LinkedList<DebuggerFrame>() : null;
+
+	/**
+	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER_ENABLED.
+	 */
+	public void pushDebuggerFrame(lucee.runtime.type.scope.Local local, lucee.runtime.type.scope.Argument arguments,
+								lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName) {
+		if (debuggerFrames != null) {
+			debuggerFrames.add(new DebuggerFrame(local, arguments, variables, pageSource, functionName));
+		}
+	}
+
+	/**
+	 * Pop the topmost debugger frame. Called on UDF exit when DEBUGGER_ENABLED.
+	 */
+	public void popDebuggerFrame() {
+		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
+			debuggerFrames.removeLast();
+		}
+	}
+
+	/**
+	 * Get all debugger frames for the current call stack.
+	 * Returns null if debugger is not enabled.
+	 */
+	public DebuggerFrame[] getDebuggerFrames() {
+		if (debuggerFrames == null) return null;
+		return debuggerFrames.toArray(new DebuggerFrame[0]);
+	}
+
+	/**
+	 * Update the line number of the topmost debugger frame.
+	 * Called on each CFML line when stepping/breakpoints are active.
+	 */
+	public void setDebuggerLine(int line) {
+		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
+			debuggerFrames.getLast().setLine(line);
+		}
+	}
+
+	/**
+	 * Get the topmost debugger frame, or null if none.
+	 */
+	public DebuggerFrame getTopmostDebuggerFrame() {
+		if (debuggerFrames == null || debuggerFrames.isEmpty()) return null;
+		return debuggerFrames.getLast();
+	}
+
+	// Debugger suspension support
+	private volatile boolean debuggerSuspended = false;
+	private volatile String debuggerSuspendLabel = null;
+	private final Object debuggerSuspendLock = new Object();
+	private long debuggerSuspendStartNano = 0;
+	private long debuggerTotalSuspendedNanos = 0;
+
+	/**
+	 * Suspend execution for debugger. Call from breakpoint() BIF or when hitting a breakpoint.
+	 * Thread will wait until debuggerResume() is called.
+	 * @param label Optional label to identify the breakpoint in debugger UI
+	 */
+	public void debuggerSuspend(String label) {
+		if (!DEBUGGER_ENABLED) return;
+
+		// Get current file/line for listener callback
+		DebuggerFrame frame = getTopmostDebuggerFrame();
+		String file = null;
+		int line = 0;
+		if (frame != null) {
+			file = frame.getFile();
+			line = frame.getLine();
+		}
+
+		debuggerSuspendLabel = label;
+		debuggerSuspended = true;
+		debuggerSuspendStartNano = System.nanoTime();
+
+		// Notify listener before blocking
+		DebuggerListener listener = DebuggerRegistry.getListener();
+		if (listener != null) {
+			listener.onSuspend(this, file, line, label);
+		}
+
+		synchronized (debuggerSuspendLock) {
+			while (debuggerSuspended) {
+				try {
+					debuggerSuspendLock.wait();
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			}
+		}
+		debuggerTotalSuspendedNanos += System.nanoTime() - debuggerSuspendStartNano;
+		debuggerSuspendLabel = null;
+
+		// Notify listener after resuming
+		if (listener != null) {
+			listener.onResume(this);
+		}
+	}
+
+	/**
+	 * Resume execution after debugger suspension.
+	 */
+	public void debuggerResume() {
+		debuggerSuspended = false;
+		synchronized (debuggerSuspendLock) {
+			debuggerSuspendLock.notify();
+		}
+	}
+
+	/**
+	 * Check if this PageContext is currently suspended.
+	 */
+	public boolean isDebuggerSuspended() {
+		return debuggerSuspended;
+	}
+
+	/**
+	 * Get the label of the current suspension point, or null.
+	 */
+	public String getDebuggerSuspendLabel() {
+		return debuggerSuspendLabel;
+	}
+
+	/**
+	 * Get total time spent suspended (for adjusting request timeouts).
+	 */
+	public long getDebuggerTotalSuspendedNanos() {
+		return debuggerTotalSuspendedNanos;
+	}
+
+	// ==================== End Debugger Stack Frame Support ====================
+
+	public FTPPoolImpl getFTPPool() {
+		if (ftpPool == null) ftpPool = new FTPPoolImpl();
+		return ftpPool;
+	}
+
 	/*
 	 * *
 	 * 
@@ -3938,8 +4122,18 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	@Override
+	public void exeLogStart(int position, int line, String id) {
+		if (execLog != null) execLog.start(position, line, id);
+	}
+
+	@Override
 	public void exeLogEnd(int position, String id) {
 		if (execLog != null) execLog.end(position, id);
+	}
+
+	@Override
+	public void exeLogEnd(int position, int line, String id) {
+		if (execLog != null) execLog.end(position, line, id);
 	}
 
 	public ExecutionLog getExecutionLog() {
