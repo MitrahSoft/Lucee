@@ -37,11 +37,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URL;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,6 +66,10 @@ import lucee.runtime.reflection.Reflector;
 public final class IOUtil {
 
 	private static final int DEFAULT_BLOCK_SIZE = 0xffff;// 65535
+
+	// ThreadLocal buffer pools to avoid repeated allocations in hot paths
+	private static final ThreadLocal<byte[]> BYTE_ARRAY_POOL = ThreadLocal.withInitial( () -> new byte[DEFAULT_BLOCK_SIZE] );
+	private static final ThreadLocal<char[]> CHAR_BUFFER_POOL = ThreadLocal.withInitial( () -> new char[DEFAULT_BLOCK_SIZE] );
 
 	/**
 	 * copy an inputstream to an outputstream
@@ -326,24 +326,18 @@ public final class IOUtil {
 	 * @throws IOException If an I/O error occurs during the copy operation.
 	 */
 	private static final void copy(InputStream in, OutputStream out, int blockSize) throws IOException {
-		// Creating channels from the input and output streams
-		ReadableByteChannel sourceChannel = Channels.newChannel(in);
-		WritableByteChannel destChannel = Channels.newChannel(out);
+		// Use pooled buffer for default block size, otherwise allocate
+		byte[] buffer;
+		if ( blockSize == DEFAULT_BLOCK_SIZE ) {
+			buffer = BYTE_ARRAY_POOL.get();
+		}
+		else {
+			buffer = new byte[blockSize];
+		}
 
-		// Allocate a ByteBuffer of the given block size
-		ByteBuffer buffer = ByteBuffer.allocate(blockSize);
-
-		// Read from the source channel into the buffer, and then write from the buffer to the destination
-		// channel
-		while (sourceChannel.read(buffer) != -1) {
-			// Flip the buffer to prepare for writing
-			buffer.flip();
-
-			// Write to the destination channel
-			destChannel.write(buffer);
-
-			// Clear the buffer for the next read
-			buffer.clear();
+		int len;
+		while ( ( len = in.read( buffer ) ) != -1 ) {
+			out.write( buffer, 0, len );
 		}
 	}
 
@@ -356,7 +350,7 @@ public final class IOUtil {
 	 * @throws IOException
 	 */
 	public static final boolean copyMax(InputStream in, OutputStream out, long max) throws IOException {
-		byte[] buffer = new byte[DEFAULT_BLOCK_SIZE];
+		byte[] buffer = BYTE_ARRAY_POOL.get();
 		int len;
 		long total = 0;
 		while ((len = in.read(buffer)) != -1) {
@@ -418,7 +412,14 @@ public final class IOUtil {
 	 */
 	private static final void copy(Reader r, Writer w, int blockSize, long timeout) throws IOException {
 		if (timeout < 1) {
-			char[] buffer = new char[blockSize];
+			// Use pooled buffer for default block size, otherwise allocate
+			char[] buffer;
+			if ( blockSize == DEFAULT_BLOCK_SIZE ) {
+				buffer = CHAR_BUFFER_POOL.get();
+			}
+			else {
+				buffer = new char[blockSize];
+			}
 			int len;
 
 			while ((len = r.read(buffer)) != -1)
