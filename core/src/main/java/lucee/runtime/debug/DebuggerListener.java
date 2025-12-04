@@ -11,6 +11,15 @@ import lucee.runtime.PageContext;
 public interface DebuggerListener {
 
 	/**
+	 * Check if the debugger is actively connected and ready to handle breakpoints.
+	 * Returns false if the listener is registered but no debugger client is attached.
+	 * Used by breakpoint() BIF to avoid suspending when no client can resume.
+	 *
+	 * @return true if a debugger client is connected and ready
+	 */
+	boolean isActive();
+
+	/**
 	 * Called when a thread is about to suspend (before blocking).
 	 * This is called on the suspended thread's stack, so the debugger should
 	 * quickly record state and return - the thread will block after this returns.
@@ -42,4 +51,18 @@ public interface DebuggerListener {
 	 * @return true if execution should suspend at this location
 	 */
 	boolean shouldSuspend(PageContext pc, String file, int line);
+
+	/**
+	 * Called when an exception is about to be handled.
+	 * The debugger can choose to suspend execution to allow inspection.
+	 *
+	 * @param pc The PageContext where the exception occurred
+	 * @param exception The exception that was thrown
+	 * @param caught true if this exception will be caught (by try/catch or error handler),
+	 *               false if it's an uncaught exception that will terminate the request
+	 * @return true if the debugger wants to suspend execution at this point
+	 */
+	default boolean onException(PageContext pc, Throwable exception, boolean caught) {
+		return false; // default: don't suspend
+	}
 }

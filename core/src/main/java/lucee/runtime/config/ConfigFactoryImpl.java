@@ -121,6 +121,7 @@ import lucee.runtime.dump.TextDumpWriter;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ConsoleExecutionLog;
 import lucee.runtime.engine.DebugExecutionLog;
+import lucee.runtime.engine.DebuggerExecutionLog;
 import lucee.runtime.engine.ExecutionLog;
 import lucee.runtime.engine.ExecutionLogFactory;
 import lucee.runtime.engine.InfoImpl;
@@ -1593,6 +1594,12 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// class
 			String strClass = getAttr(config, el, "class");
 			Class clazz;
+
+			// If debugger enabled and no explicit class configured, use DebuggerExecutionLog
+			if (StringUtil.isEmpty(strClass) && ConfigImpl.DEBUGGER_ENABLED) {
+				return new ExecutionLogFactory(DebuggerExecutionLog.class, new HashMap<String, String>());
+			}
+
 			if (!StringUtil.isEmpty(strClass)) {
 				try {
 					if ("console".equalsIgnoreCase(strClass)) clazz = ConsoleExecutionLog.class;

@@ -1191,8 +1191,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 						// print.e("mas-done:"+System.currentTimeMillis());
 						break;
 					}
-					// reach request timeout
-					else if (ended == -1 && (pc.getStartTime() + pc.getRequestTimeout()) < System.currentTimeMillis()) {
+					// reach request timeout (adjusted for debugger suspend time)
+					else if (ended == -1 && (pc.getStartTime() + pc.getRequestTimeout() + pc.getDebuggerTotalSuspendedMillis()) < System.currentTimeMillis()) {
 						// print.e("req-time:"+System.currentTimeMillis());
 						CFMLFactoryImpl.terminate(pc, false);
 						ended = System.currentTimeMillis();

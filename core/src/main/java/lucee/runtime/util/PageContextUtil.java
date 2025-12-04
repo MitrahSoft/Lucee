@@ -224,7 +224,9 @@ public final class PageContextUtil {
 	}
 
 	public static TimeSpan remainingTime(PageContext pc, boolean throwWhenAlreadyTimeout) throws RequestTimeoutException {
-		long ms = pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime());
+		// Account for debugger suspend time when calculating remaining timeout
+		long suspendedMillis = (pc instanceof PageContextImpl) ? ((PageContextImpl) pc).getDebuggerTotalSuspendedMillis() : 0;
+		long ms = pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime() - suspendedMillis);
 		if (ms > 0) {
 			if (ms < 5) {
 			}
@@ -243,7 +245,9 @@ public final class PageContextUtil {
 	}
 
 	public static void checkRequestTimeout(PageContext pc) throws RequestTimeoutException {
-		if ((pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime()) > 0) || ((PageContextImpl) pc).getTimeoutStackTrace() != null) return;
+		// Account for debugger suspend time when checking timeout
+		long suspendedMillis = (pc instanceof PageContextImpl) ? ((PageContextImpl) pc).getDebuggerTotalSuspendedMillis() : 0;
+		if ((pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime() - suspendedMillis) > 0) || ((PageContextImpl) pc).getTimeoutStackTrace() != null) return;
 		if (allowRequestTimeout(pc)) throw CFMLFactoryImpl.createRequestTimeoutException(pc);
 	}
 

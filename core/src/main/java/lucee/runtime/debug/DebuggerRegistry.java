@@ -45,4 +45,16 @@ public final class DebuggerRegistry {
 	public static boolean hasListener() {
 		return listener != null;
 	}
+
+	/**
+	 * Check if a debugger is actively connected and ready to handle breakpoints.
+	 * Returns false if no listener is registered, or if the listener is registered
+	 * but no debugger client is attached.
+	 *
+	 * @return true if a debugger client is connected and ready
+	 */
+	public static boolean isActive() {
+		DebuggerListener l = listener;
+		return l != null && l.isActive();
+	}
 }

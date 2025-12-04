@@ -91,6 +91,7 @@ import lucee.runtime.cache.tag.CacheItem;
 import lucee.runtime.cache.tag.include.IncludeCacheItem;
 import lucee.runtime.component.ComponentLoader;
 import lucee.runtime.config.Config;
+import lucee.runtime.config.ConfigImpl;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.ConfigWeb;
@@ -127,6 +128,7 @@ import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.MissingIncludeException;
 import lucee.runtime.exp.NoLongerSupported;
 import lucee.runtime.exp.PageException;
+import lucee.runtime.exp.PageExceptionImpl;
 import lucee.runtime.exp.PageExceptionBox;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.PageServletException;
@@ -240,12 +242,6 @@ public final class PageContextImpl extends PageContext {
 	private static final boolean JAVA_SETTING_CLASSIC_MODE = false;
 	private static int counter = 0;
 	private static final boolean LINKED_REQUEST = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.request.linked", null), true);
-
-	/**
-	 * Debugger stack frame support - captures CFML call stack with scopes for external debuggers.
-	 * Zero cost when disabled (default). Enable via -Dlucee.debugger.enabled=true
-	 */
-	public static final boolean DEBUGGER_ENABLED = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
 
 	/**
 	 * Field <code>pathList</code>
@@ -576,12 +572,6 @@ public final class PageContextImpl extends PageContext {
 		}
 		fdEnabled = !config.allowRequestTimeout();
 		if (config.getExecutionLogEnabled()) this.execLog = config.getExecutionLogFactory().getInstance(this);
-		// When debugger is enabled, use DebuggerExecutionLog for line tracking
-		else if (DEBUGGER_ENABLED) {
-			lucee.runtime.engine.DebuggerExecutionLog debugExecLog = new lucee.runtime.engine.DebuggerExecutionLog();
-			debugExecLog.init(this, new java.util.HashMap<>());
-			this.execLog = debugExecLog;
-		}
 		if (debugger != null) debugger.init(config);
 		if (clone) {
 			((UndefinedImpl) undefined).initialize(this, tmplPC.getScopeCascadingType(), tmplPC.hasDebugOptions(ConfigPro.DEBUG_IMPLICIT_ACCESS));
@@ -2350,6 +2340,28 @@ public final class PageContextImpl extends PageContext {
 
 	public void handlePageException(final PageException pe, boolean setHeader) {
 		if (!Abort.isSilentAbort(pe)) {
+			// Notify debugger of uncaught exception - allow it to suspend
+			if (ConfigImpl.DEBUGGER_ENABLED) {
+				DebuggerListener listener = DebuggerRegistry.getListener();
+				if (listener != null && listener.onException(this, pe, false)) {
+					// Get file/line from exception for debugger display
+					String file = null;
+					int line = 0;
+					if (pe instanceof PageExceptionImpl) {
+						PageExceptionImpl pei = (PageExceptionImpl) pe;
+						file = pei.getFile(getConfig());
+						try {
+							String lineStr = pei.getLine(getConfig());
+							if (lineStr != null && !lineStr.isEmpty()) {
+								line = Integer.parseInt(lineStr);
+							}
+						} catch (NumberFormatException ignored) {}
+					}
+					// Debugger wants to suspend - do it now before handling the exception
+					debuggerSuspend(file, line, "Uncaught exception: " + pe.getClass().getSimpleName());
+				}
+			}
+
 			// if(requestTimeoutException!=null)
 			// pe=Caster.toPageException(requestTimeoutException);
 
@@ -3535,7 +3547,7 @@ public final class PageContextImpl extends PageContext {
 		public String getFile() { return pageSource != null ? pageSource.getDisplayPath() : null; }
 	}
 
-	private final LinkedList<DebuggerFrame> debuggerFrames = DEBUGGER_ENABLED ? new LinkedList<DebuggerFrame>() : null;
+	private final LinkedList<DebuggerFrame> debuggerFrames = ConfigImpl.DEBUGGER_ENABLED ? new LinkedList<DebuggerFrame>() : null;
 
 	/**
 	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER_ENABLED.
@@ -3596,7 +3608,7 @@ public final class PageContextImpl extends PageContext {
 	 * @param label Optional label to identify the breakpoint in debugger UI
 	 */
 	public void debuggerSuspend(String label) {
-		if (!DEBUGGER_ENABLED) return;
+		if (!ConfigImpl.DEBUGGER_ENABLED) return;
 
 		// Get current file/line for listener callback
 		DebuggerFrame frame = getTopmostDebuggerFrame();
@@ -3606,7 +3618,39 @@ public final class PageContextImpl extends PageContext {
 			file = frame.getFile();
 			line = frame.getLine();
 		}
+		else {
+			// Top-level code (outside functions) - try ExecutionLog's thread-local first
+			file = lucee.runtime.engine.DebuggerExecutionLog.getCurrentFile();
+			line = lucee.runtime.engine.DebuggerExecutionLog.getCurrentLine();
 
+			// Fall back to page source for file if thread-local not set
+			if (file == null) {
+				PageSource ps = getCurrentPageSource(null);
+				if (ps != null) {
+					lucee.commons.io.res.Resource res = ps.getPhyscalFile();
+					if (res != null) {
+						file = res.getAbsolutePath();
+					}
+				}
+			}
+		}
+
+		debuggerSuspendImpl(file, line, label);
+	}
+
+	/**
+	 * Suspend execution for debugger with explicit file and line.
+	 * Used by DebuggerExecutionLog which already knows the current location.
+	 * @param file Source file path
+	 * @param line Line number
+	 * @param label Optional label to identify the breakpoint in debugger UI
+	 */
+	public void debuggerSuspend(String file, int line, String label) {
+		if (!ConfigImpl.DEBUGGER_ENABLED) return;
+		debuggerSuspendImpl(file, line, label);
+	}
+
+	private void debuggerSuspendImpl(String file, int line, String label) {
 		debuggerSuspendLabel = label;
 		debuggerSuspended = true;
 		debuggerSuspendStartNano = System.nanoTime();
@@ -3666,6 +3710,19 @@ public final class PageContextImpl extends PageContext {
 	 */
 	public long getDebuggerTotalSuspendedNanos() {
 		return debuggerTotalSuspendedNanos;
+	}
+
+	/**
+	 * Get total time spent suspended in milliseconds, including current suspend if active.
+	 * Used for adjusting request timeout calculations.
+	 */
+	public long getDebuggerTotalSuspendedMillis() {
+		long total = debuggerTotalSuspendedNanos;
+		// If currently suspended, add the time since suspend started
+		if (debuggerSuspended && debuggerSuspendStartNano > 0) {
+			total += System.nanoTime() - debuggerSuspendStartNano;
+		}
+		return total / 1_000_000; // Convert nanos to millis
 	}
 
 	// ==================== End Debugger Stack Frame Support ====================

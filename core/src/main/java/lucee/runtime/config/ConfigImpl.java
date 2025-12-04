@@ -179,6 +179,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static final RHExtension[] RHEXTENSIONS_EMPTY = new RHExtension[0];
 
+	// Debugger enabled via env var - enables execution logging for bytecode hooks
+	public static final boolean DEBUGGER_ENABLED = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
+
 	private Integer mode;
 	private static final double DEFAULT_VERSION = 5.0d;
 	private static final long CACHE_DIR_SIZE_DEFAULT = 1024L * 1024L * 100L;
@@ -4613,6 +4616,8 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean getExecutionLogEnabled() {
+		if (DEBUGGER_ENABLED) return true;
+
 		if (executionLogEnabled == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getExecutionLogEnabled")) {
 				if (executionLogEnabled == null) {
