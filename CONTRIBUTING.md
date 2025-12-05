@@ -26,7 +26,7 @@ Please read our docs on working with the Lucee source code: https://docs.lucee.o
 
 # Branch Status
 
-6.0 is the active development branch, any new cool stuff should be done against this branch
+7.0 is the active development branch, any new cool stuff should be done against this branch
 
 5.4 is our LTS branch, mainly only bugfixes
 

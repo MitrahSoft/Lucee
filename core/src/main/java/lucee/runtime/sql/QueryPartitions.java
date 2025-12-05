@@ -29,7 +29,9 @@ import lucee.commons.digest.MD5;
 import lucee.runtime.PageContext;
 import lucee.runtime.db.QoQ;
 import lucee.runtime.db.SQL;
+import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.exp.DatabaseException;
+import lucee.runtime.exp.IllegalQoQException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.sql.exp.ColumnExpression;
@@ -165,8 +167,15 @@ public final class QueryPartitions {
 				// A column expressions is set by column Key
 				else if (columns[cell] instanceof ColumnExpression) {
 					ColumnExpression ce = (ColumnExpression) columns[cell];
-
-					targetPartition.setAt(columnKeys[cell], newRow, ce.getValue(pc, source, row, null), true);
+					try {
+						targetPartition.setAt(columnKeys[cell], newRow, ce.getValue(pc, source, row, null), true);
+					}
+					catch (DatabaseException e) {
+						// Wrap as IllegalQoQException to prevent fallback to HSQLDB
+						IllegalQoQException iqe = new IllegalQoQException(e.getMessage(), e.getDetail(), sql, null);
+						ExceptionUtil.initCauseEL(iqe, e);
+						throw iqe;
+					}
 				}
 
 			}

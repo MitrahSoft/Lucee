@@ -89,6 +89,11 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
 		setOwnerComponent(owner);
 	}
 
+	@Override
+	protected final int hash() {
+		return java.util.Objects.hash(getFunctionName(), getPageSource());
+	}
+
 	public UDF duplicate(Component cfc) {
 		UDFImpl udf = new UDFImpl(properties);
 		udf.ownerComponent = cfc;

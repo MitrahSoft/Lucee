@@ -461,8 +461,7 @@
       "upDown": "Update / Downgrade / Uninstall",
       "upDownDesc": "Update or downgrade your already installed version.",
       "upload": "upload",
-      "uploadextension": "Upload new extension
-      ",
+      "uploadextension": "Upload new extension",
       "uploadextensiondesc": "If you downloaded an extension, you can add the extension here.",
       "version": "Version",
       "viewdetails": "View details"
@@ -662,6 +661,9 @@
       "compilestoponerror": "Stop on error",
       "compilestoponerrordesc": "Sets whether the compile process should be aborted on errors",
       "compiletitle": "compile",
+      "compileErrorsTitle": "Compilation Errors",
+      "compileErrorsIntro": "The following errors occurred whilst {context}. Please fix these errors and try again.",
+      "compileErrorsDesc": "The following compilation errors occurred. Please fix these errors and try again.",
       "editdesc": "Here you can edit a certain mapping or create a Lucee archive out of an existing one.",
       "introtext": "Please note that only pages processed by Lucee are aware of these mappings (cfm, cfml, cfc). If you want to use files not processed by Lucee for these special mapping directories, you have to add virtual mappings to these directories to your application server.",
       "physical": "Resource",
@@ -1357,8 +1359,11 @@
         "short": {
           "pre_release": "Pre Releases",
           "release": "Releases",
-          "snapshot": "Snapshots"
+          "snapshot": "Snapshots",
+          "alpha": "Alphas"
         },
+        "alpha": "Alpha",
+        "alphaDesc": "Alpha versions are early development builds that may contain incomplete features or bugs. They are NOT recommended for production environments.",
         "snapShot": "SnapShots",
         "snapShotDesc": "Snapshots are generated automatically with every push to the repository, when all bundled test cases pass successfully. Snapshots are NOT recommended for production environments.",
         "titleDesc": "Upgrade or Downgrade the version by selecting from the drop-down box below.",

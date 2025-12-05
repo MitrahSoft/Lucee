@@ -100,7 +100,6 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 					archive=""
 					primary="physical"
 					trusted="no";
-			  
 				var after=arrayLen(c.getMappings());
 				var has=false;
 				loop array=c.getMappings() item="local.mapping" {
@@ -112,7 +111,41 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 				expect(before+1==after).toBeTrue();
 			});
 
+			it( title='test mappings via admin API', body=function( currentSpec ) {
+				admin
+					action="getMappings"
+					type="web"
+					password="#request.WEBADMINPASSWORD#"
+					returnVariable="local.mappingsBefore";
+				var before=mappingsBefore.recordCount;
 
+				var virtual="/testMappings"&createUniqueID();
+				admin
+					action="updateMapping"
+					type="web"
+					password="#request.WEBADMINPASSWORD#"
+					virtual=virtual
+					physical="#getDirectoryFromPath(getCurrentTemplatePath())#"
+					toplevel="true"
+					archive=""
+					primary="physical"
+					trusted="no";
+
+				admin
+					action="getMappings"
+					type="web"
+					password="#request.WEBADMINPASSWORD#"
+					returnVariable="local.mappingsAfter";
+				var after=mappingsAfter.recordCount;
+
+				var has=false;
+				loop query=mappingsAfter {
+					if( virtual==mappingsAfter.virtual ) has=true;
+				}
+
+				expect( has ).toBeTrue();
+				expect( before+1==after ).toBeTrue();
+			});
 
 
 		});

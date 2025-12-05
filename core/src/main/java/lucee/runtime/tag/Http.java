@@ -43,7 +43,9 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.config.RequestConfig.Builder;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPatch;
@@ -68,6 +70,7 @@ import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
@@ -840,17 +843,43 @@ public final class Http extends BodyTagImpl {
 			HttpEntityEnclosingRequest eeReqPost = null;
 			HttpEntityEnclosingRequest eeReq = null;
 
+			// Note: We need to determine if GET/DELETE will have a body by checking params
+			// If no body is needed, use standard HttpGet/HttpDelete for better server compatibility
+			// Some servers (like Cloudflare) refuse compression for non-standard GET requests with body support
+			boolean needsBodyForGet = false;
+			boolean needsBodyForDelete = false;
+
+			// Check if any params require a body for GET/DELETE
+			for (int i = 0; i < len; i++) {
+				HttpParamBean param = this.params.get(i);
+				int type = param.getType();
+				if (type == HttpParamBean.TYPE_XML || type == HttpParamBean.TYPE_BODY) {
+					if (this.method == METHOD_GET) needsBodyForGet = true;
+					if (this.method == METHOD_DELETE) needsBodyForDelete = true;
+				}
+			}
+
 			if (this.method == METHOD_GET) {
-				req = new HttpGetWithBody(url);
-				eeReq = (HttpEntityEnclosingRequest) req;
+				if (needsBodyForGet) {
+					req = new HttpGetWithBody(url);
+					eeReq = (HttpEntityEnclosingRequest) req;
+				}
+				else {
+					req = new HttpGet(url);
+				}
 			}
 			else if (this.method == METHOD_HEAD) {
 				req = new HttpHead(url);
 			}
 			else if (this.method == METHOD_DELETE) {
 				isBinary = true;
-				req = new HttpDeleteWithBody(url);
-				eeReq = (HttpEntityEnclosingRequest) req;
+				if (needsBodyForDelete) {
+					req = new HttpDeleteWithBody(url);
+					eeReq = (HttpEntityEnclosingRequest) req;
+				}
+				else {
+					req = new HttpDelete(url);
+				}
 			}
 			else if (this.method == METHOD_PUT) {
 				isBinary = true;
@@ -1649,12 +1678,13 @@ public final class Http extends BodyTagImpl {
 		Log log = ThreadLocalPageContext.getLog(pc, "http");
 		if (log == null) log = ThreadLocalPageContext.getLog(pc, "application");
 		if (log != null) {
-			String msg = "httpRequest [" + method + "] to [" + url + "], returned [" + data.get(STATUSCODE) + "] in " + (executionTimeNS / 1000000) + "ms, "
-					+ (cached ? "(cached response)" : "") + " at " + CallStackGet.call(pc, "text");
+			if (t != null || LogUtil.doesInfo(log)) {
+				String msg = "httpRequest [" + method + "] to [" + url + "], returned [" + data.get(STATUSCODE) + "] in " + (executionTimeNS / 1000000) + "ms, "
+						+ (cached ? "(cached response)" : "") + " at " + CallStackGet.call(pc, "text");
 
-			if (t != null) log.error("cfhttp", msg, t);
-			else log.info("cfhttp", msg);
-
+				if (t != null) log.error("cfhttp", msg, t);
+				else log.info("cfhttp", msg);
+			}
 		}
 	}
 

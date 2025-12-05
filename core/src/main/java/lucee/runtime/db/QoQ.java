@@ -915,6 +915,25 @@ public final class QoQ {
 
 			// if(op.equals("=") || op.equals("in")) return executeEQ(pc,sql,qr,expression,row);
 
+			// Handle convert() specially - the second operand is a type name, not a column to evaluate
+			if (op.equals("convert")) {
+				Object left = executeExp(pc, sql, source, operators[0], row);
+				String typeName;
+				// If the user does convert( col1, 'string' ) it will be a ValueExpression and we can use it
+				// directly;
+				// If the user does convert( col1, string ) it will be a ColumnExpression and we just want to use the
+				// column name ("string" in this case).
+				// convert() is the binary version of the unary operator cast()
+				// i.e. convert( col1, string ) is the same as cast( col1 as string )
+				if (operators[1] instanceof ColumnExpression) {
+					typeName = ((ColumnExpression) operators[1]).getColumnName();
+				}
+				else {
+					typeName = Caster.toString(executeExp(pc, sql, source, operators[1], row));
+				}
+				return executeCast(pc, left, typeName);
+			}
+
 			Object left = executeExp(pc, sql, source, operators[0], row);
 			Object right = executeExp(pc, sql, source, operators[1], row);
 
@@ -931,18 +950,6 @@ public final class QoQ {
 				if (op.equals("concat")) return Caster.toString(left).concat(Caster.toString(right));
 				if (op.equals("count")) return executeCount(pc, sql, source, operators);
 				if (op.equals("coalesce")) return executeCoalesce(pc, sql, source, operators, row);
-				if (op.equals("convert")) {
-					// If the user does convert( col1, 'string' ) it will be a ValueExpression and we can use it
-					// directly;
-					// If the user does convert( col1, string ) it will be a ColumnExpressin and we just want to use the
-					// column name ("string" in this case).
-					// convert() is the binary version of the unary operator cast()
-					// i.e. convert( col1, string ) is the same as cast( col1 as string )
-					if (operators[1] instanceof ColumnExpression) {
-						right = ((ColumnExpression) operators[1]).getColumnName();
-					}
-					return executeCast(pc, left, Caster.toString(right));
-				}
 				break;
 			case 'i':
 				if (op.equals("isnull")) return executeCoalesce(pc, sql, source, operators, row);
@@ -1468,7 +1475,18 @@ public final class QoQ {
 	 * @throws PageException
 	 */
 	private Object executeColumn(PageContext pc, SQL sql, QueryImpl source, Column column, int row) throws PageException {
-		return executeColumn(pc, sql, source, column, row, null);
+		if (column.isParam()) {
+			return executeColumn(pc, sql, source, column, row, null);
+		}
+		try {
+			return column.getValue(pc, source, row);
+		}
+		catch (DatabaseException e) {
+			// Wrap as IllegalQoQException to prevent fallback to HSQLDB
+			IllegalQoQException iqe = new IllegalQoQException(e.getMessage(), e.getDetail(), sql, null);
+			ExceptionUtil.initCauseEL(iqe, e);
+			throw iqe;
+		}
 	}
 
 	private Object executeColumn(PageContext pc, SQL sql, QueryImpl source, Column column, int row, Object defaultValue) throws PageException {
@@ -1496,7 +1514,15 @@ public final class QoQ {
 				}
 			}
 		}
-		return column.getValue(pc, source, row, defaultValue);
+		try {
+			return column.getValue(pc, source, row, defaultValue);
+		}
+		catch (DatabaseException e) {
+			// Wrap as IllegalQoQException to prevent fallback to HSQLDB
+			IllegalQoQException iqe = new IllegalQoQException(e.getMessage(), e.getDetail(), sql, null);
+			ExceptionUtil.initCauseEL(iqe, e);
+			throw iqe;
+		}
 	}
 
 	// Helpers for exceptions in Lambdas

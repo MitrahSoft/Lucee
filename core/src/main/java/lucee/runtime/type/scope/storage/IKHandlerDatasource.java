@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
@@ -61,22 +62,29 @@ public final class IKHandlerDatasource implements IKHandler {
 						query.getExecutionTime());
 			}
 		}
-		boolean _isNew = query.getRecordcount() == 0;
 
+		boolean _isNew = query.getRecordcount() == 0;
 		if (_isNew) {
 			ScopeContext.debug(log, "create new " + strType + " scope for " + pc.getApplicationContext().getName() + "/" + pc.getCFID() + " in datasource [" + name + "]");
 			return null;
 		}
 		String str = Caster.toString(query.getAt(KeyConstants._data, 1));
+		if (LogUtil.doesDebug(log)) {
+			ScopeContext.debug(log, "load existing " + strType + " scope for " + pc.getApplicationContext().getName() + "/" + pc.getCFID() + " from datasource [" + name + "]");
+		}
 
 		// old style
 		boolean b;
 		if ((b = str.startsWith("struct:")) || (str.startsWith("{") && str.endsWith("}"))) {
+			if (LogUtil.doesDebug(log)) {
+				ScopeContext.debug(log, "load old style data");
+			}
 			if (b) str = str.substring(7);
 			try {
 				return toIKStorageValue((Struct) pc.evaluate(str));
 			}
 			catch (Exception e) {
+				ScopeContext.error(log, e);
 			}
 			return null;
 		}
@@ -117,7 +125,16 @@ public final class IKHandlerDatasource implements IKHandler {
 
 	@Override
 	public void store(IKStorageScopeSupport storageScope, PageContext pc, String appName, final String name, Map<Key, IKStorageScopeItem> data, String strType, int type, Log log) {
-		if (!storageScope.hasChanges()) return;
+		if (LogUtil.doesDebug(log)) {
+			ScopeContext.debug(log,
+					"check if we need to store the " + strType + " scope for " + pc.getApplicationContext().getName() + "/" + pc.getCFID() + " to datasource [" + name + "]");
+		}
+
+		if (!storageScope.hasChanges(pc, log)) return;
+
+		if (LogUtil.doesDebug(log)) {
+			ScopeContext.debug(log, "store the " + strType + " scope for " + pc.getApplicationContext().getName() + "/" + pc.getCFID() + " to datasource [" + name + "]");
+		}
 
 		DatasourceConnection dc = null;
 		ConfigPro ci = (ConfigPro) ThreadLocalPageContext.getConfig(pc);

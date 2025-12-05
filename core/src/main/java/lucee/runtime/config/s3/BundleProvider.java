@@ -74,6 +74,7 @@ public final class BundleProvider extends DefaultHandler {
 	public static final int CONNECTION_TIMEOUT = 1000;
 	private static final long MAX_AGE = 24 * 60 * 60 * 1000;
 	private static final int MAX_REDIRECTS = 10;
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
 
 	private static final int DOWNLOAD_CONNECT_TIMEOUT = 10000; // 10 seconds
 	private static final int DOWNLOAD_READ_TIMEOUT = 60000; // 60 seconds
@@ -395,7 +396,7 @@ public final class BundleProvider extends DefaultHandler {
 		}
 
 		// this also not works with windows
-		if (SystemUtil.isWindows()) return null;
+		if (IS_WINDOWS) return null;
 		ZipEntry entry;
 		File temp;
 		ZipInputStream zis = null;

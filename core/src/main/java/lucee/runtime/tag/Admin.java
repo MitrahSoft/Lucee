@@ -50,7 +50,6 @@ import org.osgi.framework.Version;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.jsp.tagext.Tag;
 import lucee.VersionInfo;
-import lucee.commons.collection.MapFactory;
 import lucee.commons.digest.Base64Encoder;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.IOUtil;
@@ -920,13 +919,57 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		boolean addCFMLFiles = getBoolV("addCFMLFiles", true);
 		boolean addNonCFMLFiles = getBoolV("addNonCFMLFiles", true);
 		Boolean ignoreScopes = getBool("ignoreScopes", null);
+		String errorVariable = getString("errorVariable", null);
+		boolean stopOnError = getBoolV("stopOnError", true);
+
+		// errorVariable implies stopOnError=false
+		if (errorVariable != null) stopOnError = false;
 
 		// compile
-		MappingImpl mapping = (MappingImpl) doCompileMapping(mappingType, virtual, true, ignoreScopes);
+		Struct errors = null;
+		if (!stopOnError) errors = new StructImpl(StructImpl.TYPE_LINKED);
+
+		MappingImpl mapping = (MappingImpl) doCompileMapping(mappingType, virtual, stopOnError, ignoreScopes, errors);
 
 		// class files
 		if (mapping == null) throw new ApplicationException("There is no mapping for [" + virtual + "]");
 		if (!mapping.hasPhysical()) throw new ApplicationException("Mapping [" + virtual + "] has no physical directory");
+
+		// If we have errors, handle them based on whether errorVariable is set
+		if (errors != null && errors.size() > 0) {
+			if (errorVariable != null) {
+				// Store errors in variable and return without creating archive
+				pageContext.setVariable(errorVariable, errors);
+				return;
+			}
+			else {
+				// Throw all errors - build message from error structs
+				StringBuilder sb = new StringBuilder();
+				Iterator<String> it = errors.keySet().iterator();
+				Object key;
+				while (it.hasNext()) {
+					key = it.next();
+					if (sb.length() > 0) sb.append("\n\n");
+					Object errorValue = errors.get(key);
+					if (errorValue instanceof Struct) {
+						Struct errorStruct = (Struct) errorValue;
+						sb.append(errorStruct.get("message", ""));
+						sb.append(", Error Occurred in File [");
+						sb.append(key);
+						Object line = errorStruct.get("line", null);
+						if (line != null) {
+							sb.append(":");
+							sb.append(line);
+						}
+						sb.append("]");
+					}
+					else {
+						sb.append(errorValue);
+					}
+				}
+				throw new ApplicationException(sb.toString());
+			}
+		}
 
 		Resource classRoot = mapping.getClassRootDirectory();
 		Resource temp = SystemUtil.getTempDirectory().getRealResource("mani-" + IDGenerator.stringId());
@@ -1028,7 +1071,35 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doCompileMapping() throws PageException {
-		doCompileMapping(MAPPING_REGULAR, getString("admin", action, "virtual").toLowerCase(), getBoolV("stoponerror", true), getBool("ignoreScopes", null));
+		String errorVariable = getString("errorVariable", null);
+		boolean stopOnError = getBoolV("stoponerror", true);
+
+		// errorVariable implies stopOnError=false
+		if (errorVariable != null) stopOnError = false;
+
+		Struct errors = null;
+		if (!stopOnError) errors = new StructImpl(StructImpl.TYPE_LINKED);
+
+		doCompileMapping(MAPPING_REGULAR, getString("admin", action, "virtual").toLowerCase(), stopOnError, getBool("ignoreScopes", null), errors);
+
+		// Set errorVariable or throw if errors occurred
+		if (errors != null && errors.size() > 0) {
+			if (errorVariable != null) {
+				pageContext.setVariable(errorVariable, errors);
+			}
+			else {
+				// Build error message from all collected errors
+				StringBuilder sb = new StringBuilder();
+				sb.append("Compilation failed with ").append(errors.size()).append(" error(s):\n");
+				for (Key key: errors.keys()) {
+					Struct errorInfo = (Struct) errors.get(key, null);
+					sb.append("\n").append(key.getString()).append(": ");
+					sb.append(errorInfo.get("message", "Unknown error"));
+				}
+				throw new ApplicationException(sb.toString());
+			}
+		}
+
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -1043,6 +1114,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private Mapping doCompileMapping(short mappingType, String virtual, boolean stoponerror, Boolean ignoreScopes) throws PageException {
+		return doCompileMapping(mappingType, virtual, stoponerror, ignoreScopes, null);
+	}
+
+	private Mapping doCompileMapping(short mappingType, String virtual, boolean stoponerror, Boolean ignoreScopes, Struct errors) throws PageException {
 
 		if (StringUtil.isEmpty(virtual)) return null;
 
@@ -1057,9 +1132,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		for (int i = 0; i < mappings.length; i++) {
 			Mapping mapping = mappings[i];
 			if (mapping.getVirtualLowerCaseWithSlash().equals(virtual)) {
-				Map<String, String> errors = stoponerror ? null : MapFactory.<String, String>getConcurrentMap();
+				boolean errorsPassedIn = errors != null;
+				if (errors == null) errors = stoponerror ? null : new StructImpl(StructImpl.TYPE_LINKED);
 				doCompileFile(mapping, mapping.getPhysical(), "", errors, ignoreScopes);
-				if (errors != null && errors.size() > 0) {
+				if (errors != null && errors.size() > 0 && !errorsPassedIn) {
 					StringBuilder sb = new StringBuilder();
 					Iterator<String> it = errors.keySet().iterator();
 					Object key;
@@ -1077,7 +1153,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		return null;
 	}
 
-	private void doCompileFile(Mapping mapping, Resource file, String path, Map<String, String> errors, Boolean explicitIgnoreScope) throws PageException {
+	private void doCompileFile(Mapping mapping, Resource file, String path, Struct errors, Boolean explicitIgnoreScope) throws PageException {
 		if (ResourceUtil.exists(file)) {
 			if (file.isDirectory()) {
 				Resource[] files = file.listResources(FILTER_CFML_TEMPLATES);
@@ -1101,26 +1177,51 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				catch (PageException pe) {
 					LogUtil.log((pageContext), Admin.class.getName(), pe);
 					String template = ps.getDisplayPath();
-					StringBuilder msg = new StringBuilder(pe.getMessage());
-					msg.append(", Error Occurred in File [");
-					msg.append(template);
-					if (pe instanceof PageExceptionImpl) {
-						try {
-							PageExceptionImpl pei = (PageExceptionImpl) pe;
-							Array context = pei.getTagContext(config);
-							if (context.size() > 0) {
-								msg.append(":");
-								msg.append(Caster.toString(((Struct) context.getE(1)).get("line")));
+
+					if (errors != null) {
+						// Store structured error information
+						Struct errorInfo = new StructImpl();
+						errorInfo.set("message", pe.getMessage());
+						errorInfo.set("detail", pe.getDetail());
+
+						if (pe instanceof PageExceptionImpl) {
+							try {
+								PageExceptionImpl pei = (PageExceptionImpl) pe;
+								Array context = pei.getTagContext(config);
+								if (context.size() > 0) {
+									Struct firstContext = (Struct) context.getE(1);
+									errorInfo.set("line", firstContext.get("line", null));
+									errorInfo.set("column", firstContext.get("column", null));
+								}
+							}
+							catch (Throwable t) {
+								ExceptionUtil.rethrowIfNecessary(t);
 							}
 						}
-						catch (Throwable t) {
-							ExceptionUtil.rethrowIfNecessary(t);
-						}
 
+						errors.put(template, errorInfo);
 					}
-					msg.append("]");
-					if (errors != null) errors.put(template, msg.toString());
-					else throw new ApplicationException(msg.toString());
+					else {
+						// Original behavior for throwing
+						StringBuilder msg = new StringBuilder(pe.getMessage());
+						msg.append(", Error Occurred in File [");
+						msg.append(template);
+						if (pe instanceof PageExceptionImpl) {
+							try {
+								PageExceptionImpl pei = (PageExceptionImpl) pe;
+								Array context = pei.getTagContext(config);
+								if (context.size() > 0) {
+									msg.append(":");
+									msg.append(Caster.toString(((Struct) context.getE(1)).get("line")));
+								}
+							}
+							catch (Throwable t) {
+								ExceptionUtil.rethrowIfNecessary(t);
+							}
+						}
+						msg.append("]");
+						throw new ApplicationException(msg.toString());
+					}
 
 				}
 				finally {

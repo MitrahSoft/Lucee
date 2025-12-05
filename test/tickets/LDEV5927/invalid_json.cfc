@@ -1,0 +1,2 @@
+component javasettings='{"maven": ["invalid' {
+}

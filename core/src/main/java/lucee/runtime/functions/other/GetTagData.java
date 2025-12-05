@@ -50,6 +50,7 @@ import lucee.transformer.library.tag.TagLib;
 import lucee.transformer.library.tag.TagLibFactory;
 import lucee.transformer.library.tag.TagLibTag;
 import lucee.transformer.library.tag.TagLibTagAttr;
+import lucee.transformer.library.tag.TagLibTagAttrGroup;
 import lucee.transformer.library.tag.TagLibTagScript;
 
 public final class GetTagData implements Function {
@@ -215,6 +216,19 @@ public final class GetTagData implements Function {
 
 			_args.setEL(attr.getName(), _arg);
 		}
+
+		// LDEV-5901: Add attribute groups
+		lucee.runtime.type.Array groups = new lucee.runtime.type.ArrayImpl();
+		for (TagLibTagAttrGroup group : tag.getAttributeGroups()) {
+			Struct grp = new StructImpl(StructImpl.TYPE_LINKED);
+			grp.set(KeyConstants._name, group.getName());
+			grp.set("label", group.getLabel());
+			grp.set(KeyConstants._description, group.getDescription());
+			grp.set(KeyConstants._attributes, group.getAttributes());
+			groups.appendEL(grp);
+		}
+		sct.set("attributeGroups", groups);
+
 		return sct;
 	}
 

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 
 import lucee.commons.db.DBUtil;
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContextImpl;
 import lucee.runtime.config.ConfigPro;
@@ -225,7 +226,7 @@ public final class Insert extends TagImpl {
 
 				// log
 				Log log = ThreadLocalPageContext.getLog(pageContext, "datasource");
-				if (log.getLogLevel() >= Log.LEVEL_INFO) {
+				if (LogUtil.doesInfo(log)) {
 					log.info("insert tag", "executed [" + sql.toString().trim() + "] in " + DecimalFormat.call(pageContext, query.getExecutionTime() / 1000000D) + " ms");
 				}
 			}

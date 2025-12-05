@@ -8,16 +8,20 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="javasettings"  {
 		}
 		
 		var trg=variables.loadPaths&"dd-java-agent.jar";
-		if(!fileExists(trg))
-			fileCopy("https://dtdg.co/latest-java-tracer", trg);
+		if(!fileExists(trg)){
+			// https://dtdg.co/latest-java-tracer
+			http url="https://repo1.maven.org/maven2/com/datadoghq/dd-java-agent/1.9.0/dd-java-agent-1.9.0.jar" file="dd-java-agent.jar" path=variables.loadPaths throwOnError=true redirect="true" timeout=10;
+		}
 
 		var trg=variables.loadPaths&"opentelemetry-api.jar";
-		if(!fileExists(trg))
-			fileCopy("https://repo1.maven.org/maven2/io/opentelemetry/opentelemetry-api/1.50.0/opentelemetry-api-1.50.0.jar", trg);
+		if(!fileExists(trg)){
+			http url="https://repo1.maven.org/maven2/io/opentelemetry/opentelemetry-api/1.50.0/opentelemetry-api-1.50.0.jar" file="opentelemetry-api.jar" path=variables.loadPaths throwOnError=true redirect="true" timeout=10;
+		}
 
 		var trg=variables.loadPaths&"opentelemetry-context.jar";
-		if(!fileExists(trg))
-			fileCopy("https://repo1.maven.org/maven2/io/opentelemetry/opentelemetry-context/1.50.0/opentelemetry-context-1.50.0.jar", trg);
+		if(!fileExists(trg)){
+			http url="https://repo1.maven.org/maven2/io/opentelemetry/opentelemetry-context/1.50.0/opentelemetry-context-1.50.0.jar" file="opentelemetry-context.jar" path=variables.loadPaths throwOnError=true redirect="true" timeout=10;
+		}
 	}
 
 	function afterAll() {

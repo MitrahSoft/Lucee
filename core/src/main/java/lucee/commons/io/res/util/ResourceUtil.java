@@ -75,6 +75,7 @@ public final class ResourceUtil {
 
 	public static final int MIMETYPE_CHECK_EXTENSION = 1;
 	public static final int MIMETYPE_CHECK_HEADER = 2;
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
 
 	/**
 	 * Field <code>FILE_SEPERATOR</code>
@@ -354,7 +355,7 @@ public final class ResourceUtil {
 			Config cw = pc.getConfig();
 			Resource[] sources = ((ConfigPro) cw).getResources(pci,
 					ExpandPath.mergeMappings(pc.getApplicationContext().getMappings(), pc.getApplicationContext().getComponentMappings()), destination, false,
-					pci.useSpecialMappings(), SystemUtil.isWindows(), checkComponentMappings, false);
+					pci.useSpecialMappings(), IS_WINDOWS, checkComponentMappings, false);
 			if (!ArrayUtil.isEmpty(sources)) {
 				for (int i = 0; i < sources.length; i++) {
 					res = sources[i];
@@ -396,11 +397,11 @@ public final class ResourceUtil {
 	}
 
 	public static boolean isUNCPath(String path) {
-		return SystemUtil.isWindows() && (path.startsWith("//") || path.startsWith("\\\\"));
+		return IS_WINDOWS && (path.startsWith("//") || path.startsWith("\\\\"));
 	}
 
 	public static boolean isWindowsPath(String path) {
-		return SystemUtil.isWindows() && path.length() > 1 && path.charAt(1) == ':';
+		return IS_WINDOWS && path.length() > 1 && path.charAt(1) == ':';
 	}
 
 	/**

@@ -4,6 +4,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 
 public final class Closer {
 	private CloserThread thread;
@@ -48,7 +49,7 @@ public final class Closer {
 				CloserJob job = jobs.poll();
 
 				if (job != null) {
-					if (log != null) log.debug("Closer", "executing job: " + job.getLablel());
+					if (LogUtil.doesDebug(log)) log.debug("Closer", "executing job: " + job.getLablel());
 
 					long now = System.currentTimeMillis();
 					try {
@@ -63,12 +64,12 @@ public final class Closer {
 				else {
 					long now = System.currentTimeMillis();
 					if (lastMod + IDLE_TIMEOUT < now) {
-						if (log != null) log.debug("Closer", "nothing to do, idle timeout reached, stoping observer ");
+						if (LogUtil.doesDebug(log)) log.debug("Closer", "nothing to do, idle timeout reached, stoping observer ");
 						break;
 					}
-					else if (log != null) log.debug("Closer", "nothing to do, remaining idle for another " + ((lastMod + IDLE_TIMEOUT) - now) + "ms");
+					else if (LogUtil.doesDebug(log)) log.debug("Closer", "nothing to do, remaining idle for another " + ((lastMod + IDLE_TIMEOUT) - now) + "ms");
 				}
-				if (log != null) log.debug("Closer", "sleep for " + INTERVALL + "ms");
+				if (LogUtil.doesDebug(log)) log.debug("Closer", "sleep for " + INTERVALL + "ms");
 				try {
 					sleep(INTERVALL);
 				}

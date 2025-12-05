@@ -200,19 +200,19 @@ public abstract class ConfigFactory {
 	 * @throws PageException
 	 * @throws NoSuchAlgorithmException
 	 */
-	static Struct loadDocument(Resource file) throws IOException, PageException {
+	static Struct loadDocument(Config config, Resource file) throws IOException, PageException {
 		InputStream is = null;
 		try {
-			return _loadDocument(file);
+			return _loadDocument(config, file);
 		}
 		finally {
 			IOUtil.close(is);
 		}
 	}
 
-	static Struct loadDocumentCreateIfFails(Resource configFile, String type) throws IOException, PageException {
+	static Struct loadDocumentCreateIfFails(Config config, Resource configFile, String type) throws IOException, PageException {
 		try {
-			return _loadDocument(configFile);
+			return _loadDocument(config, configFile);
 		}
 		catch (Exception e) {
 			// rename buggy config files
@@ -233,7 +233,7 @@ public abstract class ConfigFactory {
 				configFile.delete();
 			}
 			ConfigFile.createConfigFile(type, configFile);
-			return loadDocument(configFile);
+			return loadDocument(config, configFile);
 		}
 	}
 
@@ -258,7 +258,7 @@ public abstract class ConfigFactory {
 		else {
 			new ConverterException("inputing data is invalid, cannot cast [" + old.getClass().getName() + "] to a Resource or an InputSource");
 		}
-		Struct root = ConfigUtil.getAsStruct(reader.getData(), false, "cfLuceeConfiguration", "luceeConfiguration", "lucee-configuration");
+		Struct root = ConfigUtil.getAsStruct(config, reader.getData(), false, "cfLuceeConfiguration", "luceeConfiguration", "lucee-configuration");
 
 		//////////////////// charset ////////////////////
 		{
@@ -741,8 +741,8 @@ public abstract class ConfigFactory {
 			Struct scheduler = ConfigUtil.getAsStruct("scheduler", root);
 
 			// set scheduler
-			Resource schedulerDir = ConfigUtil.getFile(config.getRootDirectory(), ConfigFactoryImpl.getAttr(scheduler, "directory"), "scheduler", configDir, FileUtil.TYPE_DIR,
-					ResourceUtil.LEVEL_GRAND_PARENT_FILE, config);
+			Resource schedulerDir = ConfigUtil.getFile(config.getRootDirectory(), ConfigFactoryImpl.getAttr(null, scheduler, "directory"), "scheduler", configDir,
+					FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE, config);
 			Resource schedulerFile = schedulerDir.getRealResource("scheduler.xml");
 			if (schedulerFile.isFile()) {
 				Struct schedulerRoot = new XMLConfigReader(schedulerFile, true, new ReadRule(), new NameRule()).getData();
@@ -971,22 +971,22 @@ public abstract class ConfigFactory {
 		if (val != null) to.setEL(KeyImpl.init(toKey), val);
 	}
 
-	static String createVirtual(Struct data) {
-		String str = ConfigFactoryImpl.getAttr(data, "virtual");
+	static String createVirtual(Config config, Struct data) {
+		String str = ConfigFactoryImpl.getAttr(config, data, "virtual");
 		if (!StringUtil.isEmpty(str)) return str;
-		return createVirtual(ConfigFactoryImpl.getAttr(data, "physical"), ConfigFactoryImpl.getAttr(data, "archive"));
+		return createVirtual(ConfigFactoryImpl.getAttr(config, data, "physical"), ConfigFactoryImpl.getAttr(config, data, "archive"));
 	}
 
 	private static String createVirtual(String physical, String archive) {
 		return "/" + MD5.getDigestAsString(physical + ":" + archive, "");
 	}
 
-	private static Struct _loadDocument(Resource res) throws IOException, PageException {
+	private static Struct _loadDocument(Config config, Resource res) throws IOException, PageException {
 		String name = res.getName();
 		// That step is not necessary anymore TODO remove
 		if (StringUtil.endsWithIgnoreCase(name, ".xml.cfm") || StringUtil.endsWithIgnoreCase(name, ".xml")) {
 			try {
-				return ConfigUtil.getAsStruct(new XMLConfigReader(res, true, new ReadRule(), new NameRule()).getData(), false, "cfLuceeConfiguration", "luceeConfiguration",
+				return ConfigUtil.getAsStruct(config, new XMLConfigReader(res, true, new ReadRule(), new NameRule()).getData(), false, "cfLuceeConfiguration", "luceeConfiguration",
 						"lucee-configuration");
 			}
 			catch (SAXException e) {
@@ -1001,8 +1001,8 @@ public abstract class ConfigFactory {
 			Resource dir = res.getParentResource();
 			Resource ls = dir.getRealResource("lucee-server.xml");
 			Resource lw = dir.getRealResource("lucee-web.xml.cfm");
-			if (ls.isFile()) return _loadDocument(ls);
-			else if (lw.isFile()) return _loadDocument(lw);
+			if (ls.isFile()) return _loadDocument(config, ls);
+			else if (lw.isFile()) return _loadDocument(config, lw);
 			else throw fnfe;
 		}
 		/*

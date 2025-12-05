@@ -29,6 +29,7 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageSource;
 import lucee.runtime.config.Constants;
+import lucee.runtime.interpreter.JSONExpressionInterpreter;
 import lucee.runtime.type.util.ComponentUtil;
 import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.Page;
@@ -257,6 +258,27 @@ public class Component extends EvaluatorSupport {
 
 				if (mod == -1) throw new EvaluatorException(
 						"Value [" + ls.getString() + "] from attribute [modifier] of the tag [" + tlt.getFullName() + "] is invalid, valid values are [none, abstract, final]");
+			}
+		}
+
+		// javasettings - validate it's not empty (catches misparsing of struct literals)
+		attr = tag.getAttribute("javasettings");
+		if (attr != null) {
+			Expression expr = attr.getValue();
+			if (expr instanceof LitString) {
+				String val = ((LitString) expr).getString();
+				if (StringUtil.isEmpty(val, true)) {
+					throw new EvaluatorException(
+							"Invalid javasettings attribute. Struct literal syntax is not supported for javasettings, use a json string: javasettings='{maven:[\"groupId:artifactId:version\"]}'");
+				}
+				// Validate JSON syntax at compile time (LDEV-5927)
+				try {
+					new JSONExpressionInterpreter().interpret(null, val);
+				}
+				catch (Exception e) {
+					throw new EvaluatorException("Invalid JSON in javasettings attribute: " + e.getMessage()
+							+ ". Ensure the JSON is valid: javasettings='{maven:[\"groupId:artifactId:version\"]}'");
+				}
 			}
 		}
 	}

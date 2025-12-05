@@ -174,10 +174,11 @@ public final class QueryArray extends ArrayImpl implements QueryResult {
 		int rows = q.getRecordcount();
 		if (rows == 0) return qa;
 		Key[] columns = q.getColumnNames();
+		int structCapacity = StructImpl.optimalCapacity(columns.length, 2);
 
 		Struct tmp;
 		for (int r = 1; r <= rows; r++) {
-			qa.add(tmp = new StructImpl(Struct.TYPE_LINKED));
+			qa.add(tmp = new StructImpl(Struct.TYPE_LINKED, structCapacity));
 			for (Key c: columns) {
 				tmp.set(c, q.getAt(c, r, null));
 			}

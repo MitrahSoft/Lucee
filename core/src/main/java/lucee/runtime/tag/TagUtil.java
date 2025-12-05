@@ -391,7 +391,8 @@ public final class TagUtil {
 
 	public static void handleListener(PageContext pc, Object result, PageException pe, Object listener) throws PageException {
 		if (listener instanceof UDF) {
-			Struct args = new StructImpl(StructImpl.TYPE_LINKED);
+			// LDEV-5907 use unsynchronized struct for temporary args passed to callWithNamedValues
+			Struct args = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 4);
 			if (result != null) args.set(KeyConstants._result, result);
 			if (pe != null) args.set(KeyConstants._error, pe.getCatchBlock(pc.getConfig()));
 			((UDF) listener).callWithNamedValues(pc, args, true);
@@ -402,7 +403,8 @@ public final class TagUtil {
 			// result
 			if (result != null) {
 				if (cfc.contains(pc, KeyConstants._onSuccess)) {
-					Struct args = new StructImpl(StructImpl.TYPE_LINKED);
+					// LDEV-5907 use unsynchronized struct for temporary args passed to callWithNamedValues
+					Struct args = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 4);
 					args.set(KeyConstants._result, result);
 					cfc.callWithNamedValues(pc, KeyConstants._onSuccess, args);
 				}
@@ -411,7 +413,8 @@ public final class TagUtil {
 			if (pe != null) {
 				boolean second = false;
 				if (cfc.contains(pc, KeyConstants._onFail) || (second = cfc.contains(pc, KeyConstants._onError))) {
-					Struct args = new StructImpl(StructImpl.TYPE_LINKED);
+					// LDEV-5907 use unsynchronized struct for temporary args passed to callWithNamedValues
+					Struct args = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 4);
 					args.set(KeyConstants._error, pe.getCatchBlock(pc.getConfig()));
 					cfc.callWithNamedValues(pc, second ? KeyConstants._onError : KeyConstants._onFail, args);
 				}
@@ -425,7 +428,8 @@ public final class TagUtil {
 			if (result != null) {
 				UDF onSuccess = Caster.toFunction(coll.get(KeyConstants._onSuccess, null), null);
 				if (onSuccess != null) {
-					Struct args = new StructImpl(StructImpl.TYPE_LINKED);
+					// LDEV-5907 use unsynchronized struct for temporary args passed to callWithNamedValues
+					Struct args = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 4);
 					args.set(KeyConstants._result, result);
 					onSuccess.callWithNamedValues(pc, args, true);
 				}
@@ -435,7 +439,8 @@ public final class TagUtil {
 				UDF onError = Caster.toFunction(coll.get(KeyConstants._onFail, null), null);
 				if (onError == null) onError = Caster.toFunction(coll.get(KeyConstants._onError, null), null);
 				if (onError != null) {
-					Struct args = new StructImpl(StructImpl.TYPE_LINKED);
+					// LDEV-5907 use unsynchronized struct for temporary args passed to callWithNamedValues
+					Struct args = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 4);
 					args.set(KeyConstants._error, pe.getCatchBlock(pc.getConfig()));
 					onError.callWithNamedValues(pc, args, true);
 				}

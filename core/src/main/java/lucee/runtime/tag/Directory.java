@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.DosFileAttributes;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -86,6 +87,8 @@ public final class Directory extends TagImpl {
 	private static final Key DATE_LAST_MODIFIED = KeyConstants._dateLastModified;
 	private static final Key ATTRIBUTES = KeyConstants._attributes;
 	private static final Key DIRECTORY = KeyConstants._directory;
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+	private static final boolean IS_UNIX = SystemUtil.isUnix();
 
 	public static final int LIST_INFO_QUERY_ALL = 1;
 	public static final int LIST_INFO_QUERY_NAME = 2;
@@ -107,6 +110,7 @@ public final class Directory extends TagImpl {
 
 	/** The name of the directory to perform the action against. */
 	private Resource directory;
+	private String strDirectory;
 
 	/** Defines the action to be taken with directory(ies) specified in directory. */
 	private String action = "list";
@@ -165,6 +169,7 @@ public final class Directory extends TagImpl {
 		filter = null;
 		destination = null;
 		directory = null;
+		strDirectory = null;
 		action = "list";
 		sort = null;
 		mode = -1;
@@ -285,9 +290,8 @@ public final class Directory extends TagImpl {
 	 * @param directory value to set
 	 **/
 	public void setDirectory(String directory) {
-
+		this.strDirectory = directory;
 		this.directory = ResourceUtil.toResourceNotExisting(pageContext, directory);
-		// print.ln(this.directory);
 	}
 
 	/**
@@ -383,9 +387,16 @@ public final class Directory extends TagImpl {
 			if (!StringUtil.isEmpty(name) && res != null) pageContext.setVariable(name, res);
 		}
 		else if (action.equals("create")) actionCreate(pageContext, directory, serverPassword, createPath, mode, acl, storage, nameconflict);
-		else if (action.equals("delete")) actionDelete(pageContext, directory, recurse, serverPassword);
-		else if (action.equals("forcedelete")) actionDelete(pageContext, directory, true, serverPassword);
+		else if (action.equals("delete")) {
+			if (StringUtil.isEmpty(strDirectory, true)) throw new ApplicationException("The attribute [directory] is required for action [delete]");
+			actionDelete(pageContext, directory, recurse, serverPassword);
+		}
+		else if (action.equals("forcedelete")) {
+			if (StringUtil.isEmpty(strDirectory, true)) throw new ApplicationException("The attribute [directory] is required for action [forcedelete]");
+			actionDelete(pageContext, directory, true, serverPassword);
+		}
 		else if (action.equals("rename")) {
+			if (StringUtil.isEmpty(strDirectory, true)) throw new ApplicationException("The attribute [directory] is required for action [rename]");
 			String res = actionRename(pageContext, directory, strNewdirectory, serverPassword, createPath, acl, storage);
 			if (!StringUtil.isEmpty(name) && res != null) pageContext.setVariable(name, res);
 		}
@@ -535,8 +546,8 @@ public final class Directory extends TagImpl {
 		sct.setEL(KeyConstants._size, Long.valueOf(directory.length()));
 		sct.setEL("isReadable", directory.isReadable());
 		sct.setEL(KeyConstants._path, directory.getAbsolutePath());
-		
-		if (SystemUtil.isUnix()) sct.setEL(KeyConstants._mode, new ModeObjectWrap(directory));
+
+		if (IS_UNIX) sct.setEL(KeyConstants._mode, new ModeObjectWrap(directory));
 		File file = new File(Caster.toString(directory));
 		BasicFileAttributes attr;
 		try {
@@ -571,9 +582,7 @@ public final class Directory extends TagImpl {
 					query.setAt(MODE, count, new ModeObjectWrap(list[i]));
 				}
 				query.setAt(DATE_LAST_MODIFIED, count, new Date(list[i].lastModified()));
-				// TODO File Attributes are Windows only...
-				// this is slow as it fetches each the attributes one at a time
-				query.setAt(ATTRIBUTES, count, getFileAttribute(list[i], true));
+				query.setAt(ATTRIBUTES, count, getFileAttribute(list[i]));
 
 				if (hasMeta) {
 					query.setAt(META, count, ((ResourceMetaData) list[i]).getMetaData());
@@ -604,9 +613,7 @@ public final class Directory extends TagImpl {
 					query.setAt(MODE, count, new ModeObjectWrap(list[i]));
 				}
 				query.setAt(DATE_LAST_MODIFIED, count, new Date(list[i].lastModified()));
-				// TODO File Attributes are Windows only...
-				// this is slow as it fetches each the attributes one at a time
-				query.setAt(ATTRIBUTES, count, getFileAttribute(list[i], true));
+				query.setAt(ATTRIBUTES, count, getFileAttribute(list[i]));
 
 				if (hasMeta) {
 					query.setAt(META, count, ((ResourceMetaData) list[i]).getMetaData());
@@ -939,13 +946,33 @@ public final class Directory extends TagImpl {
 		return ResourceUtil.toResourceNotExisting(pageContext, path);
 	}
 
-	public static String getFileAttribute(Resource file, boolean exists) {
-		// TODO this is slow as it fetches attributes one at a time
-		// also Windows only!
-		return exists && !file.isWriteable() ? "R".concat(file.isHidden() ? "H" : "") : file.isHidden() ? "H" : "";
+	public static String getFileAttribute(Resource file) {
+		// Windows-only attributes (R=ReadOnly, H=Hidden). On Unix, return empty string to avoid unnecessary syscalls.
+		if (!IS_WINDOWS) return "";
+
+		// Optimized: fetch both attributes in a single syscall for FileResource on Windows
+		if (file instanceof FileResource) {
+			try {
+				DosFileAttributes attrs = Files.readAttributes(((FileResource) file).toPath(), DosFileAttributes.class);
+				boolean isReadOnly = attrs.isReadOnly();
+				boolean isHidden = attrs.isHidden();
+				return isReadOnly ? "R".concat(isHidden ? "H" : "") : isHidden ? "H" : "";
+			}
+			catch (IOException e) {
+				// Fall through to legacy implementation if DosFileAttributes not supported
+			}
+		}
+		// Fallback for non-FileResource or if DosFileAttributes fails
+		// Cache isHidden() result to avoid calling it twice
+		boolean hidden = file.isHidden();
+		boolean writable = file.isWriteable();
+		return !writable ? "R".concat(hidden ? "H" : "") : hidden ? "H" : "";
 	}
 
-	public static String getFileAttribute(Path path, boolean exists) {
+	public static String getFileAttribute(Path path) {
+		// Windows-only attributes (R=ReadOnly, H=Hidden). On Unix, return empty string to avoid unnecessary syscalls.
+		if (!IS_WINDOWS) return "";
+
 		String hidden;
 		try {
 			hidden = Files.isHidden(path) ? "H" : "";
@@ -953,7 +980,7 @@ public final class Directory extends TagImpl {
 		catch (IOException e) {
 			hidden = "";
 		}
-		return exists && !Files.isWritable(path) ? "R".concat(hidden) : hidden;
+		return !Files.isWritable(path) ? "R".concat(hidden) : hidden;
 	}
 
 	/**

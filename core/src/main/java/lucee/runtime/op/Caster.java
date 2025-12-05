@@ -4651,15 +4651,27 @@ public final class Caster {
 	}
 
 	public static Struct toFunctionValues(Object[] args, int offset, int len) throws ExpressionException {
-		// TODO nicht sehr optimal
-		Struct sct = new StructImpl(StructImpl.TYPE_LINKED);
+		// LDEV-5907 use unsynchronized struct with optimal capacity to avoid resize
+		Struct sct = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, StructImpl.optimalCapacity(len, 4));
 		for (int i = offset; i < offset + len; i++) {
 			if (args[i] instanceof FunctionValueImpl) {
 				FunctionValueImpl value = (FunctionValueImpl) args[i];
 				sct.setEL(value.getNameAsKey(), value.getValue());
 			}
-			else throw new ExpressionException(
-					"Missing argument name, when using named parameters to a function, every parameter must have a name [" + i + ":" + args[i].getClass().getName() + "].");
+			else {
+				String valueStr;
+				try {
+					valueStr = args[i] != null ? args[i].toString() : "null";
+				}
+				catch (Exception e) {
+					valueStr = args[i].getClass().getName();
+				}
+				if (valueStr.length() > 50) valueStr = valueStr.substring(0, 50) + "...";
+				throw new ExpressionException(
+						"Missing argument name, when using named parameters to a function, all parameters must be named. "
+								+ "Argument at position " + (i - offset + 1) + " [" + valueStr + "] is missing a name. "
+								+ "Either name all arguments (e.g., argumentName=value) or use positional arguments only.");
+			}
 		}
 		return sct;
 	}

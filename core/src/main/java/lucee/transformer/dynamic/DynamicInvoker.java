@@ -393,6 +393,21 @@ public final class DynamicInvoker {
 		return cl;
 	}
 
+	public int remove(ClassLoader parent) {
+		int count = 0;
+		DynamicClassLoader cl = loaders.get(parent.hashCode());
+		if (cl != null) {
+			synchronized (token) {
+				cl = loaders.get(parent.hashCode());
+				if (cl != null) {
+					count++;
+					loaders.remove(parent.hashCode());
+				}
+			}
+		}
+		return count;
+	}
+
 	public void cleanup() {
 		Set<Resource> set = new java.util.HashSet<>();
 		for (DynamicClassLoader cl: loaders.values()) {

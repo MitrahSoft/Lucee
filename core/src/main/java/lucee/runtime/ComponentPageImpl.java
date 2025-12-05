@@ -32,6 +32,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
+import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.CFTypes;
@@ -430,7 +432,8 @@ public abstract class ComponentPageImpl extends ComponentPage {
 				msg = prefix;
 			}
 			RestUtil.setStatus(pc, 404, msg, true);
-			ThreadLocalPageContext.getLog(pc, "rest").info("REST", prefix + " in" + addDetail);
+			Log log = ThreadLocalPageContext.getLog(pc, "rest");
+			if (LogUtil.doesInfo(log)) log.info("REST", prefix + " in" + addDetail);
 		}
 		else if (status == 405) {
 			String prefix = "Unsupported Media Type";
@@ -441,7 +444,8 @@ public abstract class ComponentPageImpl extends ComponentPage {
 				msg = prefix;
 			}
 			RestUtil.setStatus(pc, 405, msg, true);
-			ThreadLocalPageContext.getLog(pc, "rest").info("REST", prefix + " for" + addDetail);
+			Log log = ThreadLocalPageContext.getLog(pc, "rest");
+			if (LogUtil.doesInfo(log)) log.info("REST", prefix + " for" + addDetail);
 		}
 		else if (status == 406) {
 			String prefix = "Not Acceptable";
@@ -452,7 +456,8 @@ public abstract class ComponentPageImpl extends ComponentPage {
 				msg = prefix;
 			}
 			RestUtil.setStatus(pc, 406, msg, true);
-			ThreadLocalPageContext.getLog(pc, "rest").info("REST", prefix + " for" + addDetail);
+			Log log = ThreadLocalPageContext.getLog(pc, "rest");
+			if (LogUtil.doesInfo(log)) log.info("REST", prefix + " for" + addDetail);
 		}
 
 	}

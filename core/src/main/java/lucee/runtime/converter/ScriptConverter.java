@@ -185,7 +185,7 @@ public final class ScriptConverter extends ConverterSupport {
 	 */
 	public void _serializeStruct(Struct struct, StringBuilder sb, Set<Object> done) throws ConverterException {
 		sb.append(goIn());
-		boolean ordered = struct instanceof StructImpl && ((StructImpl) struct).getType() == Struct.TYPE_LINKED;
+		boolean ordered = struct instanceof StructImpl && (((StructImpl) struct).getType() == Struct.TYPE_LINKED || ((StructImpl) struct).getType() == StructImpl.TYPE_LINKED_NOT_SYNC);
 
 		if (ordered) sb.append('[');
 		else sb.append('{');

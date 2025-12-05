@@ -26,6 +26,8 @@ import java.util.Random;
  */
 public final class SQLImpl implements SQL, Serializable {
 
+	private static final SQLItem[] EMPTY_ITEMS = new SQLItem[0];
+
 	private String strSQL;
 	private SQLItem[] items;
 	private int position = 0;
@@ -40,7 +42,7 @@ public final class SQLImpl implements SQL, Serializable {
 	 */
 	public SQLImpl(String strSQL) {
 		this.strSQL = strSQL;
-		this.items = new SQLItem[0];
+		this.items = EMPTY_ITEMS;
 	}
 
 	/**
@@ -51,7 +53,7 @@ public final class SQLImpl implements SQL, Serializable {
 	 */
 	public SQLImpl(String strSQL, SQLItem[] items) {
 		this.strSQL = strSQL;
-		this.items = items == null ? new SQLItem[0] : items;
+		this.items = items == null ? EMPTY_ITEMS : items;
 	}
 
 	public void addItems(SQLItem item) {

@@ -66,6 +66,8 @@ import lucee.transformer.util.SourceCode;
  */
 public final class CFMLCompilerImpl implements CFMLCompiler {
 
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+
 	private CFMLTransformer cfmlTagTransformer;
 	private CFMLScriptTransformer cfmlScriptTransformer;
 	private ConcurrentLinkedQueue<WatchEntry> watched = new ConcurrentLinkedQueue<WatchEntry>();
@@ -239,7 +241,7 @@ public final class CFMLCompilerImpl implements CFMLCompiler {
 				final Resource classFile = classRootDir.getRealResource(page.getClassName() + ".class");
 				Resource classFileDirectory = classFile.getParentResource();
 				if (!classFileDirectory.exists()) classFileDirectory.mkdirs();
-				else if (classFile.exists() && !SystemUtil.isWindows()) {
+				else if (classFile.exists() && !IS_WINDOWS) {
 					final String prefix = page.getClassName() + "$";
 					classRootDir.list(new ResourceNameFilter() {
 						@Override

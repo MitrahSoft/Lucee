@@ -98,6 +98,8 @@ public final class FileTag extends BodyTagImpl {
 	private static final int ACTION_UPLOAD = 5;
 	private static final int ACTION_UPLOAD_ALL = 6;
 	private static final int ACTION_COPY = 7;
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+	private static final boolean IS_UNIX = SystemUtil.isUnix();
 	private static final int ACTION_INFO = 8;
 	private static final int ACTION_TOUCH = 9;
 	private static final int ACTION_DELETE = 10;
@@ -858,8 +860,8 @@ public final class FileTag extends BodyTagImpl {
 		catch (Exception e) {
 		}
 		sct.setEL(KeyConstants._dateLastModified, new DateTimeImpl(file.lastModified()));
-		sct.setEL(KeyConstants._attributes, getFileAttribute(file));
-		if (SystemUtil.isUnix()) sct.setEL(KeyConstants._mode, new ModeObjectWrap(file));
+		sct.setEL(KeyConstants._attributes, Directory.getFileAttribute(file));
+		if (IS_UNIX) sct.setEL(KeyConstants._mode, new ModeObjectWrap(file));
 
 		try {
 			sct.setEL(KeyConstants._checksum, Hash.md5(file));
@@ -875,10 +877,6 @@ public final class FileTag extends BodyTagImpl {
 		 * } } catch(Exception e) {}
 		 */
 		return sct;
-	}
-
-	private static String getFileAttribute(Resource file) {
-		return file.exists() && !file.isWriteable() ? "R".concat(file.isHidden() ? "H" : "") : file.isHidden() ? "H" : "";
 	}
 
 	/**
@@ -1252,7 +1250,7 @@ public final class FileTag extends BodyTagImpl {
 	 * @throws PageException
 	 */
 	private static void setAttributes(Resource file, String attributes) throws PageException {
-		if (!SystemUtil.isWindows() || StringUtil.isEmpty(attributes)) return;
+		if (!IS_WINDOWS || StringUtil.isEmpty(attributes)) return;
 		try {
 			ResourceUtil.setAttribute(file, attributes);
 		}
@@ -1268,7 +1266,7 @@ public final class FileTag extends BodyTagImpl {
 	 * @throws ApplicationException
 	 */
 	private static void setMode(Resource file, int mode) throws ApplicationException {
-		if (mode == -1 || SystemUtil.isWindows()) return;
+		if (mode == -1 || IS_WINDOWS) return;
 		try {
 			file.setMode(mode);
 			// FileUtil.setMode(file,mode);

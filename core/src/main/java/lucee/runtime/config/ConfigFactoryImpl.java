@@ -42,6 +42,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -323,7 +324,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				}
 			}
 			LogUtil.logGlobal(ThreadLocalPageContext.getConfig(), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(), "load config file");
-			Struct root = loadDocumentCreateIfFails(configFileNew, "server");
+			Struct root = loadDocumentCreateIfFails(config, configFileNew, "server");
 			config.setRoot(root);
 			// admin mode
 			load(config, root, false, doNew, essentialOnly);
@@ -370,7 +371,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 		int iDoNew = getNew(engine, configServer.getConfigDir(), quick, UpdateInfo.NEW_NONE).updateType;
 		boolean doNew = iDoNew != NEW_NONE;
-		Struct root = loadDocumentCreateIfFails(configFile, "server");
+		Struct root = loadDocumentCreateIfFails(null, configFile, "server");
 		configServer.setRoot(root);
 		load(configServer, root, true, doNew, quick);
 		((CFMLEngineImpl) ConfigUtil.getEngine(configServer)).onStart(configServer, true);
@@ -463,8 +464,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		if (root == null) return false;
 
 		// salt
-		String salt = getAttr(root, "adminSalt");
-		if (StringUtil.isEmpty(salt, true)) salt = getAttr(root, "salt");
+		String salt = getAttr(null, root, "adminSalt");
+		if (StringUtil.isEmpty(salt, true)) salt = getAttr(config, root, "salt");
 		boolean rtn = false;
 		if (StringUtil.isEmpty(salt, true) || !Decision.isUUId(salt)) {
 			// create salt
@@ -513,10 +514,10 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// Default Resource Provider
 			if (defaultProviders != null && defaultProviders.size() > 0) {
 				Struct defaultProvider = Caster.toStruct(defaultProviders.getE(defaultProviders.size()));
-				ClassDefinition defProv = getClassDefinition(defaultProvider, "", config.getIdentification());
+				ClassDefinition defProv = getClassDefinition(config, defaultProvider, "", config.getIdentification());
 
-				String strDefaultProviderComponent = getAttr(defaultProvider, "component");
-				if (StringUtil.isEmpty(strDefaultProviderComponent)) strDefaultProviderComponent = getAttr(defaultProvider, "class");
+				String strDefaultProviderComponent = getAttr(config, defaultProvider, "component");
+				if (StringUtil.isEmpty(strDefaultProviderComponent)) strDefaultProviderComponent = getAttr(config, defaultProvider, "class");
 
 				// class
 				if (defProv.hasClass()) {
@@ -570,11 +571,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					provider = Caster.toStruct(pit.next(), null);
 					if (provider == null) continue;
 					try {
-						prov = getClassDefinition(provider, "", config.getIdentification());
-						strProviderCFC = getAttr(provider, "component");
-						if (StringUtil.isEmpty(strProviderCFC)) strProviderCFC = getAttr(provider, "class");
+						prov = getClassDefinition(config, provider, "", config.getIdentification());
+						strProviderCFC = getAttr(config, provider, "component");
+						if (StringUtil.isEmpty(strProviderCFC)) strProviderCFC = getAttr(config, provider, "class");
 
-						strProviderScheme = getAttr(provider, "scheme");
+						strProviderScheme = getAttr(config, provider, "scheme");
 						// class
 						if (prov.hasClass() && !StringUtil.isEmpty(strProviderScheme)) {
 							strProviderScheme = strProviderScheme.trim().toLowerCase();
@@ -650,17 +651,17 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 	}
 
-	public static <T> ClassDefinition<T> getClassDefinition(Struct data, String prefix, Identification id) throws PageException {
+	public static <T> ClassDefinition<T> getClassDefinition(Config config, Struct data, String prefix, Identification id) throws PageException {
 		String attrName;
 		String cn;
 
 		if (StringUtil.isEmpty(prefix)) {
-			cn = getAttr(data, "class");
+			cn = getAttr(config, data, "class");
 			attrName = "class";
 		}
 		else {
 			if (prefix.endsWith("-")) prefix = prefix.substring(0, prefix.length() - 1);
-			cn = getAttr(data, prefix + "Class");
+			cn = getAttr(config, data, prefix + "Class");
 			attrName = prefix + "Class";
 		}
 
@@ -696,7 +697,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						handler = Caster.toStruct(entry.getValue(), null);
 						if (handler == null) continue;
 
-						cd = getClassDefinition(handler, "", config.getIdentification());
+						cd = getClassDefinition(config, handler, "", config.getIdentification());
 						strId = entry.getKey().getString();
 						if (cd.hasClass() && !StringUtil.isEmpty(strId)) {
 							strId = strId.trim().toLowerCase();
@@ -735,7 +736,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static Map<String, AIEngine> loadAI(ConfigImpl config, Struct root, Map<String, AIEngine> defaultValue) {
 		try {
 			// we only load this for the server context
-			Struct ai = ConfigUtil.getAsStruct(root, false, "ai");
+			Struct ai = ConfigUtil.getAsStruct(config, root, false, "ai");
 			if (ai != null) {
 				return _loadAI(config, ai);
 			}
@@ -760,7 +761,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				if (data == null) continue;
 				strId = entry.getKey().getString();
 				if (!StringUtil.isEmpty(strId)) {
-					data = (Struct) ConfigUtil.replaceConfigPlaceHolders(data);
+					data = (Struct) ConfigUtil.replaceConfigPlaceHolders(config, data);
 					strId = strId.trim().toLowerCase();
 					engines.put(strId, AIEngineFactory.getInstance(config, strId, data));
 				}
@@ -775,7 +776,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static Map<String, SecretProvider> loadSecretProviders(ConfigImpl config, Struct root, Map<String, SecretProvider> defaultValue) {
 		try {
 			// we only load this for the server context
-			Struct secretProvider = ConfigUtil.getAsStruct(root, false, "secretProvider");
+			// we do not give config here as first argument, to prevent a infiniti loop
+			Struct secretProvider = ConfigUtil.getAsStruct(null, root, false, "secretProvider");
 			if (secretProvider != null) {
 				return _loadSecretProviders(config, secretProvider);
 			}
@@ -833,9 +835,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						writer = Caster.toStruct(it.next(), null);
 						if (writer == null) continue;
 
-						cd = getClassDefinition(writer, "", config.getIdentification());
-						strName = getAttr(writer, "name");
-						strDefault = getAttr(writer, "default");
+						cd = getClassDefinition(config, writer, "", config.getIdentification());
+						strName = getAttr(config, writer, "name");
+						strDefault = getAttr(config, writer, "default");
 						clazz = cd.getClazz(null);
 						if (clazz != null && !StringUtil.isEmpty(strName)) {
 							if (StringUtil.isEmpty(strDefault)) def = HTMLDumpWriter.DEFAULT_NONE;
@@ -937,8 +939,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static ConfigListener loadListener(ConfigServerImpl config, Struct root, ConfigListener defaultValue) {
 		try {
 			Struct listener = ConfigUtil.getAsStruct("listener", root);
-			ClassDefinition cd = listener != null ? getClassDefinition(listener, "", config.getIdentification()) : null;
-			String strArguments = getAttr(listener, "arguments");
+			ClassDefinition cd = listener != null ? getClassDefinition(config, listener, "", config.getIdentification()) : null;
+			String strArguments = getAttr(config, listener, "arguments");
 			if (strArguments == null) strArguments = "";
 
 			if (cd != null && cd.hasClass()) {
@@ -984,7 +986,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			// API Key
 			String apiKey = null;
-			String str = root != null ? getAttr(root, "apiKey") : null;
+			String str = root != null ? getAttr(config, root, "apiKey") : null;
 			if (!StringUtil.isEmpty(str, true)) apiKey = str.trim();
 			return new IdentificationServerImpl(config, securityKey, apiKey);
 
@@ -1007,8 +1009,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Struct security = ConfigUtil.getAsStruct("security", root);
 			int vu = ConfigPro.QUERY_VAR_USAGE_UNDEFINED;
 			if (security != null) {
-				vu = AppListenerUtil.toVariableUsage(getAttr(security, "variableUsage"), ConfigPro.QUERY_VAR_USAGE_UNDEFINED);
-				if (vu == ConfigPro.QUERY_VAR_USAGE_UNDEFINED) vu = AppListenerUtil.toVariableUsage(getAttr(security, "varUsage"), ConfigPro.QUERY_VAR_USAGE_UNDEFINED);
+				vu = AppListenerUtil.toVariableUsage(getAttr(config, security, "variableUsage"), ConfigPro.QUERY_VAR_USAGE_UNDEFINED);
+				if (vu == ConfigPro.QUERY_VAR_USAGE_UNDEFINED) vu = AppListenerUtil.toVariableUsage(getAttr(config, security, "varUsage"), ConfigPro.QUERY_VAR_USAGE_UNDEFINED);
 			}
 			if (vu == ConfigPro.QUERY_VAR_USAGE_UNDEFINED) {
 				vu = ConfigPro.QUERY_VAR_USAGE_IGNORE;
@@ -1035,7 +1037,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				fa = Caster.toStruct(it.next(), null);
 				if (fa == null) continue;
 
-				path = getAttr(fa, "path");
+				path = getAttr(config, fa, "path");
 				if (!StringUtil.isEmpty(path)) {
 					res = config.getResource(path);
 					if (res.isDirectory()) reses.add(res);
@@ -1051,39 +1053,42 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return reses.toArray(new Resource[reses.size()]);
 	}
 
-	private static SecurityManagerImpl _toSecurityManager(Struct el) {
-		SecurityManagerImpl sm = new SecurityManagerImpl(_attr(el, "setting", SecurityManager.VALUE_YES), _attr(el, "file", SecurityManager.VALUE_ALL),
-				_attr(el, "direct_java_access", SecurityManager.VALUE_YES), _attr(el, "mail", SecurityManager.VALUE_YES), _attr(el, "datasource", SecurityManager.VALUE_YES),
-				_attr(el, "mapping", SecurityManager.VALUE_YES), _attr(el, "remote", SecurityManager.VALUE_YES), _attr(el, "custom_tag", SecurityManager.VALUE_YES),
-				_attr(el, "cfx_setting", SecurityManager.VALUE_YES), _attr(el, "cfx_usage", SecurityManager.VALUE_YES), _attr(el, "debugging", SecurityManager.VALUE_YES),
-				_attr(el, "search", SecurityManager.VALUE_YES), _attr(el, "scheduled_task", SecurityManager.VALUE_YES), _attr(el, "tag_execute", SecurityManager.VALUE_YES),
-				_attr(el, "tag_import", SecurityManager.VALUE_YES), _attr(el, "tag_object", SecurityManager.VALUE_YES), _attr(el, "tag_registry", SecurityManager.VALUE_YES),
-				_attr(el, "cache", SecurityManager.VALUE_YES), _attr(el, "gateway", SecurityManager.VALUE_YES), _attr(el, "orm", SecurityManager.VALUE_YES),
-				_attr2(el, "access_read", SecurityManager.ACCESS_PROTECTED), _attr2(el, "access_write", SecurityManager.ACCESS_PROTECTED));
+	private static SecurityManagerImpl _toSecurityManager(Config config, Struct el) {
+		SecurityManagerImpl sm = new SecurityManagerImpl(_attr(config, el, "setting", SecurityManager.VALUE_YES), _attr(config, el, "file", SecurityManager.VALUE_ALL),
+				_attr(config, el, "direct_java_access", SecurityManager.VALUE_YES), _attr(config, el, "mail", SecurityManager.VALUE_YES),
+				_attr(config, el, "datasource", SecurityManager.VALUE_YES), _attr(config, el, "mapping", SecurityManager.VALUE_YES),
+				_attr(config, el, "remote", SecurityManager.VALUE_YES), _attr(config, el, "custom_tag", SecurityManager.VALUE_YES),
+				_attr(config, el, "cfx_setting", SecurityManager.VALUE_YES), _attr(config, el, "cfx_usage", SecurityManager.VALUE_YES),
+				_attr(config, el, "debugging", SecurityManager.VALUE_YES), _attr(config, el, "search", SecurityManager.VALUE_YES),
+				_attr(config, el, "scheduled_task", SecurityManager.VALUE_YES), _attr(config, el, "tag_execute", SecurityManager.VALUE_YES),
+				_attr(config, el, "tag_import", SecurityManager.VALUE_YES), _attr(config, el, "tag_object", SecurityManager.VALUE_YES),
+				_attr(config, el, "tag_registry", SecurityManager.VALUE_YES), _attr(config, el, "cache", SecurityManager.VALUE_YES),
+				_attr(config, el, "gateway", SecurityManager.VALUE_YES), _attr(config, el, "orm", SecurityManager.VALUE_YES),
+				_attr2(config, el, "access_read", SecurityManager.ACCESS_PROTECTED), _attr2(config, el, "access_write", SecurityManager.ACCESS_PROTECTED));
 		return sm;
 	}
 
-	public static SecurityManagerImpl _toSecurityManagerSingle(Struct el) {
+	public static SecurityManagerImpl _toSecurityManagerSingle(Config config, Struct el) {
 		SecurityManagerImpl sm = (SecurityManagerImpl) SecurityManagerImpl.getOpenSecurityManager();
-		sm.setAccess(SecurityManager.TYPE_ACCESS_READ, _attr2(el, "access_read", SecurityManager.ACCESS_PROTECTED));
-		sm.setAccess(SecurityManager.TYPE_ACCESS_WRITE, _attr2(el, "access_write", SecurityManager.ACCESS_PROTECTED));
-		sm.setAccess(SecurityManager.TYPE_REMOTE, _attr(el, "remote", SecurityManager.VALUE_YES));
-		sm.setAccess(SecurityManager.TYPE_FILE, _attr(el, "file", SecurityManager.VALUE_ALL));
-		sm.setAccess(SecurityManager.TYPE_TAG_EXECUTE, _attr(el, "tag_execute", SecurityManager.VALUE_YES));
-		sm.setAccess(SecurityManager.TYPE_TAG_IMPORT, _attr(el, "tag_import", SecurityManager.VALUE_YES));
-		sm.setAccess(SecurityManager.TYPE_TAG_OBJECT, _attr(el, "tag_object", SecurityManager.VALUE_YES));
-		sm.setAccess(SecurityManager.TYPE_TAG_REGISTRY, _attr(el, "tag_registry", SecurityManager.VALUE_YES));
-		sm.setAccess(SecurityManager.TYPE_DIRECT_JAVA_ACCESS, _attr(el, "direct_java_access", SecurityManager.VALUE_YES));
-		sm.setAccess(SecurityManager.TYPE_CFX_USAGE, _attr(el, "cfx_usage", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_ACCESS_READ, _attr2(config, el, "access_read", SecurityManager.ACCESS_PROTECTED));
+		sm.setAccess(SecurityManager.TYPE_ACCESS_WRITE, _attr2(config, el, "access_write", SecurityManager.ACCESS_PROTECTED));
+		sm.setAccess(SecurityManager.TYPE_REMOTE, _attr(config, el, "remote", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_FILE, _attr(config, el, "file", SecurityManager.VALUE_ALL));
+		sm.setAccess(SecurityManager.TYPE_TAG_EXECUTE, _attr(config, el, "tag_execute", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_TAG_IMPORT, _attr(config, el, "tag_import", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_TAG_OBJECT, _attr(config, el, "tag_object", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_TAG_REGISTRY, _attr(config, el, "tag_registry", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_DIRECT_JAVA_ACCESS, _attr(config, el, "direct_java_access", SecurityManager.VALUE_YES));
+		sm.setAccess(SecurityManager.TYPE_CFX_USAGE, _attr(config, el, "cfx_usage", SecurityManager.VALUE_YES));
 		return sm;
 	}
 
-	private static short _attr(Struct el, String attr, short _default) {
-		return SecurityManagerImpl.toShortAccessValue(getAttr(el, attr), _default);
+	private static short _attr(Config config, Struct el, String attr, short _default) {
+		return SecurityManagerImpl.toShortAccessValue(getAttr(config, el, attr), _default);
 	}
 
-	private static short _attr2(Struct el, String attr, short _default) {
-		String strAccess = getAttr(el, attr);
+	private static short _attr2(Config config, Struct el, String attr, short _default) {
+		String strAccess = getAttr(config, el, attr);
 		if (StringUtil.isEmpty(strAccess)) return _default;
 		strAccess = strAccess.trim().toLowerCase();
 		if ("open".equals(strAccess)) return SecurityManager.ACCESS_OPEN;
@@ -1266,19 +1271,19 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						if (el == null) continue;
 
 						String virtual = e.getKey().getString();
-						String physical = getAttr(el, "physical");
-						String archive = getAttr(el, "archive");
-						String strListType = getAttr(el, "listenerType");
-						if (StringUtil.isEmpty(strListType)) strListType = getAttr(el, "listener-type");
-						if (StringUtil.isEmpty(strListType)) strListType = getAttr(el, "listenertype");
+						String physical = getAttr(config, el, "physical");
+						String archive = getAttr(config, el, "archive");
+						String strListType = getAttr(config, el, "listenerType");
+						if (StringUtil.isEmpty(strListType)) strListType = getAttr(config, el, "listener-type");
+						if (StringUtil.isEmpty(strListType)) strListType = getAttr(config, el, "listenertype");
 
-						String strListMode = getAttr(el, "listenerMode");
-						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(el, "listener-mode");
-						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(el, "listenermode");
+						String strListMode = getAttr(config, el, "listenerMode");
+						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, el, "listener-mode");
+						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, el, "listenermode");
 
-						boolean readonly = toBoolean(getAttr(el, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(el, "hidden"), false);
-						boolean toplevel = toBoolean(getAttr(el, "toplevel"), true);
+						boolean readonly = toBoolean(getAttr(config, el, "readonly"), false);
+						boolean hidden = toBoolean(getAttr(config, el, "hidden"), false);
+						boolean toplevel = toBoolean(getAttr(config, el, "toplevel"), true);
 
 						{
 							if ("/lucee-server/".equalsIgnoreCase(virtual) || "/lucee-server-context/".equalsIgnoreCase(virtual)) {
@@ -1315,16 +1320,16 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						// physical!=null &&
 						if ((physical != null || archive != null)) {
 
-							short insTemp = inspectTemplate(el);
+							short insTemp = inspectTemplate(config, el);
 
-							int insTempSlow = Caster.toIntValue(getAttr(el, "inspectTemplateIntervalSlow"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
-							int insTempFast = Caster.toIntValue(getAttr(el, "inspectTemplateIntervalFast"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
+							int insTempSlow = Caster.toIntValue(getAttr(config, el, "inspectTemplateIntervalSlow"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
+							int insTempFast = Caster.toIntValue(getAttr(config, el, "inspectTemplateIntervalFast"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
 
 							if ("/lucee/".equalsIgnoreCase(virtual) || "/lucee".equalsIgnoreCase(virtual) || "/lucee-server/".equalsIgnoreCase(virtual)
 									|| "/lucee-server-context".equalsIgnoreCase(virtual))
 								insTemp = ConfigPro.INSPECT_AUTO;
 
-							String primary = getAttr(el, "primary");
+							String primary = getAttr(config, el, "primary");
 							boolean physicalFirst = primary == null || !"archive".equalsIgnoreCase(primary);
 
 							tmp = new MappingImpl(config, virtual, physical, archive, insTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, toplevel, false, false,
@@ -1380,12 +1385,12 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return mappings.values().toArray(new Mapping[mappings.size()]);
 	}
 
-	private static short inspectTemplate(Struct data) {
+	private static short inspectTemplate(Config config, Struct data) {
 		String strInsTemp = SystemUtil.getSystemPropOrEnvVar("lucee.inspect.template", null);
-		if (StringUtil.isEmpty(strInsTemp, true)) strInsTemp = getAttr(data, "inspectTemplate");
-		if (StringUtil.isEmpty(strInsTemp, true)) strInsTemp = getAttr(data, "inspect");
+		if (StringUtil.isEmpty(strInsTemp, true)) strInsTemp = getAttr(config, data, "inspectTemplate");
+		if (StringUtil.isEmpty(strInsTemp, true)) strInsTemp = getAttr(config, data, "inspect");
 		if (StringUtil.isEmpty(strInsTemp, true)) {
-			Boolean trusted = Caster.toBoolean(getAttr(data, "trusted"), null);
+			Boolean trusted = Caster.toBoolean(getAttr(config, data, "trusted"), null);
 			if (trusted != null) {
 				if (trusted.booleanValue()) return ConfigPro.INSPECT_AUTO;
 				return ConfigPro.INSPECT_ALWAYS;
@@ -1416,11 +1421,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						el = Caster.toStruct(it.next());
 						if (el == null) continue;
 
-						String physical = getAttr(el, "physical");
-						String virtual = getAttr(el, "virtual");
-						boolean readonly = toBoolean(getAttr(el, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(el, "hidden"), false);
-						boolean _default = toBoolean(getAttr(el, "default"), false);
+						String physical = getAttr(config, el, "physical");
+						String virtual = getAttr(config, el, "virtual");
+						boolean readonly = toBoolean(getAttr(config, el, "readonly"), false);
+						boolean hidden = toBoolean(getAttr(config, el, "hidden"), false);
+						boolean _default = toBoolean(getAttr(config, el, "default"), false);
 						if (physical != null) {
 							tmp = new lucee.runtime.rest.Mapping(config, virtual, physical, hidden, readonly, _default);
 							if (_default) hasDefault = true;
@@ -1488,9 +1493,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 					// appender
 					if (forceLogAppender != null) cdAppender = config.getLogEngine().appenderClassDefintion(forceLogAppender);
-					else cdAppender = getClassDefinition(child, "appender", config.getIdentification());
+					else cdAppender = getClassDefinition(config, child, "appender", config.getIdentification());
 					if (!cdAppender.hasClass()) {
-						tmp = StringUtil.trim(getAttr(child, "appender"), "");
+						tmp = StringUtil.trim(getAttr(config, child, "appender"), "");
 						cdAppender = config.getLogEngine().appenderClassDefintion(tmp);
 					}
 					else if (!cdAppender.isBundle()) {
@@ -1499,9 +1504,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					appenderArgs = toArguments(child, "appenderArguments", true, false);
 
 					// layout
-					cdLayout = getClassDefinition(child, "layout", config.getIdentification());
+					cdLayout = getClassDefinition(config, child, "layout", config.getIdentification());
 					if (!cdLayout.hasClass()) {
-						tmp = StringUtil.trim(getAttr(child, "layout"), "");
+						tmp = StringUtil.trim(getAttr(config, child, "layout"), "");
 						cdLayout = config.getLogEngine().layoutClassDefintion(tmp);
 					}
 					else if (!cdLayout.isBundle()) {
@@ -1509,11 +1514,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					}
 					layoutArgs = toArguments(child, "layoutArguments", true, false);
 
-					String strLevel = getAttr(child, "level");
+					String strLevel = getAttr(config, child, "level");
 					if (forceLogLevel != null) strLevel = forceLogLevel;
-					if (StringUtil.isEmpty(strLevel, true)) strLevel = getAttr(child, "logLevel");
+					if (StringUtil.isEmpty(strLevel, true)) strLevel = getAttr(config, child, "logLevel");
 					level = LogUtil.toLevel(StringUtil.trim(strLevel, ""), Log.LEVEL_ERROR);
-					readOnly = Caster.toBooleanValue(getAttr(child, "readOnly"), false);
+					readOnly = Caster.toBooleanValue(getAttr(config, child, "readOnly"), false);
 					// ignore when no appender/name is defined
 					if (cdAppender.hasClass() && !StringUtil.isEmpty(name)) {
 						existing.add(name.toLowerCase());
@@ -1586,14 +1591,14 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			}
 
 			// class
-			String strClass = getAttr(el, "class");
+			String strClass = getAttr(config, el, "class");
 			Class clazz;
 			if (!StringUtil.isEmpty(strClass)) {
 				try {
 					if ("console".equalsIgnoreCase(strClass)) clazz = ConsoleExecutionLog.class;
 					else if ("debug".equalsIgnoreCase(strClass)) clazz = DebugExecutionLog.class;
 					else {
-						ClassDefinition cd = el != null ? getClassDefinition(el, "", config.getIdentification()) : null;
+						ClassDefinition cd = el != null ? getClassDefinition(config, el, "", config.getIdentification()) : null;
 
 						Class c = cd != null ? cd.getClazz() : null;
 						if (c != null && (ClassUtil.newInstance(c) instanceof ExecutionLog)) {
@@ -1658,7 +1663,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// Databases
 
 			// Data Sources
-			Struct dataSources = ConfigUtil.getAsStruct(root, false, "dataSources");
+			Struct dataSources = ConfigUtil.getAsStruct(config, root, false, "dataSources");
 			if (accessCount == -1) accessCount = dataSources.size();
 			if (dataSources.size() < accessCount) accessCount = dataSources.size();
 
@@ -1677,17 +1682,17 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				if (dataSource.containsKey(KeyConstants._database)) {
 					try {
 						// do we have an id?
-						jdbc = config.getJDBCDriverById(getAttr(dataSource, "id"), null);
+						jdbc = config.getJDBCDriverById(getAttr(config, dataSource, "id"), null);
 						if (jdbc != null && jdbc.cd != null) {
 							cd = jdbc.cd;
 						}
 						else {
-							cd = getClassDefinition(dataSource, "", config.getIdentification());
+							cd = getClassDefinition(config, dataSource, "", config.getIdentification());
 						}
 
 						// we have no class
 						if (!cd.hasClass()) {
-							jdbc = config.getJDBCDriverById(getAttr(dataSource, "type"), null);
+							jdbc = config.getJDBCDriverById(getAttr(config, dataSource, "type"), null);
 							if (jdbc != null && jdbc.cd != null) {
 								cd = jdbc.cd;
 							}
@@ -1700,15 +1705,15 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 						// still no bundle!
 						if (!cd.isBundle()) cd = patchJDBCClass(config, cd);
-						int idle = Caster.toIntValue(getAttr(dataSource, "idleTimeout"), -1);
-						if (idle == -1) idle = Caster.toIntValue(getAttr(dataSource, "connectionTimeout"), -1);
+						int idle = Caster.toIntValue(getAttr(config, dataSource, "idleTimeout"), -1);
+						if (idle == -1) idle = Caster.toIntValue(getAttr(config, dataSource, "connectionTimeout"), -1);
 						int defLive = 15;
 						if (idle > 0) defLive = idle * 5;// for backward compatibility
 
-						String dsn = getAttr(dataSource, "connectionString");
-						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(dataSource, "dsn");
-						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(dataSource, "connStr");
-						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(dataSource, "url");
+						String dsn = getAttr(config, dataSource, "connectionString");
+						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(config, dataSource, "dsn");
+						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(config, dataSource, "connStr");
+						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(config, dataSource, "url");
 						if (StringUtil.isEmpty(dsn, true)) {
 							if (jdbc == null && cd.hasClass()) {
 								jdbc = config.getJDBCDriverByClassName(cd.getClassName(), null);
@@ -1718,21 +1723,22 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 							}
 
 						}
-						String bundleName = getAttr(dataSource, "bundleName");
-						String bundleVersion = getAttr(dataSource, "bundleVersion");
+						String bundleName = getAttr(config, dataSource, "bundleName");
+						String bundleVersion = getAttr(config, dataSource, "bundleVersion");
 
-						setDatasource(config, datasources, e.getKey().getString(), cd, getAttr(dataSource, "host"), getAttr(dataSource, "database"),
-								Caster.toIntValue(getAttr(dataSource, "port"), -1), dsn, bundleName, bundleVersion, getAttr(dataSource, "username"),
-								ConfigUtil.decrypt(getAttr(dataSource, "password")), null, Caster.toIntValue(getAttr(dataSource, "connectionLimit"), DEFAULT_MAX_CONNECTION), idle,
-								Caster.toIntValue(getAttr(dataSource, "liveTimeout"), defLive), Caster.toIntValue(getAttr(dataSource, "minIdle"), 0),
-								Caster.toIntValue(getAttr(dataSource, "maxIdle"), 0), Caster.toIntValue(getAttr(dataSource, "maxTotal"), 0),
-								Caster.toLongValue(getAttr(dataSource, "metaCacheTimeout"), 60000), toBoolean(getAttr(dataSource, "blob"), true),
-								toBoolean(getAttr(dataSource, "clob"), true), Caster.toIntValue(getAttr(dataSource, "allow"), DataSource.ALLOW_ALL),
-								toBoolean(getAttr(dataSource, "validate"), false), toBoolean(getAttr(dataSource, "storage"), false), getAttr(dataSource, "timezone"),
-								ConfigUtil.getAsStruct(dataSource, true, "custom"), getAttr(dataSource, "dbdriver"),
-								ParamSyntaxImpl.toParamSyntax(dataSource, ParamSyntaxImpl.DEFAULT), toBoolean(getAttr(dataSource, "literalTimestampWithTSOffset"), false),
-								toBoolean(getAttr(dataSource, "alwaysSetTimeout"), false), toBoolean(getAttr(dataSource, "requestExclusive"), false),
-								toBoolean(getAttr(dataSource, "alwaysResetConnections"), false)
+						setDatasource(config, datasources, e.getKey().getString(), cd, getAttr(config, dataSource, "host"), getAttr(config, dataSource, "database"),
+								Caster.toIntValue(getAttr(config, dataSource, "port"), -1), dsn, bundleName, bundleVersion, getAttr(config, dataSource, "username"),
+								ConfigUtil.decrypt(getAttr(config, dataSource, "password")), null,
+								Caster.toIntValue(getAttr(config, dataSource, "connectionLimit"), DEFAULT_MAX_CONNECTION), idle,
+								Caster.toIntValue(getAttr(config, dataSource, "liveTimeout"), defLive), Caster.toIntValue(getAttr(config, dataSource, "minIdle"), 0),
+								Caster.toIntValue(getAttr(config, dataSource, "maxIdle"), 0), Caster.toIntValue(getAttr(config, dataSource, "maxTotal"), 0),
+								Caster.toLongValue(getAttr(config, dataSource, "metaCacheTimeout"), 60000), toBoolean(getAttr(config, dataSource, "blob"), true),
+								toBoolean(getAttr(config, dataSource, "clob"), true), Caster.toIntValue(getAttr(config, dataSource, "allow"), DataSource.ALLOW_ALL),
+								toBoolean(getAttr(config, dataSource, "validate"), false), toBoolean(getAttr(config, dataSource, "storage"), false),
+								getAttr(config, dataSource, "timezone"), ConfigUtil.getAsStruct(config, dataSource, true, "custom"), getAttr(config, dataSource, "dbdriver"),
+								ParamSyntaxImpl.toParamSyntax(dataSource, ParamSyntaxImpl.DEFAULT), toBoolean(getAttr(config, dataSource, "literalTimestampWithTSOffset"), false),
+								toBoolean(getAttr(config, dataSource, "alwaysSetTimeout"), false), toBoolean(getAttr(config, dataSource, "requestExclusive"), false),
+								toBoolean(getAttr(config, dataSource, "alwaysResetConnections"), false)
 
 						);
 					}
@@ -1806,7 +1812,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 					// class definition
 					driver.setEL(KeyConstants._class, e.getKey().getString());
-					cd = getClassDefinition(driver, "", config.getIdentification());
+					cd = getClassDefinition(config, driver, "", config.getIdentification());
 					if (StringUtil.isEmpty(cd.getClassName()) && !StringUtil.isEmpty(cd.getName())) {
 						try {
 							Bundle bundle = OSGiUtil.loadBundle(cd.getName(), cd.getVersion(), config.getIdentification(), null, false);
@@ -1818,9 +1824,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						}
 					}
 
-					label = getAttr(driver, "label");
-					id = getAttr(driver, "id");
-					connStr = getAttr(driver, "connectionString");
+					label = getAttr(config, driver, "label");
+					id = getAttr(config, driver, "id");
+					connStr = getAttr(config, driver, "connectionString");
 					// check if label exists
 					if (StringUtil.isEmpty(label)) {
 						log(config, Log.LEVEL_INFO, "missing label for jdbc driver [" + cd.getClassName() + "]");
@@ -1862,7 +1868,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					try {
 						cache = Caster.toStruct(it.next());
 						if (cache == null) continue;
-						cd = getClassDefinition(cache, "", config.getIdentification());
+						cd = getClassDefinition(config, cache, "", config.getIdentification());
 
 						// check if it is a bundle
 						if (!cd.isBundle()) {
@@ -1893,8 +1899,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// default cache
 			for (int i = 0; i < ConfigPro.CACHE_TYPES_MAX.length; i++) {
 				try {
-					String def = getAttr(defaultCache, "default" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES_MAX[i]));
-					if (StringUtil.isEmpty(def, true)) def = getAttr(root, "cacheDefault" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES_MAX[i]));
+					String def = getAttr(config, defaultCache, "default" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES_MAX[i]));
+					if (StringUtil.isEmpty(def, true)) def = getAttr(config, root, "cacheDefault" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES_MAX[i]));
 
 					if (!StringUtil.isEmpty(def, true)) {
 						names.put(ConfigPro.CACHE_TYPES_MAX[i], def.trim());
@@ -1935,14 +1941,14 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						entry = it.next();
 						name = entry.getKey();
 						data = Caster.toStruct(entry.getValue(), null);
-						cd = getClassDefinition(data, "", config.getIdentification());
+						cd = getClassDefinition(config, data, "", config.getIdentification());
 						if (!cd.isBundle()) {
 							ClassDefinition _cd = config.getCacheDefinition(cd.getClassName());
 							if (_cd != null) cd = _cd;
 						}
 
 						{
-							Struct custom = ConfigUtil.getAsStruct(data, true, "custom");
+							Struct custom = ConfigUtil.getAsStruct(config, data, true, "custom");
 							// Workaround for old EHCache class definitions
 							if (cd.getClassName() != null && cd.getClassName().endsWith(".EHCacheLite")) {
 								cd = new ClassDefinitionImpl("org.lucee.extension.cache.eh.EHCache");
@@ -1955,8 +1961,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 									&& (cd.getClassName().endsWith(".extension.io.cache.eh.EHCache") || cd.getClassName().endsWith("lucee.runtime.cache.eh.EHCache"))) {
 										cd = new ClassDefinitionImpl("org.lucee.extension.cache.eh.EHCache");
 									}
-							cc = new CacheConnectionImpl(config, name.getString(), cd, custom, Caster.toBooleanValue(getAttr(data, "readOnly"), false),
-									Caster.toBooleanValue(getAttr(data, "storage"), false));
+							cc = new CacheConnectionImpl(config, name.getString(), cd, custom, Caster.toBooleanValue(getAttr(config, data, "readOnly"), false),
+									Caster.toBooleanValue(getAttr(config, data, "storage"), false));
 							if (!StringUtil.isEmpty(name)) {
 								caches.put(name.getLowerString(), cc);
 							}
@@ -2046,9 +2052,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						if (eConnection == null) continue;
 						id = e.getKey().getLowerString();
 
-						ge = new GatewayEntryImpl(id, getClassDefinition(eConnection, "", config.getIdentification()), getAttr(eConnection, "cfcPath"),
-								getAttr(eConnection, "listenerCFCPath"), getAttr(eConnection, "startupMode"), ConfigUtil.getAsStruct(eConnection, true, "custom"),
-								Caster.toBooleanValue(getAttr(eConnection, "readOnly"), false));
+						ge = new GatewayEntryImpl(id, getClassDefinition(config, eConnection, "", config.getIdentification()), getAttr(config, eConnection, "cfcPath"),
+								getAttr(config, eConnection, "listenerCFCPath"), getAttr(config, eConnection, "startupMode"),
+								ConfigUtil.getAsStruct(config, eConnection, true, "custom"), Caster.toBooleanValue(getAttr(config, eConnection, "readOnly"), false));
 
 						if (!StringUtil.isEmpty(id)) {
 							mapGateways.put(id.toLowerCase(), ge);
@@ -2096,7 +2102,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static Mapping[] loadCustomTagsMappings(ConfigImpl config, Struct root) {
 		Mapping[] mappings = null;
 		try {
-			Array ctMappings = ConfigUtil.getAsArray(root, true, KeyConstants._virtual, KeyConstants._physical, true, "customTagMappings", "customTagPaths");
+			Array ctMappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, true, "customTagMappings", "customTagPaths");
 
 			boolean hasDefault = false;
 
@@ -2110,18 +2116,18 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						ctMapping = Caster.toStruct(it.next(), null);
 						if (ctMapping == null) continue;
 
-						String virtual = createVirtual(ctMapping);
-						String physical = getAttr(ctMapping, "physical");
-						String archive = getAttr(ctMapping, "archive");
-						boolean readonly = toBoolean(getAttr(ctMapping, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(ctMapping, "hidden"), false);
+						String virtual = createVirtual(config, ctMapping);
+						String physical = getAttr(config, ctMapping, "physical");
+						String archive = getAttr(config, ctMapping, "archive");
+						boolean readonly = toBoolean(getAttr(config, ctMapping, "readonly"), false);
+						boolean hidden = toBoolean(getAttr(config, ctMapping, "hidden"), false);
 						if ("{lucee-web}/customtags/".equals(physical) || "{lucee-server}/customtags/".equals(physical)) continue;
 						if ("{lucee-config}/customtags/".equals(physical)) hasDefault = true;
-						short inspTemp = inspectTemplate(ctMapping);
-						int insTempSlow = Caster.toIntValue(getAttr(ctMapping, "inspectTemplateIntervalSlow"), -1);
-						int insTempFast = Caster.toIntValue(getAttr(ctMapping, "inspectTemplateIntervalFast"), -1);
+						short inspTemp = inspectTemplate(config, ctMapping);
+						int insTempSlow = Caster.toIntValue(getAttr(config, ctMapping, "inspectTemplateIntervalSlow"), -1);
+						int insTempFast = Caster.toIntValue(getAttr(config, ctMapping, "inspectTemplateIntervalFast"), -1);
 
-						String primary = getAttr(ctMapping, "primary");
+						String primary = getAttr(config, ctMapping, "primary");
 
 						boolean physicalFirst = StringUtil.isEmpty(archive, true) || !"archive".equalsIgnoreCase(primary);
 						list.add(new MappingImpl(config, virtual, physical, archive, inspTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, true, false, true, null,
@@ -2182,11 +2188,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			// get library directories
 			if (fileSystem != null) {
-				if (StringUtil.isEmpty(strDefaultTLDDirectory)) strDefaultTLDDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "tldDirectory"));
-				if (StringUtil.isEmpty(strDefaultTagDirectory)) strDefaultTagDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "tagDirectory"));
-				if (StringUtil.isEmpty(strDefaultTLDDirectory)) strDefaultTLDDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "tldDefaultDirectory"));
-				if (StringUtil.isEmpty(strDefaultTagDirectory)) strDefaultTagDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "tagDefaultDirectory"));
-				if (StringUtil.isEmpty(strTagDirectory)) strTagDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "tagAddionalDirectory"));
+				if (StringUtil.isEmpty(strDefaultTLDDirectory)) strDefaultTLDDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "tldDirectory"));
+				if (StringUtil.isEmpty(strDefaultTagDirectory)) strDefaultTagDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "tagDirectory"));
+				if (StringUtil.isEmpty(strDefaultTLDDirectory)) strDefaultTLDDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "tldDefaultDirectory"));
+				if (StringUtil.isEmpty(strDefaultTagDirectory)) strDefaultTagDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "tagDefaultDirectory"));
+				if (StringUtil.isEmpty(strTagDirectory)) strTagDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "tagAddionalDirectory"));
 			}
 
 			// set default directories if necessary
@@ -2258,11 +2264,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			// get library directories
 			if (fileSystem != null) {
-				if (StringUtil.isEmpty(strDefaultFLDDirectory)) strDefaultFLDDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "flddirectory"));
-				if (StringUtil.isEmpty(strDefaultFuncDirectory)) strDefaultFuncDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "functionDirectory"));
-				if (StringUtil.isEmpty(strDefaultFLDDirectory)) strDefaultFLDDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "fldDefaultDirectory"));
-				if (StringUtil.isEmpty(strDefaultFuncDirectory)) strDefaultFuncDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "functionDefaultDirectory"));
-				if (StringUtil.isEmpty(strFuncDirectory)) strFuncDirectory = ConfigUtil.translateOldPath(getAttr(fileSystem, "functionAddionalDirectory"));
+				if (StringUtil.isEmpty(strDefaultFLDDirectory)) strDefaultFLDDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "flddirectory"));
+				if (StringUtil.isEmpty(strDefaultFuncDirectory)) strDefaultFuncDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "functionDirectory"));
+				if (StringUtil.isEmpty(strDefaultFLDDirectory)) strDefaultFLDDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "fldDefaultDirectory"));
+				if (StringUtil.isEmpty(strDefaultFuncDirectory)) strDefaultFuncDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "functionDefaultDirectory"));
+				if (StringUtil.isEmpty(strFuncDirectory)) strFuncDirectory = ConfigUtil.translateOldPath(getAttr(config, fileSystem, "functionAddionalDirectory"));
 			}
 
 			// set default directories if necessary
@@ -2440,8 +2446,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			if (root != null) {
 				ConfigServerImpl cs = (ConfigServerImpl) config;
 
-				String location = getAttr(root, "updateLocation");
-				if (StringUtil.isEmpty(location, true)) location = getAttr(root, "updateSiteURL");
+				String location = getAttr(config, root, "updateLocation");
+				if (StringUtil.isEmpty(location, true)) location = getAttr(config, root, "updateSiteURL");
 				if (!StringUtil.isEmpty(location, true)) {
 					location = location.trim();
 					if ("http://update.lucee.org".equals(location)) location = DEFAULT_LOCATION;
@@ -2479,24 +2485,24 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						if (client == null) continue;
 
 						// type
-						String type = getAttr(client, "type");
+						String type = getAttr(config, client, "type");
 						if (StringUtil.isEmpty(type)) type = "web";
 						// url
-						String url = getAttr(client, "url");
-						String label = getAttr(client, "label");
+						String url = getAttr(config, client, "url");
+						String label = getAttr(config, client, "label");
 						if (StringUtil.isEmpty(label)) label = url;
-						String sUser = getAttr(client, "serverUsername");
-						String sPass = ConfigUtil.decrypt(getAttr(client, "serverPassword"));
-						String aPass = ConfigUtil.decrypt(getAttr(client, "adminPassword"));
-						String aCode = ConfigUtil.decrypt(getAttr(client, "securityKey"));
+						String sUser = getAttr(config, client, "serverUsername");
+						String sPass = ConfigUtil.decrypt(getAttr(config, client, "serverPassword"));
+						String aPass = ConfigUtil.decrypt(getAttr(config, client, "adminPassword"));
+						String aCode = ConfigUtil.decrypt(getAttr(config, client, "securityKey"));
 						// if(aCode!=null && aCode.indexOf('-')!=-1)continue;
-						String usage = getAttr(client, "usage");
+						String usage = getAttr(config, client, "usage");
 						if (usage == null) usage = "";
 
-						String pUrl = getAttr(client, "proxyServer");
-						int pPort = Caster.toIntValue(getAttr(client, "proxyPort"), -1);
-						String pUser = getAttr(client, "proxyUsername");
-						String pPass = ConfigUtil.decrypt(getAttr(client, "proxyPassword"));
+						String pUrl = getAttr(config, client, "proxyServer");
+						int pPort = Caster.toIntValue(getAttr(config, client, "proxyPort"), -1);
+						String pUser = getAttr(config, client, "proxyUsername");
+						String pPass = ConfigUtil.decrypt(getAttr(config, client, "proxyPassword"));
 						ProxyData pd = null;
 						if (!StringUtil.isEmpty(pUrl, true)) {
 							pd = new ProxyDataImpl();
@@ -2532,7 +2538,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			String err = null;
 			err = SystemUtil.getSystemPropOrEnvVar("lucee.system.err", null);
-			if (StringUtil.isEmpty(err)) err = getAttr(root, "systemErr");
+			if (StringUtil.isEmpty(err)) err = getAttr(config, root, "systemErr");
 			return toPrintStream(config, err, true);
 		}
 		catch (Throwable t) {
@@ -2550,7 +2556,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			String out = null;
 			// sys prop or env var
 			out = SystemUtil.getSystemPropOrEnvVar("lucee.system.out", null);
-			if (StringUtil.isEmpty(out)) out = getAttr(root, "systemOut");
+			if (StringUtil.isEmpty(out)) out = getAttr(config, root, "systemOut");
 			return toPrintStream(config, out, false);
 
 		}
@@ -2622,7 +2628,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			// timeZone
 			String strTimeZone = null;
-			strTimeZone = getAttr(root, new String[] { "timezone", "thisTimezone" });
+			strTimeZone = getAttr(config, root, new String[] { "timezone", "thisTimezone" });
 
 			if (!StringUtil.isEmpty(strTimeZone)) return TimeZone.getTimeZone(strTimeZone);
 			else {
@@ -2644,7 +2650,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		if (ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING)) {
 			try {
 				// locale
-				String strLocale = getAttr(root, new String[] { "locale", "thisLocale" });
+				String strLocale = getAttr(config, root, new String[] { "locale", "thisLocale" });
 				if (!StringUtil.isEmpty(strLocale)) return Caster.toLocale(strLocale, defaultValue);
 
 			}
@@ -2659,7 +2665,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static ClassDefinition loadWS(ConfigImpl config, Struct root, ClassDefinition defaultValue) {
 		try {
 			Struct ws = ConfigUtil.getAsStruct("webservice", root);
-			ClassDefinition cd = ws != null ? getClassDefinition(ws, "", config.getIdentification()) : null;
+			ClassDefinition cd = ws != null ? getClassDefinition(config, ws, "", config.getIdentification()) : null;
 			if (cd != null && !StringUtil.isEmpty(cd.getClassName())) {
 				return cd;
 			}
@@ -2681,9 +2687,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			ClassDefinition cd = null;
 			if (orm != null) {
-				cd = getClassDefinition(orm, "engine", config.getIdentification());
+				cd = getClassDefinition(config, orm, "engine", config.getIdentification());
 				if (cd == null || cd.isClassNameEqualTo(DummyORMEngine.class.getName()) || cd.isClassNameEqualTo("lucee.runtime.orm.hibernate.HibernateORMEngine"))
-					cd = getClassDefinition(orm, "", config.getIdentification());
+					cd = getClassDefinition(config, orm, "", config.getIdentification());
 
 				if (cd != null && (cd.isClassNameEqualTo(DummyORMEngine.class.getName()) || cd.isClassNameEqualTo("lucee.runtime.orm.hibernate.HibernateORMEngine"))) cd = null;
 			}
@@ -2720,7 +2726,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static short loadJava(ConfigImpl config, Struct root, short defaultValue) {
 		try {
 
-			String strCompileType = getAttr(root, "compileType");
+			String strCompileType = getAttr(config, root, "compileType");
 			if (!StringUtil.isEmpty(strCompileType)) {
 				strCompileType = strCompileType.trim().toLowerCase();
 				if (strCompileType.equals("after-startup")) {
@@ -2745,7 +2751,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Resource lib = config.getLibraryDirectory();
 			Resource[] libs = lib.listResources(ExtensionResourceFilter.EXTENSION_JAR_NO_DIR);
 
-			Struct javasettings = ConfigUtil.getAsStruct(root, false, "javasettings");
+			Struct javasettings = ConfigUtil.getAsStruct(config, root, false, "javasettings");
 
 			JavaSettings js = JavaSettingsImpl.getInstance(config, javasettings, libs);
 			return js;
@@ -2836,7 +2842,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					if (child == null) continue;
 
 					// class
-					ClassDefinition cd = getClassDefinition(child, "", config.getIdentification());
+					ClassDefinition cd = getClassDefinition(config, child, "", config.getIdentification());
 					ConfigBase.Startup existing = startups.get(cd.getClassName());
 
 					if (existing != null) {
@@ -2882,7 +2888,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 		// Send partial
 		try {
-			String strSendPartial = getAttr(root, "mailSendPartial");
+			String strSendPartial = getAttr(config, root, "mailSendPartial");
 			if (!StringUtil.isEmpty(strSendPartial) && hasAccess) {
 				config.setMailSendPartial(toBoolean(strSendPartial, false));
 			}
@@ -2898,7 +2904,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 		// User set
 		try {
-			String strUserSet = getAttr(root, "mailUserSet");
+			String strUserSet = getAttr(config, root, "mailUserSet");
 			if (!StringUtil.isEmpty(strUserSet) && hasAccess) {
 				config.setUserSet(toBoolean(strUserSet, true));
 			}
@@ -2914,7 +2920,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 		// Spool Interval
 		try {
-			String strSpoolInterval = getAttr(root, "mailSpoolInterval");
+			String strSpoolInterval = getAttr(config, root, "mailSpoolInterval");
 			if (!StringUtil.isEmpty(strSpoolInterval) && hasAccess) {
 				config.setMailSpoolInterval(Caster.toIntValue(strSpoolInterval, 30));
 			}
@@ -2930,7 +2936,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 		// Encoding
 		try {
-			String strEncoding = getAttr(root, "mailDefaultEncoding");
+			String strEncoding = getAttr(config, root, "mailDefaultEncoding");
 			if (!StringUtil.isEmpty(strEncoding, true) && hasAccess) {
 				config.setMailDefaultEncoding(strEncoding);
 			}
@@ -2946,7 +2952,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 		// Spool Enable
 		try {
-			String strSpoolEnable = getAttr(root, "mailSpoolEnable");
+			String strSpoolEnable = getAttr(config, root, "mailSpoolEnable");
 			if (!StringUtil.isEmpty(strSpoolEnable) && hasAccess) {
 				config.setMailSpoolEnable(toBoolean(strSpoolEnable, true));
 			}
@@ -2962,7 +2968,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 		// Timeout
 		try {
-			String strTimeout = getAttr(root, "mailConnectionTimeout");
+			String strTimeout = getAttr(config, root, "mailConnectionTimeout");
 			if (!StringUtil.isEmpty(strTimeout) && hasAccess) {
 				config.setMailTimeout(Caster.toIntValue(strTimeout, 30));
 			}
@@ -2994,10 +3000,10 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						if (el == null) continue;
 						i++;
 						servers.add(i,
-								new ServerImpl(Caster.toIntValue(getAttr(el, "id"), i + 1), getAttr(el, "smtp"), Caster.toIntValue(getAttr(el, "port"), 25),
-										getAttr(el, "username"), ConfigUtil.decrypt(getAttr(el, "password")), toLong(getAttr(el, "life"), 1000 * 60 * 5),
-										toLong(getAttr(el, "idle"), 1000 * 60 * 1), toBoolean(getAttr(el, "tls"), false), toBoolean(getAttr(el, "ssl"), false),
-										toBoolean(getAttr(el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL));
+								new ServerImpl(Caster.toIntValue(getAttr(config, el, "id"), i + 1), getAttr(config, el, "smtp"), Caster.toIntValue(getAttr(config, el, "port"), 25),
+										getAttr(config, el, "username"), ConfigUtil.decrypt(getAttr(config, el, "password")), toLong(getAttr(config, el, "life"), 1000 * 60 * 5),
+										toLong(getAttr(config, el, "idle"), 1000 * 60 * 1), toBoolean(getAttr(config, el, "tls"), false),
+										toBoolean(getAttr(config, el, "ssl"), false), toBoolean(getAttr(config, el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL));
 
 					}
 					catch (Throwable t) {
@@ -3036,11 +3042,11 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 					el = Caster.toStruct(it.next(), null);
 					if (el == null) continue;
 
-					cd = getClassDefinition(el, "", config.getIdentification());
-					strType = getAttr(el, "type");
-					name = getAttr(el, "name");
-					async = Caster.toBooleanValue(getAttr(el, "async"), false);
-					_log = Caster.toBooleanValue(getAttr(el, "log"), true);
+					cd = getClassDefinition(config, el, "", config.getIdentification());
+					strType = getAttr(config, el, "type");
+					name = getAttr(config, el, "name");
+					async = Caster.toBooleanValue(getAttr(config, el, "async"), false);
+					_log = Caster.toBooleanValue(getAttr(config, el, "log"), true);
 
 					if ("request".equalsIgnoreCase(strType)) type = IntervallMonitor.TYPE_REQUEST;
 					else if ("action".equalsIgnoreCase(strType)) type = Monitor.TYPE_ACTION;
@@ -3109,7 +3115,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Struct search = ConfigUtil.getAsStruct("search", root);
 
 			// class
-			ClassDefinition<SearchEngine> cd = search != null ? getClassDefinition(search, "engine", config.getIdentification()) : null;
+			ClassDefinition<SearchEngine> cd = search != null ? getClassDefinition(config, search, "engine", config.getIdentification()) : null;
 			if (cd == null || !cd.hasClass() || "lucee.runtime.search.lucene.LuceneSearchEngine".equals(cd.getClassName())) {
 				cd = new ClassDefinitionImpl(DummySearchEngine.class);
 			}
@@ -3128,7 +3134,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Struct search = ConfigUtil.getAsStruct("search", root);
 
 			// directory
-			String dir = search != null ? getAttr(search, "directory") : null;
+			String dir = search != null ? getAttr(config, search, "directory") : null;
 			if (StringUtil.isEmpty(dir)) {
 				dir = "{lucee-web}/search/";
 			}
@@ -3152,72 +3158,72 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			String[] debugOptions = StringUtil.isEmpty(strDebugOption) ? null : ListUtil.listToStringArray(strDebugOption, ',');
 
 			String str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingDatabase", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowDatabase");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingDatabase");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowDatabase");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingDatabase");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_DATABASE;
 			}
 			else if (debugOptions != null && extractDebugOption("database", debugOptions)) options += ConfigPro.DEBUG_DATABASE;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingException", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowException");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingException");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowException");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingException");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_EXCEPTION;
 			}
 			else if (debugOptions != null && extractDebugOption("exception", debugOptions)) options += ConfigPro.DEBUG_EXCEPTION;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingTemplate", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowTemplate");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingTemplate");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTemplate");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingTemplate");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_TEMPLATE;
 			}
 			else if (debugOptions != null && extractDebugOption("template", debugOptions)) options += ConfigPro.DEBUG_TEMPLATE;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingDump", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowDump");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingDump");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowDump");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingDump");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_DUMP;
 			}
 			else if (debugOptions != null && extractDebugOption("dump", debugOptions)) options += ConfigPro.DEBUG_DUMP;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingTracing", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowTracing");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowTrace");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingTracing");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTracing");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTrace");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingTracing");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_TRACING;
 			}
 			else if (debugOptions != null && extractDebugOption("tracing", debugOptions)) options += ConfigPro.DEBUG_TRACING;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingTimer", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowTimer");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingTimer");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTimer");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingTimer");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_TIMER;
 			}
 			else if (debugOptions != null && extractDebugOption("timer", debugOptions)) options += ConfigPro.DEBUG_TIMER;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingImplicitAccess", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowImplicitAccess");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingImplicitAccess");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowImplicitAccess");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingImplicitAccess");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_IMPLICIT_ACCESS;
 			}
 			else if (debugOptions != null && extractDebugOption("implicit-access", debugOptions)) options += ConfigPro.DEBUG_IMPLICIT_ACCESS;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingQueryUsage", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingShowQueryUsage");
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingQueryUsage");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowQueryUsage");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingQueryUsage");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_QUERY_USAGE;
 			}
 			else if (debugOptions != null && extractDebugOption("queryUsage", debugOptions)) options += ConfigPro.DEBUG_QUERY_USAGE;
 
 			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingThread", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(root, "debuggingThread");
+			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingThread");
 			if (hasAccess && !StringUtil.isEmpty(str)) {
 				if (toBoolean(str, false)) options += ConfigPro.DEBUG_THREAD;
 			}
@@ -3261,12 +3267,12 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						cfxTag = Caster.toStruct(entry.getValue(), null);
 						if (cfxTag == null) continue;
 
-						String type = getAttr(cfxTag, "type");
+						String type = getAttr(config, cfxTag, "type");
 						if (type != null) {
 							// Java CFX Tags
 							if ("java".equalsIgnoreCase(type)) {
 								String name = entry.getKey().getString();
-								ClassDefinition cd = getClassDefinition(cfxTag, "", config.getIdentification());
+								ClassDefinition cd = getClassDefinition(config, cfxTag, "", config.getIdentification());
 								if (!StringUtil.isEmpty(name) && cd.hasClass()) {
 									map.put(name.toLowerCase(), new JavaCFXTagClass(name, cd));
 								}
@@ -3316,9 +3322,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				log(config, t);
 			}
 
-			List<RHExtension> extensions = new ArrayList<RHExtension>();
-			Set<Resource> installedFiles = new HashSet<>();
-			Set<String> installedIds = new HashSet<>();
+			Map<String, RHExtension> extensionsConfig = new ConcurrentHashMap<>();
+
 			{
 				String strBundles;
 				RHExtension rhe;
@@ -3330,10 +3335,10 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				while (it.hasNext()) {
 					child = Caster.toStruct(it.next(), null);
 					if (child == null) continue;
-					id = getAttr(child, KeyConstants._id);
+					id = getAttr(config, child, KeyConstants._id);
 					BundleInfo[] bfsq;
 					try {
-						String strRes = getAttr(child, KeyConstants._resource, KeyConstants._path, KeyConstants._url);
+						String strRes = getAttr(config, child, KeyConstants._resource, KeyConstants._path, KeyConstants._url);
 						if (StringUtil.isEmpty(id) && StringUtil.isEmpty(strRes)) continue;
 
 						Resource res = null;
@@ -3357,9 +3362,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 							}
 						}
 
-						rhe = RHExtension.installExtension(config, id, getAttr(child, KeyConstants._version), res, false);
+						rhe = RHExtension.installExtension(config, id, getAttr(config, child, KeyConstants._version), res, false);
 						// startBundles(config, rhe, firstLoad);
-						extensions.add(rhe);
+						extensionsConfig.put(rhe.getExtensionInstalledName(), rhe);
 						// installedFiles.add(rhe.getExtensionFile());
 						// installedIds.add(rhe.getId());
 					}
@@ -3372,17 +3377,13 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			}
 
 			// start bundles in parallel but wait for them to finish
-			CountDownLatch latch = new CountDownLatch(extensions.size());
+			CountDownLatch latch = new CountDownLatch(extensionsConfig.size());
 			ExecutorService executor = ThreadUtil.createExecutorService();
 			try {
 
-				for (RHExtension ext: extensions) {
+				for (RHExtension ext: extensionsConfig.values()) {
 					executor.submit(() -> {
 						try {
-							// Add extension info to thread-safe collections
-							installedFiles.add(ext.getExtensionFile());
-							installedIds.add(ext.getId());
-
 							// Call the startBundles method for each extension
 							startBundles(config, ext, firstLoad);
 						}
@@ -3417,28 +3418,42 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			// uninstall extensions no longer used
 			Boolean cleanupExtension = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.cleanup.extension", null), true);
 			if (cleanupExtension) {
-				Resource[] installed = RHExtension.getExtensionInstalledDir(config).listResources(new ExtensionResourceFilter("lex"));
+				Map<String, Resource> installed = RHExtension.loadExtensionInstalledFiles(config);
 				if (installed != null) {
 					ResetFilter filter = new ResetFilter();
 					try {
-						for (Resource r: installed) {
-							if (!installedFiles.contains(r)) {
 
-								// is maybe a diff version installed?
+						for (Resource r: installed.values()) {
+
+							// is this extension file not in the config
+							if (!extensionsConfig.containsKey(r.getName())) {
 								RHExtension ext = RHExtension.getInstance(config, r);
-								if (!installedIds.contains(ext.getId())) {
+
+								RHExtension match = null;
+								for (RHExtension e: extensionsConfig.values()) {
+									if (e.getId().equals(ext.getId())) {
+										match = e;
+										break;
+									}
+								}
+
+								// maybe it got updated and the extension file was not removed
+								if (match != null) {
+
+									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
+											+ "] in the installed folder that is in a different version in the configuraton [" + match + "], so we delete that extension file.");
+									RHExtension.removeExtensionInstalledFile(config, r.getName());
+								}
+								// the extension no longer configured, sowe remove it
+								else {
 									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
 											+ "] in the installed folder that is not present in the configuration in any version, so we will uninstall it");
 									ConfigAdmin._removeRHExtension(config, ext, null, filter, true);
 									if (deployLog != null) deployLog.info("extension", "removed extension [" + ext + "]");
 								}
-								else {
-									if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
-											+ "] in the installed folder that is in a different version in the configuraton, so we delete that extension file.");
-									ConfigAdmin.deleteExtensionFile(ext, r);
-								}
 
 							}
+
 						}
 					}
 					finally {
@@ -3447,7 +3462,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				}
 			}
 			// set
-			config.setExtensions(extensions.toArray(new RHExtension[extensions.size()]), md5);
+			config.setExtensions(extensionsConfig.values().toArray(new RHExtension[extensionsConfig.size()]), md5);
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
@@ -3500,7 +3515,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						Map<String, String> child = Caster.toStringMap(childSct, null);
 						if (child == null) return null;
 
-						String id = getAttr(childSct, KeyConstants._id);
+						String id = getAttr(config, childSct, KeyConstants._id);
 						try {
 							return RHExtension.toExtensionDefinition(config, id, child);
 						}
@@ -3549,7 +3564,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				child = Caster.toStringMap(childSct, null);
 
 				if (child == null) continue;
-				id = getAttr(childSct, KeyConstants._id);
+				id = getAttr(config, childSct, KeyConstants._id);
 
 				try {
 					extensions.add(RHExtension.toExtensionDefinition(config, id, child));
@@ -3617,7 +3632,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			boolean hasSet = false;
 
 			// Web Mapping
-			Array compMappings = ConfigUtil.getAsArray(root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
+			Array compMappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
 			hasSet = false;
 			boolean hasDefault = false;
 			if (compMappings.size() > 0) {
@@ -3629,29 +3644,29 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						cMapping = Caster.toStruct(it.next(), null);
 						if (cMapping == null) continue;
 
-						String virtual = createVirtual(cMapping);
-						String physical = getAttr(cMapping, "physical");
-						String archive = getAttr(cMapping, "archive");
-						boolean readonly = toBoolean(getAttr(cMapping, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(cMapping, "hidden"), false);
+						String virtual = createVirtual(config, cMapping);
+						String physical = getAttr(config, cMapping, "physical");
+						String archive = getAttr(config, cMapping, "archive");
+						boolean readonly = toBoolean(getAttr(config, cMapping, "readonly"), false);
+						boolean hidden = toBoolean(getAttr(config, cMapping, "hidden"), false);
 						if ("{lucee-web}/components/".equals(physical) || "{lucee-server}/components/".equals(physical)) continue;
 						if ("{lucee-config}/components/".equals(physical)) hasDefault = true;
 
-						String strListMode = getAttr(cMapping, "listenerMode");
-						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(cMapping, "listener-mode");
-						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(cMapping, "listenermode");
+						String strListMode = getAttr(config, cMapping, "listenerMode");
+						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, cMapping, "listener-mode");
+						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, cMapping, "listenermode");
 						int listMode = ConfigUtil.toListenerMode(strListMode, -1);
 
-						String strListType = getAttr(cMapping, "listenerType");
-						if (StringUtil.isEmpty(strListType)) strListMode = getAttr(cMapping, "listener-type");
-						if (StringUtil.isEmpty(strListType)) strListMode = getAttr(cMapping, "listenertype");
+						String strListType = getAttr(config, cMapping, "listenerType");
+						if (StringUtil.isEmpty(strListType)) strListMode = getAttr(config, cMapping, "listener-type");
+						if (StringUtil.isEmpty(strListType)) strListMode = getAttr(config, cMapping, "listenertype");
 						int listType = ConfigUtil.toListenerType(strListType, -1);
 
-						short inspTemp = inspectTemplate(cMapping);
-						int insTempSlow = Caster.toIntValue(getAttr(cMapping, "inspectTemplateIntervalSlow"), -1);
-						int insTempFast = Caster.toIntValue(getAttr(cMapping, "inspectTemplateIntervalFast"), -1);
+						short inspTemp = inspectTemplate(config, cMapping);
+						int insTempSlow = Caster.toIntValue(getAttr(config, cMapping, "inspectTemplateIntervalSlow"), -1);
+						int insTempFast = Caster.toIntValue(getAttr(config, cMapping, "inspectTemplateIntervalFast"), -1);
 
-						String primary = getAttr(cMapping, "primary");
+						String primary = getAttr(config, cMapping, "primary");
 
 						boolean physicalFirst = archive == null || !"archive".equalsIgnoreCase(primary);
 						hasSet = true;
@@ -3693,24 +3708,24 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			String server = null, username = null, password = null;
 			int port = -1;
 			if (proxy != null && proxy.size() > 0) {
-				enabled = Caster.toBooleanValue(getAttr(proxy, "enabled"), true);
-				server = getAttr(proxy, "server");
-				username = getAttr(proxy, "username");
-				password = getAttr(proxy, "password");
-				port = Caster.toIntValue(getAttr(proxy, "port"), -1);
+				enabled = Caster.toBooleanValue(getAttr(config, proxy, "enabled"), true);
+				server = getAttr(config, proxy, "server");
+				username = getAttr(config, proxy, "username");
+				password = getAttr(config, proxy, "password");
+				port = Caster.toIntValue(getAttr(config, proxy, "port"), -1);
 			}
 			if (StringUtil.isEmpty(server, true)) {
-				server = getAttr(root, "updateProxyHost");
-				username = getAttr(root, "updateProxyUsername");
-				password = getAttr(root, "updateProxyPassword");
-				port = Caster.toIntValue(getAttr(root, "updateProxyPort"), -1);
+				server = getAttr(config, root, "updateProxyHost");
+				username = getAttr(config, root, "updateProxyUsername");
+				password = getAttr(config, root, "updateProxyPassword");
+				port = Caster.toIntValue(getAttr(config, root, "updateProxyPort"), -1);
 				enabled = !StringUtil.isEmpty(server, true);
 
 			}
 
 			// includes/excludes
-			Set<String> includes = proxy != null ? ProxyDataImpl.toStringSet(getAttr(proxy, "includes")) : null;
-			Set<String> excludes = proxy != null ? ProxyDataImpl.toStringSet(getAttr(proxy, "excludes")) : null;
+			Set<String> includes = proxy != null ? ProxyDataImpl.toStringSet(getAttr(config, proxy, "includes")) : null;
+			Set<String> excludes = proxy != null ? ProxyDataImpl.toStringSet(getAttr(config, proxy, "excludes")) : null;
 
 			if (enabled && hasAccess && !StringUtil.isEmpty(server)) {
 				ProxyDataImpl pd = (ProxyDataImpl) ProxyDataImpl.getInstance(server, port, username, password);
@@ -3732,7 +3747,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			// status code
 			Boolean bStausCode = Caster.toBoolean(SystemUtil.getSystemPropOrEnvVar("lucee.status.code", null), null);
-			if (bStausCode == null) bStausCode = Caster.toBoolean(getAttr(root, "errorStatusCode"), null);
+			if (bStausCode == null) bStausCode = Caster.toBoolean(getAttr(config, root, "errorStatusCode"), null);
 
 			if (bStausCode != null && hasAccess) {
 				return bStausCode.booleanValue();
@@ -3749,7 +3764,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		try {
 			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING);
 
-			String strType = getAttr(root, "regexType");
+			String strType = getAttr(config, root, "regexType");
 			int type = StringUtil.isEmpty(strType) ? RegexFactory.TYPE_UNDEFINED : RegexFactory.toType(strType, RegexFactory.TYPE_UNDEFINED);
 
 			if (hasAccess && type != RegexFactory.TYPE_UNDEFINED) {
@@ -3792,37 +3807,37 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return longValue;
 	}
 
-	public static String getAttr(Struct data, String name) {
+	public static String getAttr(Config config, Struct data, String name) {
 		String v = ConfigUtil.getAsString(name, data, null);
 		if (v == null) {
 			return null;
 		}
 		if (StringUtil.isEmpty(v)) return "";
-		return ConfigUtil.replaceConfigPlaceHolder(v);
+		return ConfigUtil.replaceConfigPlaceHolder(config, v);
 	}
 
-	public static String getAttr(Struct data, String name, String alias) {
+	public static String getAttr(Config config, Struct data, String name, String alias) {
 		String v = ConfigUtil.getAsString(name, data, null);
 		if (v == null) v = ConfigUtil.getAsString(alias, data, null);
 		if (v == null) return null;
 		if (StringUtil.isEmpty(v)) return "";
-		return ConfigUtil.replaceConfigPlaceHolder(v);
+		return ConfigUtil.replaceConfigPlaceHolder(config, v);
 	}
 
-	public static String getAttr(Struct data, String[] names) {
+	public static String getAttr(Config config, Struct data, String[] names) {
 		String v;
 		for (String name: names) {
 			v = ConfigUtil.getAsString(name, data, null);
-			if (!StringUtil.isEmpty(v)) return ConfigUtil.replaceConfigPlaceHolder(v);
+			if (!StringUtil.isEmpty(v)) return ConfigUtil.replaceConfigPlaceHolder(config, v);
 		}
 		return null;
 	}
 
-	public static String getAttr(Struct data, lucee.runtime.type.Collection.Key... names) {
+	public static String getAttr(Config config, Struct data, lucee.runtime.type.Collection.Key... names) {
 		String v;
 		for (lucee.runtime.type.Collection.Key name: names) {
 			v = ConfigUtil.getAsString(name, data, null);
-			if (!StringUtil.isEmpty(v)) return ConfigUtil.replaceConfigPlaceHolder(v);
+			if (!StringUtil.isEmpty(v)) return ConfigUtil.replaceConfigPlaceHolder(config, v);
 		}
 		return null;
 	}

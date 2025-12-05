@@ -1,6 +1,6 @@
 <cfscript>
-    loop times="5" {
-       echo("Hi There");
+    loop times="3" {
+       echo("Lucee ");
        continue;
     }
   </cfscript>

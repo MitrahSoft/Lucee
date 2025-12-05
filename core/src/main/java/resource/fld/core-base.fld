@@ -6527,6 +6527,12 @@ When used, the function automatically validates that the secret exists and throw
 			<required>No</required>
 			<description>Name of the Secret Provider to read from, as configured in .CFConfig.json. If not defined, the function checks all configured providers in the order they are defined in .CFConfig.json until it finds the secret.</description>
 		</argument>
+		<argument>
+			<name>resolve</name>
+			<type>boolean</type>
+			<required>No</required>
+			<description>if set to true the secret is resolved right away, if set to false, it is resolved when used.</description>
+		</argument>
 		<return>
 			<type>any</type>
 		</return>
@@ -16472,6 +16478,23 @@ you can use tag cfadmin instead. we will add support for this function in a futu
 			<type>component</type>
 			<required>Yes</required>
 		<description>component to return info for it</description>
+    </argument>
+		<return>
+			<type>struct</type>
+		</return>
+	</function>	
+	
+	<!-- structInfo -->
+	<function>
+		<name>luceeStructInfo</name>
+		<class>lucee.runtime.functions.struct.StructInfo</class>
+		<status>hidden</status>
+		<description></description>
+		<argument>
+			<name>struct</name>
+			<type>struct</type>
+			<required>Yes</required>
+		<description></description>
     </argument>
 		<return>
 			<type>struct</type>

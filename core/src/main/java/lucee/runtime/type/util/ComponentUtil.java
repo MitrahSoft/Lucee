@@ -782,13 +782,44 @@ public final class ComponentUtil {
 		}
 	}
 
-	public static Component getActiveComponent(PageContext pc, Component current) {
-		if (pc.getActiveComponent() == null) return current;
-		if (pc.getActiveUDF() != null && (pc.getActiveComponent()).getPageSource() == (pc.getActiveUDF().getOwnerComponent()).getPageSource()) {
+	public static Component getCurrentComponent(PageContext pc, Component current) {
 
-			return pc.getActiveUDF().getOwnerComponent();
+		// where are we (getCurrentPageSource) and use the matching component
+		PageSource currPS = pc.getCurrentPageSource(null);
+		if (currPS != null) {
+
+			// current component
+			Component curr = current;
+			while (curr != null) {
+				if (currPS.equals(((ComponentImpl) curr)._getPageSource())) {
+					return curr;
+				}
+				curr = curr.getBaseComponent();
+			}
+
+			// active component
+			curr = pc.getActiveComponent();
+			while (curr != null) {
+				if (currPS.equals(((ComponentImpl) curr)._getPageSource())) {
+					return curr;
+				}
+				curr = curr.getBaseComponent();
+			}
+
+			// owner component
+			if (pc.getActiveUDF() != null) {
+				curr = pc.getActiveUDF().getOwnerComponent();
+				while (curr != null) {
+					if (currPS.equals(((ComponentImpl) curr)._getPageSource())) {
+						return curr;
+					}
+					curr = curr.getBaseComponent();
+				}
+			}
 		}
-		return pc.getActiveComponent();
+
+		if (pc.getActiveComponent() != null) return pc.getActiveComponent();
+		return current;
 	}
 
 	public static long getCompileTime(PageContext pc, PageSource ps, long defaultValue) {

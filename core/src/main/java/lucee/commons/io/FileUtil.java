@@ -40,6 +40,8 @@ import lucee.loader.util.Util;
  * Helper methods for file objects
  */
 public final class FileUtil {
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+
 	/**
 	 * Field <code>FILE_SEPERATOR</code>
 	 */
@@ -163,7 +165,7 @@ public final class FileUtil {
 	 */
 	public static boolean isLocked(Resource res) {
 
-		if (!(res instanceof File) || !SystemUtil.isWindows() || !res.exists()) return false;
+		if (!(res instanceof File) || !IS_WINDOWS || !res.exists()) return false;
 		try {
 			InputStream is = res.getInputStream();
 			is.close();

@@ -187,6 +187,8 @@ import lucee.transformer.library.tag.TagLibFactory;
  */
 public final class CFMLEngineImpl implements CFMLEngine {
 
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+
 	static {
 		System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
 		System.setProperty("javax.xml.bind.context.factory", "com.sun.xml.bind.v2.ContextFactory");
@@ -260,11 +262,12 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 		// Kick some stuff to get it started in parallel because it takes forever to load
 		ThreadUtil.getThread(() -> {
-			try {
-				Class.forName("lucee.runtime.type.util.KeyConstants");
-			}
-			catch (ClassNotFoundException e) {
-			}
+			// try {
+			// Class.forName("lucee.runtime.type.util.KeyConstants");
+			KeyConstants.sync();
+			// }
+			// catch (ClassNotFoundException e) {
+			// }
 		}, true).start();
 
 		ThreadUtil.getThread(() -> {
@@ -789,7 +792,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		if (engine == null) {
 			if (SystemUtil.getLoaderVersion() < 6.0D) {
 				// windows needs 6.0 because restart is not working with older versions
-				if (SystemUtil.isWindows())
+				if (IS_WINDOWS)
 					throw new RuntimeException("You need to update a newer lucee.jar to run this version, you can download the latest jar from https://download.lucee.org.");
 				else if (SystemUtil.getLoaderVersion() < 5.8D)
 					throw new RuntimeException("You need to update your lucee.jar to run this version, you can download the latest jar from https://download.lucee.org.");

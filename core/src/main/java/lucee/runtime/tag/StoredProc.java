@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.sql.SQLUtil;
@@ -254,9 +255,9 @@ public final class StoredProc extends BodyTagTryCatchFinallySupport {
 	}
 
 	public void addProcParam(ProcParamBean param) {
-
-		if (getLog().getLogLevel() >= Log.LEVEL_DEBUG) { // log entry added to troubleshoot LDEV-1147
-			getLog().debug("StoredProc", String.format("  param [%s] %s = %s", SQLCaster.toStringType(param.getType(), "?"), param.getVariable(), param.getValue()));
+		Log log = getLog();
+		if (LogUtil.doesDebug(log)) { // log entry added to troubleshoot LDEV-1147
+			log.debug("StoredProc", String.format("  param [%s] %s = %s", SQLCaster.toStringType(param.getType(), "?"), param.getVariable(), param.getValue()));
 		}
 		params.add(param);
 	}
@@ -370,14 +371,11 @@ public final class StoredProc extends BodyTagTryCatchFinallySupport {
 						ResultSet procColumns = conn.getMetaData().getProcedureColumns(_objName, _owner, _procName, null);
 						procParams = getProcMetaCollection(procColumns);
 						if (procParams != null) procParamsCache.put(cacheId, new SoftReference<ProcMetaCollection>(procParams));
-
-						if (getLog().getLogLevel() >= Log.LEVEL_DEBUG) { // log entry added to troubleshoot LDEV-1147
-							getLog().debug("StoredProc", "PROC OBJECT_ID: " + resultSet.getInt("OBJECT_ID"));
-						}
 					}
 					else {
-						if (getLog().getLogLevel() >= Log.LEVEL_INFO)
-							getLog().info(StoredProc.class.getSimpleName(), "procedure " + procedure + " not found in view ALL_PROCEDURES");
+						Log log = getLog();
+						if (LogUtil.doesInfo(log))
+							log.info(StoredProc.class.getSimpleName(), "procedure " + procedure + " not found in view ALL_PROCEDURES");
 					}
 				}
 
@@ -492,7 +490,8 @@ public final class StoredProc extends BodyTagTryCatchFinallySupport {
 			IOUtil.close(rsProcColumns);
 		}
 
-		if (getLog().getLogLevel() >= Log.LEVEL_DEBUG) {
+		Log log = getLog();
+		if (LogUtil.doesDebug(log)) {
 			StringBuilder sb = new StringBuilder(64);
 			Iterator<Entry<String, List<ProcMeta>>> it = allProcs.entrySet().iterator();
 			while (it.hasNext()) {
@@ -504,7 +503,7 @@ public final class StoredProc extends BodyTagTryCatchFinallySupport {
 				sb.append(ProcMetaCollection.getParamTypeList(e.getValue()));
 				sb.append(")}");
 			}
-			getLog().debug("StoredProc", sb.toString());
+			log.debug("StoredProc", sb.toString());
 		}
 
 		ProcMetaCollection result = null;
@@ -567,9 +566,9 @@ public final class StoredProc extends BodyTagTryCatchFinallySupport {
 		SQLImpl _sql = new SQLImpl(sql);
 		CallableStatement callStat = null;
 		try {
-
-			if (getLog().getLogLevel() >= Log.LEVEL_DEBUG) // log entry added to troubleshoot LDEV-1147
-				getLog().debug("StoredProc", sql + " [" + params.size() + " params]");
+			Log log = getLog();
+			if (LogUtil.doesDebug(log)) // log entry added to troubleshoot LDEV-1147
+				log.debug("StoredProc", sql + " [" + params.size() + " params]");
 
 			callStat = dc.getConnection().prepareCall(sql);
 			if (blockfactor > 0) callStat.setFetchSize(blockfactor);
@@ -705,8 +704,8 @@ public final class StoredProc extends BodyTagTryCatchFinallySupport {
 				if (logdb) pageContext.getDebugger().addQuery(null, dsn, procedure, _sql, count, pageContext.getCurrentPageSource(), (int) exe);
 			}
 
-			if (getLog().getLogLevel() >= Log.LEVEL_INFO) {
-				getLog().info(StoredProc.class.getSimpleName(), "executed [" + sql.trim() + "] in " + DecimalFormat.call(pageContext, exe / 1000000D) + " ms");
+			if (LogUtil.doesInfo(log)) {
+				log.info(StoredProc.class.getSimpleName(), "executed [" + sql.trim() + "] in " + DecimalFormat.call(pageContext, exe / 1000000D) + " ms");
 			}
 		}
 		catch (SQLException e) {

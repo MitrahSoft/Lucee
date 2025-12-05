@@ -947,8 +947,4 @@ public class QueryColumnImpl implements QueryColumnPro, Objects {
 		Object _null = NullSupportHelper.NULL();
 		return get(key, _null) != _null;
 	}
-
-	/*
-	 * @Override public int hashCode() { return CollectionUtil.hashCode(this); }
-	 */
 }

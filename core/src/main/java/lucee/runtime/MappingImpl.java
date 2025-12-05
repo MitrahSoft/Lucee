@@ -42,6 +42,7 @@ import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.MappingUtil;
 import lucee.commons.lang.PhysicalClassLoader;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.loader.engine.CFMLEngine;
 import lucee.runtime.config.Config;
@@ -74,7 +75,6 @@ public final class MappingImpl implements Mapping {
 	private final int inspectTemplateAutoIntervalFast;
 
 	private boolean physicalFirst;
-	// private transient Map<String, PhysicalClassLoaderReference> loaders = new HashMap<>();
 	private Resource archive;
 
 	private final Config config;
@@ -262,21 +262,14 @@ public final class MappingImpl implements Mapping {
 	}
 
 	private Class<?> loadClass(String className, byte[] code) throws IOException, ClassNotFoundException {
-		PhysicalClassLoader pcl = PhysicalClassLoader.getPhysicalClassLoader(config, getClassRootDirectory(), false);
-		/*
-		 * PhysicalClassLoaderReference pclr = loaders.get(className); PhysicalClassLoader pcl = pclr ==
-		 * null ? null : pclr.get(); if (pcl == null || code != null) {// || pcl.getSize(true) > 3 if (pcl
-		 * != null) { pcl.clear(); } pcl = PhysicalClassLoader.getPhysicalClassLoader(config,
-		 * getClassRootDirectory(), true); synchronized (loaders) { loaders.put(className, new
-		 * PhysicalClassLoaderReference(pcl)); } }
-		 */
+		PhysicalClassLoader pcl = PhysicalClassLoaderFactory.getPhysicalClassLoader(config, getClassRootDirectory(), false);
 
 		if (code != null) {
 			try {
 				return pcl.loadClass(className, code);
 			}
 			catch (UnmodifiableClassException e) {
-				pcl = PhysicalClassLoader.getPhysicalClassLoader(config, getClassRootDirectory(), true);
+				pcl = PhysicalClassLoaderFactory.getPhysicalClassLoader(config, getClassRootDirectory(), true);
 				try {
 					return pcl.loadClass(className, code);
 				}
@@ -293,10 +286,7 @@ public final class MappingImpl implements Mapping {
 	}
 
 	public void clear(String className) {
-		/*
-		 * PhysicalClassLoaderReference ref = loaders.remove(className); PhysicalClassLoader pcl; if (ref !=
-		 * null) { pcl = ref.get(); if (pcl != null) { pcl.clear(false); } }
-		 */
+
 	}
 
 	@Override
@@ -382,9 +372,11 @@ public final class MappingImpl implements Mapping {
 	@Override
 	public Resource getClassRootDirectory() {
 		if (classRootDirectory == null) {
-			String path = getPhysical() != null ? getPhysical().getAbsolutePath() : getArchive().getAbsolutePath();
-
-			classRootDirectory = config.getClassDirectory().getRealResource(StringUtil.toIdentityVariableName(path));
+			Resource tmp = getPhysical();
+			if (tmp == null) tmp = getArchive();
+			if (tmp != null) {
+				classRootDirectory = config.getClassDirectory().getRealResource(StringUtil.toIdentityVariableName(tmp.getAbsolutePath()));
+			}
 		}
 		return classRootDirectory;
 	}
@@ -741,22 +733,6 @@ public final class MappingImpl implements Mapping {
 		}
 		catch (Exception e) {
 			throw Caster.toPageRuntimeException(e);
-		}
-	}
-
-	private static class PhysicalClassLoaderReference extends SoftReference<PhysicalClassLoader> {
-
-		private long lastModified;
-
-		public PhysicalClassLoaderReference(PhysicalClassLoader pcl) {
-			super(pcl);
-			this.lastModified = System.currentTimeMillis();
-		}
-
-		@Override
-		public PhysicalClassLoader get() {
-			this.lastModified = System.currentTimeMillis();
-			return super.get();
 		}
 	}
 

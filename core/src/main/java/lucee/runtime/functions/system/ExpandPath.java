@@ -44,6 +44,7 @@ import lucee.runtime.type.util.ArrayUtil;
 public final class ExpandPath implements Function {
 
 	private static final long serialVersionUID = 6192659914120397912L;
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
 
 	public static String call(PageContext pc, String relPath) throws PageException {
 		ConfigWeb config = pc.getConfig();
@@ -74,7 +75,7 @@ public final class ExpandPath implements Function {
 				}
 
 				// no expand needed
-				if (!SystemUtil.isWindows() && !sources[0].exists()) {
+				if (!IS_WINDOWS && !sources[0].exists()) {
 					res = pc.getConfig().getResource(relPath);
 					if (res.exists()) {
 						return toReturnValue(relPath, res);
@@ -89,7 +90,7 @@ public final class ExpandPath implements Function {
 			}
 
 			// no expand needed
-			else if (!SystemUtil.isWindows()) {
+			else if (!IS_WINDOWS) {
 				res = pc.getConfig().getResource(relPath);
 				if (res.exists()) {
 					return toReturnValue(relPath, res);
@@ -143,7 +144,7 @@ public final class ExpandPath implements Function {
 		boolean pathEndsWithSep = StringUtil.endsWith(path, pathChar);
 		boolean realEndsWithSep = StringUtil.endsWith(realPath, '/');
 
-		if (!realEndsWithSep && SystemUtil.isWindows()) realEndsWithSep = StringUtil.endsWith(realPath, '\\');
+		if (!realEndsWithSep && IS_WINDOWS) realEndsWithSep = StringUtil.endsWith(realPath, '\\');
 
 		if (realEndsWithSep) {
 			if (!pathEndsWithSep) path = path + pathChar;
@@ -159,7 +160,7 @@ public final class ExpandPath implements Function {
 		if (path == null) return null;
 
 		// UNC Path
-		if (path.startsWith("\\\\") && SystemUtil.isWindows()) {
+		if (path.startsWith("\\\\") && IS_WINDOWS) {
 			path = path.substring(2);
 			path = path.replace('\\', '/');
 			return "//" + StringUtil.replace(path, "//", "/", false);

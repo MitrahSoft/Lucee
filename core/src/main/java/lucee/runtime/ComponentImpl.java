@@ -53,6 +53,7 @@ import lucee.commons.lang.types.RefBooleanImpl;
 import lucee.runtime.component.AbstractFinal;
 import lucee.runtime.component.AbstractFinal.UDFB;
 import lucee.runtime.component.ComponentLoader;
+import lucee.runtime.component.ComponentPageRef;
 import lucee.runtime.component.DataMember;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.component.Member;
@@ -144,7 +145,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	ComponentImpl top = this;
 	ComponentImpl base;
 	private PageSource pageSource;
-	private ComponentPageImpl cp;
+	private ComponentPageRef cpRef;
 	private ComponentScope scope;
 
 	// for all the same
@@ -207,7 +208,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		this.properties = new ComponentProperties(componentPage.getComponentName(), dspName, extend.trim(), implement, hint, output, callPath + appendix, realPath,
 				componentPage.getSubname(), _synchronized, null, persistent, accessors, modifier, meta);
 
-		this.cp = componentPage;
+		this.cpRef = new ComponentPageRef(componentPage);
 		this.pageSource = componentPage.getPageSource();
 		this.importDefintions = componentPage.getImportDefintions();
 		// if(modifier!=0)
@@ -217,11 +218,17 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	}
 
 	public JavaSettings getJavaSettings(PageContext pc) throws IOException {
-
-		boolean is = this.cp.isJavaSettingsInitialized();
+		ComponentPageImpl cp;
+		try {
+			cp = this.cpRef.get(pc);
+		}
+		catch (PageException e) {
+			throw ExceptionUtil.toIOException(e);
+		}
+		boolean is = cp.isJavaSettingsInitialized();
 		if (!is) {
 			synchronized (cp) {
-				is = this.cp.isJavaSettingsInitialized();
+				is = cp.isJavaSettingsInitialized();
 				if (!is) {
 					JavaSettings js = null;
 
@@ -259,11 +266,16 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 					// current
 					js = JavaSettingsImpl.merge(pc.getConfig(), js, JavaSettingsImpl.readJavaSettings(pc, properties.meta));
-					return this.cp.setJavaSettings(js);
+					return cp.setJavaSettings(js);
 				}
 			}
 		}
-		return this.cp.getJavaSettings();
+		return cp.getJavaSettings();
+	}
+
+	@Override
+	public final int hashCode() {
+		return java.util.Objects.hash(base, _data, pageSource);
 	}
 
 	public boolean hasJavaSettings(PageContext pc) {
@@ -293,7 +305,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		try {
 			// attributes
 			trg.pageSource = pageSource;
-			trg.cp = cp;
+			trg.cpRef = cpRef;
 			// trg._triggerDataMember=_triggerDataMember;
 			trg.useShadow = useShadow;
 			trg._static = _static;
@@ -467,7 +479,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		if (base != null) {
 			this.dataMemberDefaultAccess = base.dataMemberDefaultAccess;
-			this._static = new StaticScope(base._static, this, componentPage, dataMemberDefaultAccess);
+			this._static = new StaticScope(base._static, this, cpRef, dataMemberDefaultAccess);
 			this.absFin = base.absFin;
 			_data = base._data;
 			_udfs = isRestEnabled ? new LinkedHashMap<Key, UDF>(base._udfs) : new HashMap<Key, UDF>(base._udfs);
@@ -478,7 +490,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		}
 		else {
 			this.dataMemberDefaultAccess = pageContext.getConfig().getComponentDataMemberDefaultAccess();
-			this._static = new StaticScope(null, this, componentPage, dataMemberDefaultAccess);
+			this._static = new StaticScope(null, this, cpRef, dataMemberDefaultAccess);
 			// TODO get per CFC setting
 			// this._triggerDataMember=pageContext.getConfig().getTriggerComponentDataMember();
 			_udfs = isRestEnabled ? new LinkedHashMap<Key, UDF>() : new HashMap<Key, UDF>();
@@ -493,7 +505,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		long indexBase = 0;
 		if (base != null) {
-			indexBase = base.cp.getStaticStruct().index();
+			indexBase = base.cpRef.get(pageContext).getStaticStruct().index();
 		}
 
 		// scope
@@ -969,21 +981,21 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		if (_udfs.isEmpty() && _data.isEmpty()) {
 			return new Collection.Key[0];
 		}
-		
+
 		List<Key> orderedKeys = new ArrayList<Key>(_udfs.size() + _data.size());
-		
-		for (Entry<Key, UDF> entry : _udfs.entrySet()) {
+
+		for (Entry<Key, UDF> entry: _udfs.entrySet()) {
 			if (entry.getValue().getAccess() <= access) {
 				orderedKeys.add(entry.getKey());
 			}
 		}
-		for (Entry<Key, Member> entry : _data.entrySet()) {
+		for (Entry<Key, Member> entry: _data.entrySet()) {
 			Member member = entry.getValue();
 			if (member.getAccess() <= access && !(member instanceof UDF)) {
 				orderedKeys.add(entry.getKey());
 			}
 		}
-		
+
 		return orderedKeys.toArray(new Collection.Key[orderedKeys.size()]);
 	}
 
@@ -1023,7 +1035,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	public Member getMember(int access, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && access == ACCESS_PRIVATE && key.equalsIgnoreCase(KeyConstants._super)) {
-			Component ac = ComponentUtil.getActiveComponent(ThreadLocalPageContext.get(), this);
+			Component ac = ComponentUtil.getCurrentComponent(ThreadLocalPageContext.get(), this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 			// return SuperComponent . superMember(base);
 		}
@@ -1058,7 +1070,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	protected Member getMember(PageContext pc, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && key.equalsIgnoreCase(KeyConstants._super) && isPrivate(pc)) {
-			Component ac = ComponentUtil.getActiveComponent(pc, this);
+			Component ac = ComponentUtil.getCurrentComponent(pc, this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 		}
 		if (superAccess) {
@@ -1372,8 +1384,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		return pageSource;
 	}
 
-	public ComponentPageImpl _getComponentPageImpl() {
-		return cp;
+	public ComponentPageImpl _getComponentPageImpl(PageContext pc) throws PageException {
+		return cpRef.get(pc);
 	}
 
 	public ImportDefintion[] _getImportDefintions() {
@@ -1708,7 +1720,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		if (!StringUtil.isEmpty(displayname)) sct.set(KeyConstants._displayname, displayname);
 
 		sct.set(KeyConstants._persistent, comp.properties.persistent);
-		sct.set(KeyConstants._hashCode, comp.hashCode());
+		// sct.set(KeyConstants._hashCode, comp.hashCode());
 		sct.set(KeyConstants._accessors, comp.properties.accessors);
 		sct.set(KeyConstants._synchronized, comp.properties._synchronized);
 		sct.set(KeyConstants._inline, comp.properties.inline);
@@ -1968,9 +1980,14 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						"enable [trigger data member] in administrator to also invoke getters and setters");
 			if (existing != null) {
 				if (existing.getModifier() == Member.MODIFIER_FINAL) {
-					throw new ExpressionException("Attempt to modify a 'final' member [" + key + "] within the 'this' scope of the component [" + cp.getComponentName()
-							+ "]. This member is declared as 'final' in the base component [" + base.cp.getComponentName()
-							+ "] or a component extended by it, and cannot be overridden.");
+					ComponentPageImpl tmp = cpRef.get(pc, null);
+					String componentName = tmp != null ? tmp.getComponentName() : "";
+
+					tmp = base.cpRef.get(pc, null);
+					String baseComponentName = tmp != null ? tmp.getComponentName() : "";
+
+					throw new ExpressionException("Attempt to modify a 'final' member [" + key + "] within the 'this' scope of the component [" + componentName
+							+ "]. This member is declared as 'final' in the base component [" + baseComponentName + "] or a component extended by it, and cannot be overridden.");
 				}
 
 			}

@@ -34,6 +34,9 @@ import lucee.runtime.op.Caster;
 
 public final class FileResourceProvider implements ResourceProviderPro {
 
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+	private static final boolean IS_UNIX = SystemUtil.isUnix();
+
 	private String scheme = "file";
 
 	private long lockTimeout = 10000;
@@ -95,7 +98,7 @@ public final class FileResourceProvider implements ResourceProviderPro {
 
 	@Override
 	public boolean isAttributesSupported() {
-		return SystemUtil.isWindows();
+		return IS_WINDOWS;
 	}
 
 	@Override
@@ -105,7 +108,7 @@ public final class FileResourceProvider implements ResourceProviderPro {
 
 	@Override
 	public boolean isModeSupported() {
-		return SystemUtil.isUnix();
+		return IS_UNIX;
 	}
 
 	@Override

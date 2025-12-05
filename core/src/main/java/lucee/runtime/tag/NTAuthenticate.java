@@ -27,6 +27,8 @@ import lucee.runtime.type.StructImpl;
 
 public final class NTAuthenticate extends TagImpl {
 
+	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
+
 	private String username;
 	private String password;
 	private String domain;
@@ -103,7 +105,7 @@ public final class NTAuthenticate extends TagImpl {
 		Struct resultSt = new StructImpl();
 		pageContext.setVariable(result, resultSt);
 
-		if (SystemUtil.isWindows()) {
+		if (IS_WINDOWS) {
 			/*
 			 * 
 			 * NTAuthentication ntauth = new NTAuthentication(domain); if(username != null)
