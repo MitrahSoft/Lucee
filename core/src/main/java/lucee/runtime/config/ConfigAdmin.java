@@ -275,13 +275,13 @@ public final class ConfigAdmin {
 	private ConfigAdmin(ConfigPro config, Password password) throws IOException, PageException {
 		this.config = ConfigUtil.getConfigServerImpl(config);
 		this.password = password;
-		root = ConfigFactoryImpl.loadDocument(config.getConfigFile());
+		root = ConfigFactoryImpl.loadDocument(config, config.getConfigFile());
 	}
 
 	private ConfigAdmin(ConfigPro config, Password password, boolean optionalPW) throws IOException, PageException {
 		this.config = ConfigUtil.getConfigServerImpl(config);
 		this.password = password;
-		root = ConfigFactoryImpl.loadDocument(config.getConfigFile());
+		root = ConfigFactoryImpl.loadDocument(config, config.getConfigFile());
 		this.optionalPW = optionalPW;
 	}
 
@@ -700,7 +700,7 @@ public final class ConfigAdmin {
 
 	private void _updateMaven(GAVSO mvnEntry) throws PageException {
 		Struct javasettings = _getRootElement("javasettings");
-		Array maven = ConfigUtil.getAsArray(javasettings, false, "maven", "mvn");
+		Array maven = ConfigUtil.getAsArray(config, javasettings, false, "maven", "mvn");
 
 		// update
 		GAVSO ex;
@@ -1016,7 +1016,7 @@ public final class ConfigAdmin {
 	public void removeCustomTag(String virtual) throws SecurityException {
 		checkWriteAccess();
 
-		Array mappings = ConfigUtil.getAsArray(root, true, KeyConstants._virtual, KeyConstants._physical, false, "customTagMappings", "customTagPaths");
+		Array mappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, false, "customTagMappings", "customTagPaths");
 		Key[] keys = mappings.keys();
 		Struct data;
 		String v;
@@ -1024,7 +1024,7 @@ public final class ConfigAdmin {
 			Key key = keys[i];
 			data = Caster.toStruct(mappings.get(key, null), null);
 			if (data == null) continue;
-			v = createVirtual(data);
+			v = createVirtual(config, data);
 
 			if (virtual.equals(v)) {
 				mappings.removeEL(key);
@@ -1055,7 +1055,7 @@ public final class ConfigAdmin {
 	public void removeComponentMapping(String virtual) throws SecurityException {
 		checkWriteAccess();
 
-		Array mappings = ConfigUtil.getAsArray(root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
+		Array mappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
 		Key[] keys = mappings.keys();
 		Struct data;
 		String v;
@@ -1063,7 +1063,7 @@ public final class ConfigAdmin {
 			Key key = keys[i];
 			data = Caster.toStruct(mappings.get(key, null), null);
 			if (data == null) continue;
-			v = createVirtual(data);
+			v = createVirtual(config, data);
 
 			if (virtual.equals(v)) {
 				mappings.removeEL(key);
@@ -1108,7 +1108,7 @@ public final class ConfigAdmin {
 			throw new ExpressionException("physical must have a value when primary has value physical");
 		}
 
-		Array mappings = ConfigUtil.getAsArray(root, true, KeyConstants._virtual, KeyConstants._physical, false, "customTagMappings", "customTagPaths");
+		Array mappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, false, "customTagMappings", "customTagPaths");
 		Key[] keys = mappings.keys();
 		// Update
 		String v;
@@ -1117,7 +1117,7 @@ public final class ConfigAdmin {
 			Key key = keys[i];
 			Struct el = Caster.toStruct(mappings.get(key, null), null);
 			if (el == null) continue;
-			v = createVirtual(el);
+			v = createVirtual(config, el);
 			if (virtual.equals(v)) {
 				el.setEL("virtual", v);
 				el.setEL("physical", physical);
@@ -1151,7 +1151,7 @@ public final class ConfigAdmin {
 			el.setEL("inspectTemplateIntervalSlow", Caster.toString(inspectTemplateIntervalSlow, ""));
 		if (ConfigPro.INSPECT_INTERVAL_FAST != inspectTemplateIntervalFast && ConfigPro.INSPECT_INTERVAL_UNDEFINED != inspectTemplateIntervalFast)
 			el.setEL("inspectTemplateIntervalFast", Caster.toString(inspectTemplateIntervalFast, ""));
-		el.setEL("virtual", StringUtil.isEmpty(virtual) ? createVirtual(el) : virtual);
+		el.setEL("virtual", StringUtil.isEmpty(virtual) ? createVirtual(config, el) : virtual);
 
 		config.resetCustomTagMappings();
 	}
@@ -1209,7 +1209,7 @@ public final class ConfigAdmin {
 			throw new ExpressionException("physical must have a value when primary has value physical");
 		}
 
-		Array componentMappings = ConfigUtil.getAsArray(root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
+		Array componentMappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
 		Key[] keys = componentMappings.keys();
 		Struct el;
 
@@ -1221,7 +1221,7 @@ public final class ConfigAdmin {
 			data = Caster.toStruct(componentMappings.get(key, null), null);
 			if (data == null) continue;
 
-			v = createVirtual(data);
+			v = createVirtual(config, data);
 
 			if (virtual.equals(v)) {
 				data.setEL("virtual", v);
@@ -1254,14 +1254,14 @@ public final class ConfigAdmin {
 			el.setEL("inspectTemplateIntervalSlow", Caster.toString(inspectTemplateIntervalSlow, ""));
 		if (ConfigPro.INSPECT_INTERVAL_FAST != inspectTemplateIntervalFast && ConfigPro.INSPECT_INTERVAL_UNDEFINED != inspectTemplateIntervalFast)
 			el.setEL("inspectTemplateIntervalFast", Caster.toString(inspectTemplateIntervalFast, ""));
-		el.setEL("virtual", StringUtil.isEmpty(virtual) ? createVirtual(el) : virtual);
+		el.setEL("virtual", StringUtil.isEmpty(virtual) ? createVirtual(config, el) : virtual);
 		config.resetComponentMappings();
 	}
 
-	public static String createVirtual(Struct data) {
-		String str = ConfigFactoryImpl.getAttr(data, "virtual");
+	public static String createVirtual(Config config, Struct data) {
+		String str = ConfigFactoryImpl.getAttr(config, data, "virtual");
 		if (!StringUtil.isEmpty(str)) return str;
-		return createVirtual(ConfigFactoryImpl.getAttr(data, "physical"), ConfigFactoryImpl.getAttr(data, "archive"));
+		return createVirtual(ConfigFactoryImpl.getAttr(config, data, "physical"), ConfigFactoryImpl.getAttr(config, data, "archive"));
 	}
 
 	public static String createVirtual(String physical, String archive) {

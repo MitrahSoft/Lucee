@@ -313,7 +313,7 @@ public final class ComponentLoader {
 
 		// SEARCH
 		// search from local
-		if (searchLocal && isRealPath) {
+		if (searchLocal != null && searchLocal && isRealPath) {
 			// check realpath
 			PageSource[] arr = ((PageContextImpl) pc).getRelativePageSources(pathWithCFC);
 			page = toCIPage(PageSourceImpl.loadPage(pc, arr, null));

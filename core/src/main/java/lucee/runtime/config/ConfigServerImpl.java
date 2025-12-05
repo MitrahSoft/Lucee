@@ -343,7 +343,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 				if (defaultSecurityManager == null) {
 					Struct security = ConfigUtil.getAsStruct("security", root);
 					if (security != null) {
-						defaultSecurityManager = ConfigFactoryImpl._toSecurityManagerSingle(security);
+						defaultSecurityManager = ConfigFactoryImpl._toSecurityManagerSingle(this, security);
 					}
 					else defaultSecurityManager = SecurityManagerImpl.getOpenSecurityManager();
 				}
@@ -373,7 +373,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (defaultPassword == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDefaultPassword")) {
 				if (defaultPassword == null) {
-					Password pw = PasswordImpl.readFromStruct(root, getSalt(), true, true);
+					Password pw = PasswordImpl.readFromStruct(this, root, getSalt(), true, true);
 					if (pw != null) defaultPassword = pw;
 					else defaultPassword = getPassword();
 				}
@@ -424,7 +424,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (updateType == null) {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateType")) {
 				if (updateType == null) {
-					String ut = ConfigFactoryImpl.getAttr(root, "updateType");
+					String ut = ConfigFactoryImpl.getAttr(this, root, "updateType");
 					if (StringUtil.isEmpty(ut, true)) updateType = "manual";
 					else updateType = ut.trim();
 				}
@@ -624,7 +624,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "isMonitoringEnabled")) {
 				if (monitoringEnabled == null) {
 					Struct parent = ConfigUtil.getAsStruct("monitoring", root);
-					monitoringEnabled = Caster.toBoolean(ConfigFactoryImpl.getAttr(parent, "enabled"), Boolean.FALSE);
+					monitoringEnabled = Caster.toBoolean(ConfigFactoryImpl.getAttr(this, parent, "enabled"), Boolean.FALSE);
 				}
 			}
 		}
@@ -647,7 +647,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (delay == -1) {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
 				if (delay == -1) {
-					delay = Caster.toIntValue(ConfigFactoryImpl.getAttr(root, "loginDelay"), 1);
+					delay = Caster.toIntValue(ConfigFactoryImpl.getAttr(this, root, "loginDelay"), 1);
 				}
 			}
 		}
@@ -670,7 +670,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (captcha == null) {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginCaptcha")) {
 				if (captcha == null) {
-					captcha = Caster.toBooleanValue(ConfigFactoryImpl.getAttr(root, "loginCaptcha"), false);
+					captcha = Caster.toBooleanValue(ConfigFactoryImpl.getAttr(this, root, "loginCaptcha"), false);
 				}
 			}
 		}
@@ -693,7 +693,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (rememberMe == null) {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getRememberMe")) {
 				if (rememberMe == null) {
-					rememberMe = Caster.toBooleanValue(ConfigFactoryImpl.getAttr(root, "loginRememberme"), true);
+					rememberMe = Caster.toBooleanValue(ConfigFactoryImpl.getAttr(this, root, "loginRememberme"), true);
 				}
 			}
 		}
@@ -716,7 +716,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (classicStyle == null) {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getDateCasterClassicStyle")) {
 				if (classicStyle == null) {
-					String strClassicDateParsing = ConfigFactoryImpl.getAttr(root, "classicDateParsing");
+					String strClassicDateParsing = ConfigFactoryImpl.getAttr(this, root, "classicDateParsing");
 					classicStyle = Caster.toBoolean(strClassicDateParsing, Boolean.FALSE);
 				}
 			}
@@ -900,7 +900,7 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		if (authKeys == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getAuthenticationKeys")) {
 				if (authKeys == null) {
-					String keyList = ConfigFactoryImpl.getAttr(root, "authKeys");
+					String keyList = ConfigFactoryImpl.getAttr(this, root, "authKeys");
 					if (!StringUtil.isEmpty(keyList)) {
 						String[] keys = ListUtil.trimItems(ListUtil.toStringArray(ListUtil.toListRemoveEmpty(keyList, ',')));
 						for (int i = 0; i < keys.length; i++) {
