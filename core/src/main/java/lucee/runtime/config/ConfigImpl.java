@@ -179,8 +179,20 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static final RHExtension[] RHEXTENSIONS_EMPTY = new RHExtension[0];
 
-	// Debugger enabled via env var - enables execution logging for bytecode hooks
-	public static final boolean DEBUGGER_ENABLED = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
+	// Debugger secret - required to register a debugger listener. If not set, debugger is disabled.
+	public static final String DEBUGGER_SECRET;
+	// Debugger enabled if secret is set (non-empty)
+	public static final boolean DEBUGGER_ENABLED;
+	static {
+		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.debugger.secret", null);
+		if (secret != null && !secret.trim().isEmpty()) {
+			DEBUGGER_SECRET = secret.trim();
+			DEBUGGER_ENABLED = true;
+		} else {
+			DEBUGGER_SECRET = null;
+			DEBUGGER_ENABLED = false;
+		}
+	}
 
 	private Integer mode;
 	private static final double DEFAULT_VERSION = 5.0d;

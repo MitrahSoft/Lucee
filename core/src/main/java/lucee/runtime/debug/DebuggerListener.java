@@ -11,13 +11,20 @@ import lucee.runtime.PageContext;
 public interface DebuggerListener {
 
 	/**
-	 * Check if the debugger is actively connected and ready to handle breakpoints.
+	 * Get the name of this debugger for logging purposes.
+	 *
+	 * @return A human-readable name (e.g., "luceedebug")
+	 */
+	String getName();
+
+	/**
+	 * Check if a debugger client is connected and ready to handle breakpoints.
 	 * Returns false if the listener is registered but no debugger client is attached.
 	 * Used by breakpoint() BIF to avoid suspending when no client can resume.
 	 *
 	 * @return true if a debugger client is connected and ready
 	 */
-	boolean isActive();
+	boolean isClientConnected();
 
 	/**
 	 * Called when a thread is about to suspend (before blocking).

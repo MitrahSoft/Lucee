@@ -3668,6 +3668,7 @@ public final class PageContextImpl extends PageContext {
 				}
 				catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
+					LogUtil.log(this, "application", "debugger", e, Log.LEVEL_WARN);
 					break;
 				}
 			}

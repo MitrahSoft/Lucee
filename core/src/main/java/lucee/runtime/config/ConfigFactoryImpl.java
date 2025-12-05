@@ -1597,6 +1597,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			// If debugger enabled and no explicit class configured, use DebuggerExecutionLog
 			if (StringUtil.isEmpty(strClass) && ConfigImpl.DEBUGGER_ENABLED) {
+				LogUtil.log(config, Log.LEVEL_INFO, "application", "Debugger mode enabled (LUCEE_DEBUGGER_SECRET is set)");
 				return new ExecutionLogFactory(DebuggerExecutionLog.class, new HashMap<String, String>());
 			}
 

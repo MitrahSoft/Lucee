@@ -101,6 +101,8 @@ public final class DebuggerExecutionLog implements ExecutionLog {
 
 	@Override
 	public void release() {
-		// Nothing to clean up
+		// Clean up thread-locals to avoid memory leaks in thread pools
+		currentTopLevelLine.remove();
+		currentTopLevelFile.remove();
 	}
 }

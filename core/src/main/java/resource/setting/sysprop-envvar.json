@@ -232,12 +232,12 @@
 		"default": null
 	},
 	{
-		"sysprop": "lucee.debugger.enabled",
-		"envvar": "LUCEE_DEBUGGER_ENABLED",
-		"desc": "Enables debugger stack frame capture for external debuggers (e.g., VS Code DAP). When enabled, Lucee maintains a stack of CFML frames with captured scopes (local, arguments, variables) that external debuggers can inspect. Zero cost when disabled. Requires JVM restart to take effect.",
+		"sysprop": "lucee.debugger.secret",
+		"envvar": "LUCEE_DEBUGGER_SECRET",
+		"desc": "Secret token required to enable and authenticate the debugger. When set, enables debugger stack frame capture for external debuggers (e.g., VS Code DAP). The secret must be provided when registering a debugger listener and when connecting via DAP. If not set, debugger is disabled. Requires JVM restart to take effect.",
 		"category": "debugging",
-		"type": "boolean",
-		"default": false
+		"type": "string",
+		"default": null
 	},
 	{
 		"sysprop": "lucee.deserializejson.allowempty",

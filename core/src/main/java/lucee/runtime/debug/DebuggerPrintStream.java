@@ -24,9 +24,16 @@ public class DebuggerPrintStream extends PrintStream {
 	}
 
 	@Override
+	public void write(byte[] buf) {
+		super.write(buf, 0, buf.length);
+		notifyListener(new String(buf));
+	}
+
+	@Override
 	public void write(int b) {
 		super.write(b);
-		// Single bytes get buffered, don't notify for each one
+		// Single byte - notify immediately (some libs write char-by-char)
+		notifyListener(String.valueOf((char) b));
 	}
 
 	// Note: We only override write() methods to notify the listener.
@@ -36,7 +43,7 @@ public class DebuggerPrintStream extends PrintStream {
 	private void notifyListener(String text) {
 		if (text == null || text.isEmpty()) return;
 		DebuggerListener listener = DebuggerRegistry.getListener();
-		if (listener != null && listener.isActive()) {
+		if (listener != null && listener.isClientConnected()) {
 			listener.onOutput(text, isStdErr);
 		}
 	}

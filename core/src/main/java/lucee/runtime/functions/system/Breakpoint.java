@@ -17,7 +17,7 @@ public final class Breakpoint {
 
 	public static boolean call(PageContext pc, String label, boolean condition) {
 		// Only suspend if debugger is enabled AND a debugger client is connected
-		if (condition && ConfigImpl.DEBUGGER_ENABLED && DebuggerRegistry.isActive()) {
+		if (condition && ConfigImpl.DEBUGGER_ENABLED && DebuggerRegistry.isClientConnected()) {
 			((PageContextImpl) pc).debuggerSuspend(label);
 			return true;
 		}
