@@ -256,8 +256,24 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		MAVEN_DOWNLOAD_POLICY_LOG_LEVEL = LogUtil.toLevel(Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.log.level", null), null), Log.LEVEL_ERROR);
 	}
 
-	public static final PrintStream CONSOLE_ERR = System.err;
-	public static final PrintStream CONSOLE_OUT = System.out;
+	public static final PrintStream CONSOLE_ERR;
+	public static final PrintStream CONSOLE_OUT;
+
+	static {
+		// Install debugger print streams if debugger is enabled
+		boolean debuggerEnabled = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
+
+		if (debuggerEnabled) {
+			CONSOLE_OUT = new lucee.runtime.debug.DebuggerPrintStream(System.out, false);
+			CONSOLE_ERR = new lucee.runtime.debug.DebuggerPrintStream(System.err, true);
+			System.setOut(CONSOLE_OUT);
+			System.setErr(CONSOLE_ERR);
+		}
+		else {
+			CONSOLE_OUT = System.out;
+			CONSOLE_ERR = System.err;
+		}
+	}
 	private static final String LOG_NAME = "deploy";
 	private static final String LOG_TYPE_NAME = "request";
 
