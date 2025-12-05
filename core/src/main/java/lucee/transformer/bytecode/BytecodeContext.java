@@ -20,7 +20,9 @@ package lucee.transformer.bytecode;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.objectweb.asm.ClassWriter;
@@ -59,6 +61,7 @@ public class BytecodeContext implements Context {
 	private int line;
 	private BytecodeContext root;
 	private boolean writeLog;
+	protected Set<Integer> executableLines = new TreeSet<>();
 	private int rtn = -1;
 	private final boolean returnValue;
 
@@ -276,11 +279,20 @@ public class BytecodeContext implements Context {
 
 	public void visitLineNumber(int line) {
 		this.line = line;
+		executableLines.add(line);
+		// Also track in constructor context so getExecutableLines() gets all lines
+		if (constr != null) {
+			constr.trackExecutableLine(line);
+		}
 		getAdapter().visitLineNumber(line, getAdapter().mark());
 	}
 
 	public int getLine() {
 		return line;
+	}
+
+	public int[] getExecutableLines() {
+		return executableLines.stream().mapToInt(Integer::intValue).toArray();
 	}
 
 	public BytecodeContext getRoot() {

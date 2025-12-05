@@ -83,4 +83,15 @@ public interface DebuggerListener {
 	default void onOutput(String text, boolean isStdErr) {
 		// default: no-op
 	}
+
+	/**
+	 * Get executable line numbers for a file.
+	 * Triggers compilation if the file hasn't been compiled yet.
+	 *
+	 * @param absolutePath The absolute file path
+	 * @return Array of line numbers where breakpoints can be set, or empty array if file has errors
+	 */
+	default int[] getExecutableLines(String absolutePath) {
+		return new int[0];
+	}
 }

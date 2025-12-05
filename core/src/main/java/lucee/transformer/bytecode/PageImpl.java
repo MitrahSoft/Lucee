@@ -186,6 +186,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 	private final static Method LENGTH = new Method("getSourceLength", Types.LONG_VALUE, new Type[] {});
 	private final static Method GET_SUBNAME = new Method("getSubname", Types.STRING, new Type[] {});
+	private final static Method GET_EXECUTABLE_LINES = new Method("getExecutableLines", Type.getType(int[].class), new Type[] {});
 
 	private static final Type USER_DEFINED_FUNCTION = Type.getType(UDF.class);
 	private static final Method UDF_CALL = new Method("udfCall", Types.OBJECT, new Type[] { Types.PAGE_CONTEXT, USER_DEFINED_FUNCTION, Types.INT_VALUE });
@@ -767,6 +768,21 @@ public final class PageImpl extends BodyBase implements Page {
 				writeGetSubPages(cw, className, subs);
 			}
 		}
+
+		// getExecutableLines - must be generated AFTER all body compilation so lines are tracked
+		GeneratorAdapter execLinesAdapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, GET_EXECUTABLE_LINES, null, null, cw);
+		int[] execLines = constr.getExecutableLines();
+		execLinesAdapter.push(execLines.length);
+		execLinesAdapter.newArray(Type.INT_TYPE);
+		for (int i = 0; i < execLines.length; i++) {
+			execLinesAdapter.dup();
+			execLinesAdapter.push(i);
+			execLinesAdapter.push(execLines[i]);
+			execLinesAdapter.arrayStore(Type.INT_TYPE);
+		}
+		execLinesAdapter.returnValue();
+		execLinesAdapter.endMethod();
+
 		return ASMUtil.verify(cw.toByteArray());
 	}
 
