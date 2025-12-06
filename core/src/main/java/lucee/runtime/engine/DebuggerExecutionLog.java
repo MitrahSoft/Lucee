@@ -15,7 +15,7 @@ import lucee.runtime.debug.DebuggerRegistry;
  * This is used when DEBUGGER_ENABLED=true to provide line tracking
  * without requiring bytecode instrumentation in the debugger extension.
  */
-public final class DebuggerExecutionLog implements ExecutionLog {
+public final class DebuggerExecutionLog implements ExecutionLogPro {
 
 	/**
 	 * Thread-local to track the current file and line for top-level code.

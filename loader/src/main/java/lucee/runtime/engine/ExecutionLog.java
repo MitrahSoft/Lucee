@@ -29,9 +29,5 @@ public interface ExecutionLog {
 
 	public void start(int pos, String id);
 
-	public void start(int pos, int line, String id);
-
 	public void end(int pos, String id);
-
-	public void end(int pos, int line, String id);
 }
