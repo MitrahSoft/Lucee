@@ -339,11 +339,6 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 			if (ps != null) pci.addPageSource(ps, psInc);
 			pci.addUDF(this);
 
-			// Debugger frame support - capture scopes for external debuggers
-			if (ConfigImpl.DEBUGGER_ENABLED) {
-				pci.pushDebuggerFrame(newLocal, newArgs, pc.variablesScope(), ps, getFunctionName());
-			}
-
 			//////////////////////////////////////////
 			BodyContent bc = null;
 			Boolean wasSilent = null;
@@ -365,6 +360,13 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 					if (args != null) defineArguments(pci, getFunctionArguments(), args, newArgs);
 					else defineArguments(pci, getFunctionArguments(), values, newArgs);
 				}
+
+				// Debugger frame support - capture scopes for external debuggers
+				// Must be AFTER defineArguments so function arguments are accessible for conditional breakpoints
+				if (ConfigImpl.DEBUGGER_ENABLED) {
+					pci.pushDebuggerFrame(newLocal, newArgs, pc.variablesScope(), ps, getFunctionName(), properties.getStartLine());
+				}
+
 				returnValue = implementation(pci);
 				if (ownerComponent != null) pci.setActiveUDF(parent);
 			}

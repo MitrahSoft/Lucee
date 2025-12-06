@@ -3553,9 +3553,21 @@ public final class PageContextImpl extends PageContext {
 	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER_ENABLED.
 	 */
 	public void pushDebuggerFrame(lucee.runtime.type.scope.Local local, lucee.runtime.type.scope.Argument arguments,
-								lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName) {
+								lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName, int startLine) {
 		if (debuggerFrames != null) {
 			debuggerFrames.add(new DebuggerFrame(local, arguments, variables, pageSource, functionName));
+
+			// Notify debugger listener of function entry (for function breakpoints)
+			DebuggerListener listener = DebuggerRegistry.getListener();
+			if (listener != null && listener.isClientConnected()) {
+				String file = pageSource != null ? pageSource.getDisplayPath() : null;
+				String componentName = (variables instanceof ComponentScope)
+					? ((ComponentScope) variables).getComponent().getName()
+					: null;
+				if (listener.onFunctionEntry(this, functionName, componentName, file, startLine)) {
+					debuggerSuspend(file, startLine, "function breakpoint: " + functionName);
+				}
+			}
 		}
 	}
 

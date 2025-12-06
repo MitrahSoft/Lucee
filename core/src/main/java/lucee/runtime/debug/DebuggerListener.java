@@ -94,4 +94,20 @@ public interface DebuggerListener {
 	default int[] getExecutableLines(String absolutePath) {
 		return new int[0];
 	}
+
+	/**
+	 * Called when a UDF/method is entered.
+	 * Allows debuggers to implement function breakpoints (break on function name).
+	 * Must be fast - called on every function invocation when DEBUGGER_ENABLED.
+	 *
+	 * @param pc The PageContext executing
+	 * @param functionName The function name (case as defined in source)
+	 * @param componentName The component name if this is a CFC method, null for standalone UDFs
+	 * @param file The source file path (from PageSource.getDisplayPath())
+	 * @param startLine The first line of the function (for suspend location)
+	 * @return true if the debugger wants to suspend at function entry
+	 */
+	default boolean onFunctionEntry(PageContext pc, String functionName, String componentName, String file, int startLine) {
+		return false;
+	}
 }
