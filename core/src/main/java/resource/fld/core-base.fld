@@ -15400,6 +15400,36 @@ function(key1, key2)
 		</return>
 	</function>
 
+	<!-- IsThreadInterrupted -->
+	<function>
+		<name>IsThreadInterrupted</name>
+		<class>lucee.runtime.functions.thread.IsThreadInterrupted</class>
+		<introduced>7.0.2.1</introduced>
+		<keywords>threading</keywords>
+		<description>Checks whether a specified thread has been interrupted. The interrupted status of the thread is unaffected by this method.</description>
+		<argument>
+			<name>threadName</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>The name of the thread to check.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
+	<!-- ThreadInterrupted -->
+	<function>
+		<name>ThreadInterrupted</name>
+		<class>lucee.runtime.functions.thread.ThreadInterrupted</class>
+		<introduced>7.0.2.1</introduced>
+		<keywords>threading</keywords>
+		<description>Checks whether the current thread has been interrupted and clears the interrupted status. The interrupted status of the thread is cleared by this method, unlike IsThreadInterrupted which leaves it unchanged.</description>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
 	<!-- toBase64 -->
 	<function>
 		<name>toBase64</name>

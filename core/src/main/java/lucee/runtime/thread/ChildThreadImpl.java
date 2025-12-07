@@ -83,6 +83,7 @@ public final class ChildThreadImpl extends ChildThread implements Serializable {
 	Struct catchBlock;
 	boolean terminated;
 	boolean completed;
+	private volatile boolean interrupted;
 	ByteArrayOutputStream output;
 
 	// only used for type daemon
@@ -327,6 +328,17 @@ public final class ChildThreadImpl extends ChildThread implements Serializable {
 	@Override
 	public void terminated() {
 		terminated = true;
+	}
+
+	@Override
+	public void interrupt() {
+		interrupted = true;
+		super.interrupt();
+	}
+
+	@Override
+	public boolean isInterrupted() {
+		return interrupted || super.isInterrupted();
 	}
 
 	/**

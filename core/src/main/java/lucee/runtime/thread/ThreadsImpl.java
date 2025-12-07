@@ -190,6 +190,9 @@ public final class ThreadsImpl extends StructSupport implements lucee.runtime.ty
 	}
 
 	private boolean isInterrupted() {
+		// LDEV-5339: this check was likely copied from getOutput() above, but output is only set for daemon threads
+		// (not task threads), so task threads would always return false here. This is now harmless because
+		// ChildThreadImpl.isInterrupted() tracks the interrupted flag independently of the output buffer.
 		if (ct.output == null) return false;
 		return ct.isInterrupted();
 	}
