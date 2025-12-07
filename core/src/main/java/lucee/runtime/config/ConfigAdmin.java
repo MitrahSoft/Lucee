@@ -6215,6 +6215,7 @@ public final class ConfigAdmin {
 		Resource context = config.getConfigDir().getRealResource("context");
 		Resource trg = context.getRealResource(realpath);
 		if (trg.exists()) {
+			LogUtil.log( config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath() );
 			trg.remove(true);
 			if (_store) ConfigAdmin._storeAndReload((ConfigPro) config);
 			ResourceUtil.removeEmptyFolders(context, null);
