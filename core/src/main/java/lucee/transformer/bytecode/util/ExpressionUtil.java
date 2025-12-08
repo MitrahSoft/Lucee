@@ -44,8 +44,8 @@ import lucee.transformer.statement.Statement;
 
 public final class ExpressionUtil {
 
-	public static final Method START = new Method("exeLogStart", Types.VOID, new Type[] { Types.INT_VALUE, Types.INT_VALUE, Types.STRING });
-	public static final Method END = new Method("exeLogEnd", Types.VOID, new Type[] { Types.INT_VALUE, Types.INT_VALUE, Types.STRING });
+	public static final Method START = new Method("exeLogStart", Types.VOID, new Type[] { Types.INT_VALUE, Types.STRING });
+	public static final Method END = new Method("exeLogEnd", Types.VOID, new Type[] { Types.INT_VALUE, Types.STRING });
 
 	public static final Method CURRENT_LINE = new Method("currentLine", Types.VOID, new Type[] { Types.INT_VALUE });
 
@@ -170,10 +170,18 @@ public final class ExpressionUtil {
 		try {
 			GeneratorAdapter adapter = bc.getAdapter();
 			adapter.loadArg(0);
-			// adapter.checkCast(Types.PAGE_CONTEXT_IMPL);
-			int off = bc.getSourceOffset();
-			adapter.push(pos.pos - off);
-			adapter.push(pos.line);
+
+			// Check if execution log is line-based (cached in BytecodeContext)
+			if (bc.isLineBased()) {
+				// Push line number for line-based execution logs (e.g. debugger)
+				adapter.push(pos.line);
+			}
+			else {
+				// Push character position for char-based execution logs (e.g. console)
+				int off = bc.getSourceOffset();
+				adapter.push(pos.pos - off);
+			}
+
 			adapter.push(id);
 			adapter.invokeVirtual(Types.PAGE_CONTEXT, method);
 		}

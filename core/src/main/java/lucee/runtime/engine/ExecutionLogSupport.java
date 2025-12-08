@@ -103,24 +103,12 @@ public abstract class ExecutionLogSupport implements ExecutionLogPro {
 	}
 
 	@Override
-	public void start(int pos, int line, String id) {
-		// Default: delegate to pos-only version, subclasses can override to use line
-		start(pos, id);
-	}
-
-	@Override
 	public final void end(int pos, String id) {
 		long current = System.nanoTime();
 		Pair pair = map.remove(id);
 		if (pair != null) {
 			if ((current - pair.time) >= min) _log(pair.pos, pos, pair.time, current);
 		}
-	}
-
-	@Override
-	public void end(int pos, int line, String id) {
-		// Default: delegate to pos-only version, subclasses can override to use line
-		end(pos, id);
 	}
 
 	/**

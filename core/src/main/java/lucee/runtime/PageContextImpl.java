@@ -115,7 +115,6 @@ import lucee.runtime.debug.DebuggerRegistry;
 import lucee.runtime.dump.DumpUtil;
 import lucee.runtime.dump.DumpWriter;
 import lucee.runtime.engine.ExecutionLog;
-import lucee.runtime.engine.ExecutionLogPro;
 import lucee.runtime.err.ErrorPage;
 import lucee.runtime.err.ErrorPageImpl;
 import lucee.runtime.err.ErrorPagePool;
@@ -4193,32 +4192,8 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	@Override
-	public void exeLogStart(int position, int line, String id) {
-		if (execLog != null) {
-			if (execLog instanceof ExecutionLogPro) {
-				((ExecutionLogPro) execLog).start(position, line, id);
-			}
-			else {
-				execLog.start(position, id);
-			}
-		}
-	}
-
-	@Override
 	public void exeLogEnd(int position, String id) {
 		if (execLog != null) execLog.end(position, id);
-	}
-
-	@Override
-	public void exeLogEnd(int position, int line, String id) {
-		if (execLog != null) {
-			if (execLog instanceof ExecutionLogPro) {
-				((ExecutionLogPro) execLog).end(position, line, id);
-			}
-			else {
-				execLog.end(position, id);
-			}
-		}
 	}
 
 	public ExecutionLog getExecutionLog() {

@@ -17,6 +17,11 @@ import lucee.runtime.debug.DebuggerRegistry;
  */
 public final class DebuggerExecutionLog implements ExecutionLogPro {
 
+	@Override
+	public boolean isLineBased() {
+		return true;
+	}
+
 	/**
 	 * Thread-local to track the current file and line for top-level code.
 	 * Used by debuggerSuspend() when there's no DebuggerFrame.
@@ -49,19 +54,16 @@ public final class DebuggerExecutionLog implements ExecutionLogPro {
 	}
 
 	@Override
-	public void start(int pos, String id) {
-		// Legacy - no line info available
-	}
-
-	@Override
-	public void start(int pos, int line, String id) {
+	public void start(int line, String id) {
+		// pos is the line number when isLineBased() returns true
 		// Get file from debugger frame if available, otherwise from current page source
 		String file = null;
 		PageContextImpl.DebuggerFrame frame = pci.getTopmostDebuggerFrame();
 		if (frame != null) {
 			frame.setLine(line);
 			file = frame.getFile();
-		} else {
+		}
+		else {
 			// Top-level code (outside functions) - get file from page source
 			lucee.runtime.PageSource ps = pci.getCurrentPageSource(null);
 			if (ps != null) {
@@ -75,7 +77,8 @@ public final class DebuggerExecutionLog implements ExecutionLogPro {
 			int[] lineHolder = currentTopLevelLine.get();
 			if (lineHolder == null) {
 				currentTopLevelLine.set(new int[] { line });
-			} else {
+			}
+			else {
 				lineHolder[0] = line;
 			}
 		}
@@ -91,11 +94,6 @@ public final class DebuggerExecutionLog implements ExecutionLogPro {
 
 	@Override
 	public void end(int pos, String id) {
-		// No-op
-	}
-
-	@Override
-	public void end(int pos, int line, String id) {
 		// No-op - we only care about start positions for line tracking
 	}
 

@@ -33,6 +33,8 @@ import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.compiler.JavaFunction;
 import lucee.runtime.PageSource;
 import lucee.runtime.config.Config;
+import lucee.runtime.config.ConfigPro;
+import lucee.runtime.engine.ExecutionLogFactory;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.transformer.Context;
 import lucee.transformer.Factory;
@@ -61,6 +63,7 @@ public class BytecodeContext implements Context {
 	private int line;
 	private BytecodeContext root;
 	private boolean writeLog;
+	private Boolean isLineBased; // cached value, null = not yet calculated
 	protected Set<Integer> executableLines = new TreeSet<>();
 	private int rtn = -1;
 	private final boolean returnValue;
@@ -305,6 +308,30 @@ public class BytecodeContext implements Context {
 
 	public boolean writeLog() {
 		return this.writeLog;
+	}
+
+	/**
+	 * Check if the configured ExecutionLog is line-based.
+	 * Line-based logs receive line numbers, char-based logs receive character offsets.
+	 * Result is cached for performance.
+	 */
+	public boolean isLineBased() {
+		if (isLineBased == null) {
+			isLineBased = Boolean.FALSE;
+			try {
+				Config cfg = getConfig();
+				if (cfg instanceof ConfigPro) {
+					ExecutionLogFactory factory = ((ConfigPro) cfg).getExecutionLogFactory();
+					if (factory != null) {
+						isLineBased = factory.isLineBased();
+					}
+				}
+			}
+			catch (Throwable t) {
+				// ignore - default to false
+			}
+		}
+		return isLineBased;
 	}
 
 	public Page getPage() {

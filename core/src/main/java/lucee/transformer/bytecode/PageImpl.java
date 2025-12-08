@@ -770,36 +770,29 @@ public final class PageImpl extends BodyBase implements Page {
 			}
 		}
 
-		// getExecutableLines - returns Object[] {compileTime, lines} for caching
-		// Must be generated AFTER all body compilation so lines are tracked
-		GeneratorAdapter execLinesAdapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, GET_EXECUTABLE_LINES, null, null, cw);
+		// getExecutableLines - only generated in debug mode for debugger support
+		if (writeLog()) {
+			GeneratorAdapter execLinesAdapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, GET_EXECUTABLE_LINES, null, null, cw);
 
-		// Create Object[2] array
-		execLinesAdapter.push(2);
-		execLinesAdapter.newArray(Types.OBJECT);
+			// Create Object[2] array
+			execLinesAdapter.push(2);
+			execLinesAdapter.newArray(Types.OBJECT);
 
-		// [0] = compileTime (Long) - call this.getCompileTime() for cache invalidation
-		execLinesAdapter.dup();
-		execLinesAdapter.push(0);
-		execLinesAdapter.loadThis();
-		execLinesAdapter.invokeVirtual(Type.getObjectType(className), COMPILE_TIME);
-		execLinesAdapter.invokeStatic(Type.getType(Long.class), new Method("valueOf", Type.getType(Long.class), new Type[] { Type.LONG_TYPE }));
-		execLinesAdapter.arrayStore(Types.OBJECT);
+			// [0] = compileTime (Long) - call this.getCompileTime() for cache invalidation
+			execLinesAdapter.dup();
+			execLinesAdapter.push(0);
+			execLinesAdapter.loadThis();
+			execLinesAdapter.invokeVirtual(Type.getObjectType(className), COMPILE_TIME);
+			execLinesAdapter.invokeStatic(Type.getType(Long.class), new Method("valueOf", Type.getType(Long.class), new Type[] { Type.LONG_TYPE }));
+			execLinesAdapter.arrayStore(Types.OBJECT);
 
-		// [1] = lines (int[] or null)
-		execLinesAdapter.dup();
-		execLinesAdapter.push(1);
-		if (!writeLog()) {
-			// Production mode - lines not available
-			execLinesAdapter.visitInsn(Opcodes.ACONST_NULL);
-		}
-		else {
-			// Debug mode - encode as bitmap and decode at runtime
+			// [1] = lines (int[] or null)
+			execLinesAdapter.dup();
+			execLinesAdapter.push(1);
 			int[] execLines = constr.getExecutableLines();
 			String encoded = PageContextUtil.encodeExecutableLines(execLines);
 			int maxLine = PageContextUtil.getMaxLine(execLines);
 			if (encoded == null) {
-				// No executable lines
 				execLinesAdapter.visitInsn(Opcodes.ACONST_NULL);
 			}
 			else {
@@ -809,11 +802,11 @@ public final class PageImpl extends BodyBase implements Page {
 				execLinesAdapter.invokeStatic(Types.PAGE_CONTEXT_UTIL,
 					new Method("decodeExecutableLines", Type.getType(int[].class), new Type[] { Types.STRING, Type.INT_TYPE }));
 			}
-		}
-		execLinesAdapter.arrayStore(Types.OBJECT);
+			execLinesAdapter.arrayStore(Types.OBJECT);
 
-		execLinesAdapter.returnValue();
-		execLinesAdapter.endMethod();
+			execLinesAdapter.returnValue();
+			execLinesAdapter.endMethod();
+		}
 
 		return ASMUtil.verify(cw.toByteArray());
 	}

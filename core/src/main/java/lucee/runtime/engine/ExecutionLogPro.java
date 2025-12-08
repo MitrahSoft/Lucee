@@ -1,26 +1,20 @@
 package lucee.runtime.engine;
 
 /**
- * Extended ExecutionLog interface with line number support.
+ * Extended ExecutionLog interface with line-based position support.
  * Used by native debugger for line-level tracking.
  */
 public interface ExecutionLogPro extends ExecutionLog {
 
 	/**
-	 * Start tracking execution at a position with line number info.
+	 * Whether this implementation expects the pos parameter to be line numbers (true)
+	 * or character offsets (false).
 	 *
-	 * @param pos position identifier
-	 * @param line source line number
-	 * @param id unique identifier for this execution block
-	 */
-	public void start(int pos, int line, String id);
-
-	/**
-	 * End tracking execution at a position with line number info.
+	 * This affects bytecode generation - changing this requires recompilation of cfclasses.
 	 *
-	 * @param pos position identifier
-	 * @param line source line number
-	 * @param id unique identifier for this execution block
+	 * @return true if pos should be line numbers, false for character offsets
 	 */
-	public void end(int pos, int line, String id);
+	default boolean isLineBased() {
+		return false;
+	}
 }
