@@ -7,6 +7,6 @@ import lucee.runtime.ext.function.Function;
 public final class IsDebuggerEnabled implements Function {
 
 	public static boolean call(PageContext pc) {
-		return ConfigImpl.DEBUGGER_ENABLED;
+		return ConfigImpl.DEBUGGER;
 	}
 }

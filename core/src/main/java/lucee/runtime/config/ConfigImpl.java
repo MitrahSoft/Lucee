@@ -179,25 +179,25 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static final RHExtension[] RHEXTENSIONS_EMPTY = new RHExtension[0];
 
-	// Debugger secret - required to register a debugger listener. If not set, debugger is disabled.
+	// DAP secret - required to register a debugger listener. If not set, DAP debugger is disabled.
 	public static final String DEBUGGER_SECRET;
-	// Debugger enabled if secret is set (non-empty) - enables listener registration and console capture
+	// DAP enabled if secret is set (non-empty) - enables listener registration and console capture
 	public static final boolean DEBUGGER_ENABLED;
-	// Breakpoint support - controls bytecode instrumentation for stepping/breakpoints (default true when debugger enabled)
-	public static final boolean DEBUGGER_BREAKPOINT;
+	// DAP debugger active - controls bytecode instrumentation for stepping/breakpoints (default true when secret set)
+	public static final boolean DEBUGGER;
 	static {
-		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.debugger.secret", null);
+		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.dap.secret", null);
 		if (secret != null && !secret.trim().isEmpty()) {
 			DEBUGGER_SECRET = secret.trim();
 			DEBUGGER_ENABLED = true;
 			// Breakpoint support defaults to true, can be disabled for console-only mode
-			String bp = SystemUtil.getSystemPropOrEnvVar("lucee.debugger.breakpoint", "true");
-			DEBUGGER_BREAKPOINT = "true".equalsIgnoreCase(bp.trim());
+			String bp = SystemUtil.getSystemPropOrEnvVar("lucee.dap.breakpoint", "true");
+			DEBUGGER = "true".equalsIgnoreCase(bp.trim());
 		}
 		else {
 			DEBUGGER_SECRET = null;
 			DEBUGGER_ENABLED = false;
-			DEBUGGER_BREAKPOINT = false;
+			DEBUGGER = false;
 		}
 	}
 
@@ -4635,7 +4635,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean getExecutionLogEnabled() {
-		if (DEBUGGER_BREAKPOINT) return true;
+		if (DEBUGGER) return true;
 
 		if (executionLogEnabled == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getExecutionLogEnabled")) {

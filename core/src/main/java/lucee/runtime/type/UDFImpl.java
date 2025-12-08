@@ -363,7 +363,7 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 
 				// Debugger frame support - capture scopes for external debuggers
 				// Must be AFTER defineArguments so function arguments are accessible for conditional breakpoints
-				if (ConfigImpl.DEBUGGER_BREAKPOINT) {
+				if (ConfigImpl.DEBUGGER) {
 					pci.pushDebuggerFrame(newLocal, newArgs, pc.variablesScope(), ps, getFunctionName(), properties.getStartLine());
 				}
 
@@ -398,7 +398,7 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 		finally {
 			if (ps != null) pc.removeLastPageSource(psInc != null);
 			// Debugger frame support - pop before removeUDF to maintain consistency
-			if (ConfigImpl.DEBUGGER_BREAKPOINT) {
+			if (ConfigImpl.DEBUGGER) {
 				pci.popDebuggerFrame();
 			}
 			pci.removeUDF();

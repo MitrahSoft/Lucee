@@ -12,7 +12,7 @@ import lucee.runtime.debug.DebuggerRegistry;
  * Updates the current debugger frame's line number on each block start.
  * Also checks for breakpoints and suspends execution if needed.
  *
- * This is used when DEBUGGER_BREAKPOINT=true to provide line tracking
+ * This is used when DEBUGGER=true to provide line tracking
  * without requiring bytecode instrumentation in the debugger extension.
  */
 public final class DebuggerExecutionLog implements ExecutionLogPro {

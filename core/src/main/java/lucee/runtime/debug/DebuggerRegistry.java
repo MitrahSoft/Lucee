@@ -23,11 +23,11 @@ public final class DebuggerRegistry {
 	}
 
 	/**
-	 * Set the debugger listener. Requires the correct secret from LUCEE_DEBUGGER_SECRET.
+	 * Set the debugger listener. Requires the correct secret from LUCEE_DAP_SECRET.
 	 * Only one listener is supported - setting a new one replaces the old.
 	 *
 	 * @param l The listener to register, or null to unregister
-	 * @param secret The secret that must match LUCEE_DEBUGGER_SECRET
+	 * @param secret The secret that must match LUCEE_DAP_SECRET
 	 * @return true if registration succeeded, false if secret is invalid
 	 */
 	public static boolean setListener(DebuggerListener l, String secret) {
