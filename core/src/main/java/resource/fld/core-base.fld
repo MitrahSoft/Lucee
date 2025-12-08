@@ -2660,7 +2660,62 @@ The returned AST uses **neutral, language-agnostic node types** following ESTree
 			<type>struct</type>
 		</return>
 	</function>
-	
+
+	<!-- compress -->
+	<function>
+		<name>compress</name>
+		<class>lucee.runtime.functions.system.Compress</class>
+		<description>Compress given source to zip or gzip format. For additional formats (tar, tgz, bzip, etc.) install the compress extension.</description>
+		<argument>
+			<name>format</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>
+			Format to compress the files:
+			- gzip
+			- zip
+			</description>
+		</argument>
+		<argument>
+			<name>source</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>
+			Path (relative or absolute) to source file or directory to compress.
+			For **gzip** (single file format) must use path including the name of the file
+			</description>
+		</argument>
+		<argument>
+			<name>target</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>
+			Path (relative or absolute) including the name, where you want to save the compressed output-file
+			</description>
+		</argument>
+		<argument>
+			<name>includeBaseFolder</name>
+			<type>boolean</type>
+			<required>No</required>
+			<default>true</default>
+			<description>
+			Compress the directory or just the content of the directory
+			</description>
+		</argument>
+		<argument>
+			<name>mode</name>
+			<type>string</type>
+			<required>no</required>
+			<default>777</default>
+			<description>
+			Mode to store the files (only used by compress extension for tar formats)
+			</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
 	<!-- cos -->
 	<function>
 		<name>cos</name>
@@ -4904,8 +4959,44 @@ EntitySave(entity, [forceInsert])</description>
 		</return>
 	</function>
 
+	<!-- extract -->
+	<function>
+		<name>extract</name>
+		<class>lucee.runtime.functions.system.Extract</class>
+		<description>Extract the data of a compressed file. For additional formats (tar, tgz, bzip, etc.) install the compress extension.</description>
+		<argument>
+			<name>format</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>
+			Format of the compressed file:
+			- gzip
+			- zip
+			</description>
+		</argument>
+		<argument>
+			<name>source</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>
+			Path (relative or absolute) to the source file or a directory with compressed files to extract
+			</description>
+		</argument>
+		<argument>
+			<name>target</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>
+			Path (relative or absolute) to the directory, where you want to extract the data.
+			For **gzip** (single file format) must use path including the name of the file
+			</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
 
-		<!-- FileAppend -->
+	<!-- FileAppend -->
 	<function>
 		<name>FileAppend</name>
 		<class>lucee.runtime.functions.file.FileAppend</class>
