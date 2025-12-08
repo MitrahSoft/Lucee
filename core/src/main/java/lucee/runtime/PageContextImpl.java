@@ -2340,27 +2340,7 @@ public final class PageContextImpl extends PageContext {
 
 	public void handlePageException(final PageException pe, boolean setHeader) {
 		if (!Abort.isSilentAbort(pe)) {
-			// Notify debugger of uncaught exception - allow it to suspend
-			if (ConfigImpl.DEBUGGER_ENABLED) {
-				DebuggerListener listener = DebuggerRegistry.getListener();
-				if (listener != null && listener.onException(this, pe, false)) {
-					// Get file/line from exception for debugger display
-					String file = null;
-					int line = 0;
-					if (pe instanceof PageExceptionImpl) {
-						PageExceptionImpl pei = (PageExceptionImpl) pe;
-						file = pei.getFile(getConfig());
-						try {
-							String lineStr = pei.getLine(getConfig());
-							if (lineStr != null && !lineStr.isEmpty()) {
-								line = Integer.parseInt(lineStr);
-							}
-						} catch (NumberFormatException ignored) {}
-					}
-					// Debugger wants to suspend - do it now before handling the exception
-					debuggerSuspend(file, line, "Uncaught exception: " + pe.getClass().getSimpleName());
-				}
-			}
+			// Note: Debugger exception notification now happens in _setCatch() where frames are still intact
 
 			// if(requestTimeoutException!=null)
 			// pe=Caster.toPageException(requestTimeoutException);
@@ -3447,8 +3427,34 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	public void _setCatch(PageException pe, String name, boolean caught, boolean store, boolean signal) {
-		if (signal && fdEnabled) {
-			FDSignal.signal(pe, caught);
+		if (signal && pe != null) {
+			// FusionDebug support
+			if (fdEnabled) {
+				FDSignal.signal(pe, caught);
+			}
+			// External debugger (luceedebug) - frames are still intact at this point
+			if (ConfigImpl.DEBUGGER_ENABLED) {
+				DebuggerListener listener = DebuggerRegistry.getListener();
+				if (listener != null && listener.isClientConnected() && listener.onException( this, pe, caught )) {
+					// Get file/line from exception for debugger display
+					String file = null;
+					int line = 0;
+					if (pe instanceof PageExceptionImpl) {
+						PageExceptionImpl pei = (PageExceptionImpl) pe;
+						file = pei.getFile( getConfig() );
+						try {
+							String lineStr = pei.getLine( getConfig() );
+							if (lineStr != null && !lineStr.isEmpty()) {
+								line = Integer.parseInt( lineStr );
+							}
+						}
+						catch (NumberFormatException ignored) {
+						}
+					}
+					String label = caught ? "Caught exception: " : "Uncaught exception: ";
+					debuggerSuspend( file, line, label + pe.getClass().getSimpleName() );
+				}
+			}
 		}
 		// boolean outer = exception != null && exception == pe;
 		exception = pe;
