@@ -98,7 +98,7 @@ public interface DebuggerListener {
 	/**
 	 * Called when a UDF/method is entered.
 	 * Allows debuggers to implement function breakpoints (break on function name).
-	 * Must be fast - called on every function invocation when DEBUGGER_ENABLED.
+	 * Must be fast - called on every function invocation when DEBUGGER_BREAKPOINT is enabled.
 	 *
 	 * @param pc The PageContext executing
 	 * @param functionName The function name (case as defined in source)

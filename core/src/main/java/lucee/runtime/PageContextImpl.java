@@ -3433,7 +3433,7 @@ public final class PageContextImpl extends PageContext {
 				FDSignal.signal(pe, caught);
 			}
 			// External debugger (luceedebug) - frames are still intact at this point
-			if (ConfigImpl.DEBUGGER_ENABLED) {
+			if (ConfigImpl.DEBUGGER_BREAKPOINT) {
 				DebuggerListener listener = DebuggerRegistry.getListener();
 				if (listener != null && listener.isClientConnected() && listener.onException( this, pe, caught )) {
 					// Get file/line from exception for debugger display
@@ -3553,10 +3553,10 @@ public final class PageContextImpl extends PageContext {
 		public String getFile() { return pageSource != null ? pageSource.getDisplayPath() : null; }
 	}
 
-	private final LinkedList<DebuggerFrame> debuggerFrames = ConfigImpl.DEBUGGER_ENABLED ? new LinkedList<DebuggerFrame>() : null;
+	private final LinkedList<DebuggerFrame> debuggerFrames = ConfigImpl.DEBUGGER_BREAKPOINT ? new LinkedList<DebuggerFrame>() : null;
 
 	/**
-	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER_ENABLED.
+	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER_BREAKPOINT is enabled.
 	 */
 	public void pushDebuggerFrame(lucee.runtime.type.scope.Local local, lucee.runtime.type.scope.Argument arguments,
 								lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName, int startLine) {
@@ -3578,7 +3578,7 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	/**
-	 * Pop the topmost debugger frame. Called on UDF exit when DEBUGGER_ENABLED.
+	 * Pop the topmost debugger frame. Called on UDF exit when DEBUGGER_BREAKPOINT is enabled.
 	 */
 	public void popDebuggerFrame() {
 		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
@@ -3626,7 +3626,7 @@ public final class PageContextImpl extends PageContext {
 	 * @param label Optional label to identify the breakpoint in debugger UI
 	 */
 	public void debuggerSuspend(String label) {
-		if (!ConfigImpl.DEBUGGER_ENABLED) return;
+		if (!ConfigImpl.DEBUGGER_BREAKPOINT) return;
 
 		// Get current file/line for listener callback
 		DebuggerFrame frame = getTopmostDebuggerFrame();
@@ -3664,7 +3664,7 @@ public final class PageContextImpl extends PageContext {
 	 * @param label Optional label to identify the breakpoint in debugger UI
 	 */
 	public void debuggerSuspend(String file, int line, String label) {
-		if (!ConfigImpl.DEBUGGER_ENABLED) return;
+		if (!ConfigImpl.DEBUGGER_BREAKPOINT) return;
 		debuggerSuspendImpl(file, line, label);
 	}
 

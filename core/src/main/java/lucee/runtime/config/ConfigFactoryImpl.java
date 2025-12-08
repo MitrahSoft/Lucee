@@ -1568,9 +1568,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Class<? extends ExecutionLog> clazz = null;
 			Map<String, String> args = null;
 
-			// If debugger enabled and no explicit class configured, use DebuggerExecutionLog
-			if (StringUtil.isEmpty(strClass) && ConfigImpl.DEBUGGER_ENABLED) {
-				LogUtil.log(config, Log.LEVEL_INFO, "application", "Debugger mode enabled (LUCEE_DEBUGGER_SECRET is set)");
+			// If debugger breakpoint support enabled and no explicit class configured, use DebuggerExecutionLog
+			if (StringUtil.isEmpty(strClass) && ConfigImpl.DEBUGGER_BREAKPOINT) {
+				LogUtil.log(config, Log.LEVEL_INFO, "application", "Debugger breakpoint support enabled");
 				clazz = DebuggerExecutionLog.class;
 				args = new HashMap<String, String>();
 			}

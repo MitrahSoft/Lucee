@@ -181,16 +181,23 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	// Debugger secret - required to register a debugger listener. If not set, debugger is disabled.
 	public static final String DEBUGGER_SECRET;
-	// Debugger enabled if secret is set (non-empty)
+	// Debugger enabled if secret is set (non-empty) - enables listener registration and console capture
 	public static final boolean DEBUGGER_ENABLED;
+	// Breakpoint support - controls bytecode instrumentation for stepping/breakpoints (default true when debugger enabled)
+	public static final boolean DEBUGGER_BREAKPOINT;
 	static {
 		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.debugger.secret", null);
 		if (secret != null && !secret.trim().isEmpty()) {
 			DEBUGGER_SECRET = secret.trim();
 			DEBUGGER_ENABLED = true;
-		} else {
+			// Breakpoint support defaults to true, can be disabled for console-only mode
+			String bp = SystemUtil.getSystemPropOrEnvVar("lucee.debugger.breakpoint", "true");
+			DEBUGGER_BREAKPOINT = "true".equalsIgnoreCase(bp.trim());
+		}
+		else {
 			DEBUGGER_SECRET = null;
 			DEBUGGER_ENABLED = false;
+			DEBUGGER_BREAKPOINT = false;
 		}
 	}
 
@@ -4628,7 +4635,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean getExecutionLogEnabled() {
-		if (DEBUGGER_ENABLED) return true;
+		if (DEBUGGER_BREAKPOINT) return true;
 
 		if (executionLogEnabled == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getExecutionLogEnabled")) {
