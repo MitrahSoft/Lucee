@@ -3399,6 +3399,7 @@ You can find a list of all available timezones in the Lucee administrator (Setti
 			<type>boolean</type>
 			<required>no</required>
 			<default>true</default>
+			<introduced>6.2.5.4</introduced>
 			<description>If true (default), clears all idle connections immediately. If false, only evicts connections that have exceeded their idleTimeout.</description>
 		</argument>
 		<return>
