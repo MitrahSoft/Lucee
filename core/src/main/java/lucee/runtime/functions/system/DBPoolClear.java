@@ -27,25 +27,25 @@ import lucee.runtime.ext.function.Function;
 
 public final class DBPoolClear implements Function {
 
-	public static boolean call( PageContext pc ) {
-		return call( pc, null, true );
+	public static boolean call(PageContext pc) {
+		return call(pc, null, true);
 	}
 
-	public static boolean call( PageContext pc, String dataSourceName ) {
-		return call( pc, dataSourceName, true );
+	public static boolean call(PageContext pc, String dataSourceName) {
+		return call(pc, dataSourceName, true);
 	}
 
-	public static boolean call( PageContext pc, String dataSourceName, boolean force ) {
-		for ( DatasourceConnPool pool : ((ConfigPro) pc.getConfig()).getDatasourceConnectionPools() ) {
-			if ( StringUtil.isEmpty( dataSourceName ) || dataSourceName.equalsIgnoreCase( pool.getFactory().getDatasource().getName() ) ) {
-				if ( force ) {
+	public static boolean call(PageContext pc, String dataSourceName, boolean force) {
+		for (DatasourceConnPool pool: ((ConfigPro) pc.getConfig()).getDatasourceConnectionPools()) {
+			if (StringUtil.isEmpty(dataSourceName) || dataSourceName.equalsIgnoreCase(pool.getFactory().getDatasource().getName())) {
+				if (force) {
 					pool.clear();
 				}
 				else {
 					try {
 						pool.evict();
 					}
-					catch ( Exception e ) {
+					catch (Exception e) {
 						// evict() can throw Exception, but we don't want to fail the whole operation
 					}
 				}
