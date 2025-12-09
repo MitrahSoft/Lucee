@@ -1861,18 +1861,8 @@ public final class ConfigAdmin {
 
 		// make sure the class exists
 		setClass(child, null, "", cd);
-
-		// now unload again, JDBC driver can be loaded when necessary
-		if (cd.isBundle()) {
-			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
-			if (bl != null) {
-				try {
-					OSGiUtil.uninstall(bl);
-				}
-				catch (BundleException e) {
-				}
-			}
-		}
+		// Note: Unlike JDBC drivers, startup hooks are NOT lazy-loaded - they are instantiated
+		// immediately via resetStartups().getStartups(). Do not uninstall the bundle here.
 	}
 
 	private void _updateStartupHook(String component) {

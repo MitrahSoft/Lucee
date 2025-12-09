@@ -6094,6 +6094,18 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (startups != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getStartups")) {
 				if (startups != null) {
+					// Call finalize() on existing startup hook instances before clearing
+					for (Startup startup: startups.values()) {
+						try {
+							Method fin = Reflector.getMethod(startup.instance.getClass(), "finalize", new Class[0], true, null);
+							if (fin != null) {
+								fin.invoke(startup.instance, new Object[0]);
+							}
+						}
+						catch (Exception e) {
+							// ignore - best effort cleanup
+						}
+					}
 					startups = null;
 				}
 			}
