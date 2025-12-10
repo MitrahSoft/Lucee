@@ -27,7 +27,6 @@ import lucee.runtime.ai.RequestSupport;
 import lucee.runtime.ai.Response;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
-import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.interpreter.JSONExpressionInterpreter;
 import lucee.runtime.listener.SerializationSettings;
@@ -157,7 +156,7 @@ public final class ClaudeSession extends AISessionSupport {
 					return r;
 				}
 				else {
-					throw new ApplicationException("The AI did answer with the mime type [" + t + "] that is not supported, only [application/json] is supported");
+					throw unsupportedMimeTypeException(response, responseEntity, cs, t);
 				}
 			}
 

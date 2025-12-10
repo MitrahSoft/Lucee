@@ -178,8 +178,7 @@ public final class OpenAISession extends AISessionSupport {
 						return r;
 					}
 					else {
-						throw new ApplicationException("The AI did answer (" + AIUtil.getStatusCode(response) + ") with the mime type [" + t
-								+ "] that is not supported, only [application/json] is supported");
+						throw unsupportedMimeTypeException(response, responseEntity, cs, t);
 					}
 				}
 				finally {

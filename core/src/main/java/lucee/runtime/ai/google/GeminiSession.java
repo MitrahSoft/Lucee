@@ -26,7 +26,6 @@ import lucee.runtime.ai.RequestSupport;
 import lucee.runtime.ai.Response;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
-import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.interpreter.JSONExpressionInterpreter;
 import lucee.runtime.listener.SerializationSettings;
@@ -138,7 +137,7 @@ public final class GeminiSession extends AISessionSupport {
 					return r;
 				}
 				else {
-					throw new ApplicationException("Unsupported mime type [" + t + "], only [application/json] is supported");
+					throw unsupportedMimeTypeException(response, responseEntity, cs, t);
 				}
 			}
 		}

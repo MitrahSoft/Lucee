@@ -3,8 +3,12 @@ package lucee.runtime.ai;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig.Builder;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.util.EntityUtils;
 
+import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.functions.other.CreateUniqueId;
 
@@ -117,5 +121,25 @@ public abstract class AISessionSupport implements AISession {
 	}
 
 	// TODO add to interface
+	@Override
 	public abstract String getSystemMessage();
+
+	protected Exception unsupportedMimeTypeException(CloseableHttpResponse response, HttpEntity responseEntity, String cs, String mimetype) {
+		int statusCode = response.getStatusLine().getStatusCode();
+		String statusReason = response.getStatusLine().getReasonPhrase();
+
+		// Optionally read a snippet of the response body for context
+		String bodySnippet = "";
+		try {
+			String body = EntityUtils.toString(responseEntity, cs);
+			bodySnippet = body.length() > 200 ? body.substring(0, 200) + "..." : body;
+		}
+		catch (Exception ex) {
+			// If we can't read the body, just note that
+			bodySnippet = "[Unable to read response body]";
+		}
+
+		return new ApplicationException("Unsupported mime type [" + mimetype + "], only [application/json, text/event-stream] are supported. " + "HTTP Status: " + statusCode + " "
+				+ statusReason + ", " + "Charset: " + cs + ", " + "Response body: " + bodySnippet);
+	}
 }
