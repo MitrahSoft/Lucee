@@ -22,7 +22,7 @@ component extends="AI" {
 			defaultValue = "",
 			required = true,
 			description = "Secret key for accessing the AI engine. You can use environment variables like this: ${MY_SECRET_KEY}.",
-			type = "text"
+			type = "password"
 		)
 		,group("Fine-Tune", "Customize settings to fine-tune your AI session.")
 		,field(displayName = "Model",

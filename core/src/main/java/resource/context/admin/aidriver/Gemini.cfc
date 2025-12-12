@@ -6,7 +6,7 @@ component extends="AI" {
 			defaultValue = "",
 			required = true,
 			description = "The API key required to access Gemini. You can use environment variables such as ${MY_SECRET_KEY} for secure storage.",
-			type = "text"
+			type = "password"
 		)
 		,group("Fine-Tune", "Customize settings to fine-tune your AI session.")
 		,field(displayName = "Model",

@@ -15,7 +15,7 @@ component extends="AI" {
 			defaultValue = "",
 			required = true,
 			description = "Your Anthropic API key. You can use environment variables like this: ${ANTHROPIC_API_KEY}.",
-			type = "text"
+			type = "password"
 		)
 		,group("Configuration", "Customize your Claude integration settings.")
 		,field(displayName = "Model",

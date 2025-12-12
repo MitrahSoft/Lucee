@@ -163,10 +163,28 @@ Redirtect to entry --->
 						<th scope="row">#field.getDisplayName()#</th>
 						<td>
 							<cfif type EQ "text" or type EQ "password">
-								<cfinputClassic type="#type#" 
-									name="custom_#field.getName()#" 
-									value="#default#" class="large" style="width:100%" required="#field.getRequired()#" 
-									message="Missing value for field #field.getDisplayName()#">
+								<cfif type EQ "password">
+									<div style="display: flex; align-items: center; gap: 10px;">
+										<cfinputClassic type="password" 
+											id="custom_#field.getName()#"
+											name="custom_#field.getName()#" 
+											value="#default#" class="large" style="width:100%" required="#field.getRequired()#" 
+											message="Missing value for field #field.getDisplayName()#">
+										
+									</div>
+									<div class="comment" style="padding-bottom:4px">
+										<label style="white-space: nowrap; margin: 0;">
+											<input type="checkbox" class="checkbox" 
+												onclick="var input = document.getElementById('custom_#field.getName()#'); input.type = this.checked ? 'text' : 'password';">
+											Show #field.getDisplayName()#
+										</label>
+									</div>
+								<cfelse>
+									<cfinputClassic type="#type#" 
+										name="custom_#field.getName()#" 
+										value="#default#" class="large" style="width:100%" required="#field.getRequired()#" 
+										message="Missing value for field #field.getDisplayName()#">
+								</cfif>
 								<!--- TODO more dynamic solution --->
 								<cfif not isNew and "model" EQ field.getName()>
 									<cftry>
