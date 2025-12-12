@@ -12,7 +12,7 @@ import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.functions.other.CreateUniqueId;
 
-public abstract class AISessionSupport implements AISession {
+public abstract class AISessionSupport implements AISessionMultipart {
 
 	private String id;
 	private AIEngine engine;
@@ -92,6 +92,29 @@ public abstract class AISessionSupport implements AISession {
 	@Override
 	public Response inquiry(String message) throws PageException {
 		return inquiry(message, null);
+	}
+
+	@Override
+	public Response inquiry(List<Part> parts) throws PageException {
+		return inquiry(parts, null);
+	}
+
+	@Override
+	public Response inquiry(List<Part> parts, AIResponseListener listener) throws PageException {
+		// Default implementation: extract first text part and delegate to string inquiry
+		if (parts == null || parts.isEmpty()) {
+			throw new ApplicationException("Parts list cannot be null or empty");
+		}
+
+		for (Part part: parts) {
+			if (part.isText()) {
+				String text = part.getAsString();
+				if (text != null) {
+					return inquiry(text, listener);
+				}
+			}
+		}
+		throw new ApplicationException("this session type only supports single part text inquiries.");
 	}
 
 	public static Builder setTimeout(Builder builder, AISession session) {

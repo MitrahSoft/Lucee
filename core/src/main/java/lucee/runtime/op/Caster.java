@@ -2973,6 +2973,10 @@ public final class Caster {
 	 * sct.set(StringUtil.toLowerCase(Caster.toString(key)),map.get(key)); } return sct; }
 	 */
 
+	public static byte[] toBinary(Resource res) throws IOException {
+		return IOUtil.toBytes(res);
+	}
+
 	/**
 	 * cast an Object to a Binary
 	 * 
@@ -4667,10 +4671,8 @@ public final class Caster {
 					valueStr = args[i].getClass().getName();
 				}
 				if (valueStr.length() > 50) valueStr = valueStr.substring(0, 50) + "...";
-				throw new ExpressionException(
-						"Missing argument name, when using named parameters to a function, all parameters must be named. "
-								+ "Argument at position " + (i - offset + 1) + " [" + valueStr + "] is missing a name. "
-								+ "Either name all arguments (e.g., argumentName=value) or use positional arguments only.");
+				throw new ExpressionException("Missing argument name, when using named parameters to a function, all parameters must be named. " + "Argument at position "
+						+ (i - offset + 1) + " [" + valueStr + "] is missing a name. " + "Either name all arguments (e.g., argumentName=value) or use positional arguments only.");
 			}
 		}
 		return sct;

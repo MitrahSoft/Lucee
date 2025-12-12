@@ -866,6 +866,7 @@ public final class KeyConstants {
 	public static final Key _mappings = init("mappings");
 	public static final Key _web = init("web");
 	public static final Key _mimetype = init("mimetype");
+	public static final Key _mimeType = init("mimeType");
 	public static final Key _0 = init("0");
 	public static final Key _1 = init("1");
 	public static final Key _2 = init("2");
@@ -3117,6 +3118,7 @@ public final class KeyConstants {
 	public static final Key _srcall = init("srcall");
 	public static final Key __tick = init("_tick");
 	public static final Key __start = init("_start");
+	public static final Key _binary = init("binary");
 
 	public static Map<String, Key> getKeys() {
 		return keys;

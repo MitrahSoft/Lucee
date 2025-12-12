@@ -143,6 +143,7 @@ public final class OpenAIEngine extends AIEngineSupport implements AIEngineFile 
 	private URL baseURL;
 	public Double temperature = null;
 	private int conversationSizeLimit = DEFAULT_CONVERSATION_SIZE_LIMIT;
+	private Boolean multiPartSupported;
 	URI chatCompletionsURI;
 
 	@Override
@@ -157,6 +158,7 @@ public final class OpenAIEngine extends AIEngineSupport implements AIEngineFile 
 			if ("chatgpt".equals(str) || "openai".equals(str)) {
 				label = "ChatGPT";
 				baseURL = DEFAULT_URL_OPENAI;
+				multiPartSupported = true;
 			}
 			else if ("ollama".equals(str)) {
 				label = "Ollama";
@@ -165,14 +167,17 @@ public final class OpenAIEngine extends AIEngineSupport implements AIEngineFile 
 			else if ("perplexity".equals(str)) {
 				label = "Perplexity";
 				baseURL = DEFAULT_URL_PERPLEXITY;
+				multiPartSupported = false;
 			}
 			else if ("deepseek".equals(str)) {
 				label = "DeepSeek";
 				baseURL = DEFAULT_URL_DEEPSEEK;
+				multiPartSupported = false;
 			}
 			else if ("grok".equals(str)) {
 				label = "Grok";
 				baseURL = DEFAULT_URL_GROK;
+				multiPartSupported = false;
 			}
 
 			else throw new ApplicationException(
@@ -275,6 +280,10 @@ public final class OpenAIEngine extends AIEngineSupport implements AIEngineFile 
 
 	public URL getBaseURL() {
 		return baseURL;
+	}
+
+	public Boolean isMultiPartSupported() {
+		return multiPartSupported;
 	}
 
 	@Override
