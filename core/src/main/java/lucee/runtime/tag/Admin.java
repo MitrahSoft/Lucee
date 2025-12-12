@@ -2817,9 +2817,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doUpdateAIConnection() throws PageException {
+		String name = getString("admin", action, "name");
 		ClassDefinition cd = ClassDefinitionImpl.toClassDefinitionImpl(attributes, null, true, config.getIdentification());
-		admin.updateAIConnection(getString("admin", action, "name"), cd, getString("default", null), getStruct("admin", action, "custom"));
+		admin.updateAIConnection(name, cd, getString("default", null), getStruct("admin", action, "custom"));
 		store();
+		config.getAIEnginePool().flushEngine(name);
 		ConfigUtil.getConfigServerImpl(config).resetAIEngineFactories();
 		adminSync.broadcast(attributes, config);
 	}
@@ -3966,8 +3968,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveAIConnection() throws PageException {
-		admin.removeAIConnection(getString("admin", action, "name"));
+		String name = getString("admin", action, "name");
+		admin.removeAIConnection(name);
 		store();
+		config.getAIEnginePool().flushEngine(name);
 		ConfigUtil.getConfigServerImpl(config).resetAIEngineFactories();
 		adminSync.broadcast(attributes, config);
 	}
