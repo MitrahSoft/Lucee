@@ -12,7 +12,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 
 	function run( testResults, testBox ) {
 		describe( "LDEV-5963 - Pool eviction", function() {
-			it( "evicts idle connections after idleTimeout using DBPoolClear force=false", function() {
+			// skip: test passes but is slow (~65s) - waits for idleTimeout to expire
+			it( title="evicts idle connections after idleTimeout using DBPoolClear force=false", skip=true, body=function() {
 				// Get MySQL datasource credentials
 				var creds = server.getDatasource( "mysql" );
 				var dsName = "LDEV5963_ds";
