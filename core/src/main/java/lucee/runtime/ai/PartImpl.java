@@ -1,6 +1,7 @@
 package lucee.runtime.ai;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +9,7 @@ import lucee.commons.io.IOUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.StringUtil;
+import lucee.commons.net.HTTPUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
@@ -51,11 +53,6 @@ public class PartImpl implements Part {
 
 	public PartImpl(byte[] content, int index) {
 		this(null, index, content, null);
-	}
-
-	public PartImpl(Resource res, int index) throws IOException {
-		this(null, index, IOUtil.toBytes(res), null);
-		this.filename = res.getName();
 	}
 
 	@Override
@@ -186,7 +183,8 @@ public class PartImpl implements Part {
 			if (res != null) {
 				pc.getConfig().getSecurityManager().checkFileLocation(res);
 				try {
-					return new PartImpl(res, index);
+
+					return toPartImpl(res, index);
 				}
 				catch (IOException e) {
 					throw Caster.toPageException(e);
@@ -194,6 +192,15 @@ public class PartImpl implements Part {
 			}
 		}
 		return new PartImpl(str, index);
+	}
+
+	public static PartImpl toPartImpl(Resource res, int index) throws IOException {
+		String mt = IOUtil.getMimeType(res, null);
+		// text
+		if (mt != null && HTTPUtil.isTextMimeType(mt)) {
+			return new PartImpl(null, index, IOUtil.toString(res, (Charset) null), mt);
+		}
+		return new PartImpl(null, index, IOUtil.toBytes(res), mt);
 	}
 
 	public static String getFileName(Part part) {
