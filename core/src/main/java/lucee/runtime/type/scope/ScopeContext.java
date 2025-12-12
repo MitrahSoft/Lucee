@@ -477,6 +477,14 @@ public final class ScopeContext {
 		return hasExistingJSessionScope(pc);
 	}
 
+	/**
+	 * this method still is used in some extension, so keep it in place
+	 */
+	@Deprecated
+	public boolean hasExistingSessionScope(PageContext pc) {
+		return getExistingSessionScope(pc) != null;
+	}
+
 	private Object hasExistingJSessionScope(PageContext pc) {
 		HttpSession httpSession = ((PageContextImpl) pc).getHttpServletRequest().getSession(false);
 		if (httpSession == null) return null;
@@ -999,7 +1007,8 @@ public final class ScopeContext {
 		}
 
 		pc.resetIdAndToken();
-		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called changeSessionId() and want to keep the data
+		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called
+		// changeSessionId() and want to keep the data
 		// But for JSR-223 (where httpSession is null), we need to reset to create a new session
 		HttpSession httpSessionForReset = pc.getSession();
 		if (!(isJ2EESession && migrateSessionData && httpSessionForReset != null)) {
