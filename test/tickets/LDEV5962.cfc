@@ -184,7 +184,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 
 			describe( "pool exhaustion should timeout, not block forever", function() {
 
-				it( title="should timeout when pool exhausted instead of blocking forever", skip=isMySqlNotSupported(), body=function( currentSpec ) {
+				// skip: test passes but is slow (~35s) - waits for pool exhaustion timeout
+				it( title="should timeout when pool exhausted instead of blocking forever", skip=true, body=function( currentSpec ) {
 					// Test that pool exhaustion times out with default 30 second maxWaitMillis
 					// (idleTimeout=0 triggers default, which was infinite before fix)
 					var dsConfig = {

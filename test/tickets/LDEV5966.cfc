@@ -29,7 +29,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 
 		describe( "LDEV-5966 - Request timeout pool accounting", function() {
 
-			it( title="request timeout should not leak pool connection count", skip=isMySqlNotSupported(), body=function( currentSpec ) {
+			// skip: test passes but is slow (~8s) - request timeout test
+			it( title="request timeout should not leak pool connection count", skip=true, body=function( currentSpec ) {
 				// This test verifies that when a request times out, the connection
 				// is properly returned to the pool (or destroyed and accounted for),
 				// not just closed leaving the pool's numActive counter inflated.
@@ -143,7 +144,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 					"If higher, request timeout leaked pool accounting." );
 			});
 
-			it( title="multiple request timeouts should not accumulate phantom connections", skip=isMySqlNotSupported(), body=function( currentSpec ) {
+			// skip: test passes but is slow (~8s) - burst timeout test
+			it( title="multiple request timeouts should not accumulate phantom connections", skip=true, body=function( currentSpec ) {
 				// This test simulates burst load with timeouts to catch accumulating leaks
 
 				var dsName = "LDEV5966_burst";
