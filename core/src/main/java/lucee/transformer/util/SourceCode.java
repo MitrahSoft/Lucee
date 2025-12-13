@@ -754,15 +754,15 @@ public class SourceCode {
 	 */
 	public void setPos(int pos) {
 		// Update current line cache when position changes
-		if( pos != this.pos ) {
+		if (pos != this.pos) {
 			// If moving forward and staying on same line, no update needed
-			if( pos > this.pos && pos <= lines[currentLine - 1] ) {
+			if (pos > this.pos && pos <= lines[currentLine - 1]) {
 				// Still on same line, no update needed
 			}
 			// Moving forward past current line
-			else if( pos > this.pos ) {
+			else if (pos > this.pos) {
 				// Scan forward to find new line
-				while( currentLine < lines.length && pos > lines[currentLine - 1] ) {
+				while (currentLine < lines.length && pos > lines[currentLine - 1]) {
 					currentLine++;
 				}
 			}
@@ -771,8 +771,8 @@ public class SourceCode {
 				// Could optimize this with backward scan, but backward movement is rare
 				// Just recalculate from start
 				currentLine = 1;
-				for( int i = 0; i < lines.length; i++ ) {
-					if( pos <= lines[i] ) {
+				for (int i = 0; i < lines.length; i++) {
+					if (pos <= lines[i]) {
 						currentLine = i + 1;
 						break;
 					}
@@ -797,12 +797,12 @@ public class SourceCode {
 
 	public Position getPosition(int pos) {
 		// Check cache first
-		if( pos == cachedPos && cachedPosition != null ) {
+		if (pos == cachedPos && cachedPosition != null) {
 			return cachedPosition;
 		}
 
 		// Fast path: if asking for current position, use cached line
-		if( pos == this.pos ) {
+		if (pos == this.pos) {
 			int posAtStart = (currentLine > 1) ? lines[currentLine - 2] : 0;
 			int column = pos - posAtStart;
 			Position position = new Position(currentLine, column, pos, getSourceOffset());
@@ -820,17 +820,17 @@ public class SourceCode {
 		// If searching forward from current position, start from currentLine
 		int startLine = (pos >= this.pos && currentLine > 1) ? currentLine - 1 : 0;
 
-		for( int i = startLine; i < lines.length; i++ ) {
-			if( pos <= lines[i] ) {
+		for (int i = startLine; i < lines.length; i++) {
+			if (pos <= lines[i]) {
 				line = i + 1;
-				if( i > 0 ) posAtStart = lines[i - 1];
+				if (i > 0) posAtStart = lines[i - 1];
 				break;
 			}
 		}
-		if( line == 0 ) throw new RuntimeException( "syntax error" );
+		if (line == 0) throw new RuntimeException("syntax error");
 
 		int column = pos - posAtStart;
-		Position position = new Position( line, column, pos, getSourceOffset() );
+		Position position = new Position(line, column, pos, getSourceOffset());
 		// Cache this position
 		cachedPos = pos;
 		cachedPosition = position;
