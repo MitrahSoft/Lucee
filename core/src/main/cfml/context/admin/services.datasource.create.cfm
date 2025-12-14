@@ -354,9 +354,7 @@
 					<th scope="row">#stText.Settings.dbIdleTimeout#</th>
 					<td>
 						<select name="ConnectionTimeout" class="select small">
-							<cfloop index="idx" from="0" to="20"><option  <cfif datasource.ConnectionTimeout EQ idx>selected</cfif>><cfif idx==0>- inf -
-	
-<cfelse>#idx#</cfif></option></cfloop>
+							<cfloop index="idx" from="0" to="30"><option <cfif datasource.ConnectionTimeout EQ idx>selected</cfif>><cfif idx==0>- inf -<cfelse>#idx#</cfif></option></cfloop>
 						</select>
 						<div class="comment">#stText.Settings.dbIdleTimeoutDesc#</div>
 					</td>
@@ -598,7 +596,7 @@ optional=[];
 if(datasource.blob) optional.append('blob:#datasource.blob# // default: false');
 if(datasource.clob) optional.append('clob:#datasource.clob# // default: false');
 if(isNumeric(datasource.connectionLimit))optional.append('connectionLimit:#datasource.connectionLimit# // default:-1');
-if(datasource.connectionTimeout NEQ 1 && isNumeric(datasource.connectionTimeout))optional.append('connectionTimeout:#datasource.connectionTimeout# // default: 1; unit: minutes');
+if(datasource.connectionTimeout NEQ 10 && isNumeric(datasource.connectionTimeout))optional.append('connectionTimeout:#datasource.connectionTimeout# // default: 10; unit: minutes');
 if(isNumeric(datasource.liveTimeout) && datasource.liveTimeout>0)optional.append('liveTimeout:#datasource.liveTimeout# // default: -1; unit: minutes');
 if(datasource.metaCacheTimeout NEQ 60000 && isNumeric(datasource.metaCacheTimeout))optional.append(',metaCacheTimeout:#datasource.metaCacheTimeout# // default: 60000; unit: milliseconds');
 if(len(datasource.timezone))optional.append("timezone:'#replace(datasource.timezone,"'","''","all")#' // default is same as lucee instance");

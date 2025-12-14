@@ -12,13 +12,13 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 
 	function run( testResults, testBox ) {
 		describe( "LDEV-5963 - Pool eviction", function() {
-			// skip: test passes but is slow (~65s) - waits for idleTimeout to expire
+			// Test eviction with 5 minute idle timeout (~310s total)
 			it( title="evicts idle connections after idleTimeout using DBPoolClear force=false", skip=true, body=function() {
 				// Get MySQL datasource credentials
 				var creds = server.getDatasource( "mysql" );
 				var dsName = "LDEV5963_ds";
 
-				// Create datasource with 1 minute idleTimeout
+				// Create datasource with 5 minute idleTimeout
 				var dsConfig = {
 					class: creds.class,
 					bundleName: creds.bundleName,
@@ -26,7 +26,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 					connectionString: creds.connectionString,
 					username: creds.username,
 					password: creds.password,
-					idleTimeout: 1 // 1 minute - should be wired to minEvictableIdleTimeMillis
+					idleTimeout: 5 // 5 minutes - should be wired to minEvictableIdleTimeMillis
 				};
 
 				application action="update" datasources={ "#dsName#": dsConfig };
@@ -38,8 +38,8 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mysql" {
 					// Connection should be idle now
 					expect( getIdleConnections( dsName ) ).toBeGTE( 1, "Should have at least 1 idle connection" );
 
-					// Wait for idleTimeout to expire (1 minute + buffer)
-					sleep( 65000 );
+					// Wait for idleTimeout to expire (5 minutes + buffer)
+					sleep( 310000 );
 
 					// Evict expired idle connections (force=false uses pool.evict())
 					DBPoolClear( dsName, false );
