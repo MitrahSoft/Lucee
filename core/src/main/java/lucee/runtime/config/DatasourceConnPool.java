@@ -124,8 +124,9 @@ public final class DatasourceConnPool extends GenericObjectPool<DatasourceConnec
 		config.setMaxIdle(maxIdle > 0 ? maxIdle : GenericObjectPoolConfig.DEFAULT_MAX_IDLE);
 		config.setMaxTotal(maxTotal > 0 ? maxTotal : GenericObjectPoolConfig.DEFAULT_MAX_TOTAL);
 		config.setMaxWaitMillis(maxWaitMillis > 0 ? maxWaitMillis : GenericObjectPoolConfig.DEFAULT_MAX_WAIT_MILLIS);
-		// TDOo merge with idleTimeout
-		config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis > 0 ? minEvictableIdleTimeMillis : GenericObjectPoolConfig.DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS);
+		// TODO merge with idleTimeout
+		// minEvictableIdleTimeMillis: -1 = infinite (no eviction), >0 = use that value, 0 = use Commons Pool2 default (30 min)
+		config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis != 0 ? minEvictableIdleTimeMillis : GenericObjectPoolConfig.DEFAULT_MIN_EVICTABLE_IDLE_TIME_MILLIS);
 		// TODO this was done so far by the controler
 		config.setTimeBetweenEvictionRunsMillis(
 				timeBetweenEvictionRunsMillis > 0 ? timeBetweenEvictionRunsMillis : GenericObjectPoolConfig.DEFAULT_TIME_BETWEEN_EVICTION_RUNS_MILLIS);
