@@ -229,7 +229,7 @@ public class TagLib implements Cloneable, Lib {
 		tags.put(tag.getName(), tag);
 
 		if (tag.hasAppendix()) appendixTags.put(tag.getName(), tag);
-		else if (appendixTags.containsKey(tag.getName())) appendixTags.remove(tag.getName());
+		else appendixTags.remove(tag.getName());  // no-op if not present
 	}
 
 	/**

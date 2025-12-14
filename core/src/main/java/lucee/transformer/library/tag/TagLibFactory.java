@@ -356,12 +356,13 @@ public final class TagLibFactory extends DefaultHandler {
 				// Att Type
 				else if (inside.equals("attribute-type")) {
 					int type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
-					if (value.toLowerCase().equals("fix")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
-					else if (value.toLowerCase().equals("fixed")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
-					else if (value.toLowerCase().equals("dynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;
-					else if (value.toLowerCase().equals("noname")) type = TagLibTag.ATTRIBUTE_TYPE_NONAME;
-					else if (value.toLowerCase().equals("mixed")) type = TagLibTag.ATTRIBUTE_TYPE_MIXED;
-					else if (value.toLowerCase().equals("fulldynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;// deprecated
+					String valueLower = value.toLowerCase();
+					if (valueLower.equals("fix")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
+					else if (valueLower.equals("fixed")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
+					else if (valueLower.equals("dynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;
+					else if (valueLower.equals("noname")) type = TagLibTag.ATTRIBUTE_TYPE_NONAME;
+					else if (valueLower.equals("mixed")) type = TagLibTag.ATTRIBUTE_TYPE_MIXED;
+					else if (valueLower.equals("fulldynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;// deprecated
 					tag.setAttributeType(type);
 				}
 			}
