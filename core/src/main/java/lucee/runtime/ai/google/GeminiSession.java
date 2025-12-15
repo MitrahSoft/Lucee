@@ -2,6 +2,7 @@ package lucee.runtime.ai.google;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.List;
 
 import org.apache.http.Header;
@@ -112,13 +113,13 @@ public final class GeminiSession extends AISessionSupport {
 	}
 
 	private Response executeRequest(Struct root, String messageText, List<Part> parts, AIResponseListener listener) throws Exception {
-		HttpPost post = new HttpPost(
-				geminiEngine.toURL(geminiEngine.baseURL, GeminiEngine.CHAT, listener != null ? GeminiEngine.TYPE_STREAM : GeminiEngine.TYPE_REG).toExternalForm());
+		URL url = geminiEngine.toURL(geminiEngine.baseURL, GeminiEngine.CHAT, listener != null ? GeminiEngine.TYPE_STREAM : GeminiEngine.TYPE_REG);
+		HttpPost post = new HttpPost(url.toExternalForm());
 		post.setHeader("Content-Type", AIUtil.createJsonContentType(geminiEngine.charset));
 
 		JSONConverter json = new JSONConverter(true, CharsetUtil.UTF8, JSONDateFormat.PATTERN_CF, false);
 		String str = json.serialize(null, root, SerializationSettings.SERIALIZE_AS_COLUMN, null);
-		LogUtil.logx(null, Log.LEVEL_DEBUG, "ai", "request message send by [" + geminiEngine.getLabel() + "]: " + str, "ai", "application");
+		LogUtil.logx(null, Log.LEVEL_DEBUG, "ai", "send request message to [" + url.toExternalForm() + "] by [" + geminiEngine.getLabel() + "]: " + str, "ai", "application");
 
 		StringEntity entity = new StringEntity(str, geminiEngine.charset);
 		post.setEntity(entity);

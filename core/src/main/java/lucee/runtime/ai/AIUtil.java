@@ -427,4 +427,11 @@ public final class AIUtil {
 		}
 		return sb.toString();
 	}
+
+	public static boolean isTextOnly(List<Part> answers) {
+		for (Part a: answers) {
+			if (!a.isText()) return false;
+		}
+		return true;
+	}
 }
