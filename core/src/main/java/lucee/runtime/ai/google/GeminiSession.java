@@ -78,14 +78,22 @@ public final class GeminiSession extends AISessionSupport {
 		Struct root = new StructImpl(StructImpl.TYPE_LINKED);
 		Array contents = new ArrayImpl();
 		root.set(KeyConstants._contents, contents);
+		Struct generationConfig = null;
 
-		// Add temperature if set
+		// Add generationConfig
+		if (geminiEngine.generationConfig != null) {
+			generationConfig = (Struct) geminiEngine.generationConfig.duplicate(true);
+		}
+
+		// Add temperature
 		Double temperature = getTemperature();
 		if (temperature != null) {
-			Struct generationConfig = new StructImpl();
+			if (generationConfig == null) generationConfig = new StructImpl();
 			generationConfig.set(KeyConstants._temperature, temperature);
-			root.set("generationConfig", generationConfig);
 		}
+
+		// generationConfig
+		if (generationConfig != null) root.set("generationConfig", generationConfig);
 
 		// Add system message
 		if (!StringUtil.isEmpty(systemMessage, true)) {
