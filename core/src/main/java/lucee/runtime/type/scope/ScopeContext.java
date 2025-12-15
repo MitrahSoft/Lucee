@@ -18,9 +18,11 @@
  */
 package lucee.runtime.type.scope;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import jakarta.servlet.http.HttpSession;
 import lucee.commons.collection.MapFactory;
@@ -48,6 +50,7 @@ import lucee.runtime.interpreter.VariableInterpreter;
 import lucee.runtime.listener.ApplicationContext;
 import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.op.Caster;
+import lucee.runtime.op.Decision;
 import lucee.runtime.type.Collection.Key;
 import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
@@ -80,6 +83,26 @@ public final class ScopeContext {
 	private static final int MINUTE = 60 * 1000;
 	private static final long CLIENT_MEMORY_TIMESPAN = 1 * MINUTE;
 	private static final long SESSION_MEMORY_TIMESPAN = 1 * MINUTE;
+
+	private final static Set<Key> IGNORE_SESSION = new HashSet<>();
+	private final static Set<Key> IGNORE_CLIENT = new HashSet<>();
+	static {
+		IGNORE_SESSION.add(KeyConstants._csrf_token);
+		IGNORE_SESSION.add(KeyConstants._cfid);
+		IGNORE_SESSION.add(KeyConstants._cftoken);
+		IGNORE_SESSION.add(KeyConstants._urltoken);
+		IGNORE_SESSION.add(KeyConstants._timecreated);
+		IGNORE_SESSION.add(KeyConstants._lastvisit);
+		IGNORE_SESSION.add(KeyConstants._sessionid);
+
+		IGNORE_CLIENT.add(KeyConstants._csrf_token);
+		IGNORE_CLIENT.add(KeyConstants._cfid);
+		IGNORE_CLIENT.add(KeyConstants._cftoken);
+		IGNORE_CLIENT.add(KeyConstants._urltoken);
+		IGNORE_CLIENT.add(KeyConstants._timecreated);
+		IGNORE_CLIENT.add(KeyConstants._lastvisit);
+		IGNORE_CLIENT.add(KeyConstants._hitcount);
+	}
 
 	private Map<String, Map<String, Scope>> cfSessionContexts = MapFactory.<String, Map<String, Scope>>getConcurrentMap();
 	private Map<String, Map<String, Scope>> cfClientContexts = MapFactory.<String, Map<String, Scope>>getConcurrentMap();
@@ -251,8 +274,13 @@ public final class ScopeContext {
 					else {
 						DataSource ds = pc.getDataSource(storage, null);
 						if (ds != null && ds.isStorage()) {
-							scope = (StorageScope) IKStorageScopeSupport.getInstance(scopeType, new IKHandlerDatasource(), appContext.getName(), storage, pc, existing,
-									createIfNeeded, getLog());
+							try {
+								scope = (StorageScope) IKStorageScopeSupport.getInstance(scopeType, new IKHandlerDatasource(), appContext.getName(), storage, pc, existing,
+										createIfNeeded, getLog());
+							}
+							catch (Exception ex) {
+								LogUtil.log("scope-context", ex);
+							}
 						}
 						else {
 							scope = (StorageScope) IKStorageScopeSupport.getInstance(scopeType, new IKHandlerCache(), appContext.getName(), storage, pc, existing, createIfNeeded,
@@ -437,24 +465,27 @@ public final class ScopeContext {
 		return getJSessionScope(pc);
 	}
 
-	public boolean hasExistingSessionScope(PageContext pc) {
+	public Object getExistingSessionScope(PageContext pc) {
 		if (pc.getSessionType() == Config.SESSION_TYPE_APPLICATION) {
 			try {
-				return getCFScope(pc, false, Scope.SCOPE_SESSION) != null;
+				return getCFScope(pc, false, Scope.SCOPE_SESSION);
 			}
 			catch (Exception e) {
-				return false;
+				return null;
 			}
 		}
 		return hasExistingJSessionScope(pc);
 	}
 
-	private boolean hasExistingJSessionScope(PageContext pc) {
+	private Object hasExistingJSessionScope(PageContext pc) {
 		HttpSession httpSession = ((PageContextImpl) pc).getHttpServletRequest().getSession(false);
-		if (httpSession == null) return false;
+		if (httpSession == null) return null;
 
 		Session session = (Session) httpSession.getAttribute(pc.getApplicationContext().getName());
-		return session instanceof JSession && !session.isExpired();
+		if (session instanceof JSession && !session.isExpired()) {
+			return session;
+		}
+		return null;
 	}
 
 	public Session getExistingCFSessionScope(String applicationName, String cfid) {
@@ -781,6 +812,20 @@ public final class ScopeContext {
 				&& (type == Scope.SCOPE_CLIENT ? map.containsKey(KeyConstants._hitcount) : map.containsKey(KeyConstants._sessionid)));
 	}
 
+	public static int hash(Map<Key, IKStorageScopeItem> map, int type, boolean ignoreSimpleValues) {
+		int result = 1;
+		for (Entry<Key, IKStorageScopeItem> e: map.entrySet()) {
+			if (type == Scope.SCOPE_CLIENT ? IGNORE_CLIENT.contains(e.getKey()) : IGNORE_SESSION.contains(e.getKey())) {
+				continue;
+			}
+			if (ignoreSimpleValues && Decision.isSimpleValue(e.getValue().getValue())) {
+				continue;
+			}
+			result = 31 * result + (e.getValue() == null ? 0 : e.getValue().hashCode());
+		}
+		return result;
+	}
+
 	/**
 	 * @param cfmlFactory
 	 *
@@ -892,6 +937,7 @@ public final class ScopeContext {
 
 		boolean hasClientManagement = appContext.isSetClientManagement();
 		boolean hasSessionManagement = appContext.isSetSessionManagement();
+		boolean isJ2EESession = pc.getSessionType() == Config.SESSION_TYPE_JEE;
 
 		// get in memory scopes
 		UserScope oldClient = null;
@@ -901,8 +947,25 @@ public final class ScopeContext {
 		}
 		UserScope oldSession = null;
 		if (hasSessionManagement) {
-			Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
-			oldSession = (UserScope) sessionContext.get(pc.getCFID());
+			if (isJ2EESession) {
+				// For J2EE sessions, try the HttpSession attribute first
+				HttpSession httpSession = pc.getSession();
+				if (httpSession != null) {
+					Object session = httpSession.getAttribute(appContext.getName());
+					if (session instanceof JSession) {
+						oldSession = (JSession) session;
+					}
+				}
+				// Fall back to cfSessionContexts (used by JSR-223/script-runner where httpSession is null)
+				if (oldSession == null) {
+					Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
+					oldSession = (UserScope) sessionContext.get(pc.getCFID());
+				}
+			}
+			else {
+				Map<String, Scope> sessionContext = getSubMap(cfSessionContexts, appContext.getName());
+				oldSession = (UserScope) sessionContext.get(pc.getCFID());
+			}
 		}
 
 		if (hasSessionManagement) {
@@ -920,17 +983,48 @@ public final class ScopeContext {
 		if (hasSessionManagement) removeCFSessionScope(pc);
 		if (hasClientManagement) removeClientScope(pc);
 
+		// For J2EE sessions, handle the servlet container's session (JSESSIONID)
+		if (isJ2EESession && hasSessionManagement) {
+			HttpSession httpSession = pc.getSession();
+			if (httpSession != null) {
+				if (migrateSessionData) {
+					// sessionRotate: rotate to a new session ID but keep session alive
+					pc.getHttpServletRequest().changeSessionId();
+				}
+				else {
+					// sessionInvalidate: completely destroy the JEE session (LDEV-3248)
+					httpSession.invalidate();
+				}
+			}
+		}
+
 		pc.resetIdAndToken();
-		pc.resetSession();
+		// For J2EE sessionRotate with a real httpSession (Tomcat), don't reset session - we already called changeSessionId() and want to keep the data
+		// But for JSR-223 (where httpSession is null), we need to reset to create a new session
+		HttpSession httpSessionForReset = pc.getSession();
+		if (!(isJ2EESession && migrateSessionData && httpSessionForReset != null)) {
+			pc.resetSession();
+		}
 		pc.resetClient();
 
-		if (oldSession != null) migrate(pc, oldSession, (UserScope) getCFScope(pc, true, Scope.SCOPE_SESSION), migrateSessionData);
+		if (oldSession != null) {
+			UserScope newSession;
+			if (isJ2EESession) {
+				newSession = getSessionScope(pc);
+			}
+			else {
+				newSession = (UserScope) getCFScope(pc, true, Scope.SCOPE_SESSION);
+			}
+			migrate(pc, oldSession, newSession, migrateSessionData);
+		}
 		if (oldClient != null) migrate(pc, oldClient, (UserScope) getCFScope(pc, true, Scope.SCOPE_CLIENT), migrateClientData);
 
 	}
 
 	private static void migrate(PageContextImpl pc, UserScope oldScope, UserScope newScope, boolean migrate) {
 		if (oldScope == null || newScope == null) return;
+		// For J2EE sessions with changeSessionId(), old and new are the same object - no migration needed
+		if (oldScope == newScope) return;
 		if (!migrate) oldScope.clear();
 		oldScope.resetEnv(pc);
 		Iterator<Entry<Key, Object>> it = oldScope.entryIterator();
@@ -943,7 +1037,13 @@ public final class ScopeContext {
 			}
 			if (newScope instanceof StorageScope) {
 				((StorageScope) newScope).store(pc.getConfig());
-				((StorageScope) newScope).setTokens(((StorageScope) oldScope).getTokens());
+				if (oldScope instanceof StorageScope) {
+					((StorageScope) newScope).setTokens(((StorageScope) oldScope).getTokens());
+				}
+			}
+			else if (newScope instanceof JSession && oldScope instanceof JSession) {
+				// JSession doesn't implement StorageScope but has its own token handling
+				((JSession) newScope).setTokens(((JSession) oldScope).getTokens());
 			}
 
 		}

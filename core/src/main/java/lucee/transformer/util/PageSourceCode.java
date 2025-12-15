@@ -83,4 +83,9 @@ public final class PageSourceCode extends SourceCode {
 	public Charset getCharset() {
 		return charset;
 	}
+
+	@Override
+	public SourceCode subCFMLString( int start, int count ) {
+		return new PageSourceCode( ps, String.valueOf( text, start, count ), charset, getWriteLog(), getSourceOffset() + start );
+	}
 }

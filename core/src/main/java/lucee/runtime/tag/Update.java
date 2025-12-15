@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 
 import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContextImpl;
@@ -225,7 +226,7 @@ public final class Update extends TagImpl {
 
 				// log
 				Log log = ThreadLocalPageContext.getLog(pageContext, "datasource");
-				if (log.getLogLevel() >= Log.LEVEL_INFO) {
+				if (LogUtil.doesInfo(log)) {
 					log.info("update tag", "executed [" + sql.toString().trim() + "] in " + DecimalFormat.call(pageContext, query.getExecutionTime() / 1000000D) + " ms");
 				}
 			}

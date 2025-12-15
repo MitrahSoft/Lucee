@@ -893,8 +893,8 @@ public final class OSGiUtil {
 			Resource temp = SystemUtil.getTempFile("jar", false);
 			InputStream is = null;
 			try {
-				is = HTTPDownloader.get( updateUrl, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT );
-				IOUtil.copy( is, temp, true );
+				is = HTTPDownloader.get(updateUrl, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT);
+				IOUtil.copy(is, temp, true);
 
 				// extract version and create file with correct name
 				BundleFile bf = BundleFile.getInstance(temp);
@@ -913,13 +913,7 @@ public final class OSGiUtil {
 
 		Resource jar = jarDir.getRealResource(symbolicName + "-" + symbolicVersion + ".jar");
 		try {
-			HTTPDownloader.downloadToFile(
-				updateUrl,
-				ResourceUtil.toFile(jar),
-				DOWNLOAD_CONNECT_TIMEOUT,
-				DOWNLOAD_READ_TIMEOUT,
-				DOWNLOAD_USER_AGENT
-			);
+			HTTPDownloader.downloadToFile(updateUrl, ResourceUtil.toFile(jar), DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 		}
 		catch (GeneralSecurityException e) {
 			final String msg = "Download bundle failed for [" + symbolicName + "] in version [" + symbolicVersion + "] from [" + updateUrl
@@ -2281,7 +2275,6 @@ public final class OSGiUtil {
 				}
 
 				if (!StringUtil.isEmpty(bd)) {
-					bd += ",java.lang,java.lang.*";
 					bootDelegation = ListUtil.trimItems(ListUtil.listToStringArray(StringUtil.unwrap(bd), ','));
 				}
 			}

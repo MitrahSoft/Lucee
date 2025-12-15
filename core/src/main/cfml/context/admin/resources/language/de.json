@@ -1340,10 +1340,13 @@
 				"short": {
 					"pre_release": "Pre Releases",
 					"release": "Releases",
-					"snapshot": "Snapshots"
+					"snapshot": "Snapshots",
+					"alphas": "Alphas"
 				},
 				"snapShot": "SnapShot",
 				"snapShotDesc": "Snapshots are generated automatically with every push to the repository, when all bundled test cases pass successfully. Snapshots are NOT recommended for production environments.",
+				"alpha": "Alpha",
+				"alphaDesc": "Alphas are early versions that may be unstable and are intended for testing purposes only.",
 				"loaderMinVersion": "You cannot downgrade below {min-version} because your lucee.jar has bundled this version.",
 				"loaderPath": "To downgrade below this version you need to replace your lucee.jar, found at [ {loaderPath} ] with an older version.",
 				"type": "Typ",

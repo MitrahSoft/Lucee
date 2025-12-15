@@ -75,7 +75,6 @@ import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.SecurityException;
-import lucee.runtime.exp.TemplateException;
 import lucee.runtime.extension.Extension;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.ExtensionProvider;
@@ -104,6 +103,7 @@ import lucee.runtime.schedule.Scheduler;
 import lucee.runtime.search.SearchEngine;
 import lucee.runtime.security.SecretProvider;
 import lucee.runtime.security.SecurityManager;
+import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.spooler.SpoolerEngine;
 import lucee.runtime.tag.TagHandlerPool;
 import lucee.runtime.type.Collection.Key;
@@ -601,7 +601,12 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 
 	@Override
 	public SecurityManager getSecurityManager() {
-		return cs.getSecurityManager();
+		SecurityManager sm = cs.getSecurityManager();
+		// Set the root directory for local file access checks
+		if (sm instanceof SecurityManagerImpl) {
+			((SecurityManagerImpl) sm).setRootDirectory(getRootDirectory());
+		}
+		return sm;
 	}
 
 	@Override
@@ -1024,7 +1029,7 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws TemplateException {
+	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws PageException {
 		return componentPathCache.getPage(pc, pathWithCFC);
 	}
 

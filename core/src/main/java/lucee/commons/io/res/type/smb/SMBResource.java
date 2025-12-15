@@ -452,7 +452,6 @@ public final class SMBResource extends ResourceSupport implements Resource {
 		try {
 
 			ResourceUtil.checkCreateFileOK(this, createParentWhenNotExists);
-			// client.unregisterFTPFile(this);
 			IOUtil.copy(new ByteArrayInputStream(new byte[0]), getOutputStream(), true, true);
 		}
 		catch (SmbException e) {

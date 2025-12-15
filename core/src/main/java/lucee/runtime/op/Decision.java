@@ -91,14 +91,18 @@ public final class Decision {
 	 * @param value value to test
 	 * @return is value a simple value
 	 */
-	public static boolean isSimpleValue(Object value) {
-		return (value instanceof Number) || (value instanceof Locale) || (value instanceof TimeZone) || (value instanceof String) || (value instanceof Character)
-				|| (value instanceof Boolean) || (value instanceof Date) || ((value instanceof Castable) && !(value instanceof Objects) && !(value instanceof Collection));
+	public final static boolean isSimpleValue(Object value) {
+		return (value instanceof CharSequence) || (value instanceof Number) || (value instanceof Boolean) || (value instanceof Date)
+
+				|| ((value instanceof Castable) && !(value instanceof Objects) && !(value instanceof Collection))
+
+				|| (value instanceof Locale) || (value instanceof TimeZone) || (value instanceof Character);
 	}
 
-	public static boolean isSimpleValueLimited(Object value) {
-		return (value instanceof Number) || (value instanceof Locale) || (value instanceof TimeZone) || (value instanceof String) || (value instanceof Boolean)
-				|| (value instanceof Date);
+	public final static boolean isSimpleValueLimited(Object value) {
+		return (value instanceof CharSequence) || (value instanceof Number) || (value instanceof Boolean) || (value instanceof Date)
+
+				|| (value instanceof Locale) || (value instanceof TimeZone);
 	}
 
 	public static boolean isCastableToNumeric(Object o) {

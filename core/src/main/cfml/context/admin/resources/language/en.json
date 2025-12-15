@@ -461,8 +461,7 @@
       "upDown": "Update / Downgrade / Uninstall",
       "upDownDesc": "Update or downgrade your already installed version.",
       "upload": "upload",
-      "uploadextension": "Upload new extension
-      ",
+      "uploadextension": "Upload new extension",
       "uploadextensiondesc": "If you downloaded an extension, you can add the extension here.",
       "version": "Version",
       "viewdetails": "View details"
@@ -1360,8 +1359,11 @@
         "short": {
           "pre_release": "Pre Releases",
           "release": "Releases",
-          "snapshot": "Snapshots"
+          "snapshot": "Snapshots",
+          "alpha": "Alphas"
         },
+        "alpha": "Alpha",
+        "alphaDesc": "Alpha versions are early development builds that may contain incomplete features or bugs. They are NOT recommended for production environments.",
         "snapShot": "SnapShots",
         "snapShotDesc": "Snapshots are generated automatically with every push to the repository, when all bundled test cases pass successfully. Snapshots are NOT recommended for production environments.",
         "titleDesc": "Upgrade or Downgrade the version by selecting from the drop-down box below.",

@@ -87,7 +87,7 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 	}
 
 	protected boolean isinit = true;
-	protected Map<Collection.Key, IKStorageScopeItem> data0;
+	protected Map<Collection.Key, IKStorageScopeItem> data0 = null;
 	protected long lastvisit;
 	protected DateTime _lastvisit;
 	protected int hitcount = 0;
@@ -104,6 +104,8 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 	private IKHandler handler;
 	private String appName;
 	private String name;
+
+	private int hash;
 
 	public IKStorageScopeSupport(PageContext pc, IKHandler handler, String appName, String name, String strType, int type, Map<Collection.Key, IKStorageScopeItem> data,
 			long lastModified, long timeSpan) {
@@ -150,22 +152,42 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 			if (existing instanceof IKStorageScopeSupport) {
 				IKStorageScopeSupport tmp = ((IKStorageScopeSupport) existing);
 				if (tmp.lastModified() >= time && name.equalsIgnoreCase(tmp.getStorage())) {
+
+					if (LogUtil.doesDebug(log)) {
+						ScopeContext.debug(log, "use the existing " + (Scope.SCOPE_SESSION == scope ? "session" : "client") + " scope for " + pc.getApplicationContext().getName()
+								+ "/" + pc.getCFID() + " because it is newer or equal to the scope in storage. ");
+					}
 					return existing;
 				}
 			}
 
-			if (Scope.SCOPE_SESSION == scope) return new IKStorageScopeSession(pc, handler, appName, name, sv.getValue(), time, getSessionTimeout(pc));
+			if (LogUtil.doesDebug(log)) {
+				ScopeContext.debug(log, "use " + (Scope.SCOPE_SESSION == scope ? "session" : "client") + " scope for " + pc.getApplicationContext().getName() + "/" + pc.getCFID()
+						+ " from storage. ");
+			}
+
+			if (Scope.SCOPE_SESSION == scope) {
+				return new IKStorageScopeSession(pc, handler, appName, name, sv.getValue(), time, getSessionTimeout(pc));
+			}
 			else if (Scope.SCOPE_CLIENT == scope) return new IKStorageScopeClient(pc, handler, appName, name, sv.getValue(), time, getClientTimeout(pc));
 		}
 		else if (existing instanceof IKStorageScopeSupport) {
 			IKStorageScopeSupport tmp = ((IKStorageScopeSupport) existing);
 			if (name.equalsIgnoreCase(tmp.getStorage())) {
+				if (LogUtil.doesDebug(log)) {
+					ScopeContext.debug(log, "use the existing " + (Scope.SCOPE_SESSION == scope ? "session" : "client") + " scope for " + pc.getApplicationContext().getName() + "/"
+							+ pc.getCFID() + " because it is newer or equal to the scope in storage.");
+				}
 				return existing;
 			}
 		}
 
 		if (!createIfNeeded) return null;
 
+		if (LogUtil.doesDebug(log)) {
+			ScopeContext.debug(log,
+					"create a new " + (Scope.SCOPE_SESSION == scope ? "session" : "client") + " scope for " + pc.getApplicationContext().getName() + "/" + pc.getCFID() + ".");
+		}
 		IKStorageScopeSupport rtn = null;
 		Map<Key, IKStorageScopeItem> map = MapFactory.getConcurrentMap();
 		if (Scope.SCOPE_SESSION == scope) rtn = new IKStorageScopeSession(pc, handler, appName, name, map, 0L, getSessionTimeout(pc));
@@ -227,6 +249,11 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 			data0.put(KeyConstants._csrf_token, new IKStorageScopeItem(this.tokens, lastModifiedAtInit()));
 		}
 		data0.put(KeyConstants._timecreated, new IKStorageScopeItem(timecreated, lastModifiedAtInit()));
+
+		if (storage != null) {
+			// we have set "ignoreSimpleValues" to true, because this is already covered by "hasChanges"
+			hash = ScopeContext.hash(data0, type, true);
+		}
 	}
 
 	public void resetEnv(PageContext pc) {
@@ -399,6 +426,7 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 		if (existing != null) {
 			hasChanges = true;
 			return existing.remove(lastModified = System.currentTimeMillis());
+
 		}
 		throw new ExpressionException("can't remove key [" + key.getString() + "] from map, key doesn't exist");
 	}
@@ -484,8 +512,29 @@ public abstract class IKStorageScopeSupport extends StructSupport implements Sto
 	/**
 	 * @return the hasChanges
 	 */
-	public boolean hasChanges() {
-		return hasChanges;
+	public boolean hasChanges(PageContext pc, Log log) {
+
+		if (hasChanges) {
+			if (LogUtil.doesDebug(log)) {
+				ScopeContext.debug(log, "detected a change in the root keys of the " + (Scope.SCOPE_SESSION == type ? "session" : "client") + " scope for "
+						+ pc.getApplicationContext().getName() + "/" + pc.getCFID() + ".");
+			}
+			return true;
+		}
+		// we have set "ignoreSimpleValues" to true, because this is already covered by "hasChanges" above
+		if (ScopeContext.hash(data0, type, true) != hash) {
+			if (LogUtil.doesDebug(log)) {
+				ScopeContext.debug(log, "detected a change in one of the values in the " + (Scope.SCOPE_SESSION == type ? "session" : "client") + " scope for "
+						+ pc.getApplicationContext().getName() + "/" + pc.getCFID() + ".");
+			}
+
+			return true;
+		}
+		if (LogUtil.doesDebug(log)) {
+			ScopeContext.debug(log, "no change detected in the " + (Scope.SCOPE_SESSION == type ? "session" : "client") + " scope for " + pc.getApplicationContext().getName() + "/"
+					+ pc.getCFID() + ".");
+		}
+		return false;
 	}
 
 	@Override

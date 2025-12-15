@@ -262,11 +262,12 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 		// Kick some stuff to get it started in parallel because it takes forever to load
 		ThreadUtil.getThread(() -> {
-			try {
-				Class.forName("lucee.runtime.type.util.KeyConstants");
-			}
-			catch (ClassNotFoundException e) {
-			}
+			// try {
+			// Class.forName("lucee.runtime.type.util.KeyConstants");
+			KeyConstants.sync();
+			// }
+			// catch (ClassNotFoundException e) {
+			// }
 		}, true).start();
 
 		ThreadUtil.getThread(() -> {

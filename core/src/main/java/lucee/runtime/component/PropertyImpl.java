@@ -66,6 +66,11 @@ public final class PropertyImpl extends MemberSupport implements Property, ASMPr
 	}
 
 	@Override
+	protected final int hash() {
+		return java.util.Objects.hash(name);
+	}
+
+	@Override
 	public String getDefault() {
 		try {
 			return Caster.toString(_default);

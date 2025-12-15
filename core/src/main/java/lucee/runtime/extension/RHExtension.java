@@ -691,36 +691,36 @@ public final class RHExtension implements Serializable {
 		Log logger = ThreadLocalPageContext.getLog(config, "deploy");
 		Info info = ConfigUtil.getEngine(config).getInfo();
 
-		metadata.setSymbolicName(ConfigFactoryImpl.getAttr(data, "symbolicName", "symbolic-name"));
-		metadata.setName(ConfigFactoryImpl.getAttr(data, "name"), label);
+		metadata.setSymbolicName(ConfigFactoryImpl.getAttr(config, data, "symbolicName", "symbolic-name"));
+		metadata.setName(ConfigFactoryImpl.getAttr(config, data, "name"), label);
 		label = metadata.getName();
-		metadata.setVersion(ConfigFactoryImpl.getAttr(data, "version"), label);
+		metadata.setVersion(ConfigFactoryImpl.getAttr(config, data, "version"), label);
 		label += " : " + metadata._getVersion();
-		metadata.setId(StringUtil.isEmpty(id) ? ConfigFactoryImpl.getAttr(data, "id") : id, label);
-		metadata.setDescription(ConfigFactoryImpl.getAttr(data, "description"));
-		metadata.setTrial(Caster.toBooleanValue(ConfigFactoryImpl.getAttr(data, "trial"), false));
-		if (_img == null) _img = ConfigFactoryImpl.getAttr(data, "image");
+		metadata.setId(StringUtil.isEmpty(id) ? ConfigFactoryImpl.getAttr(config, data, "id") : id, label);
+		metadata.setDescription(ConfigFactoryImpl.getAttr(config, data, "description"));
+		metadata.setTrial(Caster.toBooleanValue(ConfigFactoryImpl.getAttr(config, data, "trial"), false));
+		if (_img == null) _img = ConfigFactoryImpl.getAttr(config, data, "image");
 		metadata.setImage(_img);
-		String cat = ConfigFactoryImpl.getAttr(data, "category");
-		if (StringUtil.isEmpty(cat, true)) cat = ConfigFactoryImpl.getAttr(data, "categories");
+		String cat = ConfigFactoryImpl.getAttr(config, data, "category");
+		if (StringUtil.isEmpty(cat, true)) cat = ConfigFactoryImpl.getAttr(config, data, "categories");
 		metadata.setCategories(cat);
-		metadata.setMinCoreVersion(ConfigFactoryImpl.getAttr(data, "luceeCoreVersion", "lucee-core-version"), info);
-		metadata.setMinLoaderVersion(ConfigFactoryImpl.getAttr(data, "luceeCoreVersion", "lucee-loader-version"), info);
-		metadata.setStartBundles(Caster.toBooleanValue(ConfigFactoryImpl.getAttr(data, "startBundles", "start-bundles"), true));
+		metadata.setMinCoreVersion(ConfigFactoryImpl.getAttr(config, data, "luceeCoreVersion", "lucee-core-version"), info);
+		metadata.setMinLoaderVersion(ConfigFactoryImpl.getAttr(config, data, "luceeCoreVersion", "lucee-loader-version"), info);
+		metadata.setStartBundles(Caster.toBooleanValue(ConfigFactoryImpl.getAttr(config, data, "startBundles", "start-bundles"), true));
 
-		metadata.setAMF(ConfigFactoryImpl.getAttr(data, "amf"), logger);
-		metadata.setResource(ConfigFactoryImpl.getAttr(data, "resource"), logger);
-		metadata.setSearch(ConfigFactoryImpl.getAttr(data, "search"), logger);
-		metadata.setORM(ConfigFactoryImpl.getAttr(data, "orm"), logger);
-		metadata.setWebservice(ConfigFactoryImpl.getAttr(data, "webservice"), logger);
-		metadata.setMonitor(ConfigFactoryImpl.getAttr(data, "monitor"), logger);
-		metadata.setCaches(ConfigFactoryImpl.getAttr(data, "cache"), logger);
-		metadata.setCacheHandler(ConfigFactoryImpl.getAttr(data, "cacheHandler", "cache-handler"), logger);
-		metadata.setJDBC(ConfigFactoryImpl.getAttr(data, "jdbc"), logger);
-		metadata.setStartupHook(ConfigFactoryImpl.getAttr(data, "startup-hook"), logger);
-		metadata.setMaven(ConfigFactoryImpl.getAttr(data, "maven"), logger);
-		metadata.setMapping(ConfigFactoryImpl.getAttr(data, "mapping"), logger);
-		metadata.setEventGatewayInstances(ConfigFactoryImpl.getAttr(data, "eventGatewayInstance", "event-gateway-instance"), logger);
+		metadata.setAMF(ConfigFactoryImpl.getAttr(config, data, "amf"), logger);
+		metadata.setResource(ConfigFactoryImpl.getAttr(config, data, "resource"), logger);
+		metadata.setSearch(ConfigFactoryImpl.getAttr(config, data, "search"), logger);
+		metadata.setORM(ConfigFactoryImpl.getAttr(config, data, "orm"), logger);
+		metadata.setWebservice(ConfigFactoryImpl.getAttr(config, data, "webservice"), logger);
+		metadata.setMonitor(ConfigFactoryImpl.getAttr(config, data, "monitor"), logger);
+		metadata.setCaches(ConfigFactoryImpl.getAttr(config, data, "cache"), logger);
+		metadata.setCacheHandler(ConfigFactoryImpl.getAttr(config, data, "cacheHandler", "cache-handler"), logger);
+		metadata.setJDBC(ConfigFactoryImpl.getAttr(config, data, "jdbc"), logger);
+		metadata.setStartupHook(ConfigFactoryImpl.getAttr(config, data, "startup-hook"), logger);
+		metadata.setMaven(ConfigFactoryImpl.getAttr(config, data, "maven"), logger);
+		metadata.setMapping(ConfigFactoryImpl.getAttr(config, data, "mapping"), logger);
+		metadata.setEventGatewayInstances(ConfigFactoryImpl.getAttr(config, data, "eventGatewayInstance", "event-gateway-instance"), logger);
 	}
 
 	public void validate(Config config) throws ApplicationException {

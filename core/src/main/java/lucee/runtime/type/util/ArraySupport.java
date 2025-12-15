@@ -349,10 +349,6 @@ public abstract class ArraySupport extends AbstractList implements ArrayPro, Lis
 		return CollectionUtil.equals(this, (Collection) obj);
 	}
 
-	/*
-	 * @Override public int hashCode() { return CollectionUtil.hashCode(this); }
-	 */
-
 	@Override
 	public Iterator<Entry<Integer, Object>> entryArrayIterator() {
 		return new EntryArrayIterator(this, intKeys());
