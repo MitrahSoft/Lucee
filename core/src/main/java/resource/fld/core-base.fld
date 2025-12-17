@@ -10240,7 +10240,7 @@ mavenLoad([
 	<!-- CreateAISession -->
 	<function>
 		<name>CreateAISession</name>
-		<alias>LuceeCreateAISession</alias>
+		<alias>LuceeCreateAISession,aiCreateSession</alias>
 		<class>lucee.runtime.functions.ai.CreateAISession</class>
 		<description>Creates a new AI session for interaction with Large Language Models (LLMs). 
 		The session maintains conversation history and context between interactions. 
@@ -10327,7 +10327,7 @@ For exception analysis and debugging, lower temperatures (0.2-0.3) are recommend
 	<!-- InquiryAISession -->
 	<function>
 		<name>InquiryAISession</name>
-		<alias>LuceeInquiryAISession</alias>
+		<alias>LuceeInquiryAISession,aiInquirySession</alias>
 		<class>lucee.runtime.functions.ai.InquiryAISession</class>
 		<description>Sends a question/message to an AI session and returns the response. The function maintains conversation context from previous interactions within the same session.
 	
