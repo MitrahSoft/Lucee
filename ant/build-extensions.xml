@@ -189,7 +189,6 @@
 		<available file="${cache}/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex" property="mysql.present"/>
 		<available file="${cache}/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex" property="mssql.present"/>
 		<available file="${cache}/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex" property="postgre.present"/>
-		<available file="${cache}/${extJtdsJdbcExtension}-${extJtdsJdbcExtensionVersion}.lex" property="jdts.present"/>
 		<available file="${cache}/${extS3Extension}-${extS3ExtensionVersion}.lex" property="s3.present"/>
 		<available file="${cache}/${extAdministratorExtension}-${extAdministratorExtensionVersion}.lex" property="admin.present"/>
 		<available file="${cache}/${extDocumentationExtension}-${extDocumentationExtensionVersion}.lex" property="doc.present"/>
@@ -218,11 +217,6 @@
 			src="${extURLMaven}${extPostgresqlJdbcExtensionGroupPath}/${extPostgresqlJdbcExtensionArtifact}/${extPostgresqlJdbcExtensionVersion}/${extPostgresqlJdbcExtensionArtifact}-${extPostgresqlJdbcExtensionVersion}.lex" 
 			dest="${cache}/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex"/>
 	</target> 
-	<target name="check-jdts" depends="check-cache" unless="jdts.present">
-		<get 
-			src="${extURLCDN}${extJtdsJdbcExtensionGroupPath}/${extJtdsJdbcExtensionArtifact}/${extJtdsJdbcExtensionVersion}/${extJtdsJdbcExtensionArtifact}-${extJtdsJdbcExtensionVersion}.lex" 
-			dest="${cache}/${extJtdsJdbcExtension}-${extJtdsJdbcExtensionVersion}.lex"/>
-	</target>
 	<target name="check-s3" depends="check-cache" unless="s3.present">
 		<get 
 			src="${extURLMaven}${extS3ExtensionGroupPath}/${extS3ExtensionArtifact}/${extS3ExtensionVersion}/${extS3ExtensionArtifact}-${extS3ExtensionVersion}.lex" 
@@ -314,18 +308,6 @@
 			tofile="${goal}/extensions/${ext_postgre.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_postgre.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_postgre.filename};</echo>
-		
-		<!-- add extension JDTS -->
-		<loadmf jar="${cache}/${extJtdsJdbcExtension}-${extJtdsJdbcExtensionVersion}.lex" prefix="ext_jdts."/>
-		<toFileName id="${ext_jdts.id}" name="${ext_jdts.name}" version="${ext_jdts.version}" property="ext_jdts.filename"/>
-		<copy 
-			file="${cache}/${extJtdsJdbcExtension}-${extJtdsJdbcExtensionVersion}.lex" 
-			todir="${goal}/extensions/"/>
-		<move 
-			file="${goal}/extensions/${extJtdsJdbcExtension}-${extJtdsJdbcExtensionVersion}.lex" 
-			tofile="${goal}/extensions/${ext_jdts.filename}"/>
-		<echo level="info">add:${goal}/extensions/${ext_jdts.filename}</echo>
-		<echo file="${goal}/extensions/.index" append="true">${ext_jdts.filename};</echo>
 
 		<!-- add extension S3 -->
 		<loadmf jar="${cache}/${extS3Extension}-${extS3ExtensionVersion}.lex" prefix="ext_s3."/>
