@@ -748,6 +748,7 @@ public final class KeyConstants {
 	public static final Key _recordcount = init("recordcount");
 	public static final Key _cached = init("cached");
 	public static final Key _cachedWithin = init("cachedWithin");
+	public static final Key _cachedWithinId = init("cachedWithinId");
 	public static final Key _COLUMNLIST = init("COLUMNLIST");
 	public static final Key _columnlist = init("columnlist");
 	public static final Key _CURRENTROW = init("CURRENTROW");
