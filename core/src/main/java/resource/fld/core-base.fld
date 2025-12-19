@@ -19316,7 +19316,6 @@ The following things are considered to be empty:
 	<function>
 		<name>CachedWithinFlush</name>
 		<class>lucee.runtime.functions.cache.CachedWithinFlush</class>
-		<status>hidden</status>
 		<description>Flushes a specific cached entry from the cache. Works with cached queries, functions, and HTTP results. 
 		This allows selective cache invalidation instead of clearing entire caches, enabling fine-grained cache control when underlying data changes.</description>
 		<argument>
@@ -19344,7 +19343,6 @@ The following things are considered to be empty:
 	<function>
 		<name>CachedWithinId</name>
 		<class>lucee.runtime.functions.cache.CachedWithinId</class>
-		<status>hidden</status>
 		<description>Returns the cache identifier (cache key) for a cached object. 
 		This ID can be used with `cacheRemove()` to manually flush the cache entry. 
 		Works with cached queries, functions, and HTTP results. 
