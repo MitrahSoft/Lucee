@@ -295,6 +295,10 @@ public final class LogUtil {
 		logGlobal(config, Log.LEVEL_ERROR, type, msg + ";" + ExceptionUtil.getStacktrace(t, true));
 	}
 
+	public static boolean does(int logLevel) {
+		return does(ThreadLocalPageContext.getLog("application"), logLevel);
+	}
+
 	public static boolean does(Log log, int logLevel) {
 		return (log != null && log.getLogLevel() <= logLevel);
 	}

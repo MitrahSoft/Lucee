@@ -127,6 +127,25 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	public static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
 		double all;
 
+		if (LogUtil.does(Log.LEVEL_DEBUG)) {
+			int allClasses = existing.allLoadedClasses.size();
+			int uniqueClasses = existing.loadedClasses.size();
+			double ratio = uniqueClasses > 0 ? (double) allClasses / uniqueClasses : 0;
+			
+			LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader",
+					"checking if flush necessary for physical classloader [" + existing.getDirectory() + "]: "
+							+ "all loaded classes: " + allClasses + ", "
+							+ "unique loaded classes: " + uniqueClasses + ", "
+							+ "ratio: " + String.format("%.2f", ratio) + ", "
+							+ "inspection size threshold: " + CLASSLOADER_INSPECTION_SIZE + ", "
+							+ "inspection ratio threshold: " + CLASSLOADER_INSPECTION_RATIO + " - "
+							+ (allClasses > CLASSLOADER_INSPECTION_SIZE 
+								? (ratio > CLASSLOADER_INSPECTION_RATIO 
+									? "FLUSHING (size and ratio thresholds exceeded)" 
+									: "NOT flushing (ratio " + String.format("%.2f", ratio) + " below threshold " + CLASSLOADER_INSPECTION_RATIO + ")")
+								: "NOT flushing (size " + allClasses + " below threshold " + CLASSLOADER_INSPECTION_SIZE + ")"));
+		}
+
 		// check size
 		if ((all = existing.allLoadedClasses.size()) > CLASSLOADER_INSPECTION_SIZE) {
 			if ((all / existing.loadedClasses.size()) > CLASSLOADER_INSPECTION_RATIO) {
