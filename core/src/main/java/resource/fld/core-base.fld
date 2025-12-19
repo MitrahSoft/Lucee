@@ -3454,13 +3454,21 @@ You can find a list of all available timezones in the Lucee administrator (Setti
 	<function>
 		<name>dbPoolClear</name>
 		<class>lucee.runtime.functions.system.DBPoolClear</class>
-		<description>clears all existing datasource connection</description>
+		<description>Clears idle database connections from the connection pool. By default (force=true) clears all idle connections immediately. With force=false, only evicts connections that have exceeded their idleTimeout. The controller thread runs eviction automatically every minute.</description>
 		<argument>
 			<name>datasource</name>
 			<alias>datasourceName,name,ds</alias>
 			<type>string</type>
 			<required>no</required>
 			<description>specific datasource to clear, if not set all datasources get removed.</description>
+		</argument>
+		<argument>
+			<name>force</name>
+			<type>boolean</type>
+			<required>no</required>
+			<default>true</default>
+			<introduced>6.2.5.4</introduced>
+			<description>If true (default), clears all idle connections immediately. If false, only evicts connections that have exceeded their idleTimeout.</description>
 		</argument>
 		<return>
 			<type>boolean</type>
@@ -10220,7 +10228,7 @@ mavenLoad([
 	<!-- CreateAISession -->
 	<function>
 		<name>CreateAISession</name>
-		<alias>LuceeCreateAISession</alias>
+		<alias>LuceeCreateAISession,aiCreateSession</alias>
 		<class>lucee.runtime.functions.ai.CreateAISession</class>
 		<description>Creates a new AI session for interaction with Large Language Models (LLMs). 
 		The session maintains conversation history and context between interactions. 
@@ -10307,7 +10315,7 @@ For exception analysis and debugging, lower temperatures (0.2-0.3) are recommend
 	<!-- InquiryAISession -->
 	<function>
 		<name>InquiryAISession</name>
-		<alias>LuceeInquiryAISession</alias>
+		<alias>LuceeInquiryAISession,aiInquirySession</alias>
 		<class>lucee.runtime.functions.ai.InquiryAISession</class>
 		<description>Sends a question/message to an AI session and returns the response. The function maintains conversation context from previous interactions within the same session.
 	
@@ -10321,12 +10329,26 @@ For exception analysis and debugging, lower temperatures (0.2-0.3) are recommend
 		</argument>
 		<argument>
 			<name>question</name>
-			<alias>message</alias>
-			<type>string</type>
+			<alias>message,parts</alias>
+			<type>any</type>
 			<required>yes</required>
-			<description>The question or message to send to the AI. This can be plain text or structured data (like JSON) depending on how the session was configured in its system message.
-	
-	The question becomes part of the conversation history and provides context for future interactions within the same session.</description>
+			<description>The question or message to send to the AI. Can be:
+- A string: Plain text question
+- An array: Multipart content with text and binary data (images, PDFs, audio, etc.)
+  Array elements can be:
+  * String: Text content or file path (if path exists, file is read automatically)
+  * Binary: File content as binary
+  * Struct: Part object with content and metadata
+  
+Examples:
+- Simple: "What is the capital of France?"
+- Multipart: ["Analyze this image", imageBytes]
+- With paths: ["Summarize this PDF", "/path/to/document.pdf"]
+- Mixed: ["Compare these", image1Bytes, "/path/to/image2.jpg"]
+- Struct: ["do you like these", {"contenttype":"audio/mpeg","path":"/path/to/music.mp3"}]
+- Struct: ["do you like these", {"contenttype":"audio/mpeg","binary":bin,"metadata":metadata}]
+
+The question becomes part of the conversation history and provides context for future interactions within the same session.</description>
 		</argument>
 		<argument>
 			<name>listener</name>
@@ -15388,6 +15410,36 @@ function(key1, key2)
 		</return>
 	</function>
 
+	<!-- IsThreadInterrupted -->
+	<function>
+		<name>IsThreadInterrupted</name>
+		<class>lucee.runtime.functions.thread.IsThreadInterrupted</class>
+		<introduced>7.0.2.1</introduced>
+		<keywords>threading</keywords>
+		<description>Checks whether a specified thread has been interrupted. The interrupted status of the thread is unaffected by this method.</description>
+		<argument>
+			<name>threadName</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>The name of the thread to check.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
+	<!-- ThreadInterrupted -->
+	<function>
+		<name>ThreadInterrupted</name>
+		<class>lucee.runtime.functions.thread.ThreadInterrupted</class>
+		<introduced>7.0.2.1</introduced>
+		<keywords>threading</keywords>
+		<description>Checks whether the current thread has been interrupted and clears the interrupted status. The interrupted status of the thread is cleared by this method, unlike IsThreadInterrupted which leaves it unchanged.</description>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
 	<!-- toBase64 -->
 	<function>
 		<name>toBase64</name>
@@ -19258,6 +19310,62 @@ The following things are considered to be empty:
 		</argument>
 		<return>
 			<type>number</type>
+		</return>
+	</function>
+	<!-- CachedWithinFlush -->
+	<function>
+		<name>CachedWithinFlush</name>
+		<class>lucee.runtime.functions.cache.CachedWithinFlush</class>
+		<status>hidden</status>
+		<description>Flushes a specific cached entry from the cache. Works with cached queries, functions, and HTTP results. 
+		This allows selective cache invalidation instead of clearing entire caches, enabling fine-grained cache control when underlying data changes.</description>
+		<argument>
+			<name>cacheObject</name>
+			<type>any</type>
+			<required>yes</required>
+			<description>The cached object to flush from cache. Must be a valid cache object such as a query result, function reference, or HTTP result struct that was cached using the `cachedwithin` attribute.</description>
+		</argument>
+		<argument>
+			<name>arguments</name>
+			<type>any</type>
+			<required>no</required>
+			<description>The arguments used when the cache entry was created. 
+			Required for cached functions to identify the specific cache entry, as each unique set of arguments creates a separate cache entry. 
+			Can be provided as an array `[arg1, arg2]` for positional arguments or as a struct `{key: value}` for named arguments. 
+			Not required for queries or HTTP results.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+	
+		
+	<!-- CachedWithinId -->
+	<function>
+		<name>CachedWithinId</name>
+		<class>lucee.runtime.functions.cache.CachedWithinId</class>
+		<status>hidden</status>
+		<description>Returns the cache identifier (cache key) for a cached object. 
+		This ID can be used with `cacheRemove()` to manually flush the cache entry. 
+		Works with cached queries, functions, and HTTP results. 
+		For cached functions, the cache ID is unique per combination of function and arguments.</description>
+		<argument>
+			<name>cacheObject</name>
+			<type>any</type>
+			<required>yes</required>
+			<description>The cached object to retrieve the cache ID for. 
+			Must be a valid cache object such as a query result, function reference, or HTTP result struct that was cached using the `cachedwithin` attribute.</description>
+		</argument>
+		<argument>
+			<name>arguments</name>
+			<type>any</type>
+			<required>no</required>
+			<description>The arguments used when the cache entry was created. 
+			Required for cached functions to identify the specific cache entry, as each unique set of arguments creates a separate cache entry. 
+			Can be provided as an array `[arg1, arg2]` for positional arguments or as a struct `{key: value}` for named arguments. Not required for queries or HTTP results.</description>
+		</argument>
+		<return>
+			<type>String</type>
 		</return>
 	</function>
 	<!-- lSDateTimeFormat -->

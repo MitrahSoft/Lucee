@@ -3567,8 +3567,24 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 						if (mt <= 0) mt = Integer.MAX_VALUE;
 					}
 
+					// maxWaitMillis: how long to wait for a connection when pool is exhausted (30 seconds)
+					long maxWaitMillis = 30000L;
+					// minEvictableIdleTimeMillis: use idleTimeout (in minutes) for how long connection can be idle before eviction
+					// -1 = not set (use default 10 minutes), 0 = infinite (no eviction), >0 = use that value
+					int idleTimeout = dsp.getIdleTimeout();
+					long minEvictableIdleTimeMillis;
+					if (idleTimeout > 0) {
+						minEvictableIdleTimeMillis = idleTimeout * 60000L;
+					}
+					else if (idleTimeout == 0) {
+						minEvictableIdleTimeMillis = -1; // infinite - disable eviction
+					}
+					else {
+						minEvictableIdleTimeMillis = 10 * 60000L; // default: 10 minutes
+					}
+
 					pool = new DatasourceConnPool(this, ds, user, pass, "datasource",
-							DatasourceConnPool.createPoolConfig(null, null, null, dsp.getMinIdle(), dsp.getMaxIdle(), mt, 0, 0, 0, 0, 0, null));
+							DatasourceConnPool.createPoolConfig(null, null, null, dsp.getMinIdle(), dsp.getMaxIdle(), mt, maxWaitMillis, minEvictableIdleTimeMillis, 0, 0, 0, null));
 					pools.put(id, pool);
 					cleanConnectionPools(id);
 				}
@@ -6083,6 +6099,18 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (startups != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getStartups")) {
 				if (startups != null) {
+					// Call finalize() on existing startup hook instances before clearing
+					for (Startup startup: startups.values()) {
+						try {
+							Method fin = Reflector.getMethod(startup.instance.getClass(), "finalize", new Class[0], true, null);
+							if (fin != null) {
+								fin.invoke(startup.instance, new Object[0]);
+							}
+						}
+						catch (Exception e) {
+							// ignore - best effort cleanup
+						}
+					}
 					startups = null;
 				}
 			}

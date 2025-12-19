@@ -112,7 +112,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 	public static final int RETURN_TYPE_STRUCT = 3;
 	public static final int RETURN_TYPE_STORED_PROC = 4;
 
-	private static final boolean USE_LOCAL_SCOPE = Caster.toBooleanValue( SystemUtil.getSystemPropOrEnvVar( "lucee.tag.populate.localscope", "true" ), true );
+	private static final boolean USE_LOCAL_SCOPE = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.tag.populate.localscope", "true"), true);
 
 	public boolean orgPSQ;
 	public boolean hasChangedPSQ;
@@ -570,6 +570,8 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 
 		SQL sqlQuery = null;
 		long exe = 0;
+		String cacheId = null;
+
 		try {
 			// cannot use attribute params and queryparam tag
 
@@ -588,7 +590,6 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			// lucee.runtime.type.Query query=null;
 			QueryResult queryResult = null;
 			String cacheHandlerId = null;
-			String cacheId = null;
 
 			final long now = System.currentTimeMillis();
 
@@ -675,6 +676,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 						queryResult = QueryStruct.toQueryStruct(q, data.columnName); // TODO this should be done in
 						// queryExecute itself so we not
 						// have to convert // afterwards
+
 					}
 					else queryResult = q;
 				}
@@ -702,6 +704,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 							sct.setEL(KeyConstants._cached, Boolean.FALSE);
 							sct.setEL(KeyConstants._executionTime, Caster.toDouble(time / 1000000));
 							sct.setEL(KeyConstants._executionTimeNano, Caster.toDouble(time));
+							if (cacheId != null) sct.setEL(KeyConstants._cachedWithinId, cacheId);
 							sct.setEL(KeyConstants._SQL, sqlQuery.getSQLString());
 
 							if (!Decision.isArray(obj)) sct.setEL(KeyConstants._RECORDCOUNT, Caster.toDouble(1));
@@ -720,6 +723,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 					if (cacheItem != null) {
 						try {
 							cacheHandler.set(pageContext, cacheId, data.cachedWithin, cacheItem);
+							queryResult.setCacheId(cacheId);
 						}
 						catch (PageException pe) {
 							LogUtil.log(pageContext, "query", pe);
@@ -730,6 +734,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			}
 			else {
 				queryResult.setCacheType(cacheHandlerId);
+				queryResult.setCacheId(cacheId);
 			}
 
 			if (PageContextUtil.debug(pageContext) && data.debug) {
@@ -754,7 +759,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			}
 
 			// Result
-			Struct meta = createMetaData(pageContext, data, queryResult, sqlQuery, setVars, exe);
+			Struct meta = createMetaData(pageContext, data, queryResult, sqlQuery, setVars, exe, cacheId);
 
 			// listener
 			((ConfigWebPro) pageContext.getConfig()).getActionMonitorCollector().log(pageContext, "query", "Query", exe, queryResult);
@@ -775,7 +780,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 				args.set(KeyConstants._exception, pe.getCatchBlock(pageContext.getConfig()));
 				ResMeta rm = writeBackResult(pageContext, data, data.listener.error(pageContext, args), setVars);
 				if (data.result == null || (rm.meta == null && rm.asQueryResult() != null))
-					rm.meta = createMetaData(pageContext, data, rm.asQueryResult(), null, setVars, exe + (System.nanoTime() - addExe));
+					rm.meta = createMetaData(pageContext, data, rm.asQueryResult(), null, setVars, exe + (System.nanoTime() - addExe), cacheId);
 				callAfter(pageContext, data, strSQL, tl, true, rm.res, rm.meta, setVars);
 			}
 			else throw pe;
@@ -798,7 +803,8 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 		}
 	}
 
-	private static Struct createMetaData(PageContext pageContext, QueryBean data, QueryResult queryResult, SQL sqlQuery, boolean setVars, long exe) throws PageException {
+	private static Struct createMetaData(PageContext pageContext, QueryBean data, QueryResult queryResult, SQL sqlQuery, boolean setVars, long exe, String cacheId)
+			throws PageException {
 		Struct meta;
 		if (data.result != null && queryResult != null) {
 			meta = new StructImpl(Struct.TYPE_REGULAR, 16);
@@ -815,7 +821,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			meta.setEL(KeyConstants._RECORDCOUNT, Caster.toDouble(rc));
 			meta.setEL(KeyConstants._executionTime, Caster.toDouble(queryResult.getExecutionTime() / 1000000));
 			meta.setEL(KeyConstants._executionTimeNano, Caster.toDouble(queryResult.getExecutionTime()));
-
+			if (cacheId != null) meta.setEL(KeyConstants._cachedWithinId, cacheId);
 			if (sqlQuery != null) meta.setEL(KeyConstants._SQL, sqlQuery.getSQLString());
 
 			// GENERATED KEYS

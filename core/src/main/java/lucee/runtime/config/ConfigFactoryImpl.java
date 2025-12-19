@@ -425,6 +425,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		if (!essentialOnly) {
 			((CFMLEngineImpl) config.getEngine()).touchMonitor(config);
 		}
+		// Trigger startup hooks (lazy-loaded)
+		config.getStartups();
+
 		config.setLoadTime(System.currentTimeMillis());
 	}
 

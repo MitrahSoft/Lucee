@@ -1861,18 +1861,8 @@ public final class ConfigAdmin {
 
 		// make sure the class exists
 		setClass(child, null, "", cd);
-
-		// now unload again, JDBC driver can be loaded when necessary
-		if (cd.isBundle()) {
-			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
-			if (bl != null) {
-				try {
-					OSGiUtil.uninstall(bl);
-				}
-				catch (BundleException e) {
-				}
-			}
-		}
+		// Note: Unlike JDBC drivers, startup hooks are NOT lazy-loaded - they are instantiated
+		// immediately via resetStartups().getStartups(). Do not uninstall the bundle here.
 	}
 
 	private void _updateStartupHook(String component) {
@@ -5054,6 +5044,11 @@ public final class ConfigAdmin {
 						reloadNecessary = true;
 						logger.info("extension", "Update Startup Hook [" + cfc + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
 					}
+					// neither valid class nor component - log error
+					else {
+						logger.error("extension", "Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion()
+								+ "] could not be registered: class definition [" + cd + "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
+					}
 				}
 			}
 
@@ -5182,6 +5177,11 @@ public final class ConfigAdmin {
 			// if(reloadNecessary){
 			reloadNecessary = true;
 			storeAndReload(false, true, reload && reloadNecessary, false);
+
+			// Trigger startup hooks if they were added/updated
+			if (filter.allow("resetStartups")) {
+				((ConfigImpl) config).resetStartups().getStartups();
+			}
 
 		}
 		catch (Throwable t) {
@@ -6215,6 +6215,7 @@ public final class ConfigAdmin {
 		Resource context = config.getConfigDir().getRealResource("context");
 		Resource trg = context.getRealResource(realpath);
 		if (trg.exists()) {
+			LogUtil.log( config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath() );
 			trg.remove(true);
 			if (_store) ConfigAdmin._storeAndReload((ConfigPro) config);
 			ResourceUtil.removeEmptyFolders(context, null);
