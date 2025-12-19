@@ -19,6 +19,7 @@ package lucee.runtime.cache.tag;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -250,12 +251,11 @@ public class CacheHandlerCollectionImpl implements CacheHandlerCollection {
 	}
 
 	private static void _create(Struct sct, StringBuilder sb) {
-		Iterator<Entry<Key, Object>> it = sct.entryIterator();
-		Entry<Key, Object> e;
+		Key[] keys = sct.keys();
+		Arrays.sort(keys);
 		sb.append('{');
-		while (it.hasNext()) {
-			e = it.next();
-			sb.append(e.getKey().getLowerString()).append(':').append(_createId(e.getValue())).append(',');
+		for (Key k: keys) {
+			sb.append(k.getLowerString()).append(':').append(_createId(sct.get(k, null))).append(',');
 		}
 		sb.append('}');
 	}
