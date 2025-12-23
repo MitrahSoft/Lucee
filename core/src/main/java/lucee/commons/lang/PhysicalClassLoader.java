@@ -21,8 +21,6 @@ package lucee.commons.lang;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.instrument.ClassDefinition;
-import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -40,7 +38,6 @@ import lucee.commons.lang.ClassUtil.ClassLoading;
 import lucee.runtime.PageSourcePool;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
-import lucee.runtime.instrumentation.InstrumentationFactory;
 import lucee.runtime.op.Caster;
 import lucee.runtime.osgi.OSGiUtil;
 import lucee.transformer.bytecode.util.ASMUtil;
@@ -317,16 +314,11 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			Class<?> clazz = findLoadedClass(name);
 			if (clazz == null) return _loadClass(name, barr, false);
 
-			Instrumentation instr = InstrumentationFactory.getInstrumentation(config);
-			if (instr != null) {
-				try {
-					instr.redefineClasses(new ClassDefinition(clazz, barr));
-					return clazz;
-				}
-				catch (Exception e) {
-					LogUtil.log(InstrumentationFactory.class.getName(), e);
-				}
-			}
+			/*
+			 * Instrumentation instr = InstrumentationFactory.getInstrumentation(config); if (instr != null) {
+			 * try { instr.redefineClasses(new ClassDefinition(clazz, barr)); return clazz; } catch (Exception
+			 * e) { LogUtil.log(InstrumentationFactory.class.getName(), e); } }
+			 */
 
 			return rename(clazz, barr);
 		}
