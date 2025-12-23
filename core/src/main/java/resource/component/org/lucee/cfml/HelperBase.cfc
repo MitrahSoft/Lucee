@@ -140,7 +140,9 @@
 				<cfif structkeyExists(tagAttributes,'action') and tagAttributes.action eq 'listdir'>
 					<cfset tagAttributes.name = 'local.___q' >
 				</cfif>
-				<cfftp attributeCollection="#tagAttributes#" result="local.tagResult"/>
+				<cfscript>
+					cfftp(attributeCollection=tagAttributes, result="local.tagResult");
+				</cfscript>
 				<cfif tagAttributes["action"] eq "listdir">
 	                  <cfif !isNull(local.___q)><cfset result.setResult(local.___q)></cfif>
 				</cfif>

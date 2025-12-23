@@ -147,7 +147,6 @@ import lucee.runtime.listener.SessionCookieData;
 import lucee.runtime.listener.SessionCookieDataImpl;
 import lucee.runtime.monitor.RequestMonitor;
 import lucee.runtime.monitor.RequestMonitorPro;
-import lucee.runtime.net.ftp.FTPPoolImpl;
 import lucee.runtime.net.http.HTTPServletRequestWrap;
 import lucee.runtime.net.http.ReqRspUtil;
 // import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
@@ -310,7 +309,6 @@ public final class PageContextImpl extends PageContext {
 	// Pools
 	private final ErrorPagePool errorPagePool = new ErrorPagePool();
 	private TagHandlerPool tagHandlerPool;
-	private FTPPoolImpl ftpPool;
 
 	private Component activeComponent;
 	private UDF activeUDF;
@@ -762,7 +760,6 @@ public final class PageContextImpl extends PageContext {
 		// activeComponent=null;
 		remoteUser = null;
 		exception = null;
-		if (ftpPool != null) ftpPool.clear();
 		parentTag = null;
 		currentTag = null;
 
@@ -3497,11 +3494,6 @@ public final class PageContextImpl extends PageContext {
 
 	public void removeUDF() {
 		if (!udfs.isEmpty()) udfs.removeLast();
-	}
-
-	public FTPPoolImpl getFTPPool() {
-		if (ftpPool == null) ftpPool = new FTPPoolImpl();
-		return ftpPool;
 	}
 
 	/*

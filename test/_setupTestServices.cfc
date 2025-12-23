@@ -365,20 +365,21 @@ component {
 			secure = "ftps";
 		else
 			secure = ( arguments.service );
-		ftp action = "open" 
-			connection = "checkConn" 
-			timeout = 2
-			secure= secure
-			username = arguments.ftp.username
-			password = arguments.ftp.password
-			server = arguments.ftp.server
-			port= arguments.ftp.port;
+		cfftp(action = "open" 
+			,connection = "checkConn" 
+			,timeout = 2
+			,secure= secure
+			,username = arguments.ftp.username
+			,password = arguments.ftp.password
+			,server = arguments.ftp.server
+			,port= arguments.ftp.port);
 
 		//SystemOutput(cfftp, true);
 		if ( !cfftp.succeeded )
 			throw cfftp.errorText;
 		sig = cfftp.returnValue.trim(); // stash, close changes cfftp
-		ftp action = "close" connection = "checkConn";
+		cfftp(action = "close"
+			,connection = "checkConn");
 		
 		return sig & ", #arguments.ftp.username#@#arguments.ftp.server#:#arguments.ftp.port#";
 	}

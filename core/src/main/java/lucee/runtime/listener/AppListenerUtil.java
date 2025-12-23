@@ -28,6 +28,7 @@ import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.type.ftp.FTPConnectionData;
+import lucee.commons.io.res.type.ftp.IFTPConnectionData;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
@@ -822,7 +823,7 @@ public final class AppListenerUtil {
 		return new ServerImpl(-1, hostName, port, username, password, lifeTimespan.getMillis(), idleTimespan.getMillis(), tls, ssl, false, ServerImpl.TYPE_LOCAL);
 	}
 
-	public static FTPConnectionData toFTP(Struct sct) {
+	public static IFTPConnectionData toFTP(Struct sct) {
 		// username
 		Object o = sct.get(KeyConstants._username, null);
 		if (o == null) o = sct.get(KeyConstants._user, null);

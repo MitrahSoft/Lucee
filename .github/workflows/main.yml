@@ -235,9 +235,9 @@ jobs:
         elif [[ "$VERSION" == *-SNAPSHOT ]]; then
           echo "------- Maven Deploy SNAPSHOT on ${{ github.event_name }} ---------";
           mvn -B -e -f loader/pom.xml clean deploy -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
-        elif [[ "$VERSION" == *-ALPHA ]]; then
-          echo "------- Maven Install ALPHA (no deplyment) on ${{ github.event_name }} ---------";
-          mvn -B -e -f loader/pom.xml clean install -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
+        #elif [[ "$VERSION" == *-ALPHA ]]; then
+        #  echo "------- Maven Install ALPHA (no deplyment) on ${{ github.event_name }} ---------";
+        #  mvn -B -e -f loader/pom.xml clean install -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
         else
           echo "------- Maven Deploy RELEASE on ${{ github.event_name }} -------";
           mvn -B -e -f loader/pom.xml clean deploy --settings maven-settings.xml -DperformRelease=true -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}";

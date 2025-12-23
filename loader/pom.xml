@@ -3,7 +3,7 @@
 
   <groupId>org.lucee</groupId>
   <artifactId>lucee</artifactId>
-  <version>7.1.0.12-ALPHA</version>
+  <version>7.1.0.13-ALPHA</version>
   <packaging>jar</packaging>
 
   <name>Lucee Loader Build</name>
@@ -409,12 +409,6 @@
     <scope>provided</scope>
   </dependency>
   <dependency>
-    <groupId>com.github.mwiede</groupId>
-    <artifactId>jsch</artifactId>
-    <version>0.2.21</version>
-    <scope>provided</scope>
-  </dependency>
-  <dependency>
     <groupId>org.lucee</groupId>
     <artifactId>tika-core</artifactId>
     <version>1.28.4</version>
@@ -480,12 +474,6 @@
     <groupId>org.lucee</groupId>
     <artifactId>commons-logging</artifactId>
     <version>1.2.0.0000L</version>
-    <scope>provided</scope>
-  </dependency>
-  <dependency>
-    <groupId>commons-net</groupId>
-    <artifactId>commons-net</artifactId>
-    <version>3.9.0</version>
     <scope>provided</scope>
   </dependency>
   <dependency>

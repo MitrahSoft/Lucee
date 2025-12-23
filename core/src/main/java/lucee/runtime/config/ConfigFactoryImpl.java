@@ -73,7 +73,6 @@ import lucee.commons.io.res.filter.ExtensionResourceFilter;
 import lucee.commons.io.res.type.cache.CacheResourceProvider;
 import lucee.commons.io.res.type.cfml.CFMLResourceProvider;
 import lucee.commons.io.res.type.file.FileResource;
-import lucee.commons.io.res.type.ftp.FTPResourceProvider;
 import lucee.commons.io.res.type.http.HTTPResourceProvider;
 import lucee.commons.io.res.type.http.HTTPSResourceProvider;
 import lucee.commons.io.res.type.s3.DummyS3ResourceProvider;
@@ -557,7 +556,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		try {
 			Array providers = ConfigUtil.getAsArray("resourceProviders", root);
 			// Resource Provider
-			boolean hasFTP = false;
 			boolean hasHTTP = false;
 			boolean hasHTTPs = false;
 			boolean hasRAM = false;
@@ -570,10 +568,17 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				String strProviderScheme;
 				Iterator<?> pit = providers.getIterator();
 				Struct provider;
+				String className;
 				while (pit.hasNext()) {
 					provider = Caster.toStruct(pit.next(), null);
 					if (provider == null) continue;
 					try {
+
+						// ignore FTP (no longer supported)
+						className = getAttr(config, provider, "class");
+						if ("lucee.commons.io.res.type.ftp.FTPResourceProvider".equals(className)) continue;
+						//
+
 						prov = getClassDefinition(config, provider, "", config.getIdentification());
 						strProviderCFC = getAttr(config, provider, "component");
 						if (StringUtil.isEmpty(strProviderCFC)) strProviderCFC = getAttr(config, provider, "class");
@@ -587,7 +592,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 							// patch for user not having
 							if ("http".equalsIgnoreCase(strProviderScheme)) hasHTTP = true;
 							else if ("https".equalsIgnoreCase(strProviderScheme)) hasHTTPs = true;
-							else if ("ftp".equalsIgnoreCase(strProviderScheme)) hasFTP = true;
 							else if ("ram".equalsIgnoreCase(strProviderScheme)) hasRAM = true;
 							else if ("s3".equalsIgnoreCase(strProviderScheme)) hasS3 = true;
 							else if ("zip".equalsIgnoreCase(strProviderScheme)) hasZip = true;
@@ -621,13 +625,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				args.put("lock-timeout", "10000");
 				args.put("case-sensitive", "false");
 				config.addResourceProvider("https", new ClassDefinitionImpl<>(HTTPSResourceProvider.class), args);
-			}
-			if (!hasFTP) {
-				Map<String, String> args = new HashMap<>();
-				args.put("lock-timeout", "20000");
-				args.put("socket-timeout", "-1");
-				args.put("client-timeout", "60000");
-				config.addResourceProvider("ftp", new ClassDefinitionImpl<>(FTPResourceProvider.class), args);
 			}
 			if (!hasRAM) {
 				Map<String, String> args = new HashMap<>();

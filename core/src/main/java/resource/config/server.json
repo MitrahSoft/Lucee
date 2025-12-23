@@ -270,11 +270,6 @@
 	},
 	"resourceProviders": [
 		{
-			"scheme": "ftp",
-			"class": "lucee.commons.io.res.type.ftp.FTPResourceProvider",
-			"arguments": "lock-timeout:20000;socket-timeout:-1;client-timeout:60000"
-		},
-		{
 			"scheme": "zip",
 			"class": "lucee.commons.io.res.type.zip.ZipResourceProvider",
 			"arguments": "lock-timeout:1000;case-sensitive:true;"
