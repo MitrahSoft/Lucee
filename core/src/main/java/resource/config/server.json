@@ -275,16 +275,6 @@
 			"arguments": "lock-timeout:1000;case-sensitive:true;"
 		},
 		{
-			"scheme": "tar",
-			"class": "lucee.commons.io.res.type.tar.TarResourceProvider",
-			"arguments": "lock-timeout:1000;case-sensitive:true;"
-		},
-		{
-			"scheme": "tgz",
-			"class": "lucee.commons.io.res.type.tgz.TGZResourceProvider",
-			"arguments": "lock-timeout:1000;case-sensitive:true;"
-		},
-		{
 			"scheme": "http",
 			"class": "lucee.commons.io.res.type.http.HTTPResourceProvider",
 			"arguments": "lock-timeout:10000;case-sensitive:false;"
