@@ -1587,4 +1587,17 @@ public final class StringUtil {
 		}
 		return SPACES.matcher(str).replaceAll(" ");
 	}
+
+	private static final Pair<Long, String>[] byteValues = new Pair[] { new Pair<Long, String>(1099511627776L, "TB"), new Pair<Long, String>(1073741824L, "GB"),
+			new Pair<Long, String>(1048576L, "MB"), new Pair<Long, String>(1024L, "KB") };
+
+	public static String byteFormat(long size) {
+		for (Pair<Long, String> pair: byteValues) {
+			if (size >= pair.getName()) {
+				double result = (double) size / pair.getName();
+				return Caster.toString(Caster.toLongValue(result)) + "" + pair.getValue();
+			}
+		}
+		return size + "B";
+	}
 }
