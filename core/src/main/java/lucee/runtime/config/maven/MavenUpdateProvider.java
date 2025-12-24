@@ -56,11 +56,7 @@ public final class MavenUpdateProvider {
 	private static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
 			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
 
-	// old up to version 7.0.0.275-SNAPSHOT
-	private static final Repository DEFAULT_REPOSITORY_SONATYPE_LEGACY = new Repository("Old Sonatype Repositry for Snapshots",
-			"https://oss.sonatype.org/content/repositories/snapshots/", Repository.TIMEOUT_NEVER, Repository.TIMEOUT_NEVER);
-
-	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_CORE = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90, DEFAULT_REPOSITORY_SONATYPE_LEGACY };
+	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_CORE = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
 	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_EXTENSIONS = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
 
 	private static final Repository[] DEFAULT_REPOSITORY_RELEASES = new Repository[] {
@@ -396,7 +392,6 @@ public final class MavenUpdateProvider {
 		try {
 			Resource resLastmod = repository.cacheDirectory
 					.getRealResource("detail_" + HashUtil.create64BitHashAsString(group + "_" + artifact + "_" + version + "_lastmod", Character.MAX_RADIX));
-
 			if (resLastmod.isFile()) {
 				long lastmod = repository.timeoutDetail == Repository.TIMEOUT_NEVER ? Repository.TIMEOUT_NEVER
 						: Caster.toLongValue(IOUtil.toString(resLastmod, CharsetUtil.UTF8), 0L);

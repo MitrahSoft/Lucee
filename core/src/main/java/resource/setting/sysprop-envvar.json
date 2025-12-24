@@ -592,7 +592,7 @@
 		"desc": "Maven repository endpoint used by Lucee >= 6 to load snapshot versions",
 		"category": "osgi",
 		"type": "string",
-		"default": "https://oss.sonatype.org/content/repositories/snapshots/"
+		"default": "https://central.sonatype.com/repository/maven-snapshots/"
 	},
 	{
 		"sysprop": "lucee.pagePool.maxSize",
