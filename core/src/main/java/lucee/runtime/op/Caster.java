@@ -1008,7 +1008,7 @@ public final class Caster {
 
 	private static String toDecimal(double value, char decDel, char thsDel) {
 		// TODO Caster toDecimal bessere impl.
-		String str = Caster.toBigDecimal((StrictMath.round(value * 100) / 100D)).toString();
+		String str = Caster.toBigDecimal((StrictMath.round(value * 100) / 100D)).toPlainString();
 		// str=toDouble(value).toString();
 		String[] arr = str.split("\\.");
 
