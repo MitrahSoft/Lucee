@@ -36,7 +36,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm" {
 	}
 
 	private function notHasMssql() {
-		return structCount( server.getDatasource( "mssql" ) ) == 0;
+		return structCount( server.getDatasource( "mssql" ) ) == 0 || structCount( server.getTestService( "orm" ) ) == 0;
 	}
 
 	private string function createURI( string calledName ) {
