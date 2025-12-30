@@ -178,7 +178,7 @@ component {
 	public void function loadServiceConfig() localmode=true {
 		systemOutput( "", true) ;
 		systemOutput("-------------- Test Services ------------", true );
-		services = ListToArray("oracle,MySQL,MSsql,postgres,h2,mongoDb,s3,s3_custom,s3_google,s3_backblaze,ftp,sftp,memcached,redis,ldap,httpbin"); // smtp,pop,imap,
+		services = ListToArray("oracle,MySQL,MSsql,postgres,h2,mongoDb,s3,s3_custom,s3_google,s3_backblaze,ftp,sftp,memcached,redis,ldap,httpbin,smtp,pop,imap");
 		// can take a while, so we check them them in parallel
 
 		services.each( function( service ) localmode=true {
@@ -341,22 +341,13 @@ component {
 	}
 
 	public function verifySMTP ( smtp, service ) localmode=true {
-		/*
 		try {
-			mail from="testsuite@lucee.org"
-					to="testsuite@lucee.org"
-					subject="service test"
-					async=false
-					server=smtp.SERVER
-					port=smtp.PORT_INSECURE
-					username=smtp.USERNAME
-					password=smtp.PASSWORD {
-				echo("test suite service test email");
-			}
+			getTagData("cf", "mail"); // with throw if mail not installed / available
+			// call service cfc to test, to avoid compile error, due to tag syntax
+			services.cfmail::testMail( smtp );
 		} catch (e) {
-			throw e.message;
+			throw(message=e.message, cause=e);
 		}
-		*/
 		return "SMTP Connection Verified";
 	}
 
