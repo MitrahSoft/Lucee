@@ -342,16 +342,10 @@ component {
 
 	public function verifySMTP ( smtp, service ) localmode=true {
 		try {
-			mail from="testsuite@lucee.org"
-					to="testsuite@lucee.org"
-					subject="service test"
-					async=false
-					server=smtp.SERVER
-					port=smtp.PORT_INSECURE
-					username=smtp.USERNAME
-					password=smtp.PASSWORD {
-				echo("test suite service test email");
-			}
+			// sometimes we run the 7 suite with 7.1
+			getTagData("cf", "mail"); // with throw if mail ext with 7.1 not installed
+			// call service cfc to test, to avoid compile error, due to tag syntax
+			services.cfmail( smtp );
 		} catch (e) {
 			throw e.message;
 		}
@@ -363,20 +357,20 @@ component {
 			secure = "ftps";
 		else
 			secure = ( arguments.service );
-		ftp action = "open" 
-			connection = "checkConn" 
-			timeout = 2
-			secure= secure
-			username = arguments.ftp.username
-			password = arguments.ftp.password
-			server = arguments.ftp.server
-			port= arguments.ftp.port;
+		cfftp(action = "open" 
+			,connection = "checkConn" 
+			,timeout = 2
+			,secure= secure
+			,username = arguments.ftp.username
+			,password = arguments.ftp.password
+			,server = arguments.ftp.server
+			,port= arguments.ftp.port);
 
 		//SystemOutput(cfftp, true);
 		if ( !cfftp.succeeded )
 			throw cfftp.errorText;
 		sig = cfftp.returnValue.trim(); // stash, close changes cfftp
-		ftp action = "close" connection = "checkConn";
+		cfftp(action = "close", connection = "checkConn");
 		
 		return sig & ", #arguments.ftp.username#@#arguments.ftp.server#:#arguments.ftp.port#";
 	}
@@ -462,17 +456,15 @@ component {
 	}
 
 	public function verifyImap ( imap ) localmode=true{
-		imap
-			action="open" 
-			server = imap.SERVER
-			username = imap.USERNAME
-			port = imap.PORT_INSECURE
-			secure="no"
-			password = imap.PASSWORD
-			connection = "testImap";
-		imap
-			action = "close",
-			connection="testImap";
+		cfimap(action="open",
+			server = imap.SERVER,
+			username = imap.USERNAME,
+			port = imap.PORT_INSECURE,
+			secure="no",
+			password = imap.PASSWORD,
+			connection = "testImap");
+		cfimap(action = "close",
+			connection="testImap");
 			
 		return "configured";
 	}
