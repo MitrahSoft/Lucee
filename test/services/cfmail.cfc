@@ -1,7 +1,7 @@
 /* with lucee 7.1, mail was moved to an extension, 
 	test here when the tag exists, to avoid compile error */
 component {
-	function testMail(smtp){
+	static function testMail(smtp){
 		cfmail(from="testsuite@lucee.org",
 					to="testsuite@lucee.org",
 					subject="service test",

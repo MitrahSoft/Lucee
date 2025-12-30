@@ -345,9 +345,9 @@ component {
 			// sometimes we run the 7 suite with 7.1
 			getTagData("cf", "mail"); // with throw if mail ext with 7.1 not installed
 			// call service cfc to test, to avoid compile error, due to tag syntax
-			services.cfmail( smtp );
+			services.cfmail::testMail( smtp );
 		} catch (e) {
-			throw e.message;
+			throw(message=e.message, cause=e);
 		}
 		return "SMTP Connection Verified";
 	}
