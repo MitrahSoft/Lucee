@@ -483,24 +483,30 @@ public final class ScopeContext {
 		}
 	}
 
-	public void removeCFSessionScope(PageContext pc) throws PageException {
+	public void removeCFSessionScope(PageContext pc) {
 
 		ApplicationContext appContext = pc.getApplicationContext();
 		Map<String, Scope> context = getSubMap(cfSessionContexts, appContext.getName());
 		if (context != null) {
-			context.remove(pc.getCFID());
-			StorageScope scope = getCFScope(pc, false, Scope.SCOPE_SESSION);
-			if (scope != null) scope.unstore(pc.getConfig());
+			// LDEV-6046: Get scope BEFORE removing from memory, so we can unstore it
+			// Don't use getCFScope() as it would reload from DB and put back in memory
+			Scope scope = context.remove(pc.getCFID());
+			if (scope instanceof StorageScope) {
+				((StorageScope) scope).unstore(pc.getConfig());
+			}
 		}
 	}
 
-	public void removeClientScope(PageContext pc) throws PageException {
+	public void removeClientScope(PageContext pc) {
 		ApplicationContext appContext = pc.getApplicationContext();
 		Map<String, Scope> context = getSubMap(cfClientContexts, appContext.getName());
 		if (context != null) {
-			context.remove(pc.getCFID());
-			StorageScope scope = getCFScope(pc, false, Scope.SCOPE_CLIENT);
-			if (scope != null) scope.unstore(pc.getConfig());
+			// LDEV-6046: Get scope BEFORE removing from memory, so we can unstore it
+			// Don't use getCFScope() as it would reload from DB and put back in memory
+			Scope scope = context.remove(pc.getCFID());
+			if (scope instanceof StorageScope) {
+				((StorageScope) scope).unstore(pc.getConfig());
+			}
 		}
 	}
 
