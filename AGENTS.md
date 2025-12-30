@@ -17,9 +17,11 @@ The Lucee code base was forked from the Railo Server Project (Version 4.2) in Ja
 
 ## Build & Commands
 
-- Build, in the `/loader` directory, execute `mvn fast`
-- Build and test, in the `/loader` directory, execute `mvn test`
-- Build and execute a specific CFML test suite in the `/loader` directory, execute `mvn test -DtestFilter="{testFilename}"`
+Always from the `/loader` directory and piping the output to a file
+
+- Build and run specific test, execute `mvn test -DtestFilter="{testFilename}`
+- To just build, execute `mvn fast`
+- To build and run the whole test suite, execute `mvn test`
 
 ### Development Environment
 
@@ -42,7 +44,8 @@ Lucee Ant Script Runner allows you to run Lucee CFML scripts headless (without a
 It is ideal for automation, testing, and running scripts with custom Lucee builds.
 
 **Requirements:**
-- You must have a local copy of the [script-runner repository](https://github.com/lucee/script-runner) checked out.
+
+- You need a local copy of the [script-runner repository](https://github.com/lucee/script-runner) checked out.
   If you do not have it, please clone it first.
   > **Tip:** The script-runner directory may already exist in the parent directory of this repo.
 
@@ -61,7 +64,6 @@ The resulting JAR will be found in `loader/target` and its filename will include
 ant -buildfile "..\script-runner\build.xml" -DluceeJar="/full/pathot/loader/target/lucee-{version}.jar" -Dwebroot="D:\work\yourproject" -Dexecute="test.cfm"
 ```
 
-
 - `-DluceeJar` being the full path to the built Lucee JAR in `loader/target`, use exact version and full path
 - `-Dwebroot` is your project directory.
 - `-Dexecute` is the script to run (relative to webroot).
@@ -70,15 +72,11 @@ See [script-runner README](https://github.com/lucee/script-runner/blob/main/READ
 
 ## Contribution Workflow
 
-- Before starting work, consider filing a proposal on the mailing list.
-- File a ticket for your issue on JIRA, assuming one does not already exist.
-- Fork the repository on GitHub.
-- Create a feature branch off the appropriate version branch. `7.0` is the active development branch. `6.2` is the active stable branch. `5.4` is for LTS security fixes.
-- Create or update unit tests for your changes.
+- Create a feature branch off the appropriate version branch. `7.0` is the active stable branch. `6.2` is the active LTS branch.
+- Create or update unit tests for your changes, TDD, repo then fix/
 - Make sure your branch is rebased with the latest changes from the upstream repo before submitting.
 - Commit messages must include the ticket number, e.g., `LDEV-007 Add support to James Bond's watch for OSGI bundles`.
 - Include a link to the JIRA ticket in your pull request description.
-- All contributors must accept the LAS Contributor License Agreement (CLA).
 
 ### Documentation
 
@@ -100,7 +98,6 @@ If your change affects a documented feature, please also submit a pull request t
 - CFML tests should not use Java unless absolutely required, prefer CFML functionality.
 - Tests should cleanup after themselves and any temporary files should be created under the directory returned from `getTempDirectory()`
 - Test framework code, specifically files in the root of the `/test` directory should be compatible with Lucee 5.4, therefore, do not use newer cfml functionality.
-
 
 ## Security
 
@@ -132,7 +129,3 @@ When updating a Java library
 - [Lucee Documentation](https://docs.lucee.org/)
 - [Lucee Mailing List / Forum](https://dev.lucee.org/)
 - [Lucee Bug Tracker](https://luceeserver.atlassian.net/)
-
-## License
-
-Lucee Server is licensed under the Lesser GNU General Public License Version 2.1 (or later).
