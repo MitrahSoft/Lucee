@@ -534,15 +534,22 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		}
 		String tmp = Util._getSystemPropOrEnvVar("lucee.version", null);
 		Version specificVersion = (!Util.isEmpty(tmp, true)) ? toVersion(tmp, null) : null;
-		// a specific version cannot be older than the core version
+		// validate the specific version if one was requested
 		if (specificVersion != null) {
-			if (Util.isNewerThan(MIN_VERSION, specificVersion)) {
-				log(org.apache.felix.resolver.Logger.LOG_ERROR, "the version defined [" + specificVersion + "] cannot be used, version cannot be older than [" + MIN_VERSION + "]");
+			if (specificVersion.equals(coreVersion)) {
+				// requested version matches the current core version, just use it
+				log(org.apache.felix.resolver.Logger.LOG_DEBUG, "specific version [" + specificVersion + "] matches core version.");
+			}
+			else if (Util.isNewerThan(MIN_VERSION, specificVersion)) {
+				log(org.apache.felix.resolver.Logger.LOG_ERROR,
+						"Lucee version requested [" + specificVersion + "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader requires at least version ["
+								+ MIN_VERSION + "].");
 				specificVersion = null;
 			}
-			else if (Util.isNewerThan(MAX_VERSION, specificVersion)) {
-				log(org.apache.felix.resolver.Logger.LOG_ERROR, "the version defined [" + specificVersion + "] cannot be used, version cannot be newver than [" + MAX_VERSION
-						+ "], update yout lucee.jar to use this version.");
+			else if (Util.isNewerThan(specificVersion, MAX_VERSION)) {
+				log(org.apache.felix.resolver.Logger.LOG_ERROR,
+						"Lucee version requested [" + specificVersion + "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader only supports versions up to ["
+								+ MAX_VERSION + "].");
 				specificVersion = null;
 			}
 			else {
