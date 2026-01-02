@@ -243,7 +243,10 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 
 		}
 		this._servlet = servlet;
-		if (register2Thread) ThreadLocalPageContext.register(pc);
+		if (register2Thread) {
+			if (isChild) ThreadLocalPageContext.registerChild(pc);
+			else ThreadLocalPageContext.register(pc);
+		}
 
 		pc.initialize(servlet, req, rsp, errorPageURL, needsSession, bufferSize, autoflush, isChild, ignoreScopes, tmplPC);
 
@@ -280,7 +283,8 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 		PageContext beforePC = ThreadLocalPageContext.get();
 		boolean tmpRegister = false;
 		if (beforePC != pc) {
-			ThreadLocalPageContext.register(pc, false);
+			if (parent != null) ThreadLocalPageContext.registerChild(pc);
+			else ThreadLocalPageContext.register(pc);
 			tmpRegister = true;
 		}
 		boolean reuse = true;
@@ -292,7 +296,10 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 			reuse = false;
 			ThreadLocalPageContext.getLog(config, "application").error("release page context", e);
 		}
-		if (tmpRegister) ThreadLocalPageContext.register(beforePC);
+		if (tmpRegister) {
+			if (beforePC != null && beforePC.getParentPageContext() != null) ThreadLocalPageContext.registerChild(beforePC);
+			else ThreadLocalPageContext.register(beforePC);
+		}
 		else if (unregisterFromThread) ThreadLocalPageContext.release();
 
 		runningPcs.remove(Integer.valueOf(pc.getId()));
