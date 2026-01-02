@@ -178,7 +178,7 @@ public final class ChildThreadImpl extends ChildThread implements Serializable {
 			// daemon
 			if (this.pc != null) {
 				pc = this.pc;
-				ThreadLocalPageContext.register(pc);
+				ThreadLocalPageContext.registerChild(pc);
 			}
 			// task
 			else {
