@@ -66,7 +66,9 @@
 			connectionLimit="#form.connectionLimit#"
 			connectionTimeout="#form.connectionTimeout#"
 			liveTimeout="#form.LiveTimeout?:''#"
-			
+			minIdle="#getForm('minIdle',-1)#"
+			maxIdle="#getForm('maxIdle',-1)#"
+
 			metaCacheTimeout="#form.metaCacheTimeout#"
 			blob="#getForm('blob',false)#"
 			clob="#getForm('clob',false)#"
@@ -364,7 +366,7 @@
 					<th scope="row">#stText.Settings.dbLiveTimeout#</th>
 					<td><cfset match=false>
 						<select name="LiveTimeout" class="select small">
-							
+
 							<option value="0" <cfif !isNumeric(datasource.LiveTimeout) or datasource.LiveTimeout LT 1><cfset match=true>selected</cfif>>- inf -</option>
 							<cfloop index="label" item="val" struct="#[
 								'1 min':1
@@ -380,6 +382,31 @@
 							<cfif not match><option selected>#datasource.LiveTimeout# min</option></cfif>
 						</select>
 						<div class="comment">#stText.Settings.dbLiveTimeoutDesc#</div>
+					</td>
+				</tr>
+				<!--- Max Idle Connections --->
+				<tr>
+					<th scope="row">#stText.Settings.dbmaxidle#</th>
+					<td>
+						<select name="maxIdle" class="select small">
+							<option value="-1" <cfif !isDefined('datasource.maxIdle') or datasource.maxIdle LT 1>selected</cfif>>- default (connectionLimit) -</option>
+							<cfloop index="idx" from="1" to="10"><option <cfif isDefined('datasource.maxIdle') and datasource.maxIdle EQ idx>selected</cfif>>#idx#</option></cfloop>
+							<cfloop index="idx" from="20" to="100" step="10"><option <cfif isDefined('datasource.maxIdle') and datasource.maxIdle EQ idx>selected</cfif>>#idx#</option></cfloop>
+							<cfloop index="idx" from="200" to="1000" step="100"><option <cfif isDefined('datasource.maxIdle') and datasource.maxIdle EQ idx>selected</cfif>>#idx#</option></cfloop>
+						</select>
+						<div class="comment">#stText.Settings.dbmaxidledesc#</div>
+					</td>
+				</tr>
+				<!--- Min Idle Connections --->
+				<tr>
+					<th scope="row">#stText.Settings.dbminidle#</th>
+					<td>
+						<select name="minIdle" class="select small">
+							<option value="-1" <cfif !isDefined('datasource.minIdle') or datasource.minIdle LT 1>selected</cfif>>- default (0) -</option>
+							<cfloop index="idx" from="0" to="10"><option <cfif isDefined('datasource.minIdle') and datasource.minIdle EQ idx>selected</cfif>>#idx#</option></cfloop>
+							<cfloop index="idx" from="20" to="100" step="10"><option <cfif isDefined('datasource.minIdle') and datasource.minIdle EQ idx>selected</cfif>>#idx#</option></cfloop>
+						</select>
+						<div class="comment">#stText.Settings.dbminidledesc#</div>
 					</td>
 				</tr>
 				<!--- Request Exclusive --->
@@ -598,6 +625,8 @@ if(datasource.clob) optional.append('clob:#datasource.clob# // default: false');
 if(isNumeric(datasource.connectionLimit))optional.append('connectionLimit:#datasource.connectionLimit# // default:-1');
 if(datasource.connectionTimeout NEQ 10 && isNumeric(datasource.connectionTimeout))optional.append('connectionTimeout:#datasource.connectionTimeout# // default: 10; unit: minutes');
 if(isNumeric(datasource.liveTimeout) && datasource.liveTimeout>0)optional.append('liveTimeout:#datasource.liveTimeout# // default: -1; unit: minutes');
+if(isDefined('datasource.minIdle') && isNumeric(datasource.minIdle) && datasource.minIdle>0)optional.append('minIdle:#datasource.minIdle# // default: 0');
+if(isDefined('datasource.maxIdle') && isNumeric(datasource.maxIdle) && datasource.maxIdle>0)optional.append('maxIdle:#datasource.maxIdle# // default: connectionLimit');
 if(datasource.metaCacheTimeout NEQ 60000 && isNumeric(datasource.metaCacheTimeout))optional.append(',metaCacheTimeout:#datasource.metaCacheTimeout# // default: 60000; unit: milliseconds');
 if(len(datasource.timezone))optional.append("timezone:'#replace(datasource.timezone,"'","''","all")#' // default is same as lucee instance");
 if(datasource.storage) optional.append('storage:#datasource.storage# // default: false');
