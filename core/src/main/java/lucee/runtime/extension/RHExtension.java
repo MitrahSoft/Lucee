@@ -1416,7 +1416,7 @@ public final class RHExtension implements Serializable {
 			}
 			// gradle style maven
 			else if (ed.getId() == null && (gavso = MavenUtil.toGAVSO(ss, null)) != null) {
-				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, false, null);
+				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, true, null);
 				if (tmp != null) ed = tmp;
 			}
 			else if (ed.getId() == null || Decision.isUUId(ed.getId())) {
