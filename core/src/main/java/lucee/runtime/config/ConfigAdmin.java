@@ -1500,9 +1500,9 @@ public final class ConfigAdmin {
 	 * @throws PageException
 	 */
 	public void updateDataSource(String id, String name, String newName, ClassDefinition cd, String dsn, String username, String password, String host, String database, int port,
-			int connectionLimit, int idleTimeout, int liveTimeout, long metaCacheTimeout, boolean blob, boolean clob, int allow, boolean validate, boolean storage, String timezone,
-			Struct custom, String dbdriver, ParamSyntax paramSyntax, boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout, boolean requestExclusive,
-			boolean alwaysResetConnections) throws PageException {
+			int connectionLimit, int idleTimeout, int liveTimeout, int minIdle, int maxIdle, long metaCacheTimeout, boolean blob, boolean clob, int allow, boolean validate,
+			boolean storage, String timezone, Struct custom, String dbdriver, ParamSyntax paramSyntax, boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout,
+			boolean requestExclusive, boolean alwaysResetConnections) throws PageException {
 
 		checkWriteAccess();
 		SecurityManager sm = config.getSecurityManager();
@@ -1557,6 +1557,13 @@ public final class ConfigAdmin {
 				el.setEL(KeyConstants._connectionLimit, Caster.toString(connectionLimit));
 				el.setEL(KeyConstants._connectionTimeout, Caster.toString(idleTimeout));
 				el.setEL(KeyConstants._liveTimeout, Caster.toString(liveTimeout));
+
+				if (minIdle > 0) el.setEL("minIdle", Caster.toString(minIdle));
+				else if (el.containsKey("minIdle")) el.removeEL(KeyImpl.init("minIdle"));
+
+				if (maxIdle > 0) el.setEL("maxIdle", Caster.toString(maxIdle));
+				else if (el.containsKey("maxIdle")) el.removeEL(KeyImpl.init("maxIdle"));
+
 				el.setEL(KeyConstants._metaCacheTimeout, Caster.toString(metaCacheTimeout));
 				el.setEL(KeyConstants._blob, Caster.toString(blob));
 				el.setEL(KeyConstants._clob, Caster.toString(clob));
@@ -1616,6 +1623,8 @@ public final class ConfigAdmin {
 		el.setEL("connectionLimit", Caster.toString(connectionLimit));
 		if (idleTimeout > -1) el.setEL("connectionTimeout", Caster.toString(idleTimeout));
 		if (liveTimeout > -1) el.setEL("liveTimeout", Caster.toString(liveTimeout));
+		if (minIdle > 0) el.setEL("minIdle", Caster.toString(minIdle));
+		if (maxIdle > 0) el.setEL("maxIdle", Caster.toString(maxIdle));
 		if (metaCacheTimeout > -1) el.setEL("metaCacheTimeout", Caster.toString(metaCacheTimeout));
 
 		el.setEL("blob", Caster.toString(blob));

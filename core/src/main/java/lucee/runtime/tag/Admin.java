@@ -2700,9 +2700,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		}
 
 		if (verify) _doVerifyDatasource(ds, username, password);
-		// print.out("limit:"+connLimit);
-		admin.updateDataSource(id, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, metaCacheTimeout, blob, clob, allow,
-				validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive, alwaysResetConnections);
+		admin.updateDataSource(id, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, minIdle, maxIdle, metaCacheTimeout, blob,
+				clob, allow, validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive, alwaysResetConnections);
 		store();
 		adminSync.broadcast(attributes, config);
 	}
@@ -3948,6 +3947,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					sct.setEL("literalTimestampWithTSOffset", Boolean.valueOf(di.getLiteralTimestampWithTSOffset()));
 					sct.setEL("alwaysSetTimeout", Boolean.valueOf(di.getAlwaysSetTimeout()));
 					sct.setEL("dbdriver", Caster.toString(di.getDbDriver(), ""));
+					sct.setEL("minIdle", di.getMinIdle() < 1 ? "" : Caster.toString(di.getMinIdle()));
+					sct.setEL("maxIdle", di.getMaxIdle() < 1 ? "" : Caster.toString(di.getMaxIdle()));
 				}
 				pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 				return;
