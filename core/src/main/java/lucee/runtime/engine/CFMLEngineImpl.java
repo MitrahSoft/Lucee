@@ -110,6 +110,7 @@ import lucee.runtime.config.ConfigWeb;
 import lucee.runtime.config.ConfigWebImpl;
 import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.DeployHandler;
+import lucee.runtime.debug.DebuggerPrintStream;
 import lucee.runtime.config.Identification;
 import lucee.runtime.config.Password;
 import lucee.runtime.engine.listener.CFMLServletContextListener;
@@ -264,8 +265,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		boolean debuggerEnabled = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
 
 		if (debuggerEnabled) {
-			CONSOLE_OUT = new lucee.runtime.debug.DebuggerPrintStream(System.out, false);
-			CONSOLE_ERR = new lucee.runtime.debug.DebuggerPrintStream(System.err, true);
+			CONSOLE_OUT = new DebuggerPrintStream(System.out, false);
+			CONSOLE_ERR = new DebuggerPrintStream(System.err, true);
 			System.setOut(CONSOLE_OUT);
 			System.setErr(CONSOLE_ERR);
 		}

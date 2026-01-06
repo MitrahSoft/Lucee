@@ -64,7 +64,7 @@ public class BytecodeContext implements Context {
 	private BytecodeContext root;
 	private boolean writeLog;
 	private Boolean isLineBased; // cached value, null = not yet calculated
-	protected Set<Integer> executableLines = new TreeSet<>();
+	protected Set<Integer> executableLines; // lazy init
 	private int rtn = -1;
 	private final boolean returnValue;
 
@@ -282,6 +282,7 @@ public class BytecodeContext implements Context {
 
 	public void visitLineNumber(int line) {
 		this.line = line;
+		if (executableLines == null) executableLines = new TreeSet<>();
 		executableLines.add(line);
 		// Also track in constructor context so getExecutableLines() gets all lines
 		if (constr != null) {
@@ -295,6 +296,7 @@ public class BytecodeContext implements Context {
 	}
 
 	public int[] getExecutableLines() {
+		if (executableLines == null) return new int[0];
 		return executableLines.stream().mapToInt(Integer::intValue).toArray();
 	}
 

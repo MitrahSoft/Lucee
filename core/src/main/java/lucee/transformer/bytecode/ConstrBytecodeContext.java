@@ -63,6 +63,7 @@ public final class ConstrBytecodeContext extends BytecodeContext {
 	public void trackExecutableLine(int line) {
 		// Uses the executableLines Set inherited from BytecodeContext
 		// We don't call visitLineNumber as that would emit bytecode
+		if (super.executableLines == null) super.executableLines = new java.util.TreeSet<>();
 		super.executableLines.add(line);
 	}
 

@@ -2,8 +2,10 @@ package lucee.runtime.engine;
 
 import java.util.Map;
 
+import lucee.commons.io.res.Resource;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
+import lucee.runtime.PageSource;
 import lucee.runtime.debug.DebuggerListener;
 import lucee.runtime.debug.DebuggerRegistry;
 
@@ -55,7 +57,10 @@ public final class DebuggerExecutionLog implements ExecutionLogPro {
 
 	@Override
 	public void start(int line, String id) {
-		// pos is the line number when isLineBased() returns true
+		// Early exit if no debugger connected - avoid all the work
+		DebuggerListener listener = DebuggerRegistry.getListener();
+		if (listener == null || !listener.isClientConnected()) return;
+
 		// Get file from debugger frame if available, otherwise from current page source
 		String file = null;
 		PageContextImpl.DebuggerFrame frame = pci.getTopmostDebuggerFrame();
@@ -65,9 +70,9 @@ public final class DebuggerExecutionLog implements ExecutionLogPro {
 		}
 		else {
 			// Top-level code (outside functions) - get file from page source
-			lucee.runtime.PageSource ps = pci.getCurrentPageSource(null);
+			PageSource ps = pci.getCurrentPageSource(null);
 			if (ps != null) {
-				lucee.commons.io.res.Resource res = ps.getPhyscalFile();
+				Resource res = ps.getPhyscalFile();
 				if (res != null) {
 					file = res.getAbsolutePath();
 				}
@@ -84,11 +89,8 @@ public final class DebuggerExecutionLog implements ExecutionLogPro {
 		}
 
 		// Check if debugger wants to suspend (breakpoint, stepping, etc.)
-		if (file != null) {
-			DebuggerListener listener = DebuggerRegistry.getListener();
-			if (listener != null && listener.shouldSuspend(pci, file, line)) {
-				pci.debuggerSuspend(file, line, null);
-			}
+		if (file != null && listener.shouldSuspend(pci, file, line)) {
+			pci.debuggerSuspend(file, line, null);
 		}
 	}
 

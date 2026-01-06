@@ -114,6 +114,7 @@ import lucee.runtime.debug.DebuggerListener;
 import lucee.runtime.debug.DebuggerRegistry;
 import lucee.runtime.dump.DumpUtil;
 import lucee.runtime.dump.DumpWriter;
+import lucee.runtime.engine.DebuggerExecutionLog;
 import lucee.runtime.engine.ExecutionLog;
 import lucee.runtime.err.ErrorPage;
 import lucee.runtime.err.ErrorPageImpl;
@@ -3531,15 +3532,14 @@ public final class PageContextImpl extends PageContext {
 	 * inspect variables in any frame, not just the current one.
 	 */
 	public static final class DebuggerFrame {
-		public final lucee.runtime.type.scope.Local local;
-		public final lucee.runtime.type.scope.Argument arguments;
-		public final lucee.runtime.type.scope.Variables variables;
+		public final Local local;
+		public final Argument arguments;
+		public final Variables variables;
 		public final PageSource pageSource;
 		public final String functionName;
 		private volatile int line;
 
-		DebuggerFrame(lucee.runtime.type.scope.Local local, lucee.runtime.type.scope.Argument arguments,
-					lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName) {
+		DebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName) {
 			this.local = local;
 			this.arguments = arguments;
 			this.variables = variables;
@@ -3558,8 +3558,7 @@ public final class PageContextImpl extends PageContext {
 	/**
 	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER is enabled.
 	 */
-	public void pushDebuggerFrame(lucee.runtime.type.scope.Local local, lucee.runtime.type.scope.Argument arguments,
-								lucee.runtime.type.scope.Variables variables, PageSource pageSource, String functionName, int startLine) {
+	public void pushDebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName, int startLine) {
 		if (debuggerFrames != null) {
 			debuggerFrames.add(new DebuggerFrame(local, arguments, variables, pageSource, functionName));
 
@@ -3638,14 +3637,14 @@ public final class PageContextImpl extends PageContext {
 		}
 		else {
 			// Top-level code (outside functions) - try ExecutionLog's thread-local first
-			file = lucee.runtime.engine.DebuggerExecutionLog.getCurrentFile();
-			line = lucee.runtime.engine.DebuggerExecutionLog.getCurrentLine();
+			file = DebuggerExecutionLog.getCurrentFile();
+			line = DebuggerExecutionLog.getCurrentLine();
 
 			// Fall back to page source for file if thread-local not set
 			if (file == null) {
 				PageSource ps = getCurrentPageSource(null);
 				if (ps != null) {
-					lucee.commons.io.res.Resource res = ps.getPhyscalFile();
+					Resource res = ps.getPhyscalFile();
 					if (res != null) {
 						file = res.getAbsolutePath();
 					}
@@ -3745,11 +3744,6 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	// ==================== End Debugger Stack Frame Support ====================
-
-	public FTPPoolImpl getFTPPool() {
-		if (ftpPool == null) ftpPool = new FTPPoolImpl();
-		return ftpPool;
-	}
 
 	/*
 	 * *
