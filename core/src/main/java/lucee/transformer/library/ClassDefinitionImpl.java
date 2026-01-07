@@ -172,7 +172,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 		return new ClassDefinitionImpl(className, null, null, id);
 	}
 
-	public static ClassDefinition toClassDefinition(Map<String, ?> map, boolean strict, Identification id) {
+	public static ClassDefinitionImpl toClassDefinition(Map<String, ?> map, boolean strict, Identification id) {
 		return toClassDefinitionImpl(MapAsStruct.toStruct(map, false), null, strict, id);
 	}
 

@@ -1712,9 +1712,8 @@ public final class ConfigAdmin {
 		}
 	}
 
-	private void _removeStartupHook(ClassDefinition cd) throws PageException {
-
-		if (!cd.isBundle()) throw new ApplicationException("missing bundle name");
+	private void _removeStartupHook(ClassDefinitionImpl cd) throws PageException {
+		if (!cd.isBundle() && !cd.isMaven()) throw new ApplicationException("Cannot remove extension startup hook [" + cd + "]: missing bundle name or maven coordinates");
 
 		Array children = ConfigUtil.getAsArray("startupHooks", root);
 		Key[] keys = children.keys();
@@ -1732,8 +1731,8 @@ public final class ConfigAdmin {
 		}
 
 		// now unload (maybe not necessary)
+		unloadStartupIfNecessary(config, cd, true);
 		if (cd.isBundle()) {
-			unloadStartupIfNecessary(config, cd, true);
 			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
 			if (bl != null) {
 				try {
@@ -1833,10 +1832,10 @@ public final class ConfigAdmin {
 		}
 	}
 
-	private void _updateStartupHook(ClassDefinition cd) throws PageException {
+	private void _updateStartupHook(ClassDefinitionImpl cd) throws PageException {
 		unloadStartupIfNecessary(config, cd, false);
-		// check if it is a bundle
-		if (!cd.isBundle()) throw new ApplicationException("missing bundle info");
+		// check if it is a bundle or maven
+		if (!cd.isBundle() && !cd.isMaven()) throw new ApplicationException("Cannot register extension startup hook [" + cd + "]: missing bundle name or maven coordinates");
 
 		Array children = ConfigUtil.getAsArray("startupHooks", root);
 
@@ -5027,11 +5026,11 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
 					// class
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || cd.isMaven())) {
 						_updateStartupHook(cd);
 						filter.add("resetStartups");
 						reloadNecessary = true;
@@ -5453,10 +5452,10 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || cd.isMaven())) {
 						_removeStartupHook(cd);
 						filter.add("resetStartups");
 					}
