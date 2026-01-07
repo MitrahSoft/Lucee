@@ -753,8 +753,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			return Reflector.componentToClass(pc, this).getClass();
 		}
 
-		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, access);
-		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), access);
+		// When calling via super, use public access for error message since super calls should access inherited methods
+		int errorAccess = superAccess ? ACCESS_PUBLIC : access;
+		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, errorAccess);
+		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), errorAccess);
 	}
 
 	Object _call(PageContext pc, Collection.Key calledName, UDF udf, Struct namedArgs, Object[] args) throws PageException {
