@@ -1,4 +1,4 @@
-component extends="org.lucee.cfml.test.LuceeTestCase"{
+component extends="org.lucee.cfml.test.LuceeTestCase" {
 	function run( testResults , testBox ) {
 		describe( title="Test suite for Canonicalize()", body=function() {
 			it(title="checking Canonicalize() function", body = function( currentSpec ) {
