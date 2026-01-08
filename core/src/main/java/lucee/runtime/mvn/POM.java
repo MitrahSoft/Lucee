@@ -34,7 +34,6 @@ public class POM {
 	public static final List<Repository> REPOSITORIES = new ArrayList<>();
 
 	public static final Repository REPOSITORY_MAVEN_CENTRAL = new Repository("maven-central", "Maven Central", "https://repo1.maven.org/maven2/");
-	public static final Repository REPOSITORY_SONATYPE = new Repository("sonatype", "Sonatype", "https://oss.sonatype.org/content/repositories/releases/");
 	public static final Repository REPOSITORY_JCENTER = new Repository("jcenter", "JCenter", "https://jcenter.bintray.com/");
 
 	// only google specific stuff
@@ -63,7 +62,6 @@ public class POM {
 		}
 
 		REPOSITORIES.add(REPOSITORY_MAVEN_CENTRAL);
-		REPOSITORIES.add(REPOSITORY_SONATYPE);
 		// REPOSITORIES.add(REPOSITORY_JCENTER);
 		// REPOSITORIES.add(REPOSITORY_APACHE);
 		// REPOSITORIES.add(REPOSITORY_GOOGLE);
