@@ -44,8 +44,6 @@ public class MavenUpdateProvider {
 			new Repository("Sonatype Repositry for Snapshots (last 90 days)", "https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_5MINUTES)
 			// versions provided by Lucee
 			, new Repository("Lucee Maven repository", "https://cdn.lucee.org/", Repository.TIMEOUT_1HOUR)
-			// old up to version 7.0.0.275-SNAPSHOT
-			, new Repository("Old Sonatype Repositry for Snapshots", "https://oss.sonatype.org/content/repositories/snapshots/", Repository.TIMEOUT_NEVER)
 
 	};
 
