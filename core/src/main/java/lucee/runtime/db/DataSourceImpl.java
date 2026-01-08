@@ -131,6 +131,7 @@ public final class DataSourceImpl extends DataSourceSupport {
 	}
 
 	private String replace(String src, String name, String value, boolean doQueryString, boolean leading) {
+		if (value == null) value = "";
 		if (StringUtil.indexOfIgnoreCase(src, "{" + name + "}") != -1) {
 			return StringUtil.replace(connStrTranslated, "{" + name + "}", value, false);
 		}
