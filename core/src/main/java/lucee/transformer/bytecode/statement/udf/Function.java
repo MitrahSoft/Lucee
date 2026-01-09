@@ -632,7 +632,7 @@ public abstract class Function extends StatementBaseNoFinal implements Opcodes, 
 
 		// name
 		{
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			name.dump(s);
 			sct.setEL(KeyConstants._name, s);
 		}
@@ -648,76 +648,76 @@ public abstract class Function extends StatementBaseNoFinal implements Opcodes, 
 		}
 		// returnType
 		if (returnType != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			returnType.dump(s);
 			sct.setEL(KeyConstants._returnType, s);
 		}
 		// returnFormat
 		if (returnFormat != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			returnFormat.dump(s);
 			sct.setEL(KeyConstants._returnFormat, s);
 		}
 		// output
 		if (output != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			output.dump(s);
 			sct.setEL(KeyConstants._output, s);
 		}
 		// bufferOutput
 		if (bufferOutput != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			bufferOutput.dump(s);
 			sct.setEL(KeyConstants._bufferOutput, s);
 		}
 		// displayName
 		if (displayName != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			displayName.dump(s);
 			sct.setEL(KeyConstants._displayName, s);
 		}
 		// description
 		if (description != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			description.dump(s);
 			sct.setEL(KeyConstants._description, s);
 		}
 		// hint
 		if (hint != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			hint.dump(s);
 			sct.setEL(KeyConstants._hint, s);
 		}
 		// secureJson
 		if (secureJson != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			secureJson.dump(s);
 			sct.setEL(KeyConstants._secureJson, s);
 		}
 		// verifyClient
 		if (verifyClient != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			verifyClient.dump(s);
 			sct.setEL(KeyConstants._verifyClient, s);
 		}
 		// localMode
 		if (localMode != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			localMode.dump(s);
 			sct.setEL(KeyConstants._localMode, s);
 		}
 		// cachedWithin
 		if (cachedWithin != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			cachedWithin.dump(s);
 			sct.setEL(KeyConstants._cachedWithin, s);
 		}
 
 		// params
-		Array params = new ArrayImpl();
+		Array params = new ArrayImpl(8, false);  // Most functions have 0-3 params, no sync needed in compiler
 		sct.setEL(KeyConstants._params, params);
 		for (Argument arg: arguments) {
-			Struct param = new StructImpl(Struct.TYPE_LINKED);
+			Struct param = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			params.appendEL(param);
 
 			Expression expr = arg.getType();
@@ -731,7 +731,7 @@ public abstract class Function extends StatementBaseNoFinal implements Opcodes, 
 
 		// body
 		if (body != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			body.dump(s);
 			sct.setEL(KeyConstants._body, s);
 		}
@@ -739,7 +739,7 @@ public abstract class Function extends StatementBaseNoFinal implements Opcodes, 
 
 	private void set(Struct param, Expression expr, Key key) {
 		if (expr != null) {
-			Struct s = new StructImpl(Struct.TYPE_LINKED);
+			Struct s = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			expr.dump(s);
 			param.setEL(key, s);
 		}

@@ -32,14 +32,19 @@ public class SourceCode {
 	public static final short ZERO_OR_MORE_SPACE = 1;
 
 	protected int pos = 0;
+	protected int currentLine = 1; // Track current line number (1-based)
 
 	protected final char[] text;
 	protected final char[] lcText;
-	protected final Integer[] lines; // TODO to int[]
+	protected final int[] lines;
 	private final boolean writeLog;
 	private int hash;
 	private SourceCode parent;
 	private int sourceOffset;
+
+	// Position cache - reduces allocations during parsing
+	private Position cachedPosition;
+	private int cachedPos = -1;
 
 	public SourceCode(SourceCode parent, String strText, boolean writeLog) {
 		this(parent, strText, writeLog, 0);
@@ -79,7 +84,7 @@ public class SourceCode {
 		}
 		pos = 0;
 		arr.add(Integer.valueOf(text.length));
-		lines = arr.toArray(new Integer[arr.size()]);
+		lines = arr.stream().mapToInt(Integer::intValue).toArray();
 
 		this.writeLog = writeLog;
 	}
@@ -748,6 +753,32 @@ public class SourceCode {
 	 * @param pos Position an die der Zeiger gestellt werde soll.
 	 */
 	public void setPos(int pos) {
+		// Update current line cache when position changes
+		if (pos != this.pos) {
+			// If moving forward and staying on same line, no update needed
+			if (pos > this.pos && pos <= lines[currentLine - 1]) {
+				// Still on same line, no update needed
+			}
+			// Moving forward past current line
+			else if (pos > this.pos) {
+				// Scan forward to find new line
+				while (currentLine < lines.length && pos > lines[currentLine - 1]) {
+					currentLine++;
+				}
+			}
+			// Moving backward - need to rescan (rare case)
+			else {
+				// Could optimize this with backward scan, but backward movement is rare
+				// Just recalculate from start
+				currentLine = 1;
+				for (int i = 0; i < lines.length; i++) {
+					if (pos <= lines[i]) {
+						currentLine = i + 1;
+						break;
+					}
+				}
+			}
+		}
 		this.pos = pos;
 	}
 
@@ -765,20 +796,45 @@ public class SourceCode {
 	}
 
 	public Position getPosition(int pos) {
+		// Check cache first
+		if (pos == cachedPos && cachedPosition != null) {
+			return cachedPosition;
+		}
+
+		// Fast path: if asking for current position, use cached line
+		if (pos == this.pos) {
+			int posAtStart = (currentLine > 1) ? lines[currentLine - 2] : 0;
+			int column = pos - posAtStart;
+			Position position = new Position(currentLine, column, pos, getSourceOffset());
+			// Cache this position
+			cachedPos = pos;
+			cachedPosition = position;
+			return position;
+		}
+
+		// Linear search with currentLine hint for forward scanning
+		// For typical forward parsing, this is O(1) amortized
 		int line = 0;
 		int posAtStart = 0;
-		for (int i = 0; i < lines.length; i++) {
-			if (pos <= lines[i].intValue()) {
+
+		// If searching forward from current position, start from currentLine
+		int startLine = (pos >= this.pos && currentLine > 1) ? currentLine - 1 : 0;
+
+		for (int i = startLine; i < lines.length; i++) {
+			if (pos <= lines[i]) {
 				line = i + 1;
-				if (i > 0) posAtStart = lines[i - 1].intValue();
+				if (i > 0) posAtStart = lines[i - 1];
 				break;
 			}
 		}
 		if (line == 0) throw new RuntimeException("syntax error");
 
 		int column = pos - posAtStart;
-
-		return new Position(line, column, pos, getSourceOffset());
+		Position position = new Position(line, column, pos, getSourceOffset());
+		// Cache this position
+		cachedPos = pos;
+		cachedPosition = position;
+		return position;
 	}
 
 	/**
@@ -788,10 +844,19 @@ public class SourceCode {
 	 * @return Zeilennummer
 	 */
 	public int getLine(int pos) {
-		for (int i = 0; i < lines.length; i++) {
-			if (pos <= lines[i].intValue()) return i + 1;
+		// Binary search to find the line containing the position
+		int left = 0;
+		int right = lines.length - 1;
+
+		while (left <= right) {
+			int mid = left + (right - left) / 2;
+			if (pos <= lines[mid]) {
+				right = mid - 1;
+			} else {
+				left = mid + 1;
+			}
 		}
-		return lines.length;
+		return left + 1;
 	}
 
 	/**
@@ -812,7 +877,7 @@ public class SourceCode {
 	public int getColumn(int pos) {
 		int line = getLine(pos) - 1;
 		if (line == 0) return pos + 1;
-		return pos - lines[line - 1].intValue();
+		return pos - lines[line - 1];
 	}
 
 	/**
@@ -833,9 +898,9 @@ public class SourceCode {
 	public String getLineAsString(int line) {
 		int index = line - 1;
 		if (lines.length <= index) return null;
-		int max = lines[index].intValue();
+		int max = lines[index];
 		int min = 0;
-		if (index != 0) min = lines[index - 1].intValue() + 1;
+		if (index != 0) min = lines[index - 1] + 1;
 
 		if (min < max && max - 1 < lcText.length) return this.substring(min, max - min);
 		return "";

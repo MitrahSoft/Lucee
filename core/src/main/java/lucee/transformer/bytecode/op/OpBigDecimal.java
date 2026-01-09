@@ -124,13 +124,13 @@ public final class OpBigDecimal extends ExpressionBase {
 		sct.setEL(KeyConstants._operator, OpNumber.toString(operation));
 		// left
 		{
-			Struct sctLeft = new StructImpl(Struct.TYPE_LINKED);
+			Struct sctLeft = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			getLeft().dump(sctLeft);
 			sct.setEL(KeyConstants._left, sctLeft);
 		}
 		// right
 		{
-			Struct sctRight = new StructImpl(Struct.TYPE_LINKED);
+			Struct sctRight = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			getRight().dump(sctRight);
 			sct.setEL(KeyConstants._right, sctRight);
 		}

@@ -20,7 +20,9 @@ package lucee.transformer.bytecode;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.GeneratorAdapter;
@@ -44,7 +46,7 @@ public class BytecodeContext implements Context {
 	private ClassWriter classWriter;
 	private GeneratorAdapter adapter;
 	private String className;
-	private List<LitString> keys;
+	private Map<LitString, Integer> keys;
 	private int count = 0;
 	private Method method;
 	private boolean doSubFunctions = true;
@@ -61,11 +63,15 @@ public class BytecodeContext implements Context {
 	private int rtn = -1;
 	private final boolean returnValue;
 
-	private static long _id = 0;
+	private static final AtomicLong _id = new AtomicLong(0);
 
-	private synchronized static String id() {
-		if (_id < 0) _id = 0;
-		return StringUtil.addZeros(++_id, 4);
+	private static String id() {
+		long id = _id.incrementAndGet();
+		if (id < 0) {
+			_id.set(0);
+			id = 0;
+		}
+		return StringUtil.addZeros(id, 4);
 	}
 
 	private String id = id();
@@ -75,7 +81,7 @@ public class BytecodeContext implements Context {
 	protected final ExpressionUtil expressionUtil;
 	private int sourceOffset;
 
-	public BytecodeContext(Config config, PageSource ps, ConstrBytecodeContext constr, PageImpl page, List<LitString> keys, ClassWriter classWriter, String className,
+	public BytecodeContext(Config config, PageSource ps, ConstrBytecodeContext constr, PageImpl page, Map<LitString, Integer> keys, ClassWriter classWriter, String className,
 			GeneratorAdapter adapter, Method method, boolean writeLog, boolean suppressWSbeforeArg, boolean output, boolean returnValue, int sourceOffset) {
 		this.config = ThreadLocalPageContext.getConfig(config);
 		this.classWriter = classWriter;
@@ -103,7 +109,7 @@ public class BytecodeContext implements Context {
 
 	}
 
-	public BytecodeContext(ConstrBytecodeContext constr, List<LitString> keys, BytecodeContext bc, GeneratorAdapter adapter, Method method) {
+	public BytecodeContext(ConstrBytecodeContext constr, Map<LitString, Integer> keys, BytecodeContext bc, GeneratorAdapter adapter, Method method) {
 		this.classWriter = bc.getClassWriter();
 		this.className = bc.getClassName();
 		this.writeLog = bc.writeLog();
@@ -195,12 +201,13 @@ public class BytecodeContext implements Context {
 
 	public synchronized int registerKey(LitString lit) {
 		// synchronized (keys) {
-		int index = keys.indexOf(lit);
-		if (index != -1) return index;// calls the toString method of litString
+		Integer index = keys.get(lit);
+		if (index != null) return index;// calls the toString method of litString
 
-		keys.add(lit);
+		int newIndex = keys.size();
+		keys.put(lit, newIndex);
 
-		return keys.size() - 1;
+		return newIndex;
 		// }
 	}
 
@@ -208,7 +215,7 @@ public class BytecodeContext implements Context {
 		this.page.registerJavaFunction(jbc);
 	}
 
-	public List<LitString> getKeys() {
+	public Map<LitString, Integer> getKeys() {
 		return keys;
 	}
 

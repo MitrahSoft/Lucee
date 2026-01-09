@@ -148,6 +148,15 @@ public abstract class AbstrCFMLExprTransformer {
 	private static FunctionLibFunction JSON_ARRAY = null;
 	protected static FunctionLibFunction JSON_STRUCT = null;
 
+	// keyword constants for identifier checks
+	private static final String KW_TRUE = "TRUE";
+	private static final String KW_FALSE = "FALSE";
+	private static final String KW_NULL = "NULL";
+	private static final String KW_JAVA = "JAVA";
+	private static final String KW_CLASS = "CLASS";
+	private static final String KW_CFML = "CFML";
+	private static final String KW_CFC = "CFC";
+
 	public static final short CTX_OTHER = TagLibTagScript.CTX_OTHER;
 	public static final short CTX_NONE = TagLibTagScript.CTX_NONE;
 	public static final short CTX_IF = TagLibTagScript.CTX_IF;
@@ -1285,26 +1294,46 @@ public abstract class AbstrCFMLExprTransformer {
 
 		Variable var;
 		comments(data);
-		// Boolean constant
-		if (id.getString().equalsIgnoreCase("TRUE")) {// || name.equals("YES")) {
-			comments(data);
-			return id.getFactory().createLitBoolean(true, line, data.srcCode.getPosition());
-		}
-		else if (id.getString().equalsIgnoreCase("FALSE")) {// || name.equals("NO")) {
-			comments(data);
-			return id.getFactory().createLitBoolean(false, line, data.srcCode.getPosition());
-		}
-		else if (id.getString().equalsIgnoreCase("NULL") && !data.srcCode.isCurrent('.') && !data.srcCode.isCurrent('[')) {
-			comments(data);
-			return id.getFactory().createNullConstant(line, data.srcCode.getPosition());
-		}
-		else if (checkPrefix && (id.getString().equalsIgnoreCase("JAVA") || id.getString().equalsIgnoreCase("CLASS")) && data.srcCode.forwardIfCurrent(':')) {
-			comments(data);
-			return id.getFactory().createLitString("saklsdjasklfhnsalkfddsf:java");
-		}
-		else if (checkPrefix && (id.getString().equalsIgnoreCase("CFML") || id.getString().equalsIgnoreCase("CFC")) && data.srcCode.forwardIfCurrent(':')) {
-			comments(data);
-			return id.getFactory().createLitString("saklsdjasklfhnsalkfddsf:cfml");
+
+		// Check for keywords: TRUE(4), FALSE(5), NULL(4), JAVA(4), CLASS(5), CFML(4), CFC(3)
+		int len = id.getString().length();
+		if (len >= 3 && len <= 5) {
+			String strUC = id.getString().toUpperCase();
+			if (len == 4) {
+				if (strUC.equals(KW_TRUE)) {
+					comments(data);
+					return id.getFactory().createLitBoolean(true, line, data.srcCode.getPosition());
+				}
+				else if (strUC.equals(KW_NULL) && !data.srcCode.isCurrent('.') && !data.srcCode.isCurrent('[')) {
+					comments(data);
+					return id.getFactory().createNullConstant(line, data.srcCode.getPosition());
+				}
+				else if (checkPrefix && data.srcCode.forwardIfCurrent(':')) {
+					if (strUC.equals(KW_JAVA)) {
+						comments(data);
+						return id.getFactory().createLitString("saklsdjasklfhnsalkfddsf:java");
+					}
+					else if (strUC.equals(KW_CFML)) {
+						comments(data);
+						return id.getFactory().createLitString("saklsdjasklfhnsalkfddsf:cfml");
+					}
+					data.srcCode.previous();
+				}
+			}
+			else if (len == 5) {
+				if (strUC.equals(KW_FALSE)) {
+					comments(data);
+					return id.getFactory().createLitBoolean(false, line, data.srcCode.getPosition());
+				}
+				else if (checkPrefix && strUC.equals(KW_CLASS) && data.srcCode.forwardIfCurrent(':')) {
+					comments(data);
+					return id.getFactory().createLitString("saklsdjasklfhnsalkfddsf:java");
+				}
+			}
+			else if (len == 3 && checkPrefix && strUC.equals(KW_CFC) && data.srcCode.forwardIfCurrent(':')) {
+				comments(data);
+				return id.getFactory().createLitString("saklsdjasklfhnsalkfddsf:cfml");
+			}
 		}
 
 		// Extract Scope from the Variable
@@ -1716,34 +1745,55 @@ public abstract class AbstrCFMLExprTransformer {
 	 * @throws TemplateException
 	 */
 	private Variable scope(Data data, Identifier id, Position line) throws TemplateException {
+		// scope names range from 3-11 chars, skip check for identifiers outside this range
+		int len = id.getString().length();
+		if (len < 3 || len > 11) return null;
+
+		// VAR(3) is only first-group scope at len 3, check it first to allow early exit for len < 5
+		if (len == 3) {
+			String idStr = id.getUpper();
+			if (idStr.equals("VAR")) {
+				Identifier _id = identifier(data, false, true);
+				if (_id != null) {
+					comments(data);
+					Variable local = data.factory.createVariable(ScopeSupport.SCOPE_VAR, line, data.srcCode.getPosition());
+					if (!"LOCAL".equalsIgnoreCase(_id.getString())) local.addMember(data.factory.createDataMember(_id));
+					else {
+						local.ignoredFirstMember(true);
+					}
+					return local;
+				}
+				return null;  // VAR without valid identifier
+			}
+			// len==3 scopes in second group: CGI, URL
+			if (data.settings.ignoreScopes) return null;
+			if (idStr.equals("CGI")) return data.factory.createVariable(Scope.SCOPE_CGI, line, data.srcCode.getPosition());
+			if (idStr.equals("URL")) return data.factory.createVariable(Scope.SCOPE_URL, line, data.srcCode.getPosition());
+			return null;
+		}
+
+		// len==4: only FORM in second group
+		if (len == 4) {
+			if (data.settings.ignoreScopes) return null;
+			if (id.getUpper().equals("FORM")) return data.factory.createVariable(Scope.SCOPE_FORM, line, data.srcCode.getPosition());
+			return null;
+		}
+
+		// len >= 5: check first group scopes
 		String idStr = id.getUpper();
 
-		if (idStr.equals("ARGUMENTS")) return data.factory.createVariable(Scope.SCOPE_ARGUMENTS, line, data.srcCode.getPosition());
-		else if (idStr.equals("LOCAL")) return data.factory.createVariable(Scope.SCOPE_LOCAL, line, data.srcCode.getPosition());
-		else if (idStr.equals("VAR")) {
-			Identifier _id = identifier(data, false, true);
-			if (_id != null) {
-				comments(data);
-				Variable local = data.factory.createVariable(ScopeSupport.SCOPE_VAR, line, data.srcCode.getPosition());
-				if (!"LOCAL".equalsIgnoreCase(_id.getString())) local.addMember(data.factory.createDataMember(_id));
-				else {
-					local.ignoredFirstMember(true);
-				}
-				return local;
-			}
-		}
+		if (idStr.equals("LOCAL")) return data.factory.createVariable(Scope.SCOPE_LOCAL, line, data.srcCode.getPosition());
 		else if (idStr.equals("VARIABLES")) return data.factory.createVariable(Scope.SCOPE_VARIABLES, line, data.srcCode.getPosition());
 		else if (idStr.equals("REQUEST")) return data.factory.createVariable(Scope.SCOPE_REQUEST, line, data.srcCode.getPosition());
 		else if (idStr.equals("SERVER")) return data.factory.createVariable(Scope.SCOPE_SERVER, line, data.srcCode.getPosition());
 		else if (idStr.equals("THREAD")) return data.factory.createVariable(Scope.SCOPE_CLUSTER, line, data.srcCode.getPosition());
+		else if (idStr.equals("ARGUMENTS")) return data.factory.createVariable(Scope.SCOPE_ARGUMENTS, line, data.srcCode.getPosition());
 
 		if (data.settings.ignoreScopes) return null;
 
-		if (idStr.equals("CGI")) return data.factory.createVariable(Scope.SCOPE_CGI, line, data.srcCode.getPosition());
-		else if (idStr.equals("SESSION")) return data.factory.createVariable(Scope.SCOPE_SESSION, line, data.srcCode.getPosition());
+		// second group scopes with len >= 5: SESSION(7), APPLICATION(11), CLIENT(6), COOKIE(6)
+		if (idStr.equals("SESSION")) return data.factory.createVariable(Scope.SCOPE_SESSION, line, data.srcCode.getPosition());
 		else if (idStr.equals("APPLICATION")) return data.factory.createVariable(Scope.SCOPE_APPLICATION, line, data.srcCode.getPosition());
-		else if (idStr.equals("FORM")) return data.factory.createVariable(Scope.SCOPE_FORM, line, data.srcCode.getPosition());
-		else if (idStr.equals("URL")) return data.factory.createVariable(Scope.SCOPE_URL, line, data.srcCode.getPosition());
 		else if (idStr.equals("CLIENT")) return data.factory.createVariable(Scope.SCOPE_CLIENT, line, data.srcCode.getPosition());
 		else if (idStr.equals("COOKIE")) return data.factory.createVariable(Scope.SCOPE_COOKIE, line, data.srcCode.getPosition());
 
@@ -1789,7 +1839,7 @@ public abstract class AbstrCFMLExprTransformer {
 			}
 		}
 		while (data.srcCode.isValidIndex());
-		return data.srcCode.substring(start, data.srcCode.getPos() - start);
+		return data.srcCode.substring( start, data.srcCode.getPos() - start );
 	}
 
 	/**

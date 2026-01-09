@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -176,7 +177,7 @@ public final class ComponentUtil {
 		// null);
 		// fv.visitEnd();
 
-		java.util.List<LitString> _keys = new ArrayList<LitString>();
+		LinkedHashMap<LitString, Integer> _keys = new LinkedHashMap<LitString, Integer>();
 
 		// remote methods
 		Collection.Key[] keys = component.keys(Component.ACCESS_REMOTE);
@@ -577,7 +578,7 @@ public final class ComponentUtil {
 		return cl.loadClass(className);
 	}
 
-	private static int createMethod(PageContext pc, ConstrBytecodeContext constr, java.util.List<LitString> keys, ClassWriter cw, String className, Object member, int max,
+	private static int createMethod(PageContext pc, ConstrBytecodeContext constr, LinkedHashMap<LitString, Integer> keys, ClassWriter cw, String className, Object member, int max,
 			boolean writeLog, boolean suppressWSbeforeArg, boolean output, boolean returnValue) throws PageException {
 
 		boolean hasOptionalArgs = false;
