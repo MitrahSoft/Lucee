@@ -8,7 +8,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="esapi"{
                 var input = ' " ';
                 var enc = EncodeForHTMLAttribute(input);
                 
-                expect( enc ).toInclude("&quot;");
+				var isEncoded=findNoCase( "&quot;", enc ) || findNoCase( "&##34;", enc );
+
+                expect( isEncoded ).toBeTrue( "Expected [#enc#] to contain either &quot; or &##34;" );
             });
 
             it( "encodes angle brackets consistently (Testing <)", function() {
