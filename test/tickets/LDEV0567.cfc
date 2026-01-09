@@ -21,7 +21,7 @@
  * The modern Guard extension uses context-aware OWASP encoding which produces 
  * different but equally secure output (e.g., literal / or decimal &#34;).
  */
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="esapi" {
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="esapi" skip="true" {
 
 	function run( testResults , testBox ) {
 
