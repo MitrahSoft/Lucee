@@ -57,6 +57,7 @@ import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import lucee.commons.date.JREDateTimeUtil;
 import lucee.commons.db.DBUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
@@ -665,6 +666,8 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 						}
 					}
 				}
+				// Get Calendar once for reuse across all rows - avoids repeated ThreadLocal lookups
+				Calendar cal = JREDateTimeUtil.getThreadCalendar( tz );
 				if (index != -1) {
 					Object o;
 					while (result.next()) {
@@ -672,7 +675,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 							break;
 						}
 						for (int i = 0; i < usedColumns.length; i++) {
-							o = casts[i].toCFType(tz, result, usedColumns[i] + 1);
+							o = casts[i].toCFType( tz, result, usedColumns[i] + 1, cal );
 							if (index == i) {
 								qry.indexes.put(Caster.toKey(o), recordcount + 1);
 							}
@@ -687,7 +690,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 							break;
 						}
 						for (int i = 0; i < usedColumns.length; i++) {
-							columns[i].add(casts[i].toCFType(tz, result, usedColumns[i] + 1));
+							columns[i].add( casts[i].toCFType( tz, result, usedColumns[i] + 1, cal ) );
 						}
 						++recordcount;
 					}
@@ -700,6 +703,8 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 				QueryStruct qs = qa == null ? (QueryStruct) qr : null;
 				Object k;
 				boolean full = NullSupportHelper.full();
+				// Get Calendar once for reuse across all rows - avoids repeated ThreadLocal lookups
+				Calendar cal = JREDateTimeUtil.getThreadCalendar( tz );
 				while (result.next()) {
 					if (maxrow > -1 && recordcount >= maxrow) {
 						break;
@@ -708,7 +713,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 					Object val;
 
 					for (int i = 0; i < usedColumns.length; i++) {
-						val = casts[i].toCFType(tz, result, usedColumns[i] + 1);
+						val = casts[i].toCFType( tz, result, usedColumns[i] + 1, cal );
 						if (val == null && !full) val = "";
 						sct.set(columnNames[i], val);
 					}
