@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
@@ -1163,30 +1162,26 @@ public final class PageContextImpl extends PageContext {
 
 	@Override
 	public PageSource getCurrentPageSource() {
-		try {
-			return pathList.getLast();
+		PageSource ps = pathList.peekLast();
+		if (ps != null) return ps;
+
+		if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
+			return parent.getCurrentPageSource();
 		}
-		catch (NoSuchElementException e) {
-			if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
-				return parent.getCurrentPageSource();
-			}
-			else if (caller != null) return caller;
-			return null;
-		}
+		else if (caller != null) return caller;
+		return null;
 	}
 
 	@Override
 	public PageSource getCurrentPageSource(PageSource defaultvalue) {
-		try {
-			return pathList.getLast();
+		PageSource ps = pathList.peekLast();
+		if (ps != null) return ps;
+
+		if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
+			return parent.getCurrentPageSource(defaultvalue);
 		}
-		catch (NoSuchElementException e) {
-			if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
-				return parent.getCurrentPageSource(defaultvalue);
-			}
-			else if (caller != null) return caller;
-			return defaultvalue;
-		}
+		else if (caller != null) return caller;
+		return defaultvalue;
 	}
 
 	/**
