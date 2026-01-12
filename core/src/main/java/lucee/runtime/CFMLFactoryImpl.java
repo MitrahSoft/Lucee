@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -222,18 +221,7 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 			}
 		}
 
-		PageContextImpl pc;
-		if (createNew || pcs.isEmpty()) {
-			pc = null;
-		}
-		else {
-			try {
-				pc = pcs.pop();
-			}
-			catch (NoSuchElementException nsee) {
-				pc = null;
-			}
-		}
+		PageContextImpl pc = createNew ? null : pcs.poll();
 		if (pc == null) pc = new PageContextImpl(scopeContext, config, servlet, tmplPC, ignoreScopes);
 
 		if (timeout > 0) pc.setRequestTimeout(timeout);
