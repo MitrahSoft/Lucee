@@ -458,13 +458,19 @@ public final class HSQLDBHandler {
 
 		Exception qoqException = null;
 
-		// First Chance
+		// First Chance - try native QoQ
 		try {
 			SelectParser parser = new SelectParser();
 			selects = parser.parse(sql.getSQLString());
+
+			// Try native QoQ - it returns null if it can't handle the query (e.g., joins)
+			// This avoids expensive exception-based flow control for unsupported features
 			QueryImpl q = qoq.execute(pc, sql, selects, maxrows);
-			q.setExecutionTime(stopwatch.time());
-			return q;
+			if (q != null) {
+				q.setExecutionTime(stopwatch.time());
+				return q;
+			}
+			// else: fall through to HSQLDB (Second Chance)
 		}
 		catch (SQLParserException spe) {
 			qoqException = spe;
