@@ -647,6 +647,17 @@
 		"default": false
 	},
 	{
+		"sysprop": "lucee.qoq.hsqldb.poolsize",
+		"envvar": "LUCEE_QOQ_HSQLDB_POOLSIZE",
+		"desc": "Controls the number of concurrent HSQLDB database instances for Query of Queries operations. Each instance can process one query at a time, enabling parallel QoQ execution. Higher values allow more concurrent queries but consume more memory. Default is the minimum of available processor cores or 8",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "numeric",
+		"introduced": "7.1.0.29",
+		"default": "Math.min(Runtime.getRuntime().availableProcessors(), 8)"
+	},
+	{
 		"sysprop": "lucee.qoq.parallelism",
 		"envvar": "LUCEE_QOQ_PARALLELISM",
 		"desc": "Controls the parallelism level for Query of Queries operations",
