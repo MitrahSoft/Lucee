@@ -670,6 +670,7 @@ public final class KeyConstants {
 	public static final Key _transfer = init("transfer");
 	public static final Key _tree = init("tree");
 	public static final Key _type = init("type");
+	public static final Key _items = init("items");
 	public static final Key _uid = init("uid");
 	public static final Key _updated = init("updated");
 	public static final Key _uri = init("uri");
@@ -3121,6 +3122,9 @@ public final class KeyConstants {
 	public static final Key __tick = init("_tick");
 	public static final Key __start = init("_start");
 	public static final Key _binary = init("binary");
+	public static final Key _enum = init("enum");
+	public static final Key _deprecated = init("deprecated");
+	public static final Key _const = init("const");
 
 	public static Map<String, Key> getKeys() {
 		return keys;

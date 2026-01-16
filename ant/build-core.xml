@@ -618,7 +618,7 @@
     <echots message="building different archives that get bundled (admin,doc) with help of the temporary generated lucee.jar"/>
     <echots message="generating lucee bytecode for java ${javaVersionCoreDefault}"/>
     <!-- build the lucee-context.lar -->
-    <java classname="org.apache.tools.ant.launch.Launcher" dir="${ant}" fork="true" failonerror="true" errorproperty="exc">
+    <java classname="org.apache.tools.ant.launch.Launcher" dir="${ant}" fork="true" failonerror="false" errorproperty="exc" resultproperty="exitcode">
       <classpath path="${java.class.path}">
           <pathelement location="${temp}/lucee.jar"/>
           <pathelement path="${runtime_classpath}"/>
@@ -651,6 +651,13 @@
       -->
 
     </java>
+    <echo level="error" message="Exit code: ${exitcode}"/>
+    <echo level="error" message="Error output: ${exc}"/>
+    <fail message="Archive creation failed with exit code ${exitcode}">
+      <condition>
+        <not><equals arg1="${exitcode}" arg2="0"/></not>
+      </condition>
+    </fail>
     <outputTrimmedString str="${exc}"/>
 </target>
 

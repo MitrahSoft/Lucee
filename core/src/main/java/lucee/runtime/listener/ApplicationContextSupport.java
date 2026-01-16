@@ -311,10 +311,11 @@ public abstract class ApplicationContextSupport implements ApplicationContext {
 			// appender
 			Struct sctApp = Caster.toStruct(v.get("appender", null), null);
 			ClassDefinition cdApp = null;
-			if (sctApp != null ){
+			if (sctApp != null) {
 				cdApp = ClassDefinitionImpl.toClassDefinitionImpl(sctApp, null, false, config.getIdentification());
 				if (!cdApp.isBundle()) cdApp = ((ConfigPro) config).getLogEngine().appenderClassDefintion(cdApp.getClassName());
-			} else {
+			}
+			else {
 				String appender = Caster.toString(v.get("appender", null), null);
 				if (appender != null) cdApp = ((ConfigPro) config).getLogEngine().appenderClassDefintion(appender);
 			}
@@ -322,10 +323,11 @@ public abstract class ApplicationContextSupport implements ApplicationContext {
 			// layout
 			Struct sctLay = Caster.toStruct(v.get("layout", null), null);
 			ClassDefinition cdLay = null;
-			if (sctLay != null){
+			if (sctLay != null) {
 				cdLay = ClassDefinitionImpl.toClassDefinitionImpl(sctLay, null, false, config.getIdentification());
 				if (!cdLay.isBundle()) cdLay = ((ConfigPro) config).getLogEngine().layoutClassDefintion(cdLay.getClassName());
-			} else {
+			}
+			else {
 				String layout = Caster.toString(v.get("layout", null), null);
 				if (layout != null) cdLay = ((ConfigPro) config).getLogEngine().layoutClassDefintion(layout);
 			}
@@ -388,7 +390,7 @@ public abstract class ApplicationContextSupport implements ApplicationContext {
 			existing.close();
 		}
 
-		LoggerAndSourceData las = new LoggerAndSourceData(config, id, name.getLowerString(), appender, appenderArgs, layout, layoutArgs, level, readOnly, true);
+		LoggerAndSourceData las = new LoggerAndSourceData(config, id, name.getLowerString(), appender, appenderArgs, layout, layoutArgs, level, readOnly, true).init();
 		_loggers.put(name, las);
 		return las;
 	}

@@ -124,6 +124,40 @@ public final class PasswordImpl implements Password {
 		}
 	}
 
+	public static Password read(Config config, String name, String value, String salt, boolean isDefault) {
+
+		// "adminPasswordDefault"
+
+		String prefix = isDefault ? "adminDefault" : "admin";
+		String prefixOlder = isDefault ? "default" : "";
+		String env = isDefault ? "lucee.admin.default.password" : "lucee.admin.password";
+
+		// first we look for the hashed and salted password
+		// preferred adminDefaultHSPW adminHSPW
+		if ((prefix + "hspw").equalsIgnoreCase(name) || (prefixOlder + "hspw").equalsIgnoreCase(name)) {
+			return new PasswordImpl(ORIGIN_HASHED_SALTED, value, salt, HASHED_SALTED);
+		}
+
+		// fall back to password that is hashed but not salted
+		// preferred adminDefaultPW adminPW
+		if ((prefix + "pw").equalsIgnoreCase(name) || (prefixOlder + "pw").equalsIgnoreCase(name)) {
+			return new PasswordImpl(ORIGIN_HASHED, value, null, HASHED);
+		}
+
+		// fall back to encrypted password
+		// preferred adminDefaultPassword adminPassword
+		if ((prefix + "Password").equalsIgnoreCase(name) || (prefixOlder + "Password").equalsIgnoreCase(name)) {
+			String rawPassword = new BlowfishEasy("tpwisgh").decryptString(value);
+			return new PasswordImpl(ORIGIN_ENCRYPTED, rawPassword, salt);
+		}
+
+		if (env.equalsIgnoreCase(name)) {
+			return new PasswordImpl(ORIGIN_ENCRYPTED, value, salt);
+		}
+
+		return null;
+	}
+
 	public static Password readFromStruct(Config config, Struct data, String salt, boolean isDefault, boolean getPasswordFromEnv) {
 		String prefix = isDefault ? "adminDefault" : "admin";
 		String prefixOlder = isDefault ? "default" : "";

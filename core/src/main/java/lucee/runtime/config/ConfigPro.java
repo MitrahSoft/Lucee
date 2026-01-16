@@ -55,7 +55,6 @@ public interface ConfigPro extends Config {
 
 	public static final int CLIENT_BOOLEAN_TRUE = 0;
 	public static final int CLIENT_BOOLEAN_FALSE = 1;
-	public static final int SERVER_BOOLEAN_TRUE = 2;
 	public static final int SERVER_BOOLEAN_FALSE = 3;
 
 	public static final int DEBUG_DATABASE = 1;

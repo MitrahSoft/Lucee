@@ -735,5 +735,4 @@ public final class MappingImpl implements Mapping {
 			throw Caster.toPageRuntimeException(e);
 		}
 	}
-
 }

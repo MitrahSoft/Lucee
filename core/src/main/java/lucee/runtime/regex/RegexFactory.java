@@ -1,13 +1,29 @@
 package lucee.runtime.regex;
 
 import lucee.commons.lang.StringUtil;
+import lucee.runtime.config.Config;
+import lucee.runtime.config.Prop;
+import lucee.runtime.config.PropFactory;
 import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.op.Caster;
+import lucee.runtime.type.Array;
+import lucee.runtime.type.ArrayImpl;
+import lucee.runtime.type.Struct;
+import lucee.runtime.type.StructImpl;
+import lucee.runtime.type.util.KeyConstants;
 
-public final class RegexFactory {
+public final class RegexFactory implements PropFactory<Regex> {
 
 	public static final int TYPE_PERL = 1;
 	public static final int TYPE_JAVA = 2;
 	public static final int TYPE_UNDEFINED = 0;
+
+	private static RegexFactory instance;
+
+	public static RegexFactory getInstance() {
+		if (instance == null) instance = new RegexFactory();
+		return instance;
+	}
 
 	public static String toType(int regexName, String defaultValue) {
 		if (regexName == TYPE_JAVA) return "java";
@@ -40,5 +56,41 @@ public final class RegexFactory {
 		if (res != -1) return res;
 
 		throw new ApplicationException("invalid regex name [" + regexName + "], valid names are [java or perl]");
+	}
+
+	@Override
+	public Regex evaluate(Config config, String name, Object val, Regex defaultValue) {
+		String strRegex = Caster.toString(val, null);
+		if (StringUtil.isEmpty(strRegex, true)) return defaultValue;
+
+		int type = toType(strRegex, -1);
+		if (type == -1) return defaultValue;
+
+		return toRegex(type, defaultValue);
+	}
+
+	@Override
+	public Struct schema(Prop<Regex> prop) {
+		Struct sct = new StructImpl(Struct.TYPE_LINKED);
+		sct.setEL(KeyConstants._type, "string");
+
+		sct.setEL(KeyConstants._description, "The regular expression engine to use. 'java' (modern) is the standard JVM engine, 'perl' (classic) is the Apache ORO engine.");
+
+		// Define the aliases supported by the toType(String) logic
+		Array enums = new ArrayImpl();
+		enums.appendEL("java");
+		enums.appendEL("modern");
+		enums.appendEL("perl");
+		enums.appendEL("perl5");
+		enums.appendEL("classic");
+
+		sct.setEL("enum", enums);
+
+		return sct;
+	}
+
+	@Override
+	public Object resolvedValue(Regex value) {
+		return value;
 	}
 }

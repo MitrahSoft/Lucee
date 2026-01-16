@@ -32,15 +32,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -54,11 +50,9 @@ import org.xml.sax.SAXException;
 
 import jakarta.servlet.ServletConfig;
 import lucee.commons.collection.MapFactory;
-import lucee.commons.date.TimeZoneConstants;
 import lucee.commons.date.TimeZoneUtil;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.digest.MD5;
-import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.DevNullOutputStream;
 import lucee.commons.io.FileUtil;
 import lucee.commons.io.IOUtil;
@@ -111,7 +105,6 @@ import lucee.runtime.db.DataSource;
 import lucee.runtime.db.DataSourceImpl;
 import lucee.runtime.db.JDBCDriver;
 import lucee.runtime.db.ParamSyntax;
-import lucee.runtime.db.ParamSyntaxImpl;
 import lucee.runtime.dump.ClassicHTMLDumpWriter;
 import lucee.runtime.dump.DumpWriter;
 import lucee.runtime.dump.DumpWriterEntry;
@@ -157,10 +150,6 @@ import lucee.runtime.monitor.RequestMonitorPro;
 import lucee.runtime.monitor.RequestMonitorProImpl;
 import lucee.runtime.monitor.RequestMonitorWrap;
 import lucee.runtime.net.http.ReqRspUtil;
-import lucee.runtime.net.mail.Server;
-import lucee.runtime.net.mail.ServerImpl;
-import lucee.runtime.net.proxy.ProxyData;
-import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
 import lucee.runtime.orm.DummyORMEngine;
@@ -174,8 +163,6 @@ import lucee.runtime.regex.Regex;
 import lucee.runtime.regex.RegexFactory;
 import lucee.runtime.search.DummySearchEngine;
 import lucee.runtime.search.SearchEngine;
-import lucee.runtime.security.SecretProvider;
-import lucee.runtime.security.SecretProviderFactory;
 import lucee.runtime.security.SecurityManager;
 import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.tag.listener.TagListener;
@@ -200,7 +187,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	private static final String TEMPLATE_EXTENSION = "cfm";
 	private static final String COMPONENT_EXTENSION = "cfc";
 	public static final boolean LOG = true;
-	private static final int DEFAULT_MAX_CONNECTION = 100;
+	public static final int DEFAULT_MAX_CONNECTION = 100;
 	public static final String DEFAULT_LOCATION = Constants.DEFAULT_UPDATE_URL.toExternalForm();
 	public static final ClassDefinition<DummyORMEngine> DUMMY_ORM_ENGINE = new ClassDefinitionImpl<DummyORMEngine>(DummyORMEngine.class);
 
@@ -773,46 +760,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return engines;
 	}
 
-	public static Map<String, SecretProvider> loadSecretProviders(ConfigImpl config, Struct root, Map<String, SecretProvider> defaultValue) {
-		try {
-			// we only load this for the server context
-			// we do not give config here as first argument, to prevent a infiniti loop
-			Struct secretProvider = ConfigUtil.getAsStruct(null, root, false, "secretProvider");
-			if (secretProvider != null) {
-				return _loadSecretProviders(config, secretProvider);
-			}
-		}
-		catch (Exception ex) {
-			log(config, ex);
-		}
-		return defaultValue;
-	}
-
-	public static Map<String, SecretProvider> _loadSecretProviders(Config config, Struct secretProvider) {
-		String strId;
-		Iterator<Entry<Key, Object>> it = secretProvider.entryIterator();
-		Entry<Key, Object> entry;
-		Struct data;
-		Map<String, SecretProvider> providers = new HashMap<>();
-
-		while (it.hasNext()) {
-			try {
-				entry = it.next();
-				data = Caster.toStruct(entry.getValue(), null);
-				if (data == null) continue;
-				strId = entry.getKey().getString();
-				if (!StringUtil.isEmpty(strId)) {
-					strId = strId.trim().toLowerCase();
-					providers.put(strId.toLowerCase(), SecretProviderFactory.getInstance(config, strId, data));
-				}
-			}
-			catch (Exception e) {
-				log(config, e);
-			}
-		}
-		return providers;
-	}
-
 	public static DumpWriterEntry[] loadDumpWriter(ConfigImpl config, Struct root, DumpWriterEntry[] defaultValue) {
 		try {
 			Array writers = ConfigUtil.getAsArray("dumpWriters", root);
@@ -1375,8 +1322,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						true, true, false, false, null, -1, -1);
 				mappings.put("/", tmp);
 			}
-			// config.setMappings((Mapping[]) mappings.toArray(new
-			// Mapping[mappings.size()]));
+
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
@@ -1467,95 +1413,71 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return arr;
 	}
 
-	public static Map<String, LoggerAndSourceData> loadLoggers(ConfigImpl config, Struct root) {
-		config.clearLoggers(Boolean.FALSE);
-		Set<String> existing = new HashSet<>();
+	public static LoggerAndSourceData loadLogger(ConfigPro config, final String name, final Struct data) {
 
-		Map<String, LoggerAndSourceData> loggerMap = new HashMap<String, LoggerAndSourceData>();
 		try {
 			// loggers
-			Struct loggers = ConfigUtil.getAsStruct("loggers", root);
-			String name, tmp;
+			String tmp;
 			Map<String, String> appenderArgs, layoutArgs;
 			ClassDefinition cdAppender, cdLayout;
 			int level = Log.LEVEL_ERROR;
 			boolean readOnly = false;
-			Iterator<Entry<Key, Object>> itt = loggers.entryIterator();
-			Entry<Key, Object> entry;
-			Struct child;
-			while (itt.hasNext()) {
-				try {
-					entry = itt.next();
-					child = Caster.toStruct(entry.getValue(), null);
-					if (child == null) continue;
 
-					name = entry.getKey().getString();
+			try {
 
-					// appender
-					if (forceLogAppender != null) cdAppender = config.getLogEngine().appenderClassDefintion(forceLogAppender);
-					else cdAppender = getClassDefinition(config, child, "appender", config.getIdentification());
-					if (!cdAppender.hasClass()) {
-						tmp = StringUtil.trim(getAttr(config, child, "appender"), "");
-						cdAppender = config.getLogEngine().appenderClassDefintion(tmp);
-					}
-					else if (!cdAppender.isBundle()) {
-						cdAppender = config.getLogEngine().appenderClassDefintion(cdAppender.getClassName());
-					}
-					appenderArgs = toArguments(child, "appenderArguments", true, false);
-
-					// layout
-					cdLayout = getClassDefinition(config, child, "layout", config.getIdentification());
-					if (!cdLayout.hasClass()) {
-						tmp = StringUtil.trim(getAttr(config, child, "layout"), "");
-						cdLayout = config.getLogEngine().layoutClassDefintion(tmp);
-					}
-					else if (!cdLayout.isBundle()) {
-						cdLayout = config.getLogEngine().layoutClassDefintion(cdLayout.getClassName());
-					}
-					layoutArgs = toArguments(child, "layoutArguments", true, false);
-
-					String strLevel = getAttr(config, child, "level");
-					if (forceLogLevel != null) strLevel = forceLogLevel;
-					if (StringUtil.isEmpty(strLevel, true)) strLevel = getAttr(config, child, "logLevel");
-					level = LogUtil.toLevel(StringUtil.trim(strLevel, ""), Log.LEVEL_ERROR);
-					readOnly = Caster.toBooleanValue(getAttr(config, child, "readOnly"), false);
-					// ignore when no appender/name is defined
-					if (cdAppender.hasClass() && !StringUtil.isEmpty(name)) {
-						existing.add(name.toLowerCase());
-						if (cdLayout.hasClass()) {
-							addLogger(config, loggerMap, name, level, cdAppender, appenderArgs, cdLayout, layoutArgs, readOnly, false);
-						}
-						else addLogger(config, loggerMap, name, level, cdAppender, appenderArgs, null, null, readOnly, false);
-					}
+				// appender
+				if (forceLogAppender != null) cdAppender = config.getLogEngine().appenderClassDefintion(forceLogAppender);
+				else cdAppender = getClassDefinition(config, data, "appender", config.getIdentification());
+				if (!cdAppender.hasClass()) {
+					tmp = StringUtil.trim(getAttr(config, data, "appender"), "");
+					cdAppender = config.getLogEngine().appenderClassDefintion(tmp);
 				}
-				catch (Throwable t) {
-					ExceptionUtil.rethrowIfNecessary(t);
-					LogUtil.logGlobal(config, ConfigFactoryImpl.class.getName(), t);
+				else if (!cdAppender.isBundle()) {
+					cdAppender = config.getLogEngine().appenderClassDefintion(cdAppender.getClassName());
+				}
+				appenderArgs = toArguments(data, "appenderArguments", true, false);
+
+				// layout
+				cdLayout = getClassDefinition(config, data, "layout", config.getIdentification());
+				if (!cdLayout.hasClass()) {
+					tmp = StringUtil.trim(getAttr(config, data, "layout"), "");
+					cdLayout = config.getLogEngine().layoutClassDefintion(tmp);
+				}
+				else if (!cdLayout.isBundle()) {
+					cdLayout = config.getLogEngine().layoutClassDefintion(cdLayout.getClassName());
+				}
+				layoutArgs = toArguments(data, "layoutArguments", true, false);
+
+				String strLevel = getAttr(config, data, "level");
+				if (forceLogLevel != null) strLevel = forceLogLevel;
+				if (StringUtil.isEmpty(strLevel, true)) strLevel = getAttr(config, data, "logLevel");
+				level = LogUtil.toLevel(StringUtil.trim(strLevel, ""), Log.LEVEL_ERROR);
+				readOnly = Caster.toBooleanValue(getAttr(config, data, "readOnly"), false);
+				// ignore when no appender/name is defined
+				if (cdAppender.hasClass() && !StringUtil.isEmpty(name)) {
+					if (cdLayout.hasClass()) {
+						return createLogger(config, name, level, cdAppender, appenderArgs, cdLayout, layoutArgs, readOnly, false).init();
+					}
+					return createLogger(config, name, level, cdAppender, appenderArgs, null, null, readOnly, false).init();
 				}
 			}
+			catch (Throwable t) {
+				ExceptionUtil.rethrowIfNecessary(t);
+				LogUtil.logGlobal(config, ConfigFactoryImpl.class.getName(), t);
+			}
+
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
 			LogUtil.logGlobal(config, ConfigFactoryImpl.class.getName(), t);
 		}
-		return loggerMap;
+		return null;
 	}
 
-	public static LoggerAndSourceData addLogger(Config config, Map<String, LoggerAndSourceData> loggers, String name, int level, ClassDefinition appender,
-			Map<String, String> appenderArgs, ClassDefinition layout, Map<String, String> layoutArgs, boolean readOnly, boolean dyn) throws PageException {
-		LoggerAndSourceData existing = loggers.get(name.toLowerCase());
+	public static LoggerAndSourceData createLogger(Config config, String name, int level, ClassDefinition appender, Map<String, String> appenderArgs, ClassDefinition layout,
+			Map<String, String> layoutArgs, boolean readOnly, boolean dyn) {
 		String id = LoggerAndSourceData.id(name.toLowerCase(), appender, appenderArgs, layout, layoutArgs, level, readOnly);
-
-		if (existing != null) {
-			if (existing.id().equals(id)) {
-				return existing;
-			}
-			existing.close();
-		}
-
-		LoggerAndSourceData las = new LoggerAndSourceData(config, id, name.toLowerCase(), appender, appenderArgs, layout, layoutArgs, level, readOnly, dyn);
-		loggers.put(name.toLowerCase(), las);
-		return las;
+		return new LoggerAndSourceData(config, id, name.toLowerCase(), appender, appenderArgs, layout, layoutArgs, level, readOnly, dyn);
 	}
 
 	public static ExecutionLogFactory loadExeLog(ConfigImpl config, Struct root) {
@@ -1633,166 +1555,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return new ExecutionLogFactory(ConsoleExecutionLog.class, new HashMap<String, String>());
 	}
 
-	/**
-	 * loads datasource settings from XMl DOM
-	 * 
-	 * @param configServer
-	 * @param config
-	 * @param doc
-	 * @return
-	 * @throws BundleException
-	 * @throws ClassNotFoundException
-	 */
-	public static Map<String, DataSource> loadDataSources(ConfigImpl config, Struct root) {
-		Map<String, DataSource> datasources = new HashMap<String, DataSource>();
-		try {
-
-			// When set to true, makes JDBC use a representation for DATE data that
-			// is compatible with the Oracle8i database.
-			System.setProperty("oracle.jdbc.V8Compatible", "true");
-
-			SecurityManager sm = config.getSecurityManager();
-			short access = sm.getAccess(SecurityManager.TYPE_DATASOURCE);
-			int accessCount = -1;
-			if (access == SecurityManager.VALUE_YES) accessCount = -1;
-			else if (access == SecurityManager.VALUE_NO) accessCount = 0;
-			else if (access >= SecurityManager.VALUE_1 && access <= SecurityManager.VALUE_10) {
-				accessCount = access - SecurityManager.NUMBER_OFFSET;
-			}
-
-			// Databases
-
-			// Data Sources
-			Struct dataSources = ConfigUtil.getAsStruct(config, root, false, "dataSources");
-			if (accessCount == -1) accessCount = dataSources.size();
-			if (dataSources.size() < accessCount) accessCount = dataSources.size();
-
-			// if(hasAccess) {
-			JDBCDriver jdbc;
-			ClassDefinition cd;
-			String id;
-			Iterator<Entry<Key, Object>> it = dataSources.entryIterator();
-			Entry<Key, Object> e;
-			Struct dataSource;
-			while (it.hasNext()) {
-				e = it.next();
-				dataSource = Caster.toStruct(e.getValue(), null);
-				if (dataSource == null) continue;
-
-				if (dataSource.containsKey(KeyConstants._database)) {
-					try {
-						// do we have an id?
-						jdbc = config.getJDBCDriverById(getAttr(config, dataSource, "id"), null);
-						if (jdbc != null && jdbc.cd != null) {
-							cd = jdbc.cd;
-						}
-						else {
-							cd = getClassDefinition(config, dataSource, "", config.getIdentification());
-						}
-
-						// we have no class
-						if (!cd.hasClass()) {
-							jdbc = config.getJDBCDriverById(getAttr(config, dataSource, "type"), null);
-							if (jdbc != null && jdbc.cd != null) {
-								cd = jdbc.cd;
-							}
-						}
-						// we only have a class
-						else if (!cd.isBundle()) {
-							jdbc = config.getJDBCDriverByClassName(cd.getClassName(), null);
-							if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) cd = jdbc.cd;
-						}
-
-						// still no bundle!
-						if (!cd.isBundle()) cd = patchJDBCClass(config, cd);
-						int idle = Caster.toIntValue(getAttr(config, dataSource, "idleTimeout"), -1);
-						if (idle == -1) idle = Caster.toIntValue(getAttr(config, dataSource, "connectionTimeout"), -1);
-						int defLive = 15;
-						if (idle > 0) defLive = idle * 5;// for backward compatibility
-
-						String dsn = getAttr(config, dataSource, "connectionString");
-						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(config, dataSource, "dsn");
-						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(config, dataSource, "connStr");
-						if (StringUtil.isEmpty(dsn, true)) dsn = getAttr(config, dataSource, "url");
-						if (StringUtil.isEmpty(dsn, true)) {
-							if (jdbc == null && cd.hasClass()) {
-								jdbc = config.getJDBCDriverByClassName(cd.getClassName(), null);
-							}
-							if (jdbc != null) {
-								dsn = jdbc.connStr;
-							}
-
-						}
-						String bundleName = getAttr(config, dataSource, "bundleName");
-						String bundleVersion = getAttr(config, dataSource, "bundleVersion");
-
-						setDatasource(config, datasources, e.getKey().getString(), cd, getAttr(config, dataSource, "host"), getAttr(config, dataSource, "database"),
-								Caster.toIntValue(getAttr(config, dataSource, "port"), -1), dsn, bundleName, bundleVersion, getAttr(config, dataSource, "username"),
-								ConfigUtil.decrypt(getAttr(config, dataSource, "password")), null,
-								Caster.toIntValue(getAttr(config, dataSource, "connectionLimit"), DEFAULT_MAX_CONNECTION), idle,
-								Caster.toIntValue(getAttr(config, dataSource, "liveTimeout"), defLive), Caster.toIntValue(getAttr(config, dataSource, "minIdle"), 0),
-								Caster.toIntValue(getAttr(config, dataSource, "maxIdle"), 0), Caster.toIntValue(getAttr(config, dataSource, "maxTotal"), 0),
-								Caster.toLongValue(getAttr(config, dataSource, "metaCacheTimeout"), 60000), toBoolean(getAttr(config, dataSource, "blob"), true),
-								toBoolean(getAttr(config, dataSource, "clob"), true), Caster.toIntValue(getAttr(config, dataSource, "allow"), DataSource.ALLOW_ALL),
-								toBoolean(getAttr(config, dataSource, "validate"), false), toBoolean(getAttr(config, dataSource, "storage"), false),
-								getAttr(config, dataSource, "timezone"), ConfigUtil.getAsStruct(config, dataSource, true, "custom"), getAttr(config, dataSource, "dbdriver"),
-								ParamSyntaxImpl.toParamSyntax(dataSource, ParamSyntaxImpl.DEFAULT), toBoolean(getAttr(config, dataSource, "literalTimestampWithTSOffset"), false),
-								toBoolean(getAttr(config, dataSource, "alwaysSetTimeout"), false), toBoolean(getAttr(config, dataSource, "requestExclusive"), false),
-								toBoolean(getAttr(config, dataSource, "alwaysResetConnections"), false)
-
-						);
-					}
-					catch (Throwable th) {
-						ExceptionUtil.rethrowIfNecessary(th);
-						log(config, th);
-					}
-				}
-			}
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return datasources;
-	}
-
-	private static ClassDefinition patchJDBCClass(ConfigImpl config, ClassDefinition cd) {
-		// PATCH for MySQL driver that did change the className within the same extension, JDBC extension
-		// expect that the className does not change.
-		if ("org.gjt.mm.mysql.Driver".equals(cd.getClassName()) || "com.mysql.jdbc.Driver".equals(cd.getClassName()) || "com.mysql.cj.jdbc.Driver".equals(cd.getClassName())) {
-			JDBCDriver jdbc = config.getJDBCDriverById("mysql", null);
-			if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) return jdbc.cd;
-
-			jdbc = config.getJDBCDriverByClassName("com.mysql.cj.jdbc.Driver", null);
-			if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) return jdbc.cd;
-
-			jdbc = config.getJDBCDriverByClassName("com.mysql.jdbc.Driver", null);
-			if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) return jdbc.cd;
-
-			jdbc = config.getJDBCDriverByClassName("org.gjt.mm.mysql.Driver", null);
-			if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) return jdbc.cd;
-
-			ClassDefinitionImpl tmp = new ClassDefinitionImpl("com.mysql.cj.jdbc.Driver", "com.mysql.cj", null, config.getIdentification());
-			if (tmp.getClazz(null) != null) return tmp;
-
-			tmp = new ClassDefinitionImpl("com.mysql.jdbc.Driver", "com.mysql.jdbc", null, config.getIdentification());
-			if (tmp.getClazz(null) != null) return tmp;
-		}
-		if ("com.microsoft.jdbc.sqlserver.SQLServerDriver".equals(cd.getClassName())) {
-			JDBCDriver jdbc = config.getJDBCDriverById("mssql", null);
-			if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) return jdbc.cd;
-
-			jdbc = config.getJDBCDriverByClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver", null);
-			if (jdbc != null && jdbc.cd != null && jdbc.cd.isBundle()) return jdbc.cd;
-
-			ClassDefinitionImpl tmp = new ClassDefinitionImpl("com.microsoft.sqlserver.jdbc.SQLServerDriver", cd.getName(), cd.getVersionAsString(), config.getIdentification());
-			if (tmp.getClazz(null) != null) return tmp;
-		}
-
-		return cd;
-	}
-
 	public static JDBCDriver[] loadJDBCDrivers(ConfigImpl config, Struct root) {
 		Map<String, JDBCDriver> map = new HashMap<String, JDBCDriver>();
 		try {
@@ -1851,72 +1613,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			log(config, t);
 		}
 		return map.values().toArray(new JDBCDriver[map.size()]);
-	}
-
-	public static Map<String, ClassDefinition> loadCacheDefintions(ConfigImpl config, Struct root) {
-		Map<String, ClassDefinition> map = new HashMap<String, ClassDefinition>();
-		try {
-
-			// first add the server drivers, so they can be overwritten
-			ClassDefinition cd;
-
-			Array caches = ConfigUtil.getAsArray("cacheClasses", root);
-			if (caches != null) {
-				Iterator<?> it = caches.getIterator();
-				Struct cache;
-				while (it.hasNext()) {
-					try {
-						cache = Caster.toStruct(it.next());
-						if (cache == null) continue;
-						cd = getClassDefinition(config, cache, "", config.getIdentification());
-
-						// check if it is a bundle
-						if (!cd.isBundle()) {
-							log(config, Log.LEVEL_INFO, "[" + cd + "] does not have bundle info");
-							continue;
-						}
-						map.put(cd.getClassName(), cd);
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-				}
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return map;
-	}
-
-	public static Map<Integer, String> loadCacheDefaultConnectionNames(ConfigImpl config, Struct root) {
-		Map<Integer, String> names = new HashMap<>();
-		try {
-			Struct defaultCache = ConfigUtil.getAsStruct("cache", root);
-
-			// default cache
-			for (int i = 0; i < ConfigPro.CACHE_TYPES_MAX.length; i++) {
-				try {
-					String def = getAttr(config, defaultCache, "default" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES_MAX[i]));
-					if (StringUtil.isEmpty(def, true)) def = getAttr(config, root, "cacheDefault" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES_MAX[i]));
-
-					if (!StringUtil.isEmpty(def, true)) {
-						names.put(ConfigPro.CACHE_TYPES_MAX[i], def.trim());
-					}
-				}
-				catch (Throwable t) {
-					ExceptionUtil.rethrowIfNecessary(t);
-					log(config, t);
-				}
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return names;
 	}
 
 	public static Map<String, CacheConnection> loadCacheCacheConnections(ConfigImpl config, Struct root) {
@@ -2092,70 +1788,43 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 	}
 
-	/**
-	 * @param configServer
-	 * @param config
-	 * @param doc
-	 * @return
-	 * @throws IOException
+	/*
+	 * public static Mapping[] loadCustomTagsMappings(ConfigImpl config, Struct root) { Mapping[]
+	 * mappings = null; try { Array ctMappings = ConfigUtil.getAsArray(config, root, true,
+	 * KeyConstants._virtual, KeyConstants._physical, true, "customTagMappings", "customTagPaths");
+	 * 
+	 * boolean hasDefault = false;
+	 * 
+	 * // Web Mapping if (ctMappings.size() > 0) { Iterator<Object> it = ctMappings.valueIterator();
+	 * List<Mapping> list = new ArrayList<>(); Struct ctMapping; while (it.hasNext()) { try { ctMapping
+	 * = Caster.toStruct(it.next(), null); if (ctMapping == null) continue;
+	 * 
+	 * String virtual = createVirtual(config, ctMapping); String physical = getAttr(config, ctMapping,
+	 * "physical"); String archive = getAttr(config, ctMapping, "archive"); boolean readonly =
+	 * toBoolean(getAttr(config, ctMapping, "readonly"), false); boolean hidden =
+	 * toBoolean(getAttr(config, ctMapping, "hidden"), false); if
+	 * ("{lucee-web}/customtags/".equals(physical) || "{lucee-server}/customtags/".equals(physical))
+	 * continue; if ("{lucee-config}/customtags/".equals(physical)) hasDefault = true; short inspTemp =
+	 * inspectTemplate(config, ctMapping); int insTempSlow = Caster.toIntValue(getAttr(config,
+	 * ctMapping, "inspectTemplateIntervalSlow"), -1); int insTempFast =
+	 * Caster.toIntValue(getAttr(config, ctMapping, "inspectTemplateIntervalFast"), -1);
+	 * 
+	 * String primary = getAttr(config, ctMapping, "primary");
+	 * 
+	 * boolean physicalFirst = StringUtil.isEmpty(archive, true) ||
+	 * !"archive".equalsIgnoreCase(primary); list.add(new MappingImpl(config, virtual, physical,
+	 * archive, inspTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, true, false, true,
+	 * null, -1, -1)); } catch (Throwable t) { ExceptionUtil.rethrowIfNecessary(t); log(config, t); } }
+	 * if (!hasDefault) { list.add(new MappingImpl(config, "/default", "{lucee-config}/customtags/",
+	 * null, ConfigPro.INSPECT_NEVER, -1, -1, true, false, true, true, false, true, null, -1, -1)); }
+	 * mappings = list.toArray(new Mapping[list.size()]); }
+	 * 
+	 * } catch (Throwable t) { ExceptionUtil.rethrowIfNecessary(t); log(config, t); } if (mappings ==
+	 * null) { mappings = new Mapping[] { new MappingImpl(config, "/default-customtags",
+	 * "{lucee-config}/customtags/", null, ConfigPro.INSPECT_UNDEFINED,
+	 * ConfigPro.INSPECT_INTERVAL_UNDEFINED, ConfigPro.INSPECT_INTERVAL_UNDEFINED, true, true, true,
+	 * true, false, true, null, -1, -1) }; } return mappings; }
 	 */
-	public static Mapping[] loadCustomTagsMappings(ConfigImpl config, Struct root) {
-		Mapping[] mappings = null;
-		try {
-			Array ctMappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, true, "customTagMappings", "customTagPaths");
-
-			boolean hasDefault = false;
-
-			// Web Mapping
-			if (ctMappings.size() > 0) {
-				Iterator<Object> it = ctMappings.valueIterator();
-				List<Mapping> list = new ArrayList<>();
-				Struct ctMapping;
-				while (it.hasNext()) {
-					try {
-						ctMapping = Caster.toStruct(it.next(), null);
-						if (ctMapping == null) continue;
-
-						String virtual = createVirtual(config, ctMapping);
-						String physical = getAttr(config, ctMapping, "physical");
-						String archive = getAttr(config, ctMapping, "archive");
-						boolean readonly = toBoolean(getAttr(config, ctMapping, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(config, ctMapping, "hidden"), false);
-						if ("{lucee-web}/customtags/".equals(physical) || "{lucee-server}/customtags/".equals(physical)) continue;
-						if ("{lucee-config}/customtags/".equals(physical)) hasDefault = true;
-						short inspTemp = inspectTemplate(config, ctMapping);
-						int insTempSlow = Caster.toIntValue(getAttr(config, ctMapping, "inspectTemplateIntervalSlow"), -1);
-						int insTempFast = Caster.toIntValue(getAttr(config, ctMapping, "inspectTemplateIntervalFast"), -1);
-
-						String primary = getAttr(config, ctMapping, "primary");
-
-						boolean physicalFirst = StringUtil.isEmpty(archive, true) || !"archive".equalsIgnoreCase(primary);
-						list.add(new MappingImpl(config, virtual, physical, archive, inspTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, true, false, true, null,
-								-1, -1));
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-				}
-				if (!hasDefault) {
-					list.add(new MappingImpl(config, "/default", "{lucee-config}/customtags/", null, ConfigPro.INSPECT_NEVER, -1, -1, true, false, true, true, false, true, null,
-							-1, -1));
-				}
-				mappings = list.toArray(new Mapping[list.size()]);
-			}
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		if (mappings == null) {
-			mappings = new Mapping[] { new MappingImpl(config, "/default-customtags", "{lucee-config}/customtags/", null, ConfigPro.INSPECT_UNDEFINED,
-					ConfigPro.INSPECT_INTERVAL_UNDEFINED, ConfigPro.INSPECT_INTERVAL_UNDEFINED, true, true, true, true, false, true, null, -1, -1) };
-		}
-		return mappings;
-	}
 
 	private static Object toKey(Mapping m) {
 		if (!StringUtil.isEmpty(m.getStrPhysical(), true)) return m.getVirtual() + ":" + m.getStrPhysical().toLowerCase().trim();
@@ -2465,109 +2134,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return Constants.DEFAULT_UPDATE_URL;
 	}
 
-	public static RemoteClient[] loadRemoteClients(ConfigImpl config, Struct root) {
-		java.util.List<RemoteClient> list = new ArrayList<RemoteClient>();
-		try {
-			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManagerImpl.TYPE_REMOTE);
-
-			Struct _clients = ConfigUtil.getAsStruct("remoteClients", root);
-
-			Array clients = null;
-			Struct client;
-
-			if (hasAccess && _clients != null) clients = ConfigUtil.getAsArray("remoteClient", _clients);
-
-			if (clients != null) {
-				Iterator<?> it = clients.getIterator();
-				while (it.hasNext()) {
-					try {
-						client = Caster.toStruct(it.next(), null);
-						if (client == null) continue;
-
-						// type
-						String type = getAttr(config, client, "type");
-						if (StringUtil.isEmpty(type)) type = "web";
-						// url
-						String url = getAttr(config, client, "url");
-						String label = getAttr(config, client, "label");
-						if (StringUtil.isEmpty(label)) label = url;
-						String sUser = getAttr(config, client, "serverUsername");
-						String sPass = ConfigUtil.decrypt(getAttr(config, client, "serverPassword"));
-						String aPass = ConfigUtil.decrypt(getAttr(config, client, "adminPassword"));
-						String aCode = ConfigUtil.decrypt(getAttr(config, client, "securityKey"));
-						// if(aCode!=null && aCode.indexOf('-')!=-1)continue;
-						String usage = getAttr(config, client, "usage");
-						if (usage == null) usage = "";
-
-						String pUrl = getAttr(config, client, "proxyServer");
-						int pPort = Caster.toIntValue(getAttr(config, client, "proxyPort"), -1);
-						String pUser = getAttr(config, client, "proxyUsername");
-						String pPass = ConfigUtil.decrypt(getAttr(config, client, "proxyPassword"));
-						ProxyData pd = null;
-						if (!StringUtil.isEmpty(pUrl, true)) {
-							pd = new ProxyDataImpl();
-							pd.setServer(pUrl);
-							if (!StringUtil.isEmpty(pUser)) {
-								pd.setUsername(pUser);
-								pd.setPassword(pPass);
-							}
-							if (pPort > 0) pd.setPort(pPort);
-						}
-						list.add(new RemoteClientImpl(label, type, url, sUser, sPass, aPass, pd, aCode, usage));
-
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-
-				}
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-
-		return list.toArray(new RemoteClient[list.size()]);
-	}
-
-	public static PrintStream loadErr(ConfigImpl config, Struct root) {
-		try {
-			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING);
-
-			String err = null;
-			err = SystemUtil.getSystemPropOrEnvVar("lucee.system.err", null);
-			if (StringUtil.isEmpty(err)) err = getAttr(config, root, "systemErr");
-			return toPrintStream(config, err, true);
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return null;
-	}
-
-	public static PrintStream loadOut(ConfigImpl config, Struct root) {
-		try {
-
-			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING);
-
-			String out = null;
-			// sys prop or env var
-			out = SystemUtil.getSystemPropOrEnvVar("lucee.system.out", null);
-			if (StringUtil.isEmpty(out)) out = getAttr(config, root, "systemOut");
-			return toPrintStream(config, out, false);
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return null;
-	}
-
-	private static PrintStream toPrintStream(Config config, String streamtype, boolean iserror) {
+	public static PrintStream toPrintStream(Config config, String streamtype, boolean iserror) {
 		if (!StringUtil.isEmpty(streamtype)) {
 			streamtype = streamtype.trim();
 			// null
@@ -2615,51 +2182,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 		return iserror ? CFMLEngineImpl.CONSOLE_ERR : CFMLEngineImpl.CONSOLE_OUT;
 
-	}
-
-	/**
-	 * @param configServer
-	 * @param config
-	 * @param doc
-	 */
-	public static TimeZone loadTimezone(ConfigImpl config, Struct root, TimeZone defaultValue) {
-		try {
-			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING);
-
-			// timeZone
-			String strTimeZone = null;
-			strTimeZone = getAttr(config, root, new String[] { "timezone", "thisTimezone" });
-
-			if (!StringUtil.isEmpty(strTimeZone)) return TimeZone.getTimeZone(strTimeZone);
-			else {
-				TimeZone def = TimeZone.getDefault();
-				if (def == null) {
-					def = TimeZoneConstants.EUROPE_LONDON;
-				}
-				return def;
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return defaultValue;
-	}
-
-	public static Locale loadLocale(ConfigImpl config, Struct root, Locale defaultValue) {
-		if (ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING)) {
-			try {
-				// locale
-				String strLocale = getAttr(config, root, new String[] { "locale", "thisLocale" });
-				if (!StringUtil.isEmpty(strLocale)) return Caster.toLocale(strLocale, defaultValue);
-
-			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				log(config, t);
-			}
-		}
-		return defaultValue;
 	}
 
 	public static ClassDefinition loadWS(ConfigImpl config, Struct root, ClassDefinition defaultValue) {
@@ -2723,28 +2245,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return defaultValue;
 	}
 
-	public static short loadJava(ConfigImpl config, Struct root, short defaultValue) {
-		try {
-
-			String strCompileType = getAttr(config, root, "compileType");
-			if (!StringUtil.isEmpty(strCompileType)) {
-				strCompileType = strCompileType.trim().toLowerCase();
-				if (strCompileType.equals("after-startup")) {
-					return Config.RECOMPILE_AFTER_STARTUP;
-				}
-				else if (strCompileType.equals("always")) {
-					return Config.RECOMPILE_ALWAYS;
-				}
-			}
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return defaultValue;
-	}
-
 	public static JavaSettings loadJavaSettings(ConfigImpl config, Struct root, JavaSettings defaultValue) {
 		try {
 
@@ -2764,44 +2264,21 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return defaultValue;
 	}
 
-	public static Struct loadConstants(ConfigImpl config, Struct root, Struct defaultValue) {
-		try {
-			Struct constants = ConfigUtil.getAsStruct("constants", root);
-
-			// Constants
-			Struct sct = null;
-			if (sct == null) sct = new StructImpl();
-			Key name;
-			if (constants != null) {
-				Iterator<Entry<Key, Object>> it = constants.entryIterator();
-				Struct con;
-				Entry<Key, Object> e;
-				while (it.hasNext()) {
-					try {
-						e = it.next();
-						con = Caster.toStruct(it.next(), null);
-						if (con == null) continue;
-
-						name = e.getKey();
-						if (StringUtil.isEmpty(name)) continue;
-						sct.setEL(name, e.getValue());
-
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-
-				}
-			}
-			return sct;
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return defaultValue;
-	}
+	/*
+	 * public static Struct loadConstantsX(ConfigImpl config, Struct root, Struct defaultValue) { try {
+	 * Struct constants = ConfigUtil.getAsStruct("constants", root);
+	 * 
+	 * // Constants Struct sct = null; if (sct == null) sct = new StructImpl(); Key name; if (constants
+	 * != null) { Iterator<Entry<Key, Object>> it = constants.entryIterator(); Entry<Key, Object> e;
+	 * while (it.hasNext()) { try { e = it.next();
+	 * 
+	 * name = e.getKey(); if (StringUtil.isEmpty(name)) continue; sct.setEL(name, e.getValue());
+	 * 
+	 * } catch (Throwable t) { ExceptionUtil.rethrowIfNecessary(t); log(config, t); }
+	 * 
+	 * } } return sct; } catch (Throwable t) { ExceptionUtil.rethrowIfNecessary(t); log(config, t); }
+	 * return defaultValue; }
+	 */
 
 	public static void log(Config config, Throwable e) {
 		try {
@@ -2882,144 +2359,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	 * @param doc
 	 * @throws IOException
 	 */
-	public static void loadMail(ConfigImpl config, Struct root) { // does no init values
-
-		boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_MAIL);
-
-		// Send partial
-		try {
-			String strSendPartial = getAttr(config, root, "mailSendPartial");
-			if (!StringUtil.isEmpty(strSendPartial) && hasAccess) {
-				config.setMailSendPartial(toBoolean(strSendPartial, false));
-			}
-			else {
-				config.setMailSendPartial(false);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setMailSendPartial(false);
-		}
-
-		// User set
-		try {
-			String strUserSet = getAttr(config, root, "mailUserSet");
-			if (!StringUtil.isEmpty(strUserSet) && hasAccess) {
-				config.setUserSet(toBoolean(strUserSet, true));
-			}
-			else {
-				config.setUserSet(true);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setUserSet(true);
-		}
-
-		// Spool Interval
-		try {
-			String strSpoolInterval = getAttr(config, root, "mailSpoolInterval");
-			if (!StringUtil.isEmpty(strSpoolInterval) && hasAccess) {
-				config.setMailSpoolInterval(Caster.toIntValue(strSpoolInterval, 30));
-			}
-			else {
-				config.setMailSpoolInterval(30);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setMailSpoolInterval(30);
-		}
-
-		// Encoding
-		try {
-			String strEncoding = getAttr(config, root, "mailDefaultEncoding");
-			if (!StringUtil.isEmpty(strEncoding, true) && hasAccess) {
-				config.setMailDefaultEncoding(strEncoding);
-			}
-			else {
-				config.setMailDefaultEncoding(CharsetUtil.UTF8);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setMailDefaultEncoding(CharsetUtil.UTF8);
-		}
-
-		// Spool Enable
-		try {
-			String strSpoolEnable = getAttr(config, root, "mailSpoolEnable");
-			if (!StringUtil.isEmpty(strSpoolEnable) && hasAccess) {
-				config.setMailSpoolEnable(toBoolean(strSpoolEnable, true));
-			}
-			else {
-				config.setMailSpoolEnable(true);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setMailSpoolEnable(true);
-		}
-
-		// Timeout
-		try {
-			String strTimeout = getAttr(config, root, "mailConnectionTimeout");
-			if (!StringUtil.isEmpty(strTimeout) && hasAccess) {
-				config.setMailTimeout(Caster.toIntValue(strTimeout, 30));
-			}
-			else {
-				config.setMailTimeout(30);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setMailTimeout(30);
-		}
-
-		// Servers
-		List<Server> servers = new ArrayList<Server>();
-		try {
-			int index = 0;
-			// Server[] servers = null;
-			Array elServers = ConfigUtil.getAsArray("mailServers", root);
-
-			// TODO get mail servers from env var
-			if (hasAccess) {
-				Iterator<?> it = elServers.getIterator();
-				Struct el;
-				int i = -1;
-				while (it.hasNext()) {
-					try {
-						el = Caster.toStruct(it.next(), null);
-						if (el == null) continue;
-						i++;
-						servers.add(i,
-								new ServerImpl(Caster.toIntValue(getAttr(config, el, "id"), i + 1), getAttr(config, el, "smtp"), Caster.toIntValue(getAttr(config, el, "port"), 25),
-										getAttr(config, el, "username"), ConfigUtil.decrypt(getAttr(config, el, "password")), toLong(getAttr(config, el, "life"), 1000 * 60 * 5),
-										toLong(getAttr(config, el, "idle"), 1000 * 60 * 1), toBoolean(getAttr(config, el, "tls"), false),
-										toBoolean(getAttr(config, el, "ssl"), false), toBoolean(getAttr(config, el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL));
-
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-				}
-			}
-			config.setMailServers(servers.toArray(new Server[servers.size()]));
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-			config.setMailServers(servers.toArray(new Server[servers.size()]));
-		}
-	}
 
 	public static void loadMonitors(ConfigImpl config, Struct root) {
 		try {
@@ -3127,112 +2466,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			log(config, t);
 		}
 		return new ClassDefinitionImpl(DummySearchEngine.class);
-	}
-
-	public static String loadSearchDir(ConfigImpl config, Struct root) {
-		try {
-			Struct search = ConfigUtil.getAsStruct("search", root);
-
-			// directory
-			String dir = search != null ? getAttr(config, search, "directory") : null;
-			if (StringUtil.isEmpty(dir)) {
-				dir = "{lucee-web}/search/";
-			}
-
-			return dir;
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return "{lucee-web}/search/";
-	}
-
-	public static int loadDebugOptions(ConfigImpl config, Struct root) {
-		int options = 0;
-		try {
-			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_DEBUGGING);
-
-			// debug options
-			String strDebugOption = SystemUtil.getSystemPropOrEnvVar("lucee.debugging.options", null);
-			String[] debugOptions = StringUtil.isEmpty(strDebugOption) ? null : ListUtil.listToStringArray(strDebugOption, ',');
-
-			String str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingDatabase", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowDatabase");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingDatabase");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_DATABASE;
-			}
-			else if (debugOptions != null && extractDebugOption("database", debugOptions)) options += ConfigPro.DEBUG_DATABASE;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingException", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowException");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingException");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_EXCEPTION;
-			}
-			else if (debugOptions != null && extractDebugOption("exception", debugOptions)) options += ConfigPro.DEBUG_EXCEPTION;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingTemplate", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTemplate");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingTemplate");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_TEMPLATE;
-			}
-			else if (debugOptions != null && extractDebugOption("template", debugOptions)) options += ConfigPro.DEBUG_TEMPLATE;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingDump", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowDump");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingDump");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_DUMP;
-			}
-			else if (debugOptions != null && extractDebugOption("dump", debugOptions)) options += ConfigPro.DEBUG_DUMP;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingTracing", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTracing");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTrace");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingTracing");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_TRACING;
-			}
-			else if (debugOptions != null && extractDebugOption("tracing", debugOptions)) options += ConfigPro.DEBUG_TRACING;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingTimer", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowTimer");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingTimer");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_TIMER;
-			}
-			else if (debugOptions != null && extractDebugOption("timer", debugOptions)) options += ConfigPro.DEBUG_TIMER;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingImplicitAccess", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowImplicitAccess");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingImplicitAccess");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_IMPLICIT_ACCESS;
-			}
-			else if (debugOptions != null && extractDebugOption("implicit-access", debugOptions)) options += ConfigPro.DEBUG_IMPLICIT_ACCESS;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingQueryUsage", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingShowQueryUsage");
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingQueryUsage");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_QUERY_USAGE;
-			}
-			else if (debugOptions != null && extractDebugOption("queryUsage", debugOptions)) options += ConfigPro.DEBUG_QUERY_USAGE;
-
-			str = SystemUtil.getSystemPropOrEnvVar("lucee.monitoring.debuggingThread", null);
-			if (StringUtil.isEmpty(str)) str = getAttr(config, root, "debuggingThread");
-			if (hasAccess && !StringUtil.isEmpty(str)) {
-				if (toBoolean(str, false)) options += ConfigPro.DEBUG_THREAD;
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return options;
 	}
 
 	private static boolean extractDebugOption(String name, String[] values) {
@@ -3619,127 +2852,57 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return providers.keySet().toArray(new RHExtensionProvider[providers.size()]);
 	}
 
-	/**
-	 * @param configServer
-	 * @param config
-	 * @param doc
-	 * @return
-	 * @throws IOException
+	/*
+	 * public static Mapping[] loadComponentMappingsX(ConfigImpl config, Struct root) { Mapping[]
+	 * mappings = null; try { boolean hasSet = false;
+	 * 
+	 * // Web Mapping Array compMappings = ConfigUtil.getAsArray(config, root, true,
+	 * KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
+	 * hasSet = false; boolean hasDefault = false; if (compMappings.size() > 0) { Iterator<Object> it =
+	 * compMappings.valueIterator(); List<Mapping> list = new ArrayList<>(); Struct cMapping; while
+	 * (it.hasNext()) { try { cMapping = Caster.toStruct(it.next(), null); if (cMapping == null)
+	 * continue;
+	 * 
+	 * String virtual = createVirtual(config, cMapping); String physical = getAttr(config, cMapping,
+	 * "physical"); String archive = getAttr(config, cMapping, "archive"); boolean readonly =
+	 * toBoolean(getAttr(config, cMapping, "readonly"), false); boolean hidden =
+	 * toBoolean(getAttr(config, cMapping, "hidden"), false); if
+	 * ("{lucee-web}/components/".equals(physical) || "{lucee-server}/components/".equals(physical))
+	 * continue; if ("{lucee-config}/components/".equals(physical)) hasDefault = true;
+	 * 
+	 * String strListMode = getAttr(config, cMapping, "listenerMode"); if
+	 * (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, cMapping, "listener-mode"); if
+	 * (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, cMapping, "listenermode"); int
+	 * listMode = ConfigUtil.toListenerMode(strListMode, -1);
+	 * 
+	 * String strListType = getAttr(config, cMapping, "listenerType"); if
+	 * (StringUtil.isEmpty(strListType)) strListMode = getAttr(config, cMapping, "listener-type"); if
+	 * (StringUtil.isEmpty(strListType)) strListMode = getAttr(config, cMapping, "listenertype"); int
+	 * listType = ConfigUtil.toListenerType(strListType, -1);
+	 * 
+	 * short inspTemp = inspectTemplate(config, cMapping); int insTempSlow =
+	 * Caster.toIntValue(getAttr(config, cMapping, "inspectTemplateIntervalSlow"), -1); int insTempFast
+	 * = Caster.toIntValue(getAttr(config, cMapping, "inspectTemplateIntervalFast"), -1);
+	 * 
+	 * String primary = getAttr(config, cMapping, "primary");
+	 * 
+	 * boolean physicalFirst = archive == null || !"archive".equalsIgnoreCase(primary); hasSet = true;
+	 * list.add(new MappingImpl(config, virtual, physical, archive, inspTemp, insTempSlow, insTempFast,
+	 * physicalFirst, hidden, readonly, true, false, true, null, listMode, listType)); } catch
+	 * (Throwable t) { ExceptionUtil.rethrowIfNecessary(t); log(config, t); } } if (!hasDefault) {
+	 * list.add(new MappingImpl(config, "/default", "{lucee-config}/components/", null,
+	 * ConfigPro.INSPECT_NEVER, -1, -1, true, false, true, true, false, true, null, -1, -1)); } mappings
+	 * = list.toArray(new Mapping[list.size()]); }
+	 * 
+	 * } catch (Throwable t) { ExceptionUtil.rethrowIfNecessary(t); log(config, t); }
+	 * 
+	 * if (mappings == null) { mappings = new Mapping[] { new MappingImpl(config, "/default-component",
+	 * "{lucee-config}/components/", null, ConfigPro.INSPECT_UNDEFINED,
+	 * ConfigPro.INSPECT_INTERVAL_UNDEFINED, ConfigPro.INSPECT_INTERVAL_UNDEFINED, true, true, true,
+	 * true, false, true, null, -1, -1) }; } return mappings;
+	 * 
+	 * }
 	 */
-	public static Mapping[] loadComponentMappings(ConfigImpl config, Struct root) {
-		Mapping[] mappings = null;
-		try {
-			boolean hasSet = false;
-
-			// Web Mapping
-			Array compMappings = ConfigUtil.getAsArray(config, root, true, KeyConstants._virtual, KeyConstants._physical, false, "componentMappings", "componentPaths");
-			hasSet = false;
-			boolean hasDefault = false;
-			if (compMappings.size() > 0) {
-				Iterator<Object> it = compMappings.valueIterator();
-				List<Mapping> list = new ArrayList<>();
-				Struct cMapping;
-				while (it.hasNext()) {
-					try {
-						cMapping = Caster.toStruct(it.next(), null);
-						if (cMapping == null) continue;
-
-						String virtual = createVirtual(config, cMapping);
-						String physical = getAttr(config, cMapping, "physical");
-						String archive = getAttr(config, cMapping, "archive");
-						boolean readonly = toBoolean(getAttr(config, cMapping, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(config, cMapping, "hidden"), false);
-						if ("{lucee-web}/components/".equals(physical) || "{lucee-server}/components/".equals(physical)) continue;
-						if ("{lucee-config}/components/".equals(physical)) hasDefault = true;
-
-						String strListMode = getAttr(config, cMapping, "listenerMode");
-						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, cMapping, "listener-mode");
-						if (StringUtil.isEmpty(strListMode)) strListMode = getAttr(config, cMapping, "listenermode");
-						int listMode = ConfigUtil.toListenerMode(strListMode, -1);
-
-						String strListType = getAttr(config, cMapping, "listenerType");
-						if (StringUtil.isEmpty(strListType)) strListMode = getAttr(config, cMapping, "listener-type");
-						if (StringUtil.isEmpty(strListType)) strListMode = getAttr(config, cMapping, "listenertype");
-						int listType = ConfigUtil.toListenerType(strListType, -1);
-
-						short inspTemp = inspectTemplate(config, cMapping);
-						int insTempSlow = Caster.toIntValue(getAttr(config, cMapping, "inspectTemplateIntervalSlow"), -1);
-						int insTempFast = Caster.toIntValue(getAttr(config, cMapping, "inspectTemplateIntervalFast"), -1);
-
-						String primary = getAttr(config, cMapping, "primary");
-
-						boolean physicalFirst = archive == null || !"archive".equalsIgnoreCase(primary);
-						hasSet = true;
-						list.add(new MappingImpl(config, virtual, physical, archive, inspTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, true, false, true, null,
-								listMode, listType));
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-				}
-				if (!hasDefault) {
-					list.add(new MappingImpl(config, "/default", "{lucee-config}/components/", null, ConfigPro.INSPECT_NEVER, -1, -1, true, false, true, true, false, true, null,
-							-1, -1));
-				}
-				mappings = list.toArray(new Mapping[list.size()]);
-			}
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-
-		if (mappings == null) {
-			mappings = new Mapping[] { new MappingImpl(config, "/default-component", "{lucee-config}/components/", null, ConfigPro.INSPECT_UNDEFINED,
-					ConfigPro.INSPECT_INTERVAL_UNDEFINED, ConfigPro.INSPECT_INTERVAL_UNDEFINED, true, true, true, true, false, true, null, -1, -1) };
-		}
-		return mappings;
-
-	}
-
-	public static void loadProxy(ConfigServerImpl config, Struct root) {
-		try {
-			boolean hasAccess = ConfigUtil.hasAccess(config, SecurityManager.TYPE_SETTING);
-			Struct proxy = ConfigUtil.getAsStruct("proxy", root);
-
-			boolean enabled = false;
-			String server = null, username = null, password = null;
-			int port = -1;
-			if (proxy != null && proxy.size() > 0) {
-				enabled = Caster.toBooleanValue(getAttr(config, proxy, "enabled"), true);
-				server = getAttr(config, proxy, "server");
-				username = getAttr(config, proxy, "username");
-				password = getAttr(config, proxy, "password");
-				port = Caster.toIntValue(getAttr(config, proxy, "port"), -1);
-			}
-			if (StringUtil.isEmpty(server, true)) {
-				server = getAttr(config, root, "updateProxyHost");
-				username = getAttr(config, root, "updateProxyUsername");
-				password = getAttr(config, root, "updateProxyPassword");
-				port = Caster.toIntValue(getAttr(config, root, "updateProxyPort"), -1);
-				enabled = !StringUtil.isEmpty(server, true);
-
-			}
-
-			// includes/excludes
-			Set<String> includes = proxy != null ? ProxyDataImpl.toStringSet(getAttr(config, proxy, "includes")) : null;
-			Set<String> excludes = proxy != null ? ProxyDataImpl.toStringSet(getAttr(config, proxy, "excludes")) : null;
-
-			if (enabled && hasAccess && !StringUtil.isEmpty(server)) {
-				ProxyDataImpl pd = (ProxyDataImpl) ProxyDataImpl.getInstance(server, port, username, password);
-				pd.setExcludes(excludes);
-				pd.setIncludes(includes);
-				config.setProxyData(pd);
-
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-	}
 
 	public static boolean loadError(ConfigImpl config, Struct root, boolean defaultValue) {
 		try {
@@ -3787,7 +2950,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	 * @param defaultValue if can't cast to a boolean is value will be returned
 	 * @return boolean value
 	 */
-	private static boolean toBoolean(String value, boolean defaultValue) {
+	public static boolean toBoolean(String value, boolean defaultValue) {
 
 		if (value == null || value.trim().length() == 0) return defaultValue;
 
