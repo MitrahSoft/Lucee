@@ -72,7 +72,7 @@ public interface ConfigPro extends Config {
 	public static final int MODE_CUSTOM = 1;
 	public static final int MODE_STRICT = 2;
 
-	public static final int CFML_WRITER_REFULAR = 1;
+	public static final int CFML_WRITER_REGULAR = 1;
 	public static final int CFML_WRITER_WS = 2;
 	public static final int CFML_WRITER_WS_PREF = 3;
 

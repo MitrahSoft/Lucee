@@ -288,10 +288,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					"If enable you cannot use expression within \"[ ]\" like this susi[getVariableName()] . This affects the following functions [IsDefined, structGet, empty] and the following tags [savecontent attribute \"variable\"].");
 	private Boolean limitEvaluation;
 
-	private static Prop<Boolean> metaMergeFormAndURL = Prop.bool().keys("mergeUrlForm").defaultValue(false).description(
-			"This setting defines if the scopes URL and Form will be merged together (CFML Default is false). If a key already exists in Form and URL Scopes, the value from the Form Scope is used.");
-	private Boolean mergeFormAndURL;
-
 	private static Prop<LoggerAndSourceData> metaLoggers = Prop.custom(LogFactory.getInstance(), Prop.TYPE_MAP).keys("loggers").logGlobal()
 			.description("definition of all logs for Lucee");
 	private Map<String, LoggerAndSourceData> loggers;
@@ -733,9 +729,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaWriterType = Prop.integer().keys("cfmlWriter", "whitespaceManagement").systemPropEnvVar("lucee.cfml.writer")
-			.defaultValue(ConfigPro.CFML_WRITER_REFULAR)
+			.defaultValue(ConfigPro.CFML_WRITER_REGULAR)
 			.choices(
-					new Choice<Integer>(ConfigPro.CFML_WRITER_REFULAR, "regular", "normal")
+					new Choice<Integer>(ConfigPro.CFML_WRITER_REGULAR, "regular", "normal")
 							.description("Standard: Outputs the generated content exactly as written in the source files, including all indentation and line breaks."),
 
 					new Choice<Integer>(ConfigPro.CFML_WRITER_WS, "white-space", "simple").description(
@@ -817,9 +813,14 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private int inspectTemplateAutoIntervalSlow = ConfigPro.INSPECT_INTERVAL_UNDEFINED;
 	private int inspectTemplateAutoIntervalFast = ConfigPro.INSPECT_INTERVAL_UNDEFINED;
 
-	private static Prop<Boolean> metaFormUrlAsStruct = Prop.bool().keys("formUrlAsStruct").defaultValue(true).description(
-			"This setting defines if the scopes URL and Form will be merged together (CFML Default is false). If a key already exists in Form and URL Scopes, the value from the Form Scope is used.");
+	private static Prop<Boolean> metaFormUrlAsStruct = Prop.bool().keys("formUrlAsStruct").defaultValue(true)
+			.description("When enabled, Lucee parses dot-notation in URL/Form keys into nested structures. " + "For example, 'index.cfm?person.name=John' becomes URL.person.name. "
+					+ "If disabled, it remains a flat key: URL['person.name'].");
 	private Boolean formUrlAsStruct;
+
+	private static Prop<Boolean> metaMergeFormAndURL = Prop.bool().keys("mergeUrlForm").defaultValue(false).description(
+			"This setting defines if the scopes URL and Form will be merged together (CFML Default is false). If a key already exists in Form and URL Scopes, the value from the Form Scope is used.");
+	private Boolean mergeFormAndURL;
 
 	private static Prop<Boolean> metaShowDebug = Prop.bool().keys("showDebug").systemPropEnvVar("lucee.monitoring.showDebug").defaultValue(false);
 	private Boolean showDebug;
@@ -917,7 +918,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private Resource extInstalled;
 	private Resource extAvailable;
 
-	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai").description("");
+	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai")
+			.description("A map of named AI Engine configurations. This allows you to define and manage multiple "
+					+ "connections to AI providers such as OpenAI (ChatGPT), Google (Gemini), Anthropic (Claude), "
+					+ "or local instances like Ollama. Each engine can be configured with specific models, "
+					+ "system instructions, and security keys, enabling specialized AI behavior across your applications.");
+
 	protected Map<String, AIEngine> aiEngines;
 
 	private Resource antiSamyPolicy;
@@ -1797,7 +1803,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (initPassword) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getPassword")) {
 				if (initPassword) {
-					Password pw = metaPassword.get(this, root);
+					password = metaPassword.get(this, root);
 					initPassword = false;
 				}
 			}
