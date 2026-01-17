@@ -2875,7 +2875,18 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			_doVerifyDatasource(cd, connStr, getString("admin", action, "dbusername"), getString("admin", action, "dbpassword"));
 		}
 		else {
-			_doVerifyDatasource(getString("admin", action, "name"), getString("admin", action, "dbusername"), getString("admin", action, "dbpassword"));
+			String name = getString("admin", action, "name");
+			String username = getString("dbusername", null);
+			String password = getString("dbpassword", null);
+			// if username/password not provided, get from stored datasource config
+			if (username == null && password == null) {
+				DataSource ds = config.getDataSource(name, null);
+				if (ds != null) {
+					username = ds.getUsername();
+					password = ds.getPassword();
+				}
+			}
+			_doVerifyDatasource(name, username, password);
 		}
 	}
 

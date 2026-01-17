@@ -37,3 +37,5 @@ buildVersionNumber.txt
 
 !ant/res/**
 
+/test-output
+/.claude
