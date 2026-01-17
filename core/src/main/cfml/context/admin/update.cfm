@@ -14,6 +14,7 @@
  * License along with this library.  If not, see <http://www.gnu.org/licenses/>.
  * 
  ---><cfsetting showdebugoutput="false">
+<cfparam name="url.json" default="false" type="boolean">
 <cftry>
 <cfparam name="session.alwaysNew" default="true" type="boolean">
 <cfinclude template="services.update.functions.cfm">
@@ -109,6 +110,7 @@
 			<cfset request.adminType=url.adminType>
 			<cfset external=getAllExternalData()>
 
+			<cfset extUpdates = []>
 			<cfsavecontent variable="ext" trim="true">
 				<cfloop query="extensions">
 					<cfscript>
@@ -116,13 +118,16 @@
 						loop list="#extensions.columnlist()#" item="key" {
 							sct[ key ]=extensions[ key ];
 						}
-						updateVersion= updateAvailable( sct, external );
-						if (updateVersion eq "false")
+						updateVersion = updateAvailable( sct, external );
+						if ( updateVersion eq "false" )
 							continue;
-						uid=extensions.id
-						link="";
-						dn="";
-						link="?action=ext.applications&action2=detail&id=#uid#";
+						uid = extensions.id;
+						link = "?action=ext.applications&action2=detail&id=#uid#";
+						arrayAppend( extUpdates, {
+							"name": extensions.name,
+							"current": sct.version,
+							"available": updateVersion
+						} );
 					</cfscript>
 					<cfoutput>
 						<a href="#link#" style="color:red;text-decoration:none;">- #extensions.name# - <b>#updateVersion#</b> ( #sct.version# ) </a><br>
@@ -207,6 +212,19 @@
 		<cfset session[id].last=now()> 
 	<cfelse>
 		<cfset content=session[id].content>
+	</cfif>
+
+	<cfif url.json>
+		<cfset result = {
+			"currentVersion": server.lucee.version,
+			"hasUpdate": adminType == "server" && ( hasUpdate ?: false ),
+			"availableVersion": available ?: "",
+			"extensionUpdates": extUpdates ?: []
+		}>
+		<cfsetting showdebugoutput="false">
+		<cfcontent reset="yes" type="application/json">
+		<cfoutput>#serializeJson( result )#</cfoutput>
+		<cfabort>
 	</cfif>
 
 	<cfoutput>#content#</cfoutput>
