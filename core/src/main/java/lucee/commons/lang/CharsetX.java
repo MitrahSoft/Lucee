@@ -22,27 +22,27 @@ import java.io.ObjectOutput;
 
 import lucee.commons.io.CharsetUtil;
 
-public final class CharSet implements Externalizable {
+public final class CharsetX implements Externalizable {
 
-	public static final CharSet UTF8 = new CharSet(CharsetUtil.UTF8);
-	public static final CharSet ISO88591 = new CharSet(CharsetUtil.ISO88591);
-	public static final CharSet UTF16BE = new CharSet(CharsetUtil.UTF16BE);
-	public static final CharSet UTF16LE = new CharSet(CharsetUtil.UTF16LE);
-	public static final CharSet UTF32BE = new CharSet(CharsetUtil.UTF32BE);
+	public static final CharsetX UTF8 = new CharsetX(CharsetUtil.UTF8);
+	public static final CharsetX ISO88591 = new CharsetX(CharsetUtil.ISO88591);
+	public static final CharsetX UTF16BE = new CharsetX(CharsetUtil.UTF16BE);
+	public static final CharsetX UTF16LE = new CharsetX(CharsetUtil.UTF16LE);
+	public static final CharsetX UTF32BE = new CharsetX(CharsetUtil.UTF32BE);
 
 	private transient java.nio.charset.Charset charset;
 
 	/**
 	 * NEVER USE THIS CONSTRUCTOR DIRECTLY, THIS IS FOR Externalizable ONLY
 	 */
-	public CharSet() {
+	public CharsetX() {
 	}
 
-	public CharSet(String charsetName) {
+	public CharsetX(String charsetName) {
 		this.charset = java.nio.charset.Charset.forName(charsetName);
 	}
 
-	public CharSet(java.nio.charset.Charset charset) {
+	public CharsetX(java.nio.charset.Charset charset) {
 		this.charset = charset;
 	}
 

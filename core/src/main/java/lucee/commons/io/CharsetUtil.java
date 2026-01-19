@@ -22,7 +22,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.SortedMap;
 
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContext;
@@ -64,15 +64,15 @@ public final class CharsetUtil {
 		}
 	}
 
-	public static CharSet toCharSet(String charset) {
+	public static CharsetX toCharsetX(String charset) {
 		if (StringUtil.isEmpty(charset, true)) return null;
-		return new CharSet(Charset.forName(charset.trim()));
+		return new CharsetX(Charset.forName(charset.trim()));
 	}
 
-	public static CharSet toCharSet(String charset, CharSet defaultValue) {
+	public static CharsetX toCharsetX(String charset, CharsetX defaultValue) {
 		if (StringUtil.isEmpty(charset)) return defaultValue;
 		try {
-			return new CharSet(Charset.forName(charset));
+			return new CharsetX(Charset.forName(charset));
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
@@ -80,12 +80,12 @@ public final class CharsetUtil {
 		}
 	}
 
-	public static CharSet toCharSet(Charset charset) {
+	public static CharsetX toCharsetX(Charset charset) {
 		if (charset == null) return null;
-		return new CharSet(charset);
+		return new CharsetX(charset);
 	}
 
-	public static Charset toCharset(CharSet charset) {
+	public static Charset toCharset(CharsetX charset) {
 		if (charset == null) return null;
 		return charset.toCharset();
 	}

@@ -29,7 +29,7 @@ import jakarta.servlet.jsp.tagext.DynamicAttributes;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.Mapping;
 import lucee.runtime.PageSource;
@@ -121,8 +121,8 @@ public final class Application extends TagImpl implements DynamicAttributes {
 	private int queryVarUsage;
 	private TimeSpan queryCachedAfter;
 
-	private CharSet webCharset;
-	private CharSet resourceCharset;
+	private CharsetX webCharset;
+	private CharsetX resourceCharset;
 	private short sessionType = -1;
 	private short wsType = -1;
 	private Boolean sessionCluster;
@@ -439,13 +439,13 @@ public final class Application extends TagImpl implements DynamicAttributes {
 
 	public void setWebcharset(String charset) {
 		if (StringUtil.isEmpty(charset)) return;
-		webCharset = CharsetUtil.toCharSet(charset);
+		webCharset = CharsetUtil.toCharsetX(charset);
 
 	}
 
 	public void setResourcecharset(String charset) {
 		if (StringUtil.isEmpty(charset)) return;
-		resourceCharset = CharsetUtil.toCharSet(charset);
+		resourceCharset = CharsetUtil.toCharsetX(charset);
 
 	}
 

@@ -18,12 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.LogUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
+import lucee.runtime.op.Caster;
 import lucee.runtime.op.OpUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -154,12 +155,12 @@ public class Prop<T> {
 		return new Prop<Charset>(PropFactory.CHARSET_FACTORY, type);
 	}
 
-	public static Prop<CharSet> charSet() {
-		return new Prop<CharSet>(PropFactory.CHARSETX_FACTORY);
+	public static Prop<CharsetX> charSet() {
+		return new Prop<CharsetX>(PropFactory.CHARSETX_FACTORY);
 	}
 
-	public static Prop<CharSet> charSet(short type) {
-		return new Prop<CharSet>(PropFactory.CHARSETX_FACTORY, type);
+	public static Prop<CharsetX> charSet(short type) {
+		return new Prop<CharsetX>(PropFactory.CHARSETX_FACTORY, type);
 	}
 
 	public static <T> Prop<T> custom(PropFactory<T> instance) {
@@ -425,7 +426,7 @@ public class Prop<T> {
 		ConfigServerImpl cs = ConfigUtil.getConfigServerImpl(config);
 
 		instances.sort(new PropComparator());
-		Struct sct = new StructImpl(Struct.TYPE_LINKED);
+		Struct root = new StructImpl(Struct.TYPE_LINKED);
 		// because we have lazy loading we need to make sure all props are loaded first
 
 		Map<Key, Field> fields = new HashMap<>();
@@ -437,18 +438,36 @@ public class Prop<T> {
 
 		cs.touchAll(null);
 
-		Key key;
+		Key name, fullName, parentName;
 		Field field;
+		Struct sct;
+		Object val;
 		outer: for (Prop<?> p: instances) {
 			// print.e("---- " + p.parent + "->" + p.keys[0] + " ---");
 
 			for (String k: p.keys) {
-				if (p.parent != null) key = KeyImpl.init(p.parent + k);
-				else key = KeyImpl.init(k);
-				field = fields.get(key);
+				name = KeyImpl.init(k);
+				if (p.parent != null) fullName = KeyImpl.init(p.parent + k);
+				else fullName = KeyImpl.init(k);
+				field = fields.get(fullName);
 				if (field != null) {
 					field.setAccessible(true);
-					sct.set(key, field.get(cs));
+					if (p.parent != null) {
+						parentName = KeyImpl.init(p.parent);
+						sct = Caster.toStruct(root.get(parentName, null), null);
+						if (sct == null) {
+							sct = new StructImpl(Struct.TYPE_LINKED);
+							root.set(parentName, sct);
+						}
+					}
+					else {
+						sct = root;
+					}
+					val = field.get(cs);
+					if (val != null && (full || !val.equals(p.defaultValue))) {
+						sct.set(name, field.get(cs));
+						sct.set(name.getString() + "_default", p.defaultValue);
+					}
 					// print.e("ok: " + key);
 					continue outer;
 				}
@@ -471,7 +490,7 @@ public class Prop<T> {
 		 * 
 		 * }
 		 */
-		return sct;
+		return root;
 	}
 
 	public static Struct createConfigSchema(boolean strict) {

@@ -861,8 +861,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private boolean check(String action, short access) {
 		if (this.action.equalsIgnoreCase(action)) {
-			if (access == ACCESS_FREE) {
-			}
+			if (access == ACCESS_FREE) {}
 			return true;
 		}
 		return false;
@@ -1255,8 +1254,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.removeAPIKey();
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetIdentification();
 	}
@@ -1269,8 +1267,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.updateAuthKey(getString("key", null));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 	}
 
@@ -1278,8 +1275,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.removeAuthKeys(getString("key", null));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 	}
 
@@ -2356,7 +2352,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		admin.setMailDefaultCharset(getString("admin", action, "defaultencoding"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetMailDefaultCharSet().resetMailSpoolEnable().resetMailSendPartial().resetMailSpoolInterval().resetMailTimeout();
+		ConfigUtil.getConfigServerImpl(config).resetMailDefaultCharsetX().resetMailSpoolEnable().resetMailSendPartial().resetMailSpoolInterval().resetMailTimeout();
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -2698,8 +2694,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				try {
 					qry.setAt(KeyConstants._info, i + 1, BundleFile.getInstance(children[i]).info());
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 		}
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
@@ -3487,8 +3482,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				headers = bf.getHeaders();
 
 			}
-			catch (BundleException e) {
-			}
+			catch (BundleException e) {}
 
 		}
 
@@ -3588,8 +3582,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					}
 
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 
 			}
 
@@ -3678,8 +3671,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					}
 				}
 			}
-			catch (Exception ex) {
-			}
+			catch (Exception ex) {}
 		}
 	}
 
@@ -5175,7 +5167,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		admin.updateTemplateCharset(getString("admin", action, "templateCharset"));
 		admin.updateWebCharset(getString("admin", action, "webCharset"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetResourceCharSet().resetTemplateCharSet().resetWebCharSet();
+		ConfigUtil.getConfigServerImpl(config).resetResourceCharsetX().resetTemplateCharsetX().resetWebCharsetX();
 		adminSync.broadcast(attributes, config);
 	}
 

@@ -45,7 +45,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.Version;
 
-import lucee.print;
 import lucee.commons.date.TimeZoneConstants;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.FileUtil;
@@ -64,7 +63,7 @@ import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
 import lucee.commons.io.res.filter.ExtensionResourceFilter;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ByteSizeParser;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
@@ -138,7 +137,6 @@ import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
-import lucee.runtime.op.Duplicator;
 import lucee.runtime.orm.ORMConfiguration;
 import lucee.runtime.orm.ORMEngine;
 import lucee.runtime.osgi.BundleInfo;
@@ -201,6 +199,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private FunctionLib cfmlFlds;
 	private Resource fldFile;
 	private RHExtensionProvider[] rhextensionProviders;
+	private Class adminSyncClass;
 
 	//////////////////////////
 	// not read from config //
@@ -235,6 +234,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private static Object token = new Object();
 	private SpoolerEngine remoteClientSpoolerEngine;
 	private String extensionsMD5;
+	private Resource antiSamyPolicy;
+	private Resource extAvailable;
+	private Resource extInstalled;
+	private SchedulerImpl scheduler;
+	private List<Object> consoleLayouts = new ArrayList<>();
+	private List<Object> resourceLayouts = new ArrayList<>();
 	//////////////////////////
 	//////////////////////////
 
@@ -441,9 +446,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			"This setting determines whether the SMTP protocol should explicitly use the sender's identity for the \"From\" address during the mail handshake, rather than relying on the default server identity or an automatically generated system address.");
 	private Boolean mailUserSet;//
 
-	private static Prop<CharSet> metaMailDefaultCharset = Prop.charSet().keys("mailDefaultEncoding", "mailDefaultCharset").access(SecurityManager.TYPE_MAIL)
-			.defaultValue(CharSet.UTF8).description("default charset used for sending mails");
-	private CharSet mailDefaultEncoding;
+	private static Prop<CharsetX> metaMailDefaultCharset = Prop.charSet().keys("mailDefaultEncoding", "mailDefaultCharset").access(SecurityManager.TYPE_MAIL)
+			.defaultValue(CharsetX.UTF8).description("default charset used for sending mails");
+	private CharsetX mailDefaultEncoding;
 
 	private static Prop<Integer> metaMailTimeout = Prop.integer().keys("mailConnectionTimeout", "mailTimeout").access(SecurityManager.TYPE_MAIL).defaultValue(30)
 			.description("default mail connection timeout in seconds");
@@ -575,17 +580,17 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private static Prop<String> metaDeployDirectory = Prop.str().keys("deployDirectory").parent("fileSystem").description("folder where Lucee stores template classes");
 	private Resource fileSystemDeployDirectory;
 
-	private static Prop<CharSet> metaResourceCharset = Prop.charSet().keys("resourceCharset").systemPropEnvVar("lucee.resource.charset").defaultValue(SystemUtil.getCharSet())
+	private static Prop<CharsetX> metaResourceCharset = Prop.charSet().keys("resourceCharset").systemPropEnvVar("lucee.resource.charset").defaultValue(SystemUtil.getCharsetX())
 			.description("Default character set for reading from/writing to various resources");
-	private CharSet resourceCharset;
+	private CharsetX resourceCharset;
 
-	private static Prop<CharSet> metaTemplateCharset = Prop.charSet().keys("templateCharset").systemPropEnvVar("lucee.template.charset").defaultValue(SystemUtil.getCharSet())
+	private static Prop<CharsetX> metaTemplateCharset = Prop.charSet().keys("templateCharset").systemPropEnvVar("lucee.template.charset").defaultValue(SystemUtil.getCharsetX())
 			.description("Default character used to read templates (*.cfm and *.cfc files)");
-	private CharSet templateCharset;
+	private CharsetX templateCharset;
 
-	private static Prop<CharSet> metaWebCharset = Prop.charSet().keys("webCharset").systemPropEnvVar("lucee.web.charset").defaultValue(CharSet.UTF8)
+	private static Prop<CharsetX> metaWebCharset = Prop.charSet().keys("webCharset").systemPropEnvVar("lucee.web.charset").defaultValue(CharsetX.UTF8)
 			.description("Default character set for output streams, form-, url-, and cgi scope variables and reading/writing the header");
-	private CharSet webCharset;
+	private CharsetX webCharset;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaApplicationListenerType = Prop.integer().keys("listenerType", "applicationListener").systemPropEnvVar("lucee.listener.type")
@@ -916,13 +921,67 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					+ "Increasing this value allows for faster parallel processing of background queues, but consumes more system resources.");
 	private Integer remoteClientsMaxThreads;
 
+	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai", "aiEngines")
+			.description("A map of named AI Engine configurations. This allows you to define and manage multiple "
+					+ "connections to AI providers such as OpenAI (ChatGPT), Google (Gemini), Anthropic (Claude), "
+					+ "or local instances like Ollama. Each engine can be configured with specific models, "
+					+ "system instructions, and security keys, enabling specialized AI behavior across your applications.");
+	protected Map<String, AIEngine> ai;
+
+	private static Prop<Startup> metaStartups = Prop.custom(StartupFactory.getInstance(), Prop.TYPE_LIST).keys("startupHooks")
+			.description("A list of custom Java classes to be instantiated upon Lucee startup. "
+					+ "Lucee follows a specific instantiation priority: it first looks for a constructor "
+					+ "that accepts the 'lucee.runtime.config.Config' interface to pass the current " + "configuration; if not found, it falls back to a no-argument constructor. "
+					+ "These hooks are ideal for initializing third-party libraries, listeners, or " + "application-specific global state.");
+	private static Map<String, Startup> startupHooks;
+
 	private static Prop<RemoteClient> metaRemoteClients = Prop.custom(RemoteClientFactory.getInstance(), Prop.TYPE_LIST).keys("remoteClient").parent("remoteClients")
 			.access(SecurityManagerImpl.TYPE_REMOTE).deprecated();
 	private RemoteClient[] remoteClientsRemoteClient;
 
-	private Array scheduledTasks;
+	private static Prop<lucee.runtime.rest.Mapping> metaRestMappings = Prop.custom(lucee.runtime.rest.MappingFactory.getInstance(), Prop.TYPE_LIST).keys("mapping").parent("rest")
+			.description("Defines a list of REST mappings for the engine. Each mapping connects a virtual URI (accessed via '/rest/virtual-path') to a physical directory. "
+					+ "If no mapping is explicitly marked as 'default', Lucee automatically creates a fallback mapping " + "pointing to the '{lucee-config}/rest' directory. "
+					+ "The engine strictly enforces a single default mapping; if multiple mappings are marked as default, "
+					+ "only the first one encountered is honored, and others are downgraded to non-default.");
+	private lucee.runtime.rest.Mapping[] restMapping;
 
-	private SchedulerImpl scheduler;
+	private static Prop<Struct> metaRemoteClientsUsage = Prop.sct().keys("usage").parent("remoteClients").defaultValue(new StructImpl()).deprecated();
+	private Struct remoteClientsUsage;
+
+	private static Prop<String> metaCachedWithinFunction = Prop.str().keys("cachedWithinFunction").description("Enables and defines the default caching for function calls. "
+			+ "If set, all functions that support caching will be cached for this duration unless overridden in the code.").deprecated();
+	private String cachedWithinFunction;
+
+	private static Prop<String> metaCachedWithinInclude = Prop.str().keys("cachedWithinInclude")
+			.description("Enables and defines default caching for 'cfinclude'. " + "Setting this automatically caches included template output for the specified timespan.")
+			.deprecated();;
+	private String cachedWithinInclude;
+
+	private static Prop<String> metaCachedWithinQuery = Prop.str().keys("cachedWithinQuery")
+			.description("Enables and defines the default caching for database queries. " + "When set, all 'cfquery' operations are cached by default using this timespan.")
+			.deprecated();;
+	private String cachedWithinQuery;
+
+	private static Prop<String> metaCachedWithinResource = Prop.str().keys("cachedWithinResource")
+			.description("Enables and defines default caching for Lucee resources and virtual file system lookups.").deprecated();;
+	private String cachedWithinResource;
+
+	private static Prop<String> metaCachedWithinHTTP = Prop.str().keys("cachedWithinHTTP")
+			.description(
+					"Enables and defines default caching for 'cfhttp' requests. " + "Setting this ensures all outgoing HTTP calls are cached for the defined period by default.")
+			.deprecated();;
+	private String cachedWithinHTTP;
+
+	private static Prop<String> metaCachedWithinFile = Prop.str().keys("cachedWithinFile").description("Enables and defines default caching for file-system read operations.")
+			.deprecated();;
+	private String cachedWithinFile;
+
+	private static Prop<String> metaCachedWithinWebservice = Prop.str().keys("cachedWithinWebservice")
+			.description("Enables and defines default caching for SOAP webservice calls. " + "Automatically caches remote responses for the specified duration.").deprecated();;
+	private String cachedWithinWebservice;
+
+	private Array scheduledTasks;
 
 	private final Resources resources = new ResourcesImpl();
 	private boolean initResource = true;
@@ -935,8 +994,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private DumpWriterEntry[] dmpWriterEntries;
 
-	private Struct remoteClientUsage;
-	private Class adminSyncClass;
 	protected Mapping defaultFunctionMapping;
 	protected final Map<String, Mapping> functionMappings = new ConcurrentHashMap<String, Mapping>();
 
@@ -946,29 +1003,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private final Map<String, ORMEngine> ormengines = new HashMap<String, ORMEngine>();
 	private ClassDefinition<? extends ORMEngine> cdORMEngine;
 	private ORMConfiguration ormConfig;
-	private lucee.runtime.rest.Mapping[] restMappings;
-
-	private List<Object> consoleLayouts = new ArrayList<>();
-	private List<Object> resourceLayouts = new ArrayList<>();
-
-	private Map<Key, Map<Key, Object>> tagDefaultAttributeValues;
-	private Map<Integer, Object> cachedWithins;
-	private static Map<String, Startup> startups;
 
 	private JavaSettings javaSettings;
 	private final Map<String, JavaSettings> javaSettingsInstances = new ConcurrentHashMap<>();
-	private Resource extInstalled;
-	private Resource extAvailable;
-
-	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai", "aiEngines")
-			.description("A map of named AI Engine configurations. This allows you to define and manage multiple "
-					+ "connections to AI providers such as OpenAI (ChatGPT), Google (Gemini), Anthropic (Claude), "
-					+ "or local instances like Ollama. Each engine can be configured with specific models, "
-					+ "system instructions, and security keys, enabling specialized AI behavior across your applications.");
-
-	protected Map<String, AIEngine> ai;
-
-	private Resource antiSamyPolicy;
 
 	/**
 	 * @return the allowURLRequestTimeout
@@ -2096,22 +2133,53 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public lucee.runtime.rest.Mapping[] getRestMappings() {
-		if (restMappings == null) {
+		if (restMapping == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRestMappings")) {
-				if (restMappings == null) {
-					restMappings = ConfigFactoryImpl.loadRestMappings(this, root);
+				if (restMapping == null) {
+
+					List<lucee.runtime.rest.Mapping> list = metaRestMappings.list(this, root);
+					Map<String, lucee.runtime.rest.Mapping> map = new HashMap<>();
+
+					// has default and put in a map
+					boolean hasDefault = false;
+					for (lucee.runtime.rest.Mapping m: list) {
+						map.put(m.getVirtual(), m);
+						if (m.isDefault()) {
+							hasDefault = true;
+						}
+					}
+
+					// set default if not exist
+					if (!hasDefault) {
+						Resource rest = this.getConfigDir().getRealResource("rest");
+						rest.mkdirs();
+						lucee.runtime.rest.Mapping tmp = new lucee.runtime.rest.Mapping(this, "/default-set-by-lucee", rest.getAbsolutePath(), true, true, true);
+						map.put(tmp.getVirtual(), tmp);
+						restMapping = map.values().toArray(new lucee.runtime.rest.Mapping[map.size()]);
+					}
+					else {
+						// make sure only one is default
+						hasDefault = false;
+						for (lucee.runtime.rest.Mapping m: map.values()) {
+							if (m.isDefault()) {
+								if (hasDefault) m.setDefault(false);
+								hasDefault = true;
+							}
+						}
+						restMapping = map.values().toArray(new lucee.runtime.rest.Mapping[map.size()]);
+					}
 				}
 			}
 		}
-		return restMappings;
+		return restMapping;
 	}
 
 	@Override
 	public ConfigImpl resetRestMappings() {
-		if (restMappings != null) {
+		if (restMapping != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRestMappings")) {
-				if (restMappings != null) {
-					restMappings = null;
+				if (restMapping != null) {
+					restMapping = null;
 				}
 			}
 		}
@@ -3119,12 +3187,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Charset getTemplateCharset() {
-		return CharsetUtil.toCharset(getTemplateCharSet());
+		return CharsetUtil.toCharset(getTemplateCharsetX());
 	}
 
-	public CharSet getTemplateCharSet() {
+	public CharsetX getTemplateCharsetX() {
 		if (templateCharset == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getTemplateCharSet")) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getTemplateCharsetX")) {
 				if (templateCharset == null) {
 					templateCharset = metaTemplateCharset.get(this, root);
 				}
@@ -3133,9 +3201,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return templateCharset;
 	}
 
-	public ConfigImpl resetTemplateCharSet() {
+	public ConfigImpl resetTemplateCharsetX() {
 		if (templateCharset != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getTemplateCharSet")) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getTemplateCharsetX")) {
 				if (templateCharset != null) {
 					templateCharset = null;
 				}
@@ -3146,13 +3214,13 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Charset getWebCharset() {
-		return CharsetUtil.toCharset(getWebCharSet());
+		return CharsetUtil.toCharset(getWebCharsetX());
 	}
 
 	@Override
-	public CharSet getWebCharSet() {
+	public CharsetX getWebCharsetX() {
 		if (webCharset == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getWebCharSet")) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getWebCharsetX")) {
 				if (webCharset == null) {
 					webCharset = metaWebCharset.get(this, root);
 				}
@@ -3161,9 +3229,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return webCharset;
 	}
 
-	public ConfigImpl resetWebCharSet() {
+	public ConfigImpl resetWebCharsetX() {
 		if (webCharset != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getWebCharSet")) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getWebCharsetX")) {
 				if (webCharset != null) {
 					webCharset = null;
 				}
@@ -3174,13 +3242,13 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Charset getResourceCharset() {
-		return CharsetUtil.toCharset(getResourceCharSet());
+		return CharsetUtil.toCharset(getResourceCharsetX());
 	}
 
 	@Override
-	public CharSet getResourceCharSet() {// = SystemUtil.getCharSet()
+	public CharsetX getResourceCharsetX() {
 		if (resourceCharset == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getResourceCharSet")) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getResourceCharsetX")) {
 				if (resourceCharset == null) {
 					resourceCharset = metaResourceCharset.get(this, root);
 				}
@@ -3189,9 +3257,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return resourceCharset;
 	}
 
-	public ConfigImpl resetResourceCharSet() {// = SystemUtil.getCharSet()
+	public ConfigImpl resetResourceCharsetX() {
 		if (resourceCharset != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getResourceCharSet")) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getResourceCharsetX")) {
 				if (resourceCharset != null) {
 					resourceCharset = null;
 				}
@@ -3285,10 +3353,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 */
 	@Override
 	public Charset getMailDefaultCharset() {
-		return getMailDefaultCharSet().toCharset();
+		return getMailDefaultCharsetX().toCharset();
 	}
 
-	public CharSet getMailDefaultCharSet() {
+	public CharsetX getMailDefaultCharsetX() {
 		if (mailDefaultEncoding == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
 				if (mailDefaultEncoding == null) {
@@ -3299,7 +3367,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return mailDefaultEncoding;
 	}
 
-	public ConfigImpl resetMailDefaultCharSet() {
+	public ConfigImpl resetMailDefaultCharsetX() {
 		if (mailDefaultEncoding != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
 				if (mailDefaultEncoding != null) {
@@ -3654,7 +3722,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	public int getProxyPort() {
+	public Integer getProxyPort() {
 		if (proxyPort == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "proxyPort")) {
 				if (proxyPort == null) {
@@ -4770,25 +4838,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Struct getRemoteClientUsage() {
-		if (remoteClientUsage == null) {
+		if (remoteClientsUsage == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClientUsage")) {
-				if (remoteClientUsage == null) {
-					Struct _clients = ConfigUtil.getAsStruct("remoteClients", root);
-					Struct sct = ConfigUtil.getAsStruct(null, _clients, true, "usage");// config.setRemoteClientUsage(toStruct(strUsage));
-					if (sct == null) remoteClientUsage = new StructImpl();
-					else remoteClientUsage = sct;
-
+				if (remoteClientsUsage == null) {
+					remoteClientsUsage = metaRemoteClientsUsage.get(this, root);
 				}
 			}
 		}
-		return remoteClientUsage;
+		return remoteClientsUsage;
 	}
 
 	public ConfigImpl resetRemoteClientUsage() {
-		if (remoteClientUsage != null) {
+		if (remoteClientsUsage != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClientUsage")) {
-				if (remoteClientUsage != null) {
-					remoteClientUsage = null;
+				if (remoteClientsUsage != null) {
+					remoteClientsUsage = null;
 
 				}
 			}
@@ -6538,11 +6602,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Map<Key, Map<Key, Object>> getTagDefaultAttributeValues() {
-		return tagDefaultAttributeValues == null ? null : Duplicator.duplicateMap(tagDefaultAttributeValues, new ConcurrentHashMap<Key, Map<Key, Object>>(), true);
-	}
-
-	protected void setTagDefaultAttributeValues(Map<Key, Map<Key, Object>> values) {
-		this.tagDefaultAttributeValues = values;
+		return null;
+		// return tagDefaultAttributeValues == null ? null :
+		// Duplicator.duplicateMap(tagDefaultAttributeValues, new ConcurrentHashMap<Key, Map<Key,
+		// Object>>(), true);
 	}
 
 	@Override
@@ -6568,38 +6631,190 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	@Override
-	public Object getCachedWithin(int type) {
-		if (cachedWithins == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getCachedWithin")) {
-				if (cachedWithins == null) {
-					HashMap<Integer, Object> map = new HashMap<Integer, Object>();
-					for (int i = 0; i < ConfigPro.CACHE_TYPES.length; i++) {
-						try {
-							String cw = ConfigFactoryImpl.getAttr(this, root, "cachedWithin" + StringUtil.ucFirst(ConfigPro.STRING_CACHE_TYPES[i]));
-							if (!StringUtil.isEmpty(cw, true)) map.put(ConfigPro.CACHE_TYPES[i], cw.trim());
-						}
-						catch (Throwable t) {
-							ExceptionUtil.rethrowIfNecessary(t);
-							ConfigFactoryImpl.log(this, t);
-						}
-					}
-					cachedWithins = map;
+	public String getCachedWithinFile() {
+		if (cachedWithinFile == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinFile")) {
+				if (cachedWithinFile == null) {
+					cachedWithinFile = metaCachedWithinFile.get(this, root);
 				}
 			}
 		}
-		return cachedWithins.get(type);
-		// = new HashMap<Integer, Object>()
+		return cachedWithinFile;
+	}
+
+	public ConfigImpl resetCachedWithinFile() {
+		if (cachedWithinFile != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinFile")) {
+				if (cachedWithinFile != null) {
+					cachedWithinFile = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCachedWithinFunction() {
+		if (cachedWithinFunction == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinFunction")) {
+				if (cachedWithinFunction == null) {
+					cachedWithinFunction = metaCachedWithinFunction.get(this, root);
+				}
+			}
+		}
+		return cachedWithinFunction;
+	}
+
+	public ConfigImpl resetCachedWithinFunction() {
+		if (cachedWithinFunction != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinFunction")) {
+				if (cachedWithinFunction != null) {
+					cachedWithinFunction = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCachedWithinHTTP() {
+		if (cachedWithinHTTP == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinHTTP")) {
+				if (cachedWithinHTTP == null) {
+					cachedWithinHTTP = metaCachedWithinHTTP.get(this, root);
+				}
+			}
+		}
+		return cachedWithinHTTP;
+	}
+
+	public ConfigImpl resetCachedWithinHTTP() {
+		if (cachedWithinHTTP != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinHTTP")) {
+				if (cachedWithinHTTP != null) {
+					cachedWithinHTTP = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCachedWithinInclude() {
+		if (cachedWithinInclude == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinInclude")) {
+				if (cachedWithinInclude == null) {
+					cachedWithinInclude = metaCachedWithinInclude.get(this, root);
+				}
+			}
+		}
+		return cachedWithinInclude;
+	}
+
+	public ConfigImpl resetCachedWithinInclude() {
+		if (cachedWithinInclude != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinInclude")) {
+				if (cachedWithinInclude != null) {
+					cachedWithinInclude = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCachedWithinQuery() {
+		if (cachedWithinQuery == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinQuery")) {
+				if (cachedWithinQuery == null) {
+					cachedWithinQuery = metaCachedWithinQuery.get(this, root);
+				}
+			}
+		}
+		return cachedWithinQuery;
+	}
+
+	public ConfigImpl resetCachedWithinQuery() {
+		if (cachedWithinQuery != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinQuery")) {
+				if (cachedWithinQuery != null) {
+					cachedWithinQuery = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCachedWithinResource() {
+		if (cachedWithinResource == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinResource")) {
+				if (cachedWithinResource == null) {
+					cachedWithinResource = metaCachedWithinResource.get(this, root);
+				}
+			}
+		}
+		return cachedWithinResource;
+	}
+
+	public ConfigImpl resetCachedWithinResource() {
+		if (cachedWithinResource != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinResource")) {
+				if (cachedWithinResource != null) {
+					cachedWithinResource = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCachedWithinWebservice() {
+		if (cachedWithinWebservice == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinWebservice")) {
+				if (cachedWithinWebservice == null) {
+					cachedWithinWebservice = metaCachedWithinWebservice.get(this, root);
+				}
+			}
+		}
+		return cachedWithinWebservice;
+	}
+
+	public ConfigImpl resetCachedWithinWebservice() {
+		if (cachedWithinWebservice != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cachedWithinWebservice")) {
+				if (cachedWithinWebservice != null) {
+					cachedWithinWebservice = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public Object getCachedWithin(int type) {
+
+		switch (type) {
+		case Config.CACHEDWITHIN_FUNCTION:
+			return getCachedWithinFunction();
+		case Config.CACHEDWITHIN_INCLUDE:
+			return getCachedWithinInclude();
+		case Config.CACHEDWITHIN_QUERY:
+			return getCachedWithinQuery();
+		case Config.CACHEDWITHIN_RESOURCE:
+			return getCachedWithinResource();
+		case Config.CACHEDWITHIN_HTTP:
+			return getCachedWithinHTTP();
+		case Config.CACHEDWITHIN_FILE:
+			return getCachedWithinFile();
+		case Config.CACHEDWITHIN_WEBSERVICE:
+			return getCachedWithinWebservice();
+		}
+		return null;
 	}
 
 	public ConfigImpl resetCachedWithin() {
-		if (cachedWithins != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getCachedWithin")) {
-				if (cachedWithins != null) {
-					cachedWithins = null;
-				}
-			}
-		}
+		resetCachedWithinFile();
+		resetCachedWithinFunction();
+		resetCachedWithinHTTP();
+		resetCachedWithinInclude();
+		resetCachedWithinQuery();
+		resetCachedWithinResource();
+		resetCachedWithinWebservice();
 		return this;
 	}
 
@@ -7033,22 +7248,28 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Map<String, Startup> getStartups() {
-		if (startups == null) {
+		if (startupHooks == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getStartups")) {
-				if (startups == null) {
-					startups = ConfigFactoryImpl.loadStartupHook(this, root);
+				if (startupHooks == null) {
+
+					List<Startup> list = metaStartups.list(this, root);
+					Map<String, Startup> map = new ConcurrentHashMap<>(list.size());
+					for (Startup startup: list) {
+						map.put(startup.cd.getClassName(), startup);
+					}
+					startupHooks = map;
 				}
 			}
 		}
-		return startups;
+		return startupHooks;
 	}
 
 	public ConfigImpl resetStartups() {
-		if (startups != null) {
+		if (startupHooks != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getStartups")) {
-				if (startups != null) {
+				if (startupHooks != null) {
 					// Call finalize() on existing startup hook instances before clearing
-					for (Startup startup: startups.values()) {
+					for (Startup startup: startupHooks.values()) {
 						try {
 							Method fin = Reflector.getMethod(startup.instance.getClass(), "finalize", new Class[0], true, null);
 							if (fin != null) {
@@ -7059,7 +7280,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 							// ignore - best effort cleanup
 						}
 					}
-					startups = null;
+					startupHooks = null;
 				}
 			}
 		}
@@ -7307,7 +7528,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (filter == null) {
 			for (Method method: methods) {
 				if (!method.getName().startsWith("get") || ignores.contains(method.getName()) || method.getArgumentCount() != 0) continue;
-				print.e("->" + method.getName());
 				method.invoke(this);
 			}
 		}

@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 import lucee.commons.io.CharsetUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
@@ -405,18 +405,18 @@ public interface PropFactory<T> {
 		return s;
 	}
 
-	public static class CharsetXPropFactory implements PropFactory<CharSet> {
+	public static class CharsetXPropFactory implements PropFactory<CharsetX> {
 		private CharsetXPropFactory() {}
 
 		@Override
-		public CharSet evaluate(Config config, String name, Object val, CharSet defaultValue) {
-			CharSet cs = CharsetUtil.toCharSet(Caster.toString(val, null), defaultValue);
+		public CharsetX evaluate(Config config, String name, Object val, CharsetX defaultValue) {
+			CharsetX cs = CharsetUtil.toCharsetX(Caster.toString(val, null), defaultValue);
 			if (cs == null) return defaultValue;
 			return cs;
 		}
 
 		@Override
-		public Struct schema(Prop<CharSet> prop) {
+		public Struct schema(Prop<CharsetX> prop) {
 			Struct sct = new StructImpl(Struct.TYPE_LINKED);
 			sct.setEL(KeyConstants._type, "string");
 			sct.setEL(KeyConstants._description, "A valid Java Charset name (e.g., 'UTF-8', 'ISO-8859-1', 'US-ASCII').");
@@ -429,7 +429,7 @@ public interface PropFactory<T> {
 		}
 
 		@Override
-		public Object resolvedValue(CharSet value) {
+		public Object resolvedValue(CharsetX value) {
 			String res = Caster.toString(value, null);
 			if (res == null) return value;
 			return res;

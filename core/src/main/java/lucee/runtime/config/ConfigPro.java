@@ -13,7 +13,7 @@ import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogEngine;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.PhysicalClassLoader;
 import lucee.commons.lang.types.RefBoolean;
@@ -293,9 +293,9 @@ public interface ConfigPro extends Config {
 
 	public boolean isUserset();// used in mail extension
 
-	public CharSet getResourceCharSet();
+	public CharsetX getResourceCharsetX();
 
-	public CharSet getWebCharSet();
+	public CharsetX getWebCharsetX();
 
 	public Map<String, ClassDefinition> getCacheDefinitions();
 

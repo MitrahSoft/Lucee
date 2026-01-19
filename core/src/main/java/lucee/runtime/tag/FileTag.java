@@ -44,7 +44,7 @@ import lucee.commons.io.res.filter.NotResourceFilter;
 import lucee.commons.io.res.filter.ResourceFilter;
 import lucee.commons.io.res.util.ModeObjectWrap;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.mimetype.MimeType;
@@ -137,7 +137,7 @@ public final class FileTag extends BodyTagImpl {
 	private String filefield;
 
 	/** Character set name for the file contents. */
-	private CharSet charset = null;
+	private CharsetX charset = null;
 
 	/** Yes: appends newline character to text written to file */
 	private boolean addnewline = true;
@@ -316,7 +316,7 @@ public final class FileTag extends BodyTagImpl {
 	 **/
 	public void setCharset(String charset) {
 		if (StringUtil.isEmpty(charset)) return;
-		this.charset = CharsetUtil.toCharSet(charset.trim());
+		this.charset = CharsetUtil.toCharsetX(charset.trim());
 	}
 
 	/**
@@ -423,7 +423,7 @@ public final class FileTag extends BodyTagImpl {
 	@Override
 	public int doStartTag() throws PageException {
 
-		if (charset == null) charset = CharsetUtil.toCharSet(((PageContextImpl) pageContext).getResourceCharset());
+		if (charset == null) charset = CharsetUtil.toCharsetX(((PageContextImpl) pageContext).getResourceCharset());
 
 		securityManager = pageContext.getConfig().getSecurityManager();
 

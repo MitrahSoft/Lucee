@@ -35,7 +35,7 @@ import lucee.commons.io.res.ResourceProvider;
 import lucee.commons.io.res.ResourcesImpl;
 import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.PhysicalClassLoader;
 import lucee.commons.lang.types.RefBoolean;
@@ -585,8 +585,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public CharSet getWebCharSet() {
-		return cs.getWebCharSet();
+	public CharsetX getWebCharsetX() {
+		return cs.getWebCharsetX();
 	}
 
 	@Override
@@ -595,8 +595,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public CharSet getResourceCharSet() {
-		return cs.getResourceCharSet();
+	public CharsetX getResourceCharsetX() {
+		return cs.getResourceCharsetX();
 	}
 
 	@Override
@@ -634,8 +634,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 		return cs.getMailDefaultCharset();
 	}
 
-	public CharSet getMailDefaultCharSet() {
-		return cs.getMailDefaultCharSet();
+	public CharsetX getMailDefaultCharsetX() {
+		return cs.getMailDefaultCharsetX();
 	}
 
 	@Override
@@ -1941,8 +1941,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 		cs.createTag(arg0, arg1, arg2);
 	}
 
-	public CharSet getTemplateCharSet() {
-		return cs.getTemplateCharSet();
+	public CharsetX getTemplateCharsetX() {
+		return cs.getTemplateCharsetX();
 	}
 
 	public void flushCTPathCache() {

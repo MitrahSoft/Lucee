@@ -96,7 +96,6 @@ import lucee.runtime.cache.tag.timespan.TimespanCacheHandler;
 import lucee.runtime.cfx.customtag.CFXTagClass;
 import lucee.runtime.cfx.customtag.JavaCFXTagClass;
 import lucee.runtime.component.ImportDefintion;
-import lucee.runtime.config.ConfigBase.Startup;
 import lucee.runtime.config.component.ComponentFactory;
 import lucee.runtime.config.gateway.GatewayMap;
 import lucee.runtime.converter.ConverterException;
@@ -174,8 +173,6 @@ import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.util.CollectionUtil;
 import lucee.runtime.type.util.KeyConstants;
 import lucee.runtime.type.util.ListUtil;
-import lucee.transformer.dynamic.meta.Constructor;
-import lucee.transformer.dynamic.meta.Method;
 import lucee.transformer.library.ClassDefinitionImpl;
 import lucee.transformer.library.function.FunctionLib;
 import lucee.transformer.library.function.FunctionLibException;
@@ -1347,72 +1344,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return ConfigUtil.inspectTemplate(strInsTemp, ConfigPro.INSPECT_UNDEFINED);
 	}
 
-	public static lucee.runtime.rest.Mapping[] loadRestMappings(ConfigImpl config, Struct root) {
-		Map<String, lucee.runtime.rest.Mapping> mappings = new HashMap<String, lucee.runtime.rest.Mapping>();
-		try {
-			boolean hasAccess = true;// MUST
-			Struct el = ConfigUtil.getAsStruct("rest", root);
-
-			Array _mappings = ConfigUtil.getAsArray("mapping", el);
-
-			// first get mapping defined in server admin (read-only)
-			boolean hasDefault = false;
-			lucee.runtime.rest.Mapping tmp;
-
-			// get current mappings
-			if (hasAccess && _mappings != null) {
-				Iterator<?> it = _mappings.getIterator();
-				while (it.hasNext()) {
-					try {
-						el = Caster.toStruct(it.next());
-						if (el == null) continue;
-
-						String physical = getAttr(config, el, "physical");
-						String virtual = getAttr(config, el, "virtual");
-						boolean readonly = toBoolean(getAttr(config, el, "readonly"), false);
-						boolean hidden = toBoolean(getAttr(config, el, "hidden"), false);
-						boolean _default = toBoolean(getAttr(config, el, "default"), false);
-						if (physical != null) {
-							tmp = new lucee.runtime.rest.Mapping(config, virtual, physical, hidden, readonly, _default);
-							if (_default) hasDefault = true;
-							mappings.put(tmp.getVirtual(), tmp);
-						}
-
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-				}
-			}
-
-			// set default if not exist
-			if (!hasDefault) {
-				Resource rest = config.getConfigDir().getRealResource("rest");
-				rest.mkdirs();
-				tmp = new lucee.runtime.rest.Mapping(config, "/default-set-by-lucee", rest.getAbsolutePath(), true, true, true);
-				mappings.put(tmp.getVirtual(), tmp);
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		lucee.runtime.rest.Mapping[] arr = mappings.values().toArray(new lucee.runtime.rest.Mapping[mappings.size()]);
-
-		// make sure only one is default
-		boolean hasDefault = false;
-		lucee.runtime.rest.Mapping m;
-		for (int i = 0; i < arr.length; i++) {
-			m = arr[i];
-			if (m.isDefault()) {
-				if (hasDefault) m.setDefault(false);
-				hasDefault = true;
-			}
-		}
-		return arr;
-	}
-
 	public static LoggerAndSourceData loadLogger(ConfigPro config, final String name, final Struct data) {
 
 		try {
@@ -2302,55 +2233,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			ExceptionUtil.rethrowIfNecessary(th);
 			th.printStackTrace();
 		}
-	}
-
-	public static Map<String, Startup> loadStartupHook(ConfigImpl config, Struct root) {
-		Map<String, Startup> startups = new HashMap<>();
-		try {
-			Array children = ConfigUtil.getAsArray("startupHooks", root);
-
-			if (children == null || children.size() == 0) return startups;
-
-			Iterator<?> it = children.getIterator();
-			Struct child;
-			while (it.hasNext()) {
-				try {
-					child = Caster.toStruct(it.next());
-					if (child == null) continue;
-
-					// class
-					ClassDefinition cd = getClassDefinition(config, child, "", config.getIdentification());
-					ConfigBase.Startup existing = startups.get(cd.getClassName());
-
-					if (existing != null) {
-						if (existing.cd.equals(cd)) continue;
-						try {
-							Method fin = Reflector.getMethod(existing.instance.getClass(), "finalize", new Class[0], true, null);
-							if (fin != null) {
-								fin.invoke(existing.instance, new Object[0]);
-							}
-						}
-						catch (Throwable t) {
-							ExceptionUtil.rethrowIfNecessary(t);
-						}
-					}
-					Class clazz = cd.getClazz();
-
-					Constructor constr = Reflector.getConstructor(clazz, new Class[] { Config.class }, null);
-					if (constr != null) startups.put(cd.getClassName(), new ConfigBase.Startup(cd, constr.newInstance(new Object[] { config })));
-					else startups.put(cd.getClassName(), new ConfigBase.Startup(cd, ClassUtil.loadInstance(clazz)));
-				}
-				catch (Throwable t) {
-					ExceptionUtil.rethrowIfNecessary(t);
-					log(config, t);
-				}
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return startups;
 	}
 
 	/**
