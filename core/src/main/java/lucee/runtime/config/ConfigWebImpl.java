@@ -1666,7 +1666,7 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 
 	@Override
 	public Password updatePasswordIfNecessary(boolean server, String passwordRaw) {
-		return PasswordImpl.updatePasswordIfNecessary(cs, cs.password, passwordRaw);
+		return PasswordImpl.updatePasswordIfNecessary(cs, cs.hspw, passwordRaw);
 	}
 
 	@Override

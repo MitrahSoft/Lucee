@@ -1,8 +1,12 @@
 package lucee.runtime.config;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -39,6 +43,7 @@ public class Prop<T> {
 
 	String[] keys;
 	T defaultValue;
+
 	Choice<T>[] choices;
 	String[] envVarSystemProps;
 	String description;
@@ -413,6 +418,60 @@ public class Prop<T> {
 
 		}
 		return list;
+	}
+
+	public static Struct createConfig(Config config, boolean full) throws IOException, IllegalArgumentException, IllegalAccessException, PageException {
+
+		ConfigServerImpl cs = ConfigUtil.getConfigServerImpl(config);
+
+		instances.sort(new PropComparator());
+		Struct sct = new StructImpl(Struct.TYPE_LINKED);
+		// because we have lazy loading we need to make sure all props are loaded first
+
+		Map<Key, Field> fields = new HashMap<>();
+		for (Field f: ConfigImpl.class.getDeclaredFields()) {
+			if (Modifier.isStatic(f.getModifiers())) continue;
+			// print.e(f.getName());
+			fields.put(KeyImpl.init(f.getName()), f);
+		}
+
+		cs.touchAll(null);
+
+		Key key;
+		Field field;
+		outer: for (Prop<?> p: instances) {
+			// print.e("---- " + p.parent + "->" + p.keys[0] + " ---");
+
+			for (String k: p.keys) {
+				if (p.parent != null) key = KeyImpl.init(p.parent + k);
+				else key = KeyImpl.init(k);
+				field = fields.get(key);
+				if (field != null) {
+					field.setAccessible(true);
+					sct.set(key, field.get(cs));
+					// print.e("ok: " + key);
+					continue outer;
+				}
+				break;
+			}
+			// print.e("ko: " + p.keys[0]);
+
+			// Object field = Reflector.getField(cs, p.keys[0], null);
+			// if (field != null) print.e("ok: " + p.keys[0]);
+			// else print.e("ko: " + p.keys[0]);
+		}
+
+		/*
+		 * MethodInstance getter; Object result; outer: for (Prop<?> p: instances) { print.e("---- " +
+		 * p.parent + "->" + p.keys[0] + " ---"); for (String key: p.keys) { if (p.parent != null) { key =
+		 * p.parent + key; } getter = Reflector.getGetter(cs.getClass(), key, false, true, true, null); if
+		 * (getter != null) { result = getter.invoke(cs); sct.put(key, result); continue outer; } }
+		 * 
+		 * print.e("ko: " + p.keys[0]);
+		 * 
+		 * }
+		 */
+		return sct;
 	}
 
 	public static Struct createConfigSchema(boolean strict) {

@@ -31,6 +31,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -240,28 +241,55 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private static Prop<CacheConnection> metaCacheConnection = Prop.custom(CacheConnectionFactory.getInstance(), Prop.TYPE_MAP).keys("caches")
 			.access(SecurityManager.TYPE_DATASOURCE).description("Defines cache connections for data storage, sessions, and distributed locks."
 					+ " Supports OSGi/Maven driver loading and specific role assignments like 'storage' or 'default' query caching.");
-	private Map<String, CacheConnection> cacheConnection;
+	private Map<String, CacheConnection> caches;
 
 	private static String depText = "set instead 'default' with the cache connection itself";
 	private static Prop<String> metaCacheDefaultConnectionNamesResource = Prop.str().keys("defaultResource", "cacheDefaultResource").parent("cache").deprecated()
 			.description(depText);
+	private boolean initCacheDefaultResource;
+	private String cacheDefaultResource;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesFunction = Prop.str().keys("defaultFunction", "cacheDefaultFunction").parent("cache").deprecated()
 			.description(depText);
+	private boolean initCacheDefaultFunction;
+	private String cacheDefaultFunction;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesInclude = Prop.str().keys("defaultInclude", "cacheDefaultInclude").parent("cache").deprecated().description(depText);
+	private boolean initCacheDefaultInclude;
+	private String cacheDefaultInclude;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesQuery = Prop.str().keys("defaultQuery", "cacheDefaultQuery").parent("cache").deprecated().description(depText);
+	private boolean initCacheDefaultQuery;
+	private String cacheDefaultQuery;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesTemplate = Prop.str().keys("defaultTemplate", "cacheDefaultTemplate").parent("cache").deprecated()
 			.description(depText);
+	private boolean initCacheDefaultTemplate;
+	private String cacheDefaultTemplate;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesObject = Prop.str().keys("defaultObject", "cacheDefaultObject").parent("cache").deprecated().description(depText);
+	private boolean initCacheDefaultObject;
+	private String cacheDefaultObject;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesFile = Prop.str().keys("defaultFile", "cacheDefaultFile").parent("cache").deprecated().description(depText);
+	private boolean initCacheDefaultFile;
+	private String cacheDefaultFile;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesHTTP = Prop.str().keys("defaultHTTP", "cacheDefaultHTTP").parent("cache").deprecated().description(depText);
+	private boolean initCacheDefaultHTTP;
+	private String cacheDefaultHTTP;
+
 	private static Prop<String> metaCacheDefaultConnectionNamesWebservice = Prop.str().keys("defaultWebservice", "cacheDefaultWebservice").parent("cache").deprecated()
 			.description(depText);
+	private boolean initCacheDefaultWebservice;
+	private String cacheDefaultWebservice;
+
 	private Map<Integer, String> cacheDefaultConnectionNames = null;
 
 	private static Prop<DataSource> metaDatasourcesAll = Prop.custom(DataSourceFactory.getInstance(), Prop.TYPE_MAP).keys("dataSources").access(SecurityManager.TYPE_DATASOURCE)
 			.description("Defines database connections. Supports loading drivers via OSGi bundles or Maven coordinates,"
 					+ " cloud-native credential resolution, and advanced pooling controls like connection limits and live timeouts.");
-	private Map<String, DataSource> datasourcesAll;
+	private Map<String, DataSource> dataSources;
 	private Map<String, DataSource> datasourcesNoQoQ;
 
 	@SuppressWarnings("unchecked")
@@ -276,60 +304,68 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					new Choice<Short>(SCOPE_STANDARD, "standard")
 							.description("Standard CFML: Scans 'Arguments', 'Local', 'Variables', 'CGI', 'URL', 'Form', and 'Cookie'. Matches traditional CFML engine behavior."))
 			.description("Defines the search strategy for unscoped variables. 'Strict' is recommended for modern, secure applications to prevent unintended scope injection.");
-	private Short scopeType;
+	private Short scopeCascading;
 
 	private static Prop<Boolean> metaAllowImplicidQueryCall = Prop.bool().keys("cascadeToResultset", "searchResults").systemPropEnvVar("lucee.cascade.to.resultset")
 			.defaultValue(true).description(
 					"When a variable has no scope defined (Example: #myVar# instead of #variables.myVar#), Lucee will also search available resultsets (CFML Standard) or not");
-	private Boolean allowImplicidQueryCall;
+	private Boolean cascadeToResultset;
 
 	private static Prop<Boolean> metaLimitEvaluation = Prop.bool().keys("limitEvaluation")
 			.systemPropEnvVar("lucee.security.limitEvaluation", "lucee.security.isdefined", "lucee.isdefined.limit").defaultValue(false).parent("security").description(
 					"If enable you cannot use expression within \"[ ]\" like this susi[getVariableName()] . This affects the following functions [IsDefined, structGet, empty] and the following tags [savecontent attribute \"variable\"].");
-	private Boolean limitEvaluation;
+	private Boolean securityLimitEvaluation;
 
 	private static Prop<LoggerAndSourceData> metaLoggers = Prop.custom(LogFactory.getInstance(), Prop.TYPE_MAP).keys("loggers").logGlobal()
 			.description("definition of all logs for Lucee");
 	private Map<String, LoggerAndSourceData> loggers;
 
 	private static Prop<Boolean> metaDebugLogOutput = Prop.bool().keys("debuggingLogOutput").defaultValue(false);
-	private Boolean debugLogOutput;
+	private Boolean debuggingLogOutput;
 
 	// debug options
 	private static Prop<Boolean> metaDebugOptionsDatabase = Prop.bool().keys("debuggingDatabase", "debuggingShowDatabase").systemPropEnvVar("lucee.monitoring.debuggingDatabase")
 			.defaultValue(false).access(SecurityManager.TYPE_DEBUGGING)
 			.description("Select this option to log the database activity for the SQL Query events and Stored Procedure events.");
+	private Boolean debuggingDatabase;
 
 	private static Prop<Boolean> metaDebugOptionsException = Prop.bool().keys("debuggingException", "debuggingShowException")
 			.systemPropEnvVar("lucee.monitoring.debuggingException").defaultValue(false).access(SecurityManager.TYPE_DEBUGGING)
 			.description("Select this option to log all exceptions raised for the request.");
+	private Boolean debuggingException;
 
 	private static Prop<Boolean> metaDebugOptionsTemplate = Prop.bool().keys("debuggingTemplate", "debuggingShowTemplate").systemPropEnvVar("lucee.monitoring.debuggingTemplate")
 			.defaultValue(false).access(SecurityManager.TYPE_DEBUGGING).description("Select this option log template activity for all cfm and cfc templates.");
+	private Boolean debuggingTemplate;
 
 	private static Prop<Boolean> metaDebugOptionsDump = Prop.bool().keys("debuggingDump", "debuggingShowDump").systemPropEnvVar("lucee.monitoring.debuggingDump")
 			.defaultValue(false).access(SecurityManager.TYPE_DEBUGGING)
 			.description("Select this option to enable output produced with help of the tag cfdump and send to debugging.");
+	private Boolean debuggingDump;
 
 	private static Prop<Boolean> metaDebugOptionsTracing = Prop.bool().keys("debuggingTracing", "debuggingShowTracing", "debuggingShowTrace")
 			.systemPropEnvVar("lucee.monitoring.debuggingTracing").defaultValue(false).access(SecurityManager.TYPE_DEBUGGING)
 			.description("Select this option to log trace event information. Tracing lets a developer track program flow and efficiency through the use of the CFTRACE tag.");
+	private Boolean debuggingTracing;
 
 	private static Prop<Boolean> metaDebugOptionsTimer = Prop.bool().keys("debuggingTimer", "debuggingShowTimer").systemPropEnvVar("lucee.monitoring.debuggingTimer")
 			.defaultValue(false).access(SecurityManager.TYPE_DEBUGGING).description(
 					"Select this option to show timer event information. Timers let a developer track the execution time of the code between the start and end tags of the CFTIMER tag.");
+	private Boolean debuggingTimer;
 
 	private static Prop<Boolean> metaDebugOptionsImplicitAccess = Prop.bool().keys("debuggingImplicitAccess", "debuggingImplicitVariableAccess", "debuggingShowImplicitAccess")
 			.systemPropEnvVar("lucee.monitoring.debuggingImplicitAccess").defaultValue(false).access(SecurityManager.TYPE_DEBUGGING)
 			.description("Select this option to log all accesses to scopes, queries and threads that happens implicit (cascaded).");
+	private Boolean debuggingImplicitAccess;
 
 	private static Prop<Boolean> metaDebugOptionsQueryUsage = Prop.bool().keys("debuggingQueryUsage", "debuggingShowQueryUsage")
 			.systemPropEnvVar("lucee.monitoring.debuggingQueryUsage").defaultValue(false).access(SecurityManager.TYPE_DEBUGGING)
 			.description("Select this option to also log query usage.");
+	private Boolean debuggingQueryUsage;
 
 	private static Prop<Boolean> metaDebugOptionsThread = Prop.bool().keys("debuggingThread", "debuggingShowThread").systemPropEnvVar("lucee.monitoring.debuggingThread")
 			.defaultValue(false).access(SecurityManager.TYPE_DEBUGGING).description("Select this option to also log threads.");
-	private Integer debugOptions;
+	private Boolean debuggingThread;
 
 	private static Prop<Boolean> metaSuppressContent = Prop.bool().keys("suppressContent").defaultValue(false)
 			.description("Suppress content written to response stream when a Component is invoked remotely. Only works if the content was not flushed before.");
@@ -391,27 +427,27 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Integer> metaSpoolInterval = Prop.integer().keys("mailSpoolInterval").defaultValue(30).access(SecurityManager.TYPE_MAIL)
 			.description("interval in seconds Lucee checks for new mails to send");
-	private int spoolInterval = -1;
+	private int mailSpoolInterval = -1;
 
 	private static Prop<Boolean> metaSpoolEnable = Prop.bool().keys("mailSpoolEnable").defaultValue(true).access(SecurityManager.TYPE_MAIL)
 			.description("if true, the mails are sent in a background thread and the main request does not have to wait until the mails are sent.");
-	private Boolean spoolEnable;
+	private Boolean mailSpoolEnable;
 
 	private static Prop<Boolean> metaSendPartial = Prop.bool().keys("mailSendPartial").defaultValue(false).access(SecurityManager.TYPE_MAIL).description(
 			"This setting determines whether the SMTP protocol should deliver a message to all valid recipients when some addresses are invalid, rather than failing the entire delivery attempt if a single recipient is rejected.");
-	private Boolean sendPartial;//
+	private Boolean mailSendPartial;//
 
 	private static Prop<Boolean> metaUserSet = Prop.bool().keys("mailUserSet").defaultValue(true).access(SecurityManager.TYPE_MAIL).description(
 			"This setting determines whether the SMTP protocol should explicitly use the sender's identity for the \"From\" address during the mail handshake, rather than relying on the default server identity or an automatically generated system address.");
-	private Boolean userSet;//
+	private Boolean mailUserSet;//
 
 	private static Prop<CharSet> metaMailDefaultCharset = Prop.charSet().keys("mailDefaultEncoding", "mailDefaultCharset").access(SecurityManager.TYPE_MAIL)
 			.defaultValue(CharSet.UTF8).description("default charset used for sending mails");
-	private CharSet mailDefaultCharset;
+	private CharSet mailDefaultEncoding;
 
 	private static Prop<Integer> metaMailTimeout = Prop.integer().keys("mailConnectionTimeout", "mailTimeout").access(SecurityManager.TYPE_MAIL).defaultValue(30)
 			.description("default mail connection timeout in seconds");
-	private int mailTimeout = -1;
+	private int mailConnectionTimeout = -1;
 
 	private static Prop<Server> metaMailServers = Prop.custom(ServerFactory.getInstance(), Prop.TYPE_LIST).keys("mailServers").access(SecurityManager.TYPE_MAIL)
 			.description("mailserver to use for sending mails.");
@@ -439,7 +475,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<String> metaSearchEngineDirectory = Prop.str().keys("directory").parent("search").defaultValue("{lucee-web}/search/")
 			.description("search engine directory");
-	private String searchEngineDirectory;
+	private String searchDirectory;
 
 	private static Prop<Locale> metaLocale = Prop.locale().keys("locale", "thisLocale").defaultValue(Locale.US)
 			.description("Define the desired time locale for Lucee, this will change the default locale for the context of the web.");
@@ -447,21 +483,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaPsq = Prop.bool().keys("preserveSingleQuote", "datasourcePreserveSingleQuotes").defaultValue(false)
 			.description("Preserve single quotes (\") in the SQL defined with the tag cfquery");
-	private Boolean psq;
+	private Boolean preserveSingleQuote;
 
 	private static Prop<String> metaErrorTemplate500 = Prop.str().keys("errorGeneralTemplate", "generalErrorTemplate").access(SecurityManager.TYPE_DEBUGGING)
 			.defaultValue("/lucee/templates/error/error." + (Constants.getCFMLTemplateExtensions()[0])).description(
 					"This setting specifies the custom file path for the template rendered during all uncaught internal server exceptions, providing a tailored response for unexpected application failures.");
-	private String errorTemplate500;
+	private String errorGeneralTemplate;
 
 	private static Prop<String> metaErrorTemplate404 = Prop.str().keys("errorMissingTemplate", "missingErrorTemplate").access(SecurityManager.TYPE_DEBUGGING)
 			.defaultValue("/lucee/templates/error/error." + (Constants.getCFMLTemplateExtensions()[0])).description(
 					"This setting specifies the custom file path for the template rendered whenever a requested resource is not found on the server, ensuring a controlled and helpful response for status 404 missing page exceptions.");
-	private String errorTemplate404;
+	private String errorMissingTemplate;
 
 	private static Prop<Password> metaPassword = Prop.custom(PasswordFactory.getInstance()).keys("hspw", "adminhspw", "adminpw", "pw", "adminpassword", "password")
 			.systemPropEnvVar("lucee.admin.password");
-	protected Password password;
+	protected Password hspw;
 	private boolean initPassword = true;
 
 	private static Prop<String> metaSalt = Prop.str().keys("salt", "adminSalt").systemPropEnvVar("lucee.admin.salt");
@@ -490,7 +526,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<CFXTagClass> metaCfxTagPool = Prop.custom(JavaCFXTagClassFactory.getInstance(), Prop.TYPE_MAP).keys("cfx").access(SecurityManager.TYPE_CFX_SETTING)
 			.deprecated();
-	private CFXTagPool cfxTagPool;
+	private CFXTagPool cfx;
 
 	private static Prop<Boolean> metaRestList = Prop.bool().keys("list").parent("rest").defaultValue(false).description("List Services when \"/rest/\" is called");
 	private Boolean restList;
@@ -519,11 +555,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					.description("Strict: Data members are only accessible within the component itself or by components that extend it."))
 			.description(
 					"Determines the default visibility for data members in the 'this' scope of a component. This allows you to control how internal state is exposed to the rest of the application or external consumers.");
-	private Integer componentDataMemberDefaultAccess;
+	private Integer componentDataMemberAccess;
 
 	private static Prop<Boolean> metaTriggerComponentDataMember = Prop.bool().keys("componentImplicitNotation", "triggerComponentDataMember").defaultValue(false).description(
 			"If there is no accessible data member (property, element of the this scope) inside a component, Lucee searches for available matching \"getters\" or \"setters\" for the requested property. The following example should clarify this behaviour. \"somevar = myComponent.properyName\". If \"myComponent\" has no accessible data member named \"propertyName\", Lucee searches for a function member (method) named \"getPropertyName\".");
-	private Boolean triggerComponentDataMember;
+	private Boolean componentImplicitNotation;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Short> metaSessionType = Prop.shor().keys("sessionType").defaultValue(SESSION_TYPE_APPLICATION).choices(
@@ -537,15 +573,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private Short sessionType;
 
 	private static Prop<String> metaDeployDirectory = Prop.str().keys("deployDirectory").parent("fileSystem").description("folder where Lucee stores template classes");
-	private Resource deployDirectory;
+	private Resource fileSystemDeployDirectory;
 
 	private static Prop<CharSet> metaResourceCharset = Prop.charSet().keys("resourceCharset").systemPropEnvVar("lucee.resource.charset").defaultValue(SystemUtil.getCharSet())
 			.description("Default character set for reading from/writing to various resources");
 	private CharSet resourceCharset;
-
-	public static void main(String[] args) {
-		print.e(Prop.createConfigSchema(true));
-	}
 
 	private static Prop<CharSet> metaTemplateCharset = Prop.charSet().keys("templateCharset").systemPropEnvVar("lucee.template.charset").defaultValue(SystemUtil.getCharSet())
 			.description("Default character used to read templates (*.cfm and *.cfc files)");
@@ -568,6 +600,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 					new Choice<Integer>(ApplicationListener.TYPE_MIXED, "mixed").description("Compatibility: Searches for both Application.cfc and Application.cfm. (Default)"))
 			.description("Determines which types of application initialization files Lucee should detect and execute.");
+	private Integer listenerType;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaApplicationListenerMode = Prop.integer().keys("listenerMode", "applicationMode").systemPropEnvVar("lucee.listener.mode")
@@ -585,10 +618,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					new Choice<Integer>(ApplicationListener.MODE_ROOT, "root").description("Root Only: Checks only the webroot for application files."))
 			.description(
 					"Specifies the file-system search strategy for locating application files. Recursive searching (currentToRoot) is the most flexible but can add overhead on deep directory structures.");
+	private Integer listenerMode;
 
 	private static Prop<Boolean> metaApplicationListenerSingleton = Prop.bool().keys("listenerSingleton", "applicationSingleton")
 			.systemPropEnvVar("lucee.listener.singleton", "lucee.application.singleton").defaultValue(false).description(
 					"When enabled, Lucee caches a single instance of Application.cfc for the life of the application, reducing overhead compared to the default behavior of reinstantiating it for every request.");
+	private Boolean listenerSingleton;
 	private ApplicationListener applicationListener;
 
 	private static Prop<String> metaScriptProtect = Prop.str().keys("scriptProtect").systemPropEnvVar("lucee.script.protect").defaultValue("all")
@@ -597,61 +632,68 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaProxyEnabled = Prop.bool().keys("enabled").systemPropEnvVar("lucee.proxy.enabled").access(SecurityManager.TYPE_SETTING).parent("proxy")
 			.defaultValue(true).description("enable proxy");
+	private Boolean proxyEnabled;
 
 	private static Prop<String> metaProxyServer = Prop.str().keys("server", "host", "updateProxyHost").systemPropEnvVar("lucee.proxy.host", "lucee.proxy.server")
 			.access(SecurityManager.TYPE_SETTING).parent("proxy").description("proxy host");
+	private String proxyServer;
 
-	private static Prop<String> metaProxyUser = Prop.str().keys("username", "user", "updateProxyUsername").systemPropEnvVar("lucee.proxy.username")
+	private static Prop<String> metaProxyUsername = Prop.str().keys("username", "user", "updateProxyUsername").systemPropEnvVar("lucee.proxy.username")
 			.access(SecurityManager.TYPE_SETTING).parent("proxy").description("proxy username");
+	private String proxyUsername;
 
-	private static Prop<String> metaProxyPass = Prop.str().keys("password", "pass", "updateProxyPassword").systemPropEnvVar("lucee.proxy.password")
+	private static Prop<String> metaProxyPassword = Prop.str().keys("password", "pass", "updateProxyPassword").systemPropEnvVar("lucee.proxy.password")
 			.access(SecurityManager.TYPE_SETTING).parent("proxy").description("proxy password");
+	private String proxyPassword;
 
 	private static Prop<Integer> metaProxyPort = Prop.integer().keys("port", "updateProxyPort").systemPropEnvVar("lucee.proxy.port").access(SecurityManager.TYPE_SETTING)
 			.parent("proxy").description("proxy port");
+	private Integer proxyPort;
 
 	private static Prop<String> metaProxyIncludes = Prop.str().keys("includes").systemPropEnvVar("lucee.proxy.includes").access(SecurityManager.TYPE_SETTING).parent("proxy")
 			.description("proxy includes");
+	private String proxyIncludes;
 
 	private static Prop<String> metaProxyExcludes = Prop.str().keys("excludes").systemPropEnvVar("lucee.proxy.excludes").access(SecurityManager.TYPE_SETTING).parent("proxy")
 			.description("proxy excludes");
+	private String proxyExcludes;
 	private ProxyData proxy = null;
 
 	private static Prop<String> metaClientScopeDir = Prop.str().keys("clientDirectory").description("client scope directory");
-	private Resource clientScopeDir;
+	private Resource clientDirectory;
 
 	private static Prop<String> metaClientScopeDirSize = Prop.str().keys("clientDirectoryMaxSize").systemPropEnvVar("lucee.client.directory.max.size").defaultValue("100mb")
 
 			.description("Defines the maximum allowable disk space for the client scope storage directory, accepting values with unit suffixes like kb, mb, gb, or tb.");
-	private Long clientScopeDirSize;
+	private Long clientDirectoryMaxSize;
 
 	private static Prop<String> metaCacheDir = Prop.str().keys("cacheDirectory").defaultValue("100mb")
 			.description("Defines the maximum allowable disk space for the client scope storage directory, accepting values with unit suffixes like kb, mb, gb, or tb.");
-	private Resource cacheDir;
+	private Resource cacheDirectory;
 
 	private static Prop<String> metaCacheDirSize = Prop.str().keys("cacheDirectoryMaxSize").systemPropEnvVar("lucee.cache.directory.max.size").defaultValue("100mb")
 			.description("Defines the maximum allowable disk space for the cache directory, accepting values with unit suffixes like kb, mb, gb, or tb.");
-	private Long cacheDirSize;
+	private Long cacheDirectoryMaxSize;
 
 	private static Prop<Boolean> metaUseComponentShadow = Prop.bool().keys("componentUseVariablesScope").defaultValue(true)
 			.description("Defines whether a component has an independent variables scope parallel to the \"this\" scope (CFML standard) or not.");
-	private Boolean useComponentShadow;
+	private Boolean componentUseVariablesScope;
 
 	private static Prop<String> metaOut = Prop.str().keys("systemOut").systemPropEnvVar("lucee.system.out").defaultValue("system").access(SecurityManager.TYPE_SETTING).description(
 			"Specifies the destination for standard system output, supporting 'system', 'log', 'null', file paths via 'file:', or custom PrintWriter implementations via 'class:'");
-	private PrintWriter out;
+	private PrintWriter systemOut;
 
 	private static Prop<String> metaErr = Prop.str().keys("systemErr").systemPropEnvVar("lucee.system.err").defaultValue("system").access(SecurityManager.TYPE_SETTING).description(
 			"Defines the destination for standard error output, supporting values like 'system', 'log', 'null', or specific paths using 'file:' and custom implementations via 'class:'.");
-	private PrintWriter err;
+	private PrintWriter systemErr;
 
 	private static Prop<Boolean> metaDoCustomTagDeepSearch = Prop.bool().keys("customTagDeepSearch", "customTagSearchSubdirectories").access(SecurityManager.TYPE_CUSTOM_TAG)
 			.defaultValue(false).description("Search for custom tags in subdirectories.");
-	private Boolean doCustomTagDeepSearch = null;
+	private Boolean customTagDeepSearch = null;
 
 	private static Prop<Boolean> metaDoComponentTagDeepSearch = Prop.bool().keys("componentDeepSearch", "componentSearchSubdirectories").defaultValue(false)
 			.description("Search for CFCs in the subdirectories.");
-	private Boolean doComponentTagDeepSearch;
+	private Boolean componentDeepSearch;
 
 	private static Prop<Double> metaVersion = Prop.dbl().keys("version").defaultValue(DEFAULT_VERSION).hidden();
 	private Double version = null;
@@ -670,14 +712,14 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaDoLocalCustomTag = Prop.bool().keys("customTagLocalSearch", "customTagSearchLocal").access(SecurityManager.TYPE_CUSTOM_TAG).defaultValue(true)
 			.description("look for custom tags locally.");
-	private Boolean doLocalCustomTag;
+	private Boolean customTagLocalSearch;
 
 	private static Prop<Struct> metaConstants = Prop.sct().keys("constants").defaultValue(new StructImpl());
 	private Struct constants = null;
 
 	private static Prop<Boolean> metaAllowURLRequestTimeout = Prop.bool().keys("requestTimeoutInURL", "allowUrlRequesttimeout").defaultValue(false)
 			.description("Defines if it is possible to overwrite the request timeout with the query string [requestTimeout] in the URL.");
-	private Boolean allowURLRequestTimeout;
+	private Boolean requestTimeoutInURL;
 
 	private static Prop<Boolean> metaErrorStatusCode = Prop.bool().keys("errorStatusCode").systemPropEnvVar("lucee.status.code").defaultValue(true)
 			.access(SecurityManager.TYPE_DEBUGGING).description("In case of an exception, should individual status codes be returned? Untick to always return 200 status code.");
@@ -692,10 +734,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					"Classic: Unscoped assignments only update the 'local' scope if the key already exists there; otherwise, they are created in the 'variables' scope. (Legacy default)"))
 			.description(
 					"Controls how unscoped variable assignments behave inside functions. The 'always' mode is recommended for modern applications to ensure better encapsulation and thread safety.");
-	private Integer localMode;
+	private Integer localScopeMode;
 
 	private static Prop<Boolean> metaAllowRealPath = Prop.bool().keys("allowRealpath").parent("fileSystem").defaultValue(true);
-	private Boolean allowRealPath;
+	private Boolean fileSystemAllowRealpath;
 
 	private static Prop<String> metaCustomTagExtensions = Prop.str().keys("customTagExtensions").defaultValue(ListUtil.arrayToList(Constants.getExtensions(), ","))
 			.access(SecurityManager.TYPE_CUSTOM_TAG).description("this are the file extensions Lucee allows for custom tags.");
@@ -713,7 +755,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private static ImportDefintion DEFAULT_IMPORT_DEFINITION = new ImportDefintionImpl(Constants.DEFAULT_PACKAGE, "*");
 	private static Prop<String> metaComponentDefaultImport = Prop.str().keys("componentAutoImport", "componentDefaultImport").defaultValue(DEFAULT_IMPORT_DEFINITION.toString())
 			.description("Defines a package that is automatically imported for all components. Defaults to 'org.lucee.cfml.*' and requires the wildcard suffix.");
-	private ImportDefintion componentDefaultImport;
+	private ImportDefintion componentAutoImport;
 
 	private static Prop<Boolean> metaComponentLocalSearch = Prop.bool().keys("componentLocalSearch").defaultValue(true)
 			.description("If enabled, Lucee looks for component relative to the local position.");
@@ -721,14 +763,14 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaUseComponentPathCache = Prop.bool().keys("componentUseCachePath").defaultValue(true)
 			.description("If enabled, Lucee caches where it did find components, what speedup futher access");
-	private Boolean useComponentPathCache;
+	private Boolean componentUseCachePath;
 
 	private static Prop<Boolean> metaUseCTPathCache = Prop.bool().keys("customTagUseCachePath", "customTagCachePaths").access(SecurityManager.TYPE_CUSTOM_TAG).defaultValue(true)
 			.description("If enabled, Lucee caches where it did find custom tags, what speedup futher access");
-	private Boolean useCTPathCache;
+	private Boolean customTagUseCachePath;
 
 	@SuppressWarnings("unchecked")
-	private static Prop<Integer> metaWriterType = Prop.integer().keys("cfmlWriter", "whitespaceManagement").systemPropEnvVar("lucee.cfml.writer")
+	private static Prop<Integer> metaCfmlWriter = Prop.integer().keys("cfmlWriter", "whitespaceManagement").systemPropEnvVar("lucee.cfml.writer")
 			.defaultValue(ConfigPro.CFML_WRITER_REGULAR)
 			.choices(
 					new Choice<Integer>(ConfigPro.CFML_WRITER_REGULAR, "regular", "normal")
@@ -741,22 +783,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 							"Advanced Optimization: Uses an intelligent algorithm to remove unnecessary whitespace while preserving critical spacing (e.g., inside 'pre' or 'textarea' tags)."))
 			.description(
 					"Specifies the white-space management strategy for the output stream. Using 'smart' optimization can significantly reduce page weight without breaking HTML layout.");
-	protected Integer writerType;
+	protected Integer cfmlWriter;
 
 	private static Prop<Boolean> metaHandleUnquotedAttributeValueAsString = Prop.bool().keys("handleUnquotedAttributeValueAsString").defaultValue(true)
 			.description("Controls if unquoted tag attributes are treated as literal strings (true) or as variable references (false) for evaluation.");
-	private Boolean handleUnQuotedAttrValueAsString;
+	private Boolean handleUnquotedAttributeValueAsString;
 
 	private static Prop<Integer> metaQueueMax = Prop.integer().keys("requestQueueMax").systemPropEnvVar("lucee.queue.max").defaultValue(100)
 			.description("maximal size of the request quque size");
-	private int queueMax = -1;
+	private int requestQueueMax = -1;
 
 	private static Prop<Long> metaQueueTimeout = Prop.loong().keys("requestQueueTimeout").systemPropEnvVar("lucee.queue.timeout").defaultValue(0L)
 			.description("timeout for an element in the queue in milliseconds");
-	private long queueTimeout = -1;
+	private long requestQueueTimeout = -1;
 
 	private static Prop<Boolean> metaQueueEnable = Prop.bool().keys("requestQueueEnable").systemPropEnvVar("lucee.queue.enable").defaultValue(false);
-	private Boolean queueEnable;
+	private Boolean requestQueueEnable;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaVarUsage = Prop.integer().keys("variableUsage").parent("security").defaultValue(ConfigPro.QUERY_VAR_USAGE_IGNORE).choices(
@@ -770,24 +812,24 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					.description("Strict/Secure: Blocks any 'cfquery' that contains variables not wrapped in 'cfqueryparam'. Highly recommended for modern, secure environments."))
 			.description(
 					"Controls how Lucee handles raw variables used inside 'cfquery' tags. Enabling 'error' mode effectively prevents SQL injection by mandating parameterized queries.");
-	private Integer varUsage;
+	private Integer securityVariableUsage;
 
 	private static Prop<TimeSpan> metaCachedAfterTimeRange = Prop.timespan().keys("cachedAfter")
 			.description("In case the attribute \"cacheAfter\" is set without the attribute \"cachedwithin\" in the tag \"query\" this time span is used for the element cached.");
-	private TimeSpan cachedAfterTimeRange;
-	private boolean initCachedAfterTimeRange = true;
+	private TimeSpan cachedAfter;
+	private boolean initCachedAfter = true;
 
 	private static Prop<Regex> metaRegex = Prop.custom(RegexFactory.getInstance()).keys("regexType").systemPropEnvVar("lucee.regex.type")
 			.defaultValue(RegexFactory.toRegex(RegexFactory.TYPE_PERL, null))
 			.description("Which regular expression dialect should be used. Modern (Java dialect) or Classic (Perl5 dialect).");
-	private Regex regex;
+	private Regex regexType;
 
 	private static Prop<TimeSpan> metaApplicationPathCacheTimeout = Prop.timespan().keys("applicationPathTimeout").systemPropEnvVar("lucee.application.path.cache.timeout")
 			.defaultValue(TimeSpanImpl.fromMillis(20000L)) // 20 seconds
 			.description("Specifies how long Lucee caches the resolved location of Application.cfc or Application.cfm files. "
 					+ "Caching this path prevents repetitive, expensive file-system lookups on every request. "
 					+ "A shorter timeout detects new application files faster, while a longer timeout improves performance in high-traffic environments.");
-	private Long applicationPathCacheTimeout;
+	private Long applicationPathTimeout;
 
 	private static Prop<Boolean> metaPreciseMath = Prop.bool().keys("preciseMath").systemPropEnvVar("lucee.precise.math").defaultValue(false)
 			.description("If enabled, this improves the accuracy of floating point calculations but makes them slightly slower.");
@@ -795,7 +837,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<String> metaMainLoggerName = Prop.str().keys("mainLogger").systemPropEnvVar("lucee.logging.main").defaultValue("application")
 			.description("defines the main logger used by Lucee, this logger is used when no log name was provided or the provided name does not exist.");
-	private String mainLoggerName;
+	private String mainLogger;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Short> metaCompileType = Prop.shor().keys("compileType").defaultValue(RECOMPILE_NEVER).choices(new Choice<Short>(RECOMPILE_NEVER, "never").description(
@@ -820,7 +862,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaMergeFormAndURL = Prop.bool().keys("mergeUrlForm").defaultValue(false).description(
 			"This setting defines if the scopes URL and Form will be merged together (CFML Default is false). If a key already exists in Form and URL Scopes, the value from the Form Scope is used.");
-	private Boolean mergeFormAndURL;
+	private Boolean mergeUrlForm;
 
 	private static Prop<Boolean> metaShowDebug = Prop.bool().keys("showDebug").systemPropEnvVar("lucee.monitoring.showDebug").defaultValue(false);
 	private Boolean showDebug;
@@ -829,54 +871,54 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			.defaultValue(false);
 	private Boolean showDoc;
 
-	private static Prop<Boolean> metaShowMetric = Prop.bool().keys("showMetrics", "showMetric", "metric", "metrics").systemPropEnvVar("lucee.monitoring.showMetric")
+	private static Prop<Boolean> metaShowMetric = Prop.bool().keys("showMetric", "showMetrics", "metric", "metrics").systemPropEnvVar("lucee.monitoring.showMetric")
 			.defaultValue(false);
 	private Boolean showMetric;
 
-	private static Prop<Boolean> metaShowTest = Prop.bool().keys("showTests", "showTest", "test").systemPropEnvVar("lucee.monitoring.showTest").defaultValue(false);
+	private static Prop<Boolean> metaShowTest = Prop.bool().keys("showTest", "showTests", "test").systemPropEnvVar("lucee.monitoring.showTest").defaultValue(false);
 	private Boolean showTest;
 
 	private static Prop<Boolean> metafullNullSupport = Prop.bool().keys("nullSupport", "fullNullSupport").systemPropEnvVar("lucee.full.null.support").defaultValue(false);
-	private Boolean fullNullSupport;
+	private Boolean nullSupport;
 
-	private static Prop<SecretProvider> metaSecretProviders = Prop.custom(SecretProviderFactory.getInstance(), Prop.TYPE_MAP).keys("secretProvider");
-	protected Map<String, SecretProvider> secretProviders;
+	private static Prop<SecretProvider> metaSecretProviders = Prop.custom(SecretProviderFactory.getInstance(), Prop.TYPE_MAP).keys("secretProvider", "secretProviders");
+	protected Map<String, SecretProvider> secretProvider;
 
 	private static Prop<ClassDefinition> metacCacheDefinitions = Prop.custom(ClassDefinitionFactory.getInstance(), Prop.TYPE_LIST).keys("cacheClasses").deprecated();
-	private Map<String, ClassDefinition> cacheDefinitions;
+	private Map<String, ClassDefinition> cacheClasses;
 
 	private static Prop<GatewayEntry> metaGatewayEntries = Prop.custom(GatewayEntryFactory.getInstance(), Prop.TYPE_MAP).keys("gateways").access(SecurityManagerImpl.TYPE_GATEWAY)
 			.description(
 					"Defines Event Gateways for asynchronous communication (SMS, XMPP, File Watcher, etc.). Configures the driver class, listener CFC, and custom protocol parameters.");
-	private GatewayMap gatewayEntries;
+	private GatewayMap gateways;
 
 	private static Prop<Boolean> metaCgiScopeReadonly = Prop.bool().keys("cgiScopeReadOnly").defaultValue(true).description("make the cgi scope read only or not");
 	private Boolean cgiScopeReadonly;
 
 	private static Prop<Integer> metaDebugMaxRecordsLogged = Prop.integer().keys("debuggingMaxRecordsLogged", "debuggingShowMaxRecordsLogged").defaultValue(10);
-	private Integer debugMaxRecordsLogged;
+	private Integer debuggingMaxRecordsLogged;
 
 	private static Prop<Boolean> metaCheckForChangesInConfigFile = Prop.bool().keys("checkForChanges").systemPropEnvVar("lucee.check.for.changes").defaultValue(false)
 			.description("Enables automatic 'Hot-Reload' for the Lucee configuration file. "
 					+ "When set to 'true', the engine polls the 'lucee-config.json' file (approximately every 60 seconds) "
 					+ "and automatically applies any detected changes to the running server without requiring a restart.");
-	private Boolean checkForChangesInConfigFile;
+	private Boolean checkForChanges;
 
 	private static Prop<String> metaRemoteClientDirectory = Prop.str().keys("directory").parent("remoteClients").systemPropEnvVar("lucee.task.directory")
 			.description("Specifies the file-system directory where Lucee stores persistent background tasks (e.g., cfmail, cfthread tasks). "
 					+ "By storing tasks as physical files, Lucee prevents memory exhaustion during high-volume mail bursts and ensures that "
 					+ "failed or pending tasks are preserved across server restarts.");
-	private Resource remoteClientDirectory;
+	private Resource remoteClientsDirectory;
 
 	private static Prop<Integer> metaRemoteClientMaxThreads = Prop.integer().keys("maxThreads").parent("remoteClients").defaultValue(20)
 			.description("Sets the maximum number of concurrent worker threads for the Lucee Spooler. "
 					+ "The spooler handles asynchronous tasks such as background mail delivery (cfmail) and thread tasks (cfthread type='task'). "
 					+ "Increasing this value allows for faster parallel processing of background queues, but consumes more system resources.");
-	private Integer remoteClientMaxThreads;
+	private Integer remoteClientsMaxThreads;
 
 	private static Prop<RemoteClient> metaRemoteClients = Prop.custom(RemoteClientFactory.getInstance(), Prop.TYPE_LIST).keys("remoteClient").parent("remoteClients")
 			.access(SecurityManagerImpl.TYPE_REMOTE).deprecated();
-	private RemoteClient[] remoteClients;
+	private RemoteClient[] remoteClientsRemoteClient;
 
 	private Array scheduledTasks;
 
@@ -918,13 +960,13 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private Resource extInstalled;
 	private Resource extAvailable;
 
-	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai")
+	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai", "aiEngines")
 			.description("A map of named AI Engine configurations. This allows you to define and manage multiple "
 					+ "connections to AI providers such as OpenAI (ChatGPT), Google (Gemini), Anthropic (Claude), "
 					+ "or local instances like Ollama. Each engine can be configured with specific models, "
 					+ "system instructions, and security keys, enabling specialized AI behavior across your applications.");
 
-	protected Map<String, AIEngine> aiEngines;
+	protected Map<String, AIEngine> ai;
 
 	private Resource antiSamyPolicy;
 
@@ -933,25 +975,25 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 */
 	@Override
 	public boolean isAllowURLRequestTimeout() {
-		if (allowURLRequestTimeout == null) {
+		if (requestTimeoutInURL == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "isAllowURLRequestTimeout")) {
-				if (allowURLRequestTimeout == null) {
+				if (requestTimeoutInURL == null) {
 					String allowURLReqTimeout = ConfigFactoryImpl.getAttr(this, root, new String[] { "requestTimeoutInURL", "allowUrlRequesttimeout" });
 					if (!StringUtil.isEmpty(allowURLReqTimeout)) {
-						allowURLRequestTimeout = Caster.toBooleanValue(allowURLReqTimeout, metaAllowURLRequestTimeout.defaultValue);
+						requestTimeoutInURL = Caster.toBooleanValue(allowURLReqTimeout, metaAllowURLRequestTimeout.defaultValue);
 					}
-					else allowURLRequestTimeout = metaAllowURLRequestTimeout.defaultValue;
+					else requestTimeoutInURL = metaAllowURLRequestTimeout.defaultValue;
 				}
 			}
 		}
-		return allowURLRequestTimeout;
+		return requestTimeoutInURL;
 	}
 
 	public ConfigImpl resetAllowURLRequestTimeout() {
-		if (allowURLRequestTimeout != null) {
+		if (requestTimeoutInURL != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "isAllowURLRequestTimeout")) {
-				if (allowURLRequestTimeout != null) {
-					allowURLRequestTimeout = null;
+				if (requestTimeoutInURL != null) {
+					requestTimeoutInURL = null;
 				}
 			}
 		}
@@ -1011,21 +1053,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public short getScopeCascadingType() {
-		if (scopeType == null) {
+		if (scopeCascading == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getScopeCascadingType")) {
-				if (scopeType == null) {
-					scopeType = metaScopeType.get(this, root);
+				if (scopeCascading == null) {
+					scopeCascading = metaScopeType.get(this, root);
 				}
 			}
 		}
-		return scopeType;
+		return scopeCascading;
 	}
 
 	public ConfigImpl resetScopeCascadingType() {
-		if (scopeType != null) {
+		if (scopeCascading != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getScopeCascadingType")) {
-				if (scopeType != null) {
-					scopeType = null;
+				if (scopeCascading != null) {
+					scopeCascading = null;
 				}
 			}
 		}
@@ -1078,21 +1120,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean allowImplicidQueryCall() {
-		if (allowImplicidQueryCall == null) {
+		if (cascadeToResultset == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "allowImplicidQueryCall")) {
-				if (allowImplicidQueryCall == null) {
-					allowImplicidQueryCall = metaAllowImplicidQueryCall.get(this, root);
+				if (cascadeToResultset == null) {
+					cascadeToResultset = metaAllowImplicidQueryCall.get(this, root);
 				}
 			}
 		}
-		return allowImplicidQueryCall;
+		return cascadeToResultset;
 	}
 
 	public ConfigImpl resetAllowImplicidQueryCall() {
-		if (allowImplicidQueryCall != null) {
+		if (cascadeToResultset != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "allowImplicidQueryCall")) {
-				if (allowImplicidQueryCall != null) {
-					allowImplicidQueryCall = null;
+				if (cascadeToResultset != null) {
+					cascadeToResultset = null;
 				}
 			}
 		}
@@ -1101,21 +1143,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean limitEvaluation() {
-		if (limitEvaluation == null) {
+		if (securityLimitEvaluation == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "limitEvaluation")) {
-				if (limitEvaluation == null) {
-					limitEvaluation = metaLimitEvaluation.get(this, root);
+				if (securityLimitEvaluation == null) {
+					securityLimitEvaluation = metaLimitEvaluation.get(this, root);
 				}
 			}
 		}
-		return limitEvaluation;
+		return securityLimitEvaluation;
 	}
 
 	public ConfigImpl resetLimitEvaluation() {
-		if (limitEvaluation != null) {
+		if (securityLimitEvaluation != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "limitEvaluation")) {
-				if (limitEvaluation != null) {
-					limitEvaluation = null;
+				if (securityLimitEvaluation != null) {
+					securityLimitEvaluation = null;
 				}
 			}
 		}
@@ -1124,21 +1166,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean mergeFormAndURL() {
-		if (mergeFormAndURL == null) {
+		if (mergeUrlForm == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mergeFormAndURL")) {
-				if (mergeFormAndURL == null) {
-					mergeFormAndURL = metaMergeFormAndURL.get(this, root);
+				if (mergeUrlForm == null) {
+					mergeUrlForm = metaMergeFormAndURL.get(this, root);
 				}
 			}
 		}
-		return mergeFormAndURL;
+		return mergeUrlForm;
 	}
 
 	public ConfigImpl resetMergeFormAndURL() {
-		if (mergeFormAndURL != null) {
+		if (mergeUrlForm != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mergeFormAndURL")) {
-				if (mergeFormAndURL != null) {
-					mergeFormAndURL = null;
+				if (mergeUrlForm != null) {
+					mergeUrlForm = null;
 				}
 			}
 		}
@@ -1358,21 +1400,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public boolean isMailSpoolEnable() {
 		// TODO
-		if (spoolEnable == null) {
+		if (mailSpoolEnable == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (spoolEnable == null) {
-					spoolEnable = metaSpoolEnable.get(this, root);
+				if (mailSpoolEnable == null) {
+					mailSpoolEnable = metaSpoolEnable.get(this, root);
 				}
 			}
 		}
-		return spoolEnable;
+		return mailSpoolEnable;
 	}
 
 	public ConfigImpl resetMailSpoolEnable() {
-		if (spoolEnable != null) {
+		if (mailSpoolEnable != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (spoolEnable != null) {
-					spoolEnable = null;
+				if (mailSpoolEnable != null) {
+					mailSpoolEnable = null;
 				}
 			}
 		}
@@ -1382,21 +1424,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public boolean isMailSendPartial() {
 		// TODO
-		if (sendPartial == null) {
+		if (mailSendPartial == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (sendPartial == null) {
-					sendPartial = metaSendPartial.get(this, root);
+				if (mailSendPartial == null) {
+					mailSendPartial = metaSendPartial.get(this, root);
 				}
 			}
 		}
-		return sendPartial;
+		return mailSendPartial;
 	}
 
 	public ConfigImpl resetMailSendPartial() {
-		if (sendPartial != null) {
+		if (mailSendPartial != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (sendPartial != null) {
-					sendPartial = null;
+				if (mailSendPartial != null) {
+					mailSendPartial = null;
 				}
 			}
 		}
@@ -1406,21 +1448,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public boolean isUserset() {
 		// TODO
-		if (userSet == null) {
+		if (mailUserSet == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (userSet == null) {
-					userSet = metaUserSet.get(this, root);
+				if (mailUserSet == null) {
+					mailUserSet = metaUserSet.get(this, root);
 				}
 			}
 		}
-		return userSet;
+		return mailUserSet;
 	}
 
 	public ConfigImpl resetUserset() {
-		if (userSet != null) {
+		if (mailUserSet != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (userSet != null) {
-					userSet = null;
+				if (mailUserSet != null) {
+					mailUserSet = null;
 				}
 			}
 		}
@@ -1455,21 +1497,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public int getMailTimeout() {
 		// TODO
-		if (mailTimeout == -1) {
+		if (mailConnectionTimeout == -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (mailTimeout == -1) {
-					mailTimeout = metaMailTimeout.get(this, root);
+				if (mailConnectionTimeout == -1) {
+					mailConnectionTimeout = metaMailTimeout.get(this, root);
 				}
 			}
 		}
-		return mailTimeout;
+		return mailConnectionTimeout;
 	}
 
 	public ConfigImpl resetMailTimeout() {
-		if (mailTimeout != -1) {
+		if (mailConnectionTimeout != -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (mailTimeout != -1) {
-					mailTimeout = -1;
+				if (mailConnectionTimeout != -1) {
+					mailConnectionTimeout = -1;
 				}
 			}
 		}
@@ -1479,21 +1521,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public int getQueryVarUsage() {
 		// TODO
-		if (varUsage == null) {
+		if (securityVariableUsage == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueryVarUsage")) {
-				if (varUsage == null) {
-					varUsage = metaVarUsage.get(this, root);
+				if (securityVariableUsage == null) {
+					securityVariableUsage = metaVarUsage.get(this, root);
 				}
 			}
 		}
-		return varUsage;
+		return securityVariableUsage;
 	}
 
 	public ConfigImpl resetQueryVarUsage() {
-		if (varUsage != null) {
+		if (securityVariableUsage != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueryVarUsage")) {
-				if (varUsage != null) {
-					varUsage = null;
+				if (securityVariableUsage != null) {
+					securityVariableUsage = null;
 				}
 			}
 		}
@@ -1502,21 +1544,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean getPSQL() {
-		if (psq == null) {
+		if (preserveSingleQuote == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getPSQL")) {
-				if (psq == null) {
-					psq = metaPsq.get(this, root);
+				if (preserveSingleQuote == null) {
+					preserveSingleQuote = metaPsq.get(this, root);
 				}
 			}
 		}
-		return psq;
+		return preserveSingleQuote;
 	}
 
 	public ConfigImpl resetPSQL() {
-		if (psq != null) {
+		if (preserveSingleQuote != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getPSQL")) {
-				if (psq != null) {
-					psq = null;
+				if (preserveSingleQuote != null) {
+					preserveSingleQuote = null;
 				}
 			}
 		}
@@ -1674,21 +1716,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean debugLogOutput() {
-		if (debugLogOutput == null) {
+		if (debuggingLogOutput == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "debugLogOutput")) {
-				if (debugLogOutput == null) {
-					debugLogOutput = metaDebugLogOutput.get(this, root);
+				if (debuggingLogOutput == null) {
+					debuggingLogOutput = metaDebugLogOutput.get(this, root);
 				}
 			}
 		}
-		return debugLogOutput;
+		return debuggingLogOutput;
 	}
 
 	public ConfigImpl resetLogOutput() {
-		if (debugLogOutput != null) {
+		if (debuggingLogOutput != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "debugLogOutput")) {
-				if (debugLogOutput != null) {
-					debugLogOutput = null;
+				if (debuggingLogOutput != null) {
+					debuggingLogOutput = null;
 				}
 			}
 		}
@@ -1701,21 +1743,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public int getMailSpoolInterval() {
 		// TODO
-		if (spoolInterval == -1) {
+		if (mailSpoolInterval == -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (spoolInterval == -1) {
-					spoolInterval = metaSpoolInterval.get(this, root);
+				if (mailSpoolInterval == -1) {
+					mailSpoolInterval = metaSpoolInterval.get(this, root);
 				}
 			}
 		}
-		return spoolInterval;
+		return mailSpoolInterval;
 	}
 
 	public ConfigImpl resetMailSpoolInterval() {
-		if (spoolInterval != -1) {
+		if (mailSpoolInterval != -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (spoolInterval != -1) {
-					spoolInterval = -1;
+				if (mailSpoolInterval != -1) {
+					mailSpoolInterval = -1;
 				}
 			}
 		}
@@ -1803,12 +1845,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (initPassword) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getPassword")) {
 				if (initPassword) {
-					password = metaPassword.get(this, root);
+					hspw = metaPassword.get(this, root);
 					initPassword = false;
 				}
 			}
 		}
-		return password;
+		return hspw;
 	}
 
 	protected ConfigImpl resetPassword() {
@@ -1816,7 +1858,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getPassword")) {
 				if (!initPassword) {
 					initPassword = true;
-					password = null;
+					hspw = null;
 				}
 			}
 		}
@@ -2131,7 +2173,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 */
 	@Override
 	public void setPassword(Password password) {
-		this.password = password;
+		this.hspw = password;
 	}
 
 	/**
@@ -2521,21 +2563,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	private Map<String, AIEngine> getAIEngines() {
-		if (aiEngines == null) {
+		if (ai == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getAIEngineFactories")) {
-				if (aiEngines == null) {
-					aiEngines = metaAiEngines.map(this, root);
+				if (ai == null) {
+					ai = metaAiEngines.map(this, root);
 				}
 			}
 		}
-		return aiEngines;
+		return ai;
 	}
 
 	public ConfigImpl resetAIEngineFactories() {
-		if (aiEngines != null) {
+		if (ai != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getAIEngineFactories")) {
-				if (aiEngines != null) {
-					aiEngines = null;
+				if (ai != null) {
+					ai = null;
 				}
 			}
 		}
@@ -2551,22 +2593,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Map<String, SecretProvider> getSecretProviders() {
-		if (secretProviders == null) {
+		if (secretProvider == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSecretProviders")) {
-				if (secretProviders == null) {
-					secretProviders = metaSecretProviders.map(this, root);
+				if (secretProvider == null) {
+					secretProvider = metaSecretProviders.map(this, root);
 					// secretProviders = ConfigFactoryImpl.loadSecretProviders(this, root, null);
 				}
 			}
 		}
-		return secretProviders;
+		return secretProvider;
 	}
 
 	public ConfigImpl resetSecretProviders() {
-		if (secretProviders != null) {
+		if (secretProvider != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSecretProviders")) {
-				if (secretProviders != null) {
-					secretProviders = null;
+				if (secretProvider != null) {
+					secretProvider = null;
 				}
 			}
 		}
@@ -2609,21 +2651,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public CFXTagPool getCFXTagPool() throws SecurityException {
-		if (cfxTagPool == null) {
+		if (cfx == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCFXTagPool")) {
-				if (cfxTagPool == null) {
-					cfxTagPool = new CFXTagPoolImpl(metaCfxTagPool.map(this, root));
+				if (cfx == null) {
+					cfx = new CFXTagPoolImpl(metaCfxTagPool.map(this, root));
 				}
 			}
 		}
-		return cfxTagPool;
+		return cfx;
 	}
 
 	public ConfigImpl resetCFXTagPool() {
-		if (cfxTagPool != null) {
+		if (cfx != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCFXTagPool")) {
-				if (cfxTagPool != null) {
-					cfxTagPool = null;
+				if (cfx != null) {
+					cfx = null;
 				}
 			}
 		}
@@ -2816,21 +2858,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public String getSearchEngineDirectory() {
-		if (searchEngineDirectory == null) {
+		if (searchDirectory == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSearchEngineDirectory")) {
-				if (searchEngineDirectory == null) {
-					searchEngineDirectory = metaSearchEngineDirectory.get(this, root);
+				if (searchDirectory == null) {
+					searchDirectory = metaSearchEngineDirectory.get(this, root);
 				}
 			}
 		}
-		return this.searchEngineDirectory;
+		return this.searchDirectory;
 	}
 
 	public ConfigImpl resetSearchEngineDirectory() {
-		if (searchEngineDirectory != null) {
+		if (searchDirectory != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSearchEngineDirectory")) {
-				if (searchEngineDirectory != null) {
-					searchEngineDirectory = null;
+				if (searchDirectory != null) {
+					searchDirectory = null;
 				}
 			}
 		}
@@ -2839,21 +2881,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public int getComponentDataMemberDefaultAccess() {
-		if (componentDataMemberDefaultAccess == null) {
+		if (componentDataMemberAccess == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getComponentDataMemberDefaultAccess")) {
-				if (componentDataMemberDefaultAccess == null) {
-					componentDataMemberDefaultAccess = metaComponentDataMemberDefaultAccess.get(this, root);
+				if (componentDataMemberAccess == null) {
+					componentDataMemberAccess = metaComponentDataMemberDefaultAccess.get(this, root);
 				}
 			}
 		}
-		return componentDataMemberDefaultAccess;
+		return componentDataMemberAccess;
 	}
 
 	public ConfigImpl resetComponentDataMemberDefaultAccess() {
-		if (componentDataMemberDefaultAccess != null) {
+		if (componentDataMemberAccess != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getComponentDataMemberDefaultAccess")) {
-				if (componentDataMemberDefaultAccess != null) {
-					componentDataMemberDefaultAccess = null;
+				if (componentDataMemberAccess != null) {
+					componentDataMemberAccess = null;
 				}
 			}
 		}
@@ -2909,37 +2951,37 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	public String getErrorTemplate(int statusCode) {
 
 		if (statusCode == 404) {
-			if (errorTemplate404 == null) {
+			if (errorMissingTemplate == null) {
 				synchronized (SystemUtil.createToken("ConfigImpl", "getErrorTemplate404")) {
-					if (errorTemplate404 == null) {
-						errorTemplate404 = metaErrorTemplate404.get(this, root);
+					if (errorMissingTemplate == null) {
+						errorMissingTemplate = metaErrorTemplate404.get(this, root);
 					}
 				}
 			}
-			return errorTemplate404;
+			return errorMissingTemplate;
 		}
-		if (errorTemplate500 == null) {
+		if (errorGeneralTemplate == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getErrorTemplate500")) {
-				if (errorTemplate500 == null) {
-					errorTemplate500 = metaErrorTemplate500.get(this, root);
+				if (errorGeneralTemplate == null) {
+					errorGeneralTemplate = metaErrorTemplate500.get(this, root);
 				}
 			}
 		}
-		return errorTemplate500;
+		return errorGeneralTemplate;
 	}
 
 	public ConfigImpl resetErrorTemplates() {
-		if (errorTemplate404 != null) {
+		if (errorMissingTemplate != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getErrorTemplate404")) {
-				if (errorTemplate404 != null) {
-					errorTemplate404 = null;
+				if (errorMissingTemplate != null) {
+					errorMissingTemplate = null;
 				}
 			}
 		}
-		if (errorTemplate500 != null) {
+		if (errorGeneralTemplate != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getErrorTemplate500")) {
-				if (errorTemplate500 != null) {
-					errorTemplate500 = null;
+				if (errorGeneralTemplate != null) {
+					errorGeneralTemplate = null;
 				}
 			}
 		}
@@ -2998,26 +3040,27 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Resource getClassDirectory() {
-		if (deployDirectory == null) {
+		if (fileSystemDeployDirectory == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getClassDirectory")) {
-				if (deployDirectory == null) {
+				if (fileSystemDeployDirectory == null) {
 
 					String strDeployDirectory = metaDeployDirectory.get(this, root);
 					if (!StringUtil.isEmpty(strDeployDirectory, true)) {
 						strDeployDirectory = ConfigUtil.translateOldPath(strDeployDirectory);
 					}
-					deployDirectory = ConfigUtil.getFile(configDir, strDeployDirectory, "cfclasses", configDir, FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE, this);
+					fileSystemDeployDirectory = ConfigUtil.getFile(configDir, strDeployDirectory, "cfclasses", configDir, FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE,
+							this);
 				}
 			}
 		}
-		return deployDirectory;
+		return fileSystemDeployDirectory;
 	}
 
 	public ConfigImpl resetClassDirectory() {
-		if (deployDirectory != null) {
+		if (fileSystemDeployDirectory != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getClassDirectory")) {
-				if (deployDirectory != null) {
-					deployDirectory = null;
+				if (fileSystemDeployDirectory != null) {
+					fileSystemDeployDirectory = null;
 				}
 			}
 		}
@@ -3183,21 +3226,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	private Map<String, DataSource> getDataSourcesAll() {
-		if (datasourcesAll == null) {
+		if (dataSources == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDataSources")) {
-				if (datasourcesAll == null) {
-					datasourcesAll = metaDatasourcesAll.map(this, root);
+				if (dataSources == null) {
+					dataSources = metaDatasourcesAll.map(this, root);
 				}
 			}
 		}
-		return datasourcesAll;
+		return dataSources;
 	}
 
 	public ConfigImpl resetDataSources() {
-		if (datasourcesAll != null || datasourcesNoQoQ != null) {
+		if (dataSources != null || datasourcesNoQoQ != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDataSources")) {
-				if (datasourcesAll != null || datasourcesNoQoQ != null) {
-					datasourcesAll = null;
+				if (dataSources != null || datasourcesNoQoQ != null) {
+					dataSources = null;
 					datasourcesNoQoQ = null;
 				}
 			}
@@ -3246,21 +3289,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	public CharSet getMailDefaultCharSet() {
-		if (mailDefaultCharset == null) {
+		if (mailDefaultEncoding == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (mailDefaultCharset == null) {
-					mailDefaultCharset = metaMailDefaultCharset.get(this, root);
+				if (mailDefaultEncoding == null) {
+					mailDefaultEncoding = metaMailDefaultCharset.get(this, root);
 				}
 			}
 		}
-		return mailDefaultCharset;
+		return mailDefaultEncoding;
 	}
 
 	public ConfigImpl resetMailDefaultCharSet() {
-		if (mailDefaultCharset != null) {
+		if (mailDefaultEncoding != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "mail")) {
-				if (mailDefaultCharset != null) {
-					mailDefaultCharset = null;
+				if (mailDefaultEncoding != null) {
+					mailDefaultEncoding = null;
 				}
 			}
 		}
@@ -3393,6 +3436,72 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return getResources().getResource(path);
 	}
 
+	public int getListenerType() {
+		if (listenerType == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "listenerType")) {
+				if (listenerType == null) {
+					listenerType = metaApplicationListenerType.get(this, root);
+				}
+			}
+		}
+		return listenerType;
+	}
+
+	public ConfigImpl resetListenerType() {
+		if (listenerType != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "listenerType")) {
+				if (listenerType != null) {
+					listenerType = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public int getListenerMode() {
+		if (listenerMode == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "listenerMode")) {
+				if (listenerMode == null) {
+					listenerMode = metaApplicationListenerMode.get(this, root);
+				}
+			}
+		}
+		return listenerMode;
+	}
+
+	public ConfigImpl resetListenerMode() {
+		if (listenerMode != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "listenerMode")) {
+				if (listenerMode != null) {
+					listenerMode = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getListenerSingleton() {
+		if (listenerSingleton == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "listenerSingleton")) {
+				if (listenerSingleton == null) {
+					listenerSingleton = metaApplicationListenerSingleton.get(this, root);
+				}
+			}
+		}
+		return listenerSingleton;
+	}
+
+	public ConfigImpl resetListenerSingleton() {
+		if (listenerSingleton != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "listenerSingleton")) {
+				if (listenerSingleton != null) {
+					listenerSingleton = null;
+				}
+			}
+		}
+		return this;
+	}
+
 	@Override
 	public ApplicationListener getApplicationListener() {
 		if (applicationListener == null) {
@@ -3400,14 +3509,14 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 				if (applicationListener == null) {
 
 					// type
-					ApplicationListener listener = ConfigUtil.loadListener(metaApplicationListenerType.get(this, root), null);
+					ApplicationListener listener = ConfigUtil.loadListener(getListenerType(), null);
 
 					// mode
-					listener.setMode(metaApplicationListenerMode.get(this, root));
+					listener.setMode(getListenerMode());
 
 					// singleton
 					if (listener instanceof ModernAppListener) {// FYI Mixed does extend Modern so it is included
-						listener.setSingelton(metaApplicationListenerSingleton.get(this, root));
+						listener.setSingelton(getListenerSingleton());
 					}
 					applicationListener = listener;
 
@@ -3422,6 +3531,9 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getApplicationListener")) {
 				if (applicationListener != null) {
 					applicationListener = null;
+					resetListenerType();
+					resetListenerMode();
+					resetListenerSingleton();
 				}
 			}
 		}
@@ -3454,6 +3566,160 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
+	public boolean getProxyEnabled() {
+		if (proxyEnabled == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyEnabled")) {
+				if (proxyEnabled == null) {
+					proxyEnabled = metaProxyEnabled.get(this, root);
+				}
+			}
+		}
+		return proxyEnabled;
+	}
+
+	public ConfigImpl resetProxyEnabled() {
+		if (proxyEnabled != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyEnabled")) {
+				if (proxyEnabled != null) {
+					proxyEnabled = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getProxyServer() {
+		if (proxyServer == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyServer")) {
+				if (proxyServer == null) {
+					proxyServer = metaProxyServer.get(this, root);
+				}
+			}
+		}
+		return proxyServer;
+	}
+
+	public ConfigImpl resetProxyServer() {
+		if (proxyServer != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyServer")) {
+				if (proxyServer != null) {
+					proxyServer = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getProxyUsername() {
+		if (proxyUsername == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyUsername")) {
+				if (proxyUsername == null) {
+					proxyUsername = metaProxyUsername.get(this, root);
+				}
+			}
+		}
+		return proxyUsername;
+	}
+
+	public ConfigImpl resetProxyUsername() {
+		if (proxyUsername != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyUsername")) {
+				if (proxyUsername != null) {
+					proxyUsername = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getProxyPassword() {
+		if (proxyPassword == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyPassword")) {
+				if (proxyPassword == null) {
+					proxyPassword = metaProxyPassword.get(this, root);
+				}
+			}
+		}
+		return proxyPassword;
+	}
+
+	public ConfigImpl resetProxyPassword() {
+		if (proxyPassword != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyPassword")) {
+				if (proxyPassword != null) {
+					proxyPassword = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public int getProxyPort() {
+		if (proxyPort == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyPort")) {
+				if (proxyPort == null) {
+					proxyPort = metaProxyPort.get(this, root);
+				}
+			}
+		}
+		return proxyPort;
+	}
+
+	public ConfigImpl resetProxyPort() {
+		if (proxyPort != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyPort")) {
+				if (proxyPort != null) {
+					proxyPort = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getProxyIncludes() {
+		if (proxyIncludes == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyIncludes")) {
+				if (proxyIncludes == null) {
+					proxyIncludes = metaProxyIncludes.get(this, root);
+				}
+			}
+		}
+		return proxyIncludes;
+	}
+
+	public ConfigImpl resetProxyIncludes() {
+		if (proxyIncludes != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyIncludes")) {
+				if (proxyIncludes != null) {
+					proxyIncludes = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getProxyExcludes() {
+		if (proxyExcludes == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyExcludes")) {
+				if (proxyExcludes == null) {
+					proxyExcludes = metaProxyExcludes.get(this, root);
+				}
+			}
+		}
+		return proxyExcludes;
+	}
+
+	public ConfigImpl resetProxyExcludes() {
+		if (proxyExcludes != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "proxyExcludes")) {
+				if (proxyExcludes != null) {
+					proxyExcludes = null;
+				}
+			}
+		}
+		return this;
+	}
+
 	/**
 	 * @return the proxyPassword
 	 */
@@ -3462,22 +3728,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (proxy == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getProxyData")) {
 				if (proxy == null) {
-					boolean enabled = metaProxyEnabled.get(this, root);
-					String server = metaProxyServer.get(this, root);
+					boolean enabled = getProxyEnabled();
+					String server = getProxyServer();
 
 					if (enabled && !StringUtil.isEmpty(server)) {
 
-						String user = metaProxyUser.get(this, root);
-						String pass = metaProxyPass.get(this, root);
-						Integer port = metaProxyPort.get(this, root);
+						String user = getProxyUsername();
+						String pass = getProxyPassword();
+						Integer port = getProxyPort();
 
 						ProxyDataImpl pd = (ProxyDataImpl) ProxyDataImpl.getInstance(server, port, user, pass);
 
-						String strIncludes = metaProxyIncludes.get(this, root);
+						String strIncludes = getProxyIncludes();
 						Set<String> includes = proxy != null ? ProxyDataImpl.toStringSet(strIncludes) : null;
 						if (includes != null) pd.setIncludes(includes);
 
-						String strExcludes = metaProxyExcludes.get(this, root);
+						String strExcludes = getProxyExcludes();
 						Set<String> excludes = proxy != null ? ProxyDataImpl.toStringSet(strExcludes) : null;
 						if (excludes != null) pd.setExcludes(excludes);
 						proxy = pd;
@@ -3493,6 +3759,13 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getProxyData")) {
 				if (proxy != null) {
 					proxy = null;
+					resetProxyEnabled();
+					resetProxyServer();
+					resetProxyUsername();
+					resetProxyPassword();
+					resetProxyPort();
+					resetProxyIncludes();
+					resetProxyExcludes();
 				}
 			}
 		}
@@ -3510,21 +3783,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 */
 	@Override
 	public boolean getTriggerComponentDataMember() {
-		if (triggerComponentDataMember == null) {
+		if (componentImplicitNotation == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getTriggerComponentDataMember")) {
-				if (triggerComponentDataMember == null) {
-					triggerComponentDataMember = metaTriggerComponentDataMember.get(this, root);
+				if (componentImplicitNotation == null) {
+					componentImplicitNotation = metaTriggerComponentDataMember.get(this, root);
 				}
 			}
 		}
-		return triggerComponentDataMember;
+		return componentImplicitNotation;
 	}
 
 	public ConfigImpl resetTriggerComponentDataMember() {
-		if (triggerComponentDataMember != null) {
+		if (componentImplicitNotation != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getTriggerComponentDataMember")) {
-				if (triggerComponentDataMember != null) {
-					triggerComponentDataMember = null;
+				if (componentImplicitNotation != null) {
+					componentImplicitNotation = null;
 				}
 			}
 		}
@@ -3533,30 +3806,30 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Resource getClientScopeDir() {
-		if (clientScopeDir == null) {
+		if (clientDirectory == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getClientScopeDir")) {
-				if (clientScopeDir == null) {
+				if (clientDirectory == null) {
 					Resource configDir = getConfigDir();
 
 					String strClientDirectory = metaClientScopeDir.get(this, root);
 					if (!StringUtil.isEmpty(strClientDirectory, true)) {
 						strClientDirectory = ConfigUtil.translateOldPath(strClientDirectory.trim());
-						clientScopeDir = ConfigUtil.getFile(configDir, strClientDirectory, "client-scope", configDir, FileUtil.TYPE_DIR, ResourceUtil.LEVEL_PARENT_FILE, this);
+						clientDirectory = ConfigUtil.getFile(configDir, strClientDirectory, "client-scope", configDir, FileUtil.TYPE_DIR, ResourceUtil.LEVEL_PARENT_FILE, this);
 					}
 					else {
-						clientScopeDir = configDir.getRealResource("client-scope");
+						clientDirectory = configDir.getRealResource("client-scope");
 					}
 				}
 			}
 		}
-		return clientScopeDir;
+		return clientDirectory;
 	}
 
 	public ConfigImpl resetClientScopeDir() {
-		if (clientScopeDir != null) {
+		if (clientDirectory != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getClientScopeDir")) {
-				if (clientScopeDir != null) {
-					clientScopeDir = null;
+				if (clientDirectory != null) {
+					clientDirectory = null;
 				}
 			}
 		}
@@ -3571,21 +3844,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public long getClientScopeDirSize() {
-		if (clientScopeDirSize == null) {
+		if (clientDirectoryMaxSize == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getClientScopeDirSize")) {
-				if (clientScopeDirSize == null) {
-					clientScopeDirSize = ByteSizeParser.parseByteSizeDefinition(metaClientScopeDirSize.get(this, root).trim(), 1024L * 1024L * 100L);
+				if (clientDirectoryMaxSize == null) {
+					clientDirectoryMaxSize = ByteSizeParser.parseByteSizeDefinition(metaClientScopeDirSize.get(this, root).trim(), 1024L * 1024L * 100L);
 				}
 			}
 		}
-		return clientScopeDirSize;
+		return clientDirectoryMaxSize;
 	}
 
 	public ConfigImpl resetClientScopeDirSize() {
-		if (clientScopeDirSize != null) {
+		if (clientDirectoryMaxSize != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getClientScopeDirSize")) {
-				if (clientScopeDirSize != null) {
-					clientScopeDirSize = null;
+				if (clientDirectoryMaxSize != null) {
+					clientDirectoryMaxSize = null;
 				}
 			}
 		}
@@ -3637,30 +3910,30 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Resource getCacheDir() {
-		if (cacheDir == null) {
+		if (cacheDirectory == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDir")) {
-				if (cacheDir == null) {
+				if (cacheDirectory == null) {
 					Resource configDir = getConfigDir();
 
 					String strCacheDirectory = metaCacheDir.get(this, root);
 					if (!StringUtil.isEmpty(strCacheDirectory)) {
 						strCacheDirectory = ConfigUtil.translateOldPath(strCacheDirectory);
-						cacheDir = ConfigUtil.getFile(configDir, strCacheDirectory, "cache", configDir, FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE, this);
+						cacheDirectory = ConfigUtil.getFile(configDir, strCacheDirectory, "cache", configDir, FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE, this);
 					}
 					else {
-						cacheDir = configDir.getRealResource("cache");
+						cacheDirectory = configDir.getRealResource("cache");
 					}
 				}
 			}
 		}
-		return cacheDir;
+		return cacheDirectory;
 	}
 
 	public ConfigImpl resetCacheDir() {
-		if (cacheDir != null) {
+		if (cacheDirectory != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDir")) {
-				if (cacheDir != null) {
-					cacheDir = null;
+				if (cacheDirectory != null) {
+					cacheDirectory = null;
 				}
 			}
 		}
@@ -3669,22 +3942,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public long getCacheDirSize() {
-		if (cacheDirSize == null) {
+		if (cacheDirectoryMaxSize == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDirSize")) {
-				if (cacheDirSize == null) {
-					cacheDirSize = ByteSizeParser.parseByteSizeDefinition(metaCacheDirSize.get(this, root), 1024L * 1024L * 100L);
+				if (cacheDirectoryMaxSize == null) {
+					cacheDirectoryMaxSize = ByteSizeParser.parseByteSizeDefinition(metaCacheDirSize.get(this, root), 1024L * 1024L * 100L);
 					;
 				}
 			}
 		}
-		return cacheDirSize;
+		return cacheDirectoryMaxSize;
 	}
 
 	public ConfigImpl resetCacheDirSize() {
-		if (cacheDirSize != null) {
+		if (cacheDirectoryMaxSize != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDirSize")) {
-				if (cacheDirSize != null) {
-					cacheDirSize = null;
+				if (cacheDirectoryMaxSize != null) {
+					cacheDirectoryMaxSize = null;
 				}
 			}
 		}
@@ -3752,21 +4025,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean useComponentShadow() {
-		if (useComponentShadow == null) {
+		if (componentUseVariablesScope == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "useComponentShadow")) {
-				if (useComponentShadow == null) {
-					useComponentShadow = metaUseComponentShadow.get(this, root);
+				if (componentUseVariablesScope == null) {
+					componentUseVariablesScope = metaUseComponentShadow.get(this, root);
 				}
 			}
 		}
-		return useComponentShadow;
+		return componentUseVariablesScope;
 	}
 
 	public ConfigImpl resetComponentShadow() {
-		if (useComponentShadow != null) {
+		if (componentUseVariablesScope != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "useComponentShadow")) {
-				if (useComponentShadow != null) {
-					useComponentShadow = null;
+				if (componentUseVariablesScope != null) {
+					componentUseVariablesScope = null;
 				}
 			}
 		}
@@ -3775,21 +4048,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean useComponentPathCache() {
-		if (useComponentPathCache == null) {
+		if (componentUseCachePath == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "useComponentPathCache")) {
-				if (useComponentPathCache == null) {
-					useComponentPathCache = metaUseComponentPathCache.get(this, root);
+				if (componentUseCachePath == null) {
+					componentUseCachePath = metaUseComponentPathCache.get(this, root);
 				}
 			}
 		}
-		return useComponentPathCache;
+		return componentUseCachePath;
 	}
 
 	public ConfigImpl resetComponentPathCache() {
-		if (useComponentPathCache != null) {
+		if (componentUseCachePath != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "useComponentPathCache")) {
-				if (useComponentPathCache != null) {
-					useComponentPathCache = null;
+				if (componentUseCachePath != null) {
+					componentUseCachePath = null;
 				}
 			}
 		}
@@ -3798,21 +4071,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean useCTPathCache() {
-		if (useCTPathCache == null) {
+		if (customTagUseCachePath == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "useCTPathCache")) {
-				if (useCTPathCache == null) {
-					useCTPathCache = metaUseCTPathCache.get(this, root);
+				if (customTagUseCachePath == null) {
+					customTagUseCachePath = metaUseCTPathCache.get(this, root);
 				}
 			}
 		}
-		return useCTPathCache;
+		return customTagUseCachePath;
 	}
 
 	public ConfigImpl resetUseCTPathCache() {
-		if (useCTPathCache != null) {
+		if (customTagUseCachePath != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "useCTPathCache")) {
-				if (useCTPathCache != null) {
-					useCTPathCache = null;
+				if (customTagUseCachePath != null) {
+					customTagUseCachePath = null;
 				}
 			}
 		}
@@ -3833,30 +4106,30 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public PrintWriter getErrWriter() {
-		if (err == null) {
+		if (systemErr == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getErrWriter")) {
-				if (err == null) {
+				if (systemErr == null) {
 					String strErr = metaErr.get(this, root);
 					PrintStream ps = ConfigFactoryImpl.toPrintStream(this, strErr, true);
 
 					if (ps == null) {
-						err = SystemUtil.getPrintWriter(SystemUtil.ERR);
+						systemErr = SystemUtil.getPrintWriter(SystemUtil.ERR);
 					}
 					else {
-						err = new PrintWriter(ps);
+						systemErr = new PrintWriter(ps);
 						System.setErr(ps);
 					}
 				}
 			}
 		}
-		return err;
+		return systemErr;
 	}
 
 	public ConfigImpl resetErrWriter() {
-		if (err != null) {
+		if (systemErr != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getErrWriter")) {
-				if (err != null) {
-					err = null;
+				if (systemErr != null) {
+					systemErr = null;
 				}
 			}
 		}
@@ -3865,30 +4138,30 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public PrintWriter getOutWriter() {
-		if (out == null) {
+		if (systemOut == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getOutWriter")) {
-				if (out == null) {
+				if (systemOut == null) {
 					String strOut = metaOut.get(this, root);
 					PrintStream ps = ConfigFactoryImpl.toPrintStream(this, strOut, false);
 
 					if (ps == null) {
-						out = SystemUtil.getPrintWriter(SystemUtil.OUT);
+						systemOut = SystemUtil.getPrintWriter(SystemUtil.OUT);
 					}
 					else {
-						out = new PrintWriter(ps);
+						systemOut = new PrintWriter(ps);
 						System.setOut(ps);
 					}
 				}
 			}
 		}
-		return out;
+		return systemOut;
 	}
 
 	public ConfigImpl resetOutWriter() {
-		if (out != null) {
+		if (systemOut != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getOutWriter")) {
-				if (out != null) {
-					out = null;
+				if (systemOut != null) {
+					systemOut = null;
 				}
 			}
 		}
@@ -3982,23 +4255,27 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		}
 	}
 
+	public boolean getLocalCustomTag() {
+		return doLocalCustomTag();
+	}
+
 	@Override
 	public boolean doLocalCustomTag() {
-		if (doLocalCustomTag == null) {
+		if (customTagLocalSearch == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "doLocalCustomTag")) {
-				if (doLocalCustomTag == null) {
-					doLocalCustomTag = metaDoLocalCustomTag.get(this, root);
+				if (customTagLocalSearch == null) {
+					customTagLocalSearch = metaDoLocalCustomTag.get(this, root);
 				}
 			}
 		}
-		return doLocalCustomTag;
+		return customTagLocalSearch;
 	}
 
 	public ConfigImpl resetLocalCustomTag() {
-		if (doLocalCustomTag != null) {
+		if (customTagLocalSearch != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "doLocalCustomTag")) {
-				if (doLocalCustomTag != null) {
-					doLocalCustomTag = null;
+				if (customTagLocalSearch != null) {
+					customTagLocalSearch = null;
 				}
 			}
 		}
@@ -4028,46 +4305,54 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
+	public boolean getComponentDeepSearch() {
+		return doComponentDeepSearch();
+	}
+
 	@Override
 	public boolean doComponentDeepSearch() {
-		if (doComponentTagDeepSearch == null) {
+		if (componentDeepSearch == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "doComponentDeepSearch")) {
-				if (doComponentTagDeepSearch == null) {
-					doComponentTagDeepSearch = metaDoComponentTagDeepSearch.get(this, root);
+				if (componentDeepSearch == null) {
+					componentDeepSearch = metaDoComponentTagDeepSearch.get(this, root);
 				}
 			}
 		}
-		return doComponentTagDeepSearch;
+		return componentDeepSearch;
 	}
 
 	public ConfigImpl resetComponentDeepSearch() {
-		if (doComponentTagDeepSearch != null) {
+		if (componentDeepSearch != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "doComponentDeepSearch")) {
-				if (doComponentTagDeepSearch != null) {
-					doComponentTagDeepSearch = null;
+				if (componentDeepSearch != null) {
+					componentDeepSearch = null;
 				}
 			}
 		}
 		return this;
 	}
 
+	public boolean getCustomTagDeepSearch() {
+		return doCustomTagDeepSearch();
+	}
+
 	@Override
 	public boolean doCustomTagDeepSearch() {
-		if (doCustomTagDeepSearch == null) {
+		if (customTagDeepSearch == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "doCustomTagDeepSearch")) {
-				if (doCustomTagDeepSearch == null) {
-					doCustomTagDeepSearch = metaDoCustomTagDeepSearch.get(this, root);
+				if (customTagDeepSearch == null) {
+					customTagDeepSearch = metaDoCustomTagDeepSearch.get(this, root);
 				}
 			}
 		}
-		return doCustomTagDeepSearch;
+		return customTagDeepSearch;
 	}
 
 	public ConfigImpl resetCustomTagDeepSearch() {
-		if (doCustomTagDeepSearch != null) {
+		if (customTagDeepSearch != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "doCustomTagDeepSearch")) {
-				if (doCustomTagDeepSearch != null) {
-					doCustomTagDeepSearch = null;
+				if (customTagDeepSearch != null) {
+					customTagDeepSearch = null;
 				}
 			}
 		}
@@ -4224,23 +4509,23 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public RemoteClient[] getRemoteClients() {
-		if (remoteClients == null) {
+		if (remoteClientsRemoteClient == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClients")) {
-				if (remoteClients == null) {
+				if (remoteClientsRemoteClient == null) {
 					List<RemoteClient> list = metaRemoteClients.list(this, root);
 
-					remoteClients = list.toArray(new RemoteClient[list.size()]);
+					remoteClientsRemoteClient = list.toArray(new RemoteClient[list.size()]);
 				}
 			}
 		}
-		return remoteClients;
+		return remoteClientsRemoteClient;
 	}
 
 	public ConfigImpl resetRemoteClients() {
-		if (remoteClients != null) {
+		if (remoteClientsRemoteClient != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClients")) {
-				if (remoteClients != null) {
-					remoteClients = null;
+				if (remoteClientsRemoteClient != null) {
+					remoteClientsRemoteClient = null;
 				}
 			}
 		}
@@ -4260,21 +4545,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	public int getRemoteClientMaxThreads() {
-		if (remoteClientMaxThreads == null) {
+		if (remoteClientsMaxThreads == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClientMaxThreads")) {
-				if (remoteClientMaxThreads == null) {
-					remoteClientMaxThreads = metaRemoteClientMaxThreads.get(this, root);
+				if (remoteClientsMaxThreads == null) {
+					remoteClientsMaxThreads = metaRemoteClientMaxThreads.get(this, root);
 				}
 			}
 		}
-		return remoteClientMaxThreads;
+		return remoteClientsMaxThreads;
 	}
 
 	public ConfigImpl resetRemoteClientMaxThreads() {
-		if (remoteClientMaxThreads != null) {
+		if (remoteClientsMaxThreads != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClientMaxThreads")) {
-				if (remoteClientMaxThreads != null) {
-					remoteClientMaxThreads = null;
+				if (remoteClientsMaxThreads != null) {
+					remoteClientsMaxThreads = null;
 				}
 			}
 		}
@@ -4284,25 +4569,25 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	//
 	@Override
 	public Resource getRemoteClientDirectory() {
-		if (remoteClientDirectory == null) {
+		if (remoteClientsDirectory == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClientDirectory")) {
-				if (remoteClientDirectory == null) {
+				if (remoteClientsDirectory == null) {
 					String strDir = metaRemoteClientDirectory.get(this, root);
-					remoteClientDirectory = ConfigUtil.getFile(getRootDirectory(), strDir, "client-task", getConfigDir(), FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE,
+					remoteClientsDirectory = ConfigUtil.getFile(getRootDirectory(), strDir, "client-task", getConfigDir(), FileUtil.TYPE_DIR, ResourceUtil.LEVEL_GRAND_PARENT_FILE,
 							this);
 
-					if (!remoteClientDirectory.exists()) remoteClientDirectory.mkdirs();
+					if (!remoteClientsDirectory.exists()) remoteClientsDirectory.mkdirs();
 				}
 			}
 		}
-		return remoteClientDirectory;
+		return remoteClientsDirectory;
 	}
 
 	public ConfigImpl resetRemoteClientDirectory() {
-		if (remoteClientDirectory != null) {
+		if (remoteClientsDirectory != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRemoteClientDirectory")) {
-				if (remoteClientDirectory != null) {
-					remoteClientDirectory = null;
+				if (remoteClientsDirectory != null) {
+					remoteClientsDirectory = null;
 				}
 			}
 		}
@@ -4334,21 +4619,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public int getLocalMode() {
-		if (localMode == null) {
+		if (localScopeMode == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getLocalMode")) {
-				if (localMode == null) {
-					localMode = metaLocalMode.get(this, root);
+				if (localScopeMode == null) {
+					localScopeMode = metaLocalMode.get(this, root);
 				}
 			}
 		}
-		return localMode;
+		return localScopeMode;
 	}
 
 	public ConfigImpl resetLocalMode() {
-		if (localMode != null) {
+		if (localScopeMode != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getLocalMode")) {
-				if (localMode != null) {
-					localMode = null;
+				if (localScopeMode != null) {
+					localScopeMode = null;
 				}
 			}
 		}
@@ -4445,21 +4730,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean allowRealPath() {
-		if (allowRealPath == null) {
+		if (fileSystemAllowRealpath == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "allowRealPath")) {
-				if (allowRealPath == null) {
-					allowRealPath = metaAllowRealPath.get(this, root);
+				if (fileSystemAllowRealpath == null) {
+					fileSystemAllowRealpath = metaAllowRealPath.get(this, root);
 				}
 			}
 		}
-		return allowRealPath;
+		return fileSystemAllowRealpath;
 	}
 
 	public ConfigImpl resetAllowRealPath() {
-		if (allowRealPath != null) {
+		if (fileSystemAllowRealpath != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "allowRealPath")) {
-				if (allowRealPath != null) {
-					allowRealPath = null;
+				if (fileSystemAllowRealpath != null) {
+					fileSystemAllowRealpath = null;
 
 				}
 			}
@@ -4753,6 +5038,222 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return rc;
 	}
 
+	public String getCacheDefaultResource() {
+		if (!initCacheDefaultResource) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultResource")) {
+				if (!initCacheDefaultResource) {
+					cacheDefaultResource = metaCacheDefaultConnectionNamesResource.get(this, root);
+					initCacheDefaultResource = true;
+				}
+			}
+		}
+		return cacheDefaultResource;
+	}
+
+	public ConfigImpl resetCacheDefaultResource() {
+		if (initCacheDefaultResource) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultResource")) {
+				if (initCacheDefaultResource) {
+					cacheDefaultResource = null;
+					initCacheDefaultResource = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultFunction() {
+		if (!initCacheDefaultFunction) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultFunction")) {
+				if (!initCacheDefaultFunction) {
+					cacheDefaultFunction = metaCacheDefaultConnectionNamesFunction.get(this, root);
+					initCacheDefaultFunction = true;
+				}
+			}
+		}
+		return cacheDefaultFunction;
+	}
+
+	public ConfigImpl resetCacheDefaultFunction() {
+		if (initCacheDefaultFunction) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultFunction")) {
+				if (initCacheDefaultFunction) {
+					cacheDefaultFunction = null;
+					initCacheDefaultFunction = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultInclude() {
+		if (!initCacheDefaultInclude) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultInclude")) {
+				if (!initCacheDefaultInclude) {
+					cacheDefaultInclude = metaCacheDefaultConnectionNamesInclude.get(this, root);
+					initCacheDefaultInclude = true;
+				}
+			}
+		}
+		return cacheDefaultInclude;
+	}
+
+	public ConfigImpl resetCacheDefaultInclude() {
+		if (initCacheDefaultInclude) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultInclude")) {
+				if (initCacheDefaultInclude) {
+					cacheDefaultInclude = null;
+					initCacheDefaultInclude = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultQuery() {
+		if (!initCacheDefaultQuery) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultQuery")) {
+				if (!initCacheDefaultQuery) {
+					cacheDefaultQuery = metaCacheDefaultConnectionNamesQuery.get(this, root);
+					initCacheDefaultQuery = true;
+				}
+			}
+		}
+		return cacheDefaultQuery;
+	}
+
+	public ConfigImpl resetCacheDefaultQuery() {
+		if (initCacheDefaultQuery) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultQuery")) {
+				if (initCacheDefaultQuery) {
+					cacheDefaultQuery = null;
+					initCacheDefaultQuery = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultTemplate() {
+		if (!initCacheDefaultTemplate) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultTemplate")) {
+				if (!initCacheDefaultTemplate) {
+					cacheDefaultTemplate = metaCacheDefaultConnectionNamesTemplate.get(this, root);
+					initCacheDefaultTemplate = true;
+				}
+			}
+		}
+		return cacheDefaultTemplate;
+	}
+
+	public ConfigImpl resetCacheDefaultTemplate() {
+		if (initCacheDefaultTemplate) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultTemplate")) {
+				if (initCacheDefaultTemplate) {
+					cacheDefaultTemplate = null;
+					initCacheDefaultTemplate = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultObject() {
+		if (!initCacheDefaultObject) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultObject")) {
+				if (!initCacheDefaultObject) {
+					cacheDefaultObject = metaCacheDefaultConnectionNamesObject.get(this, root);
+					initCacheDefaultObject = true;
+				}
+			}
+		}
+		return cacheDefaultObject;
+	}
+
+	public ConfigImpl resetCacheDefaultObject() {
+		if (initCacheDefaultObject) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultObject")) {
+				if (initCacheDefaultObject) {
+					cacheDefaultObject = null;
+					initCacheDefaultObject = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultFile() {
+		if (!initCacheDefaultFile) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultFile")) {
+				if (!initCacheDefaultFile) {
+					cacheDefaultFile = metaCacheDefaultConnectionNamesFile.get(this, root);
+					initCacheDefaultFile = true;
+				}
+			}
+		}
+		return cacheDefaultFile;
+	}
+
+	public ConfigImpl resetCacheDefaultFile() {
+		if (initCacheDefaultFile) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultFile")) {
+				if (initCacheDefaultFile) {
+					cacheDefaultFile = null;
+					initCacheDefaultFile = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultHTTP() {
+		if (!initCacheDefaultHTTP) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultHTTP")) {
+				if (!initCacheDefaultHTTP) {
+					cacheDefaultHTTP = metaCacheDefaultConnectionNamesHTTP.get(this, root);
+					initCacheDefaultHTTP = true;
+				}
+			}
+		}
+		return cacheDefaultHTTP;
+	}
+
+	public ConfigImpl resetCacheDefaultHTTP() {
+		if (initCacheDefaultHTTP) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultHTTP")) {
+				if (initCacheDefaultHTTP) {
+					cacheDefaultHTTP = null;
+					initCacheDefaultHTTP = false;
+				}
+			}
+		}
+		return this;
+	}
+
+	public String getCacheDefaultWebservice() {
+		if (!initCacheDefaultWebservice) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultWebservice")) {
+				if (!initCacheDefaultWebservice) {
+					cacheDefaultWebservice = metaCacheDefaultConnectionNamesWebservice.get(this, root);
+					initCacheDefaultWebservice = true;
+				}
+			}
+		}
+		return cacheDefaultWebservice;
+	}
+
+	public ConfigImpl resetCacheDefaultWebservice() {
+		if (initCacheDefaultWebservice) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "cacheDefaultWebservice")) {
+				if (initCacheDefaultWebservice) {
+					cacheDefaultWebservice = null;
+					initCacheDefaultWebservice = false;
+				}
+			}
+		}
+		return this;
+	}
+
 	public Map<Integer, String> getCacheDefaultConnectionNames() {
 		if (cacheDefaultConnectionNames == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDefaultConnectionName")) {
@@ -4760,39 +5261,39 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					Map<Integer, String> names = new HashMap<>();
 
 					// resource
-					String str = metaCacheDefaultConnectionNamesResource.get(this, root);
+					String str = getCacheDefaultResource();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_RESOURCE, str);
 
 					// function
-					str = metaCacheDefaultConnectionNamesFunction.get(this, root);
+					str = getCacheDefaultFunction();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_FUNCTION, str);
 
 					// include
-					str = metaCacheDefaultConnectionNamesInclude.get(this, root);
+					str = getCacheDefaultInclude();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_INCLUDE, str);
 
 					// query
-					str = metaCacheDefaultConnectionNamesQuery.get(this, root);
+					str = getCacheDefaultQuery();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_QUERY, str);
 
 					// template
-					str = metaCacheDefaultConnectionNamesTemplate.get(this, root);
+					str = getCacheDefaultTemplate();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_TEMPLATE, str);
 
 					// object
-					str = metaCacheDefaultConnectionNamesObject.get(this, root);
+					str = getCacheDefaultObject();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_OBJECT, str);
 
 					// file
-					str = metaCacheDefaultConnectionNamesFile.get(this, root);
+					str = getCacheDefaultFile();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_FILE, str);
 
 					// HTTP
-					str = metaCacheDefaultConnectionNamesHTTP.get(this, root);
+					str = getCacheDefaultHTTP();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_HTTP, str);
 
 					// Webservice
-					str = metaCacheDefaultConnectionNamesWebservice.get(this, root);
+					str = getCacheDefaultWebservice();
 					if (!StringUtil.isEmpty(str, true)) names.put(ConfigPro.CACHE_TYPE_WEBSERVICE, str);
 
 					cacheDefaultConnectionNames = names;
@@ -4802,22 +5303,32 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return cacheDefaultConnectionNames;
 	}
 
-	@Override
-	public String getCacheDefaultConnectionName(int type) {
-		String res = getCacheDefaultConnectionNames().get(type);
-		if (StringUtil.isEmpty(res, true)) return "";
-		return res.trim();
-	}
-
 	public ConfigImpl resetCacheDefaultConnectionNames() {
 		if (cacheDefaultConnectionNames != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDefaultConnectionName")) {
 				if (cacheDefaultConnectionNames != null) {
 					cacheDefaultConnectionNames = null;
+
+					resetCacheDefaultFile();
+					resetCacheDefaultFunction();
+					resetCacheDefaultHTTP();
+					resetCacheDefaultInclude();
+					resetCacheDefaultObject();
+					resetCacheDefaultQuery();
+					resetCacheDefaultResource();
+					resetCacheDefaultTemplate();
+					resetCacheDefaultWebservice();
 				}
 			}
 		}
 		return this;
+	}
+
+	@Override
+	public String getCacheDefaultConnectionName(int type) {
+		String res = getCacheDefaultConnectionNames().get(type);
+		if (StringUtil.isEmpty(res, true)) return "";
+		return res.trim();
 	}
 
 	public Map<Integer, CacheConnection> getCacheDefaultConnections() {
@@ -4869,21 +5380,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Map<String, CacheConnection> getCacheConnections() {// = new HashMap<String, CacheConnection>()
-		if (cacheConnection == null) {
+		if (caches == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheConnections")) {
-				if (cacheConnection == null) {
-					cacheConnection = metaCacheConnection.map(this, root);
+				if (caches == null) {
+					caches = metaCacheConnection.map(this, root);
 				}
 			}
 		}
-		return cacheConnection;
+		return caches;
 	}
 
 	public ConfigImpl resetCacheConnections() {// = new HashMap<String, CacheConnection>()
-		if (cacheConnection != null) {
+		if (caches != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheConnections")) {
-				if (cacheConnection != null) {
-					cacheConnection = null;
+				if (caches != null) {
+					caches = null;
 				}
 			}
 		}
@@ -5089,21 +5600,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public long getApplicationPathCacheTimeout() {
-		if (applicationPathCacheTimeout == null) {
+		if (applicationPathTimeout == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getApplicationPathCacheTimeout")) {
-				if (applicationPathCacheTimeout == null) {
-					applicationPathCacheTimeout = metaApplicationPathCacheTimeout.get(this, root).getMillis();
+				if (applicationPathTimeout == null) {
+					applicationPathTimeout = metaApplicationPathCacheTimeout.get(this, root).getMillis();
 				}
 			}
 		}
-		return applicationPathCacheTimeout;
+		return applicationPathTimeout;
 	}
 
 	public ConfigImpl resetApplicationPathCacheTimeout() {
-		if (applicationPathCacheTimeout != null) {
+		if (applicationPathTimeout != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getApplicationPathCacheTimeout")) {
-				if (applicationPathCacheTimeout != null) {
-					applicationPathCacheTimeout = null;
+				if (applicationPathTimeout != null) {
+					applicationPathTimeout = null;
 				}
 			}
 		}
@@ -5190,21 +5701,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public ImportDefintion getComponentDefaultImport() {
-		if (componentDefaultImport == null) {
+		if (componentAutoImport == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getComponentDefaultImport")) {
-				if (componentDefaultImport == null) {
-					componentDefaultImport = ImportDefintionImpl.getInstance(metaComponentDefaultImport.get(this, root), DEFAULT_IMPORT_DEFINITION);
+				if (componentAutoImport == null) {
+					componentAutoImport = ImportDefintionImpl.getInstance(metaComponentDefaultImport.get(this, root), DEFAULT_IMPORT_DEFINITION);
 				}
 			}
 		}
-		return componentDefaultImport;
+		return componentAutoImport;
 	}
 
 	public ConfigImpl resetComponentDefaultImport() {
-		if (componentDefaultImport != null) {
+		if (componentAutoImport != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getComponentDefaultImport")) {
-				if (componentDefaultImport != null) {
-					this.componentDefaultImport = null;
+				if (componentAutoImport != null) {
+					this.componentAutoImport = null;
 				}
 			}
 		}
@@ -5401,21 +5912,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public int getDebugMaxRecordsLogged() {
-		if (debugMaxRecordsLogged == null) {
+		if (debuggingMaxRecordsLogged == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDebugMaxRecordsLogged")) {
-				if (debugMaxRecordsLogged == null) {
-					debugMaxRecordsLogged = metaDebugMaxRecordsLogged.get(this, root);
+				if (debuggingMaxRecordsLogged == null) {
+					debuggingMaxRecordsLogged = metaDebugMaxRecordsLogged.get(this, root);
 				}
 			}
 		}
-		return debugMaxRecordsLogged;
+		return debuggingMaxRecordsLogged;
 	}
 
 	public ConfigImpl resetDebugMaxRecordsLogged() {
-		if (debugMaxRecordsLogged != null) {
+		if (debuggingMaxRecordsLogged != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDebugMaxRecordsLogged")) {
-				if (debugMaxRecordsLogged != null) {
-					debugMaxRecordsLogged = null;
+				if (debuggingMaxRecordsLogged != null) {
+					debuggingMaxRecordsLogged = null;
 				}
 			}
 		}
@@ -5558,21 +6069,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	// do not move to Config interface, do instead setCFMLWriterClass
 	@Override
 	public int getCFMLWriterType() {
-		if (writerType == null) {
+		if (cfmlWriter == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCFMLWriterType")) {
-				if (writerType == null) {
-					writerType = metaWriterType.get(this, root);
+				if (cfmlWriter == null) {
+					cfmlWriter = metaCfmlWriter.get(this, root);
 				}
 			}
 		}
-		return writerType;
+		return cfmlWriter;
 	}
 
 	public ConfigImpl resetCFMLWriterType() {
-		if (writerType != null) {
+		if (cfmlWriter != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCFMLWriterType")) {
-				if (writerType != null) {
-					writerType = null;
+				if (cfmlWriter != null) {
+					cfmlWriter = null;
 				}
 			}
 		}
@@ -5613,37 +6124,228 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	public int getDebugOptions() {
-		if (debugOptions == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getDebugOptions")) {
-				if (debugOptions == null) {
-
-					int options = 0;
-					if (metaDebugOptionsDatabase.get(this, root)) options += ConfigPro.DEBUG_DATABASE;
-					if (metaDebugOptionsException.get(this, root)) options += ConfigPro.DEBUG_EXCEPTION;
-					if (metaDebugOptionsTemplate.get(this, root)) options += ConfigPro.DEBUG_TEMPLATE;
-					if (metaDebugOptionsDump.get(this, root)) options += ConfigPro.DEBUG_DUMP;
-					if (metaDebugOptionsTracing.get(this, root)) options += ConfigPro.DEBUG_TRACING;
-					if (metaDebugOptionsTimer.get(this, root)) options += ConfigPro.DEBUG_TIMER;
-					if (metaDebugOptionsImplicitAccess.get(this, root)) options += ConfigPro.DEBUG_IMPLICIT_ACCESS;
-					if (metaDebugOptionsQueryUsage.get(this, root)) options += ConfigPro.DEBUG_QUERY_USAGE;
-					if (metaDebugOptionsThread.get(this, root)) options += ConfigPro.DEBUG_THREAD;
-
-					debugOptions = options;
+	public boolean getDebuggingDatabase() {
+		if (debuggingDatabase == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingDatabase")) {
+				if (debuggingDatabase == null) {
+					debuggingDatabase = metaDebugOptionsDatabase.get(this, root);
 				}
 			}
 		}
-		return debugOptions;
+		return debuggingDatabase;
+	}
+
+	public ConfigImpl resetDebuggingDatabase() {
+		if (debuggingDatabase != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingDatabase")) {
+				if (debuggingDatabase != null) {
+					debuggingDatabase = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingException() {
+		if (debuggingException == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingException")) {
+				if (debuggingException == null) {
+					debuggingException = metaDebugOptionsException.get(this, root);
+				}
+			}
+		}
+		return debuggingException;
+	}
+
+	public ConfigImpl resetDebuggingException() {
+		if (debuggingException != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingException")) {
+				if (debuggingException != null) {
+					debuggingException = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingTemplate() {
+		if (debuggingTemplate == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingTemplate")) {
+				if (debuggingTemplate == null) {
+					debuggingTemplate = metaDebugOptionsTemplate.get(this, root);
+				}
+			}
+		}
+		return debuggingTemplate;
+	}
+
+	public ConfigImpl resetDebuggingTemplate() {
+		if (debuggingTemplate != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingTemplate")) {
+				if (debuggingTemplate != null) {
+					debuggingTemplate = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingDump() {
+		if (debuggingDump == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingDump")) {
+				if (debuggingDump == null) {
+					debuggingDump = metaDebugOptionsDump.get(this, root);
+				}
+			}
+		}
+		return debuggingDump;
+	}
+
+	public ConfigImpl resetDebuggingDump() {
+		if (debuggingDump != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingDump")) {
+				if (debuggingDump != null) {
+					debuggingDump = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingTracing() {
+		if (debuggingTracing == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingTracing")) {
+				if (debuggingTracing == null) {
+					debuggingTracing = metaDebugOptionsTracing.get(this, root);
+				}
+			}
+		}
+		return debuggingTracing;
+	}
+
+	public ConfigImpl resetDebuggingTracing() {
+		if (debuggingTracing != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingTracing")) {
+				if (debuggingTracing != null) {
+					debuggingTracing = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingTimer() {
+		if (debuggingTimer == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingTimer")) {
+				if (debuggingTimer == null) {
+					debuggingTimer = metaDebugOptionsTimer.get(this, root);
+				}
+			}
+		}
+		return debuggingTimer;
+	}
+
+	public ConfigImpl resetDebuggingTimer() {
+		if (debuggingTimer != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingTimer")) {
+				if (debuggingTimer != null) {
+					debuggingTimer = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingImplicitAccess() {
+		if (debuggingImplicitAccess == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingImplicitAccess")) {
+				if (debuggingImplicitAccess == null) {
+					debuggingImplicitAccess = metaDebugOptionsImplicitAccess.get(this, root);
+				}
+			}
+		}
+		return debuggingImplicitAccess;
+	}
+
+	public ConfigImpl resetDebuggingImplicitAccess() {
+		if (debuggingImplicitAccess != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingImplicitAccess")) {
+				if (debuggingImplicitAccess != null) {
+					debuggingImplicitAccess = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingQueryUsage() {
+		if (debuggingQueryUsage == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingQueryUsage")) {
+				if (debuggingQueryUsage == null) {
+					debuggingQueryUsage = metaDebugOptionsQueryUsage.get(this, root);
+				}
+			}
+		}
+		return debuggingQueryUsage;
+	}
+
+	public ConfigImpl resetDebuggingQueryUsage() {
+		if (debuggingQueryUsage != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingQueryUsage")) {
+				if (debuggingQueryUsage != null) {
+					debuggingQueryUsage = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getDebuggingThread() {
+		if (debuggingThread == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingThread")) {
+				if (debuggingThread == null) {
+					debuggingThread = metaDebugOptionsThread.get(this, root);
+				}
+			}
+		}
+		return debuggingThread;
+	}
+
+	public ConfigImpl resetDebuggingThread() {
+		if (debuggingThread != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "debuggingThread")) {
+				if (debuggingThread != null) {
+					debuggingThread = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public int getDebugOptions() {
+		int options = 0;
+		if (getDebuggingDatabase()) options += ConfigPro.DEBUG_DATABASE;
+		if (getDebuggingException()) options += ConfigPro.DEBUG_EXCEPTION;
+		if (getDebuggingTemplate()) options += ConfigPro.DEBUG_TEMPLATE;
+		if (getDebuggingDump()) options += ConfigPro.DEBUG_DUMP;
+		if (getDebuggingTracing()) options += ConfigPro.DEBUG_TRACING;
+		if (getDebuggingTimer()) options += ConfigPro.DEBUG_TIMER;
+		if (getDebuggingImplicitAccess()) options += ConfigPro.DEBUG_IMPLICIT_ACCESS;
+		if (getDebuggingQueryUsage()) options += ConfigPro.DEBUG_QUERY_USAGE;
+		if (getDebuggingThread()) options += ConfigPro.DEBUG_THREAD;
+		return options;
 	}
 
 	public ConfigImpl resetDebugOptions() {
-		if (debugOptions != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getDebugOptions")) {
-				if (debugOptions != null) {
-					debugOptions = null;
-				}
-			}
-		}
+		resetDebuggingDatabase();
+		resetDebuggingException();
+		resetDebuggingTemplate();
+		resetDebuggingDump();
+		resetDebuggingTracing();
+		resetDebuggingTimer();
+		resetDebuggingImplicitAccess();
+		resetDebuggingQueryUsage();
+		resetDebuggingThread();
 		return this;
 	}
 	// = 0
@@ -5655,21 +6357,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean checkForChangesInConfigFile() {
-		if (checkForChangesInConfigFile == null) {
+		if (checkForChanges == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "checkForChangesInConfigFile")) {
-				if (checkForChangesInConfigFile == null) {
-					checkForChangesInConfigFile = metaCheckForChangesInConfigFile.get(this, root);
+				if (checkForChanges == null) {
+					checkForChanges = metaCheckForChangesInConfigFile.get(this, root);
 				}
 			}
 		}
-		return checkForChangesInConfigFile;
+		return checkForChanges;
 	}
 
 	public ConfigImpl resetCheckForChangesInConfigFile() {
-		if (checkForChangesInConfigFile != null) {
+		if (checkForChanges != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "checkForChangesInConfigFile")) {
-				if (checkForChangesInConfigFile != null) {
-					checkForChangesInConfigFile = null;
+				if (checkForChanges != null) {
+					checkForChanges = null;
 				}
 			}
 		}
@@ -5845,21 +6547,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Boolean getHandleUnQuotedAttrValueAsString() {
-		if (handleUnQuotedAttrValueAsString == null) {
+		if (handleUnquotedAttributeValueAsString == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getHandleUnQuotedAttrValueAsString")) {
-				if (handleUnQuotedAttrValueAsString == null) {
-					handleUnQuotedAttrValueAsString = metaHandleUnquotedAttributeValueAsString.get(this, root);
+				if (handleUnquotedAttributeValueAsString == null) {
+					handleUnquotedAttributeValueAsString = metaHandleUnquotedAttributeValueAsString.get(this, root);
 				}
 			}
 		}
-		return handleUnQuotedAttrValueAsString;
+		return handleUnquotedAttributeValueAsString;
 	}
 
 	public ConfigImpl resetHandleUnQuotedAttrValueAsString() {
-		if (handleUnQuotedAttrValueAsString != null) {
+		if (handleUnquotedAttributeValueAsString != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getHandleUnQuotedAttrValueAsString")) {
-				if (handleUnQuotedAttrValueAsString != null) {
-					handleUnQuotedAttrValueAsString = null;
+				if (handleUnquotedAttributeValueAsString != null) {
+					handleUnquotedAttributeValueAsString = null;
 				}
 			}
 		}
@@ -6043,21 +6745,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public int getQueueMax() {
-		if (queueMax == -1) {
+		if (requestQueueMax == -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueueMax")) {
-				if (queueMax == -1) {
-					queueMax = metaQueueMax.get(this, root);
+				if (requestQueueMax == -1) {
+					requestQueueMax = metaQueueMax.get(this, root);
 				}
 			}
 		}
-		return queueMax;
+		return requestQueueMax;
 	}
 
 	public ConfigImpl resetQueueMax() {
-		if (queueMax != -1) {
+		if (requestQueueMax != -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueueMax")) {
-				if (queueMax != -1) {
-					queueMax = -1;
+				if (requestQueueMax != -1) {
+					requestQueueMax = -1;
 				}
 			}
 		}
@@ -6066,22 +6768,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public long getQueueTimeout() {
-		if (queueTimeout == -1) {
+		if (requestQueueTimeout == -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueueTimeout")) {
-				if (queueTimeout == -1) {
-					queueTimeout = metaQueueTimeout.get(this, root);
+				if (requestQueueTimeout == -1) {
+					requestQueueTimeout = metaQueueTimeout.get(this, root);
 					;
 				}
 			}
 		}
-		return queueTimeout;
+		return requestQueueTimeout;
 	}
 
 	public ConfigImpl resetQueueTimeout() {
-		if (queueTimeout != -1) {
+		if (requestQueueTimeout != -1) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueueTimeout")) {
-				if (queueTimeout != -1) {
-					queueTimeout = -1;
+				if (requestQueueTimeout != -1) {
+					requestQueueTimeout = -1;
 				}
 			}
 		}
@@ -6090,21 +6792,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean getQueueEnable() {
-		if (queueEnable == null) {
+		if (requestQueueEnable == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueueEnable")) {
-				if (queueEnable == null) {
-					queueEnable = metaQueueEnable.get(this, root);
+				if (requestQueueEnable == null) {
+					requestQueueEnable = metaQueueEnable.get(this, root);
 				}
 			}
 		}
-		return queueEnable;
+		return requestQueueEnable;
 	}
 
 	public ConfigImpl resetQueueEnable() {
-		if (queueEnable != null) {
+		if (requestQueueEnable != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getQueueEnable")) {
-				if (queueEnable != null) {
-					queueEnable = null;
+				if (requestQueueEnable != null) {
+					requestQueueEnable = null;
 				}
 			}
 		}
@@ -6161,26 +6863,26 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	@Deprecated
 	public Map<String, ClassDefinition> getCacheDefinitions() {
-		if (cacheDefinitions == null) {
+		if (cacheClasses == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDefinitions")) {
-				if (cacheDefinitions == null) {
+				if (cacheClasses == null) {
 					List<ClassDefinition> list = metacCacheDefinitions.list(this, root);
 					Map<String, ClassDefinition> map = new HashMap<String, ClassDefinition>();
 					for (ClassDefinition cd: list) {
 						map.put(cd.getClassName(), cd);
 					}
-					cacheDefinitions = map;
+					cacheClasses = map;
 				}
 			}
 		}
-		return cacheDefinitions;
+		return cacheClasses;
 	}
 
 	public ConfigImpl resetCacheDefinitions() {
-		if (cacheDefinitions != null) {
+		if (cacheClasses != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheDefinitions")) {
-				if (cacheDefinitions != null) {
-					cacheDefinitions = null;
+				if (cacheClasses != null) {
+					cacheClasses = null;
 				}
 			}
 		}
@@ -6212,21 +6914,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	public GatewayMap getGatewayEntries() {
-		if (gatewayEntries == null) {
+		if (gateways == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getGatewayEntries")) {
-				if (gatewayEntries == null) {
-					gatewayEntries = (GatewayMap) metaGatewayEntries.map(this, root, new GatewayMap());
+				if (gateways == null) {
+					gateways = (GatewayMap) metaGatewayEntries.map(this, root, new GatewayMap());
 				}
 			}
 		}
-		return gatewayEntries;
+		return gateways;
 	}
 
 	public ConfigImpl resetGatewayEntries() {
-		if (gatewayEntries != null) {
+		if (gateways != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getGatewayEntries")) {
-				if (gatewayEntries != null) {
-					gatewayEntries = null;
+				if (gateways != null) {
+					gateways = null;
 				}
 			}
 		}
@@ -6266,21 +6968,21 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public final boolean getFullNullSupport() {
-		if (fullNullSupport == null) {
+		if (nullSupport == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getFullNullSupport")) {
-				if (fullNullSupport == null) {
-					fullNullSupport = metafullNullSupport.get(this, root);
+				if (nullSupport == null) {
+					nullSupport = metafullNullSupport.get(this, root);
 				}
 			}
 		}
-		return fullNullSupport;
+		return nullSupport;
 	}
 
 	public final ConfigImpl resetFullNullSupport() {
-		if (fullNullSupport != null) {
+		if (nullSupport != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getFullNullSupport")) {
-				if (fullNullSupport != null) {
-					fullNullSupport = null;
+				if (nullSupport != null) {
+					nullSupport = null;
 				}
 			}
 		}
@@ -6304,25 +7006,25 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public TimeSpan getCachedAfterTimeRange() {
-		if (initCachedAfterTimeRange) {
+		if (initCachedAfter) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCachedAfterTimeRange")) {
-				if (initCachedAfterTimeRange) {
+				if (initCachedAfter) {
 
 					TimeSpan ts = metaCachedAfterTimeRange.get(this, root);
-					if (ts != null && ts.getMillis() > 0) cachedAfterTimeRange = ts;
-					initCachedAfterTimeRange = false;
+					if (ts != null && ts.getMillis() > 0) cachedAfter = ts;
+					initCachedAfter = false;
 				}
 			}
 		}
-		return this.cachedAfterTimeRange;
+		return this.cachedAfter;
 	}
 
 	public ConfigImpl resetCachedAfterTimeRange() {
-		if (!initCachedAfterTimeRange) {
+		if (!initCachedAfter) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCachedAfterTimeRange")) {
-				if (!initCachedAfterTimeRange) {
-					cachedAfterTimeRange = null;
-					initCachedAfterTimeRange = true;
+				if (!initCachedAfter) {
+					cachedAfter = null;
+					initCachedAfter = true;
 				}
 			}
 		}
@@ -6366,18 +7068,18 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Regex getRegex() {
-		if (regex == null) {
+		if (regexType == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRegex")) {
-				regex = metaRegex.get(this, root);
+				regexType = metaRegex.get(this, root);
 			}
 		}
-		return regex;
+		return regexType;
 	}
 
 	public ConfigImpl resetRegex() {
-		if (regex != null) {
+		if (regexType != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getRegex")) {
-				if (regex != null) regex = null;
+				if (regexType != null) regexType = null;
 			}
 		}
 		return this;
@@ -6407,28 +7109,28 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	protected void setMainLogger(String mainLoggerName) {
-		if (!StringUtil.isEmpty(mainLoggerName, true)) this.mainLoggerName = mainLoggerName.trim();
+		if (!StringUtil.isEmpty(mainLoggerName, true)) this.mainLogger = mainLoggerName.trim();
 	}
 
 	@Override
 	public String getMainLogger() {
-		if (mainLoggerName == null) {
+		if (mainLogger == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getMainLogger")) {
-				if (mainLoggerName == null) {
-					mainLoggerName = metaMainLoggerName.get(this, root);
+				if (mainLogger == null) {
+					mainLogger = metaMainLoggerName.get(this, root);
 				}
 
 			}
 		}
 
-		return this.mainLoggerName;
+		return this.mainLogger;
 	}
 
 	public ConfigImpl resetMainLogger() {
-		if (mainLoggerName != null) {
+		if (mainLogger != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getMainLogger")) {
-				if (mainLoggerName != null) {
-					mainLoggerName = null;
+				if (mainLogger != null) {
+					mainLogger = null;
 				}
 			}
 		}
@@ -6594,18 +7296,26 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		}
 	}
 
-	/*
-	 * public static void main(String[] args) throws IOException { List<Method> methods; Resource res =
-	 * ResourcesImpl.getFileResourceProvider().getResource("/Users/mic/Tmp3/wwwwww");
-	 * ResourceUtil.deleteContent(res, null); DynamicInvoker.getInstance(res);
-	 * 
-	 * methods = Reflector.getMethods(lucee.runtime.config.ConfigWebImpl.class); methods =
-	 * Reflector.getMethods(lucee.runtime.config.ConfigServerImpl.class);
-	 * 
-	 * int max = 5; for (Method method: methods) { if (!method.getName().startsWith("reset") ||
-	 * method.getName().equals("reset") || method.getName().equals("resetAll") ||
-	 * method.getArgumentCount() != 0) continue; print.e("->" +
-	 * method.getDeclaringProviderClassNameWithSameAccess() + ":" +
-	 * method.getDeclaringProviderClassName() + ":" + method.getName()); // if (--max == 0) break; } }
-	 */
+	public void touchAll(ResetFilter filter) throws IOException {
+		List<Method> methods = Reflector.getMethods(this.getClass());
+
+		Set<String> ignores = new HashSet<>();
+		ignores.add("getDebugTemplate");
+		ignores.add("getExtensionProviders");
+		ignores.add("getExtensions");
+
+		if (filter == null) {
+			for (Method method: methods) {
+				if (!method.getName().startsWith("get") || ignores.contains(method.getName()) || method.getArgumentCount() != 0) continue;
+				print.e("->" + method.getName());
+				method.invoke(this);
+			}
+		}
+		else {
+			for (Method method: methods) {
+				if (!ignores.contains(method.getName()) && method.getArgumentCount() == 0 && filter.allow(method.getName())) method.invoke(this);
+			}
+		}
+	}
+
 }
