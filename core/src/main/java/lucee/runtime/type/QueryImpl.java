@@ -1920,7 +1920,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public String castToString() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to String", "Use Built-In-Function \"serialize(Query):String\" to create a String from Query");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to String", "Use Built-In-Function \"serialize(Query):String\" to create a String from Query");
 	}
 
 	@Override
@@ -1930,7 +1930,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public boolean castToBooleanValue() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to a boolean value");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to a boolean value");
 	}
 
 	@Override
@@ -1940,7 +1940,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public double castToDoubleValue() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to a number value");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to a number value");
 	}
 
 	@Override
@@ -1950,7 +1950,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public DateTime castToDateTime() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to a Date");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to a Date");
 	}
 
 	@Override
