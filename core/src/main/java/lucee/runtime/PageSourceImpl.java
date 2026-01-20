@@ -949,8 +949,10 @@ public final class PageSourceImpl implements PageSource {
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj) return true;
-		if (obj instanceof PageSourceImpl) return _getClassName().equals(((PageSourceImpl) obj)._getClassName());
-		if (obj instanceof PageSource) return _getClassName().equals(ClassUtil.extractName(((PageSource) obj).getClassName()));
+		// LDEV-6056: Use getClassName() (includes package) instead of _getClassName() (just class name)
+		// to correctly distinguish components with the same filename in different packages
+		if (obj instanceof PageSourceImpl) return getClassName().equals(((PageSourceImpl) obj).getClassName());
+		if (obj instanceof PageSource) return getClassName().equals(((PageSource) obj).getClassName());
 		return false;
 
 	}
@@ -964,9 +966,18 @@ public final class PageSourceImpl implements PageSource {
 	public boolean equals(PageSource ps) {
 		if (this == ps) return true;
 
-		if (ps instanceof PageSourceImpl) return _getClassName().equals(((PageSourceImpl) ps)._getClassName());
-		return _getClassName().equals(ClassUtil.extractName(ps.getClassName()));
+		// LDEV-6056: Use getClassName() (includes package) instead of _getClassName() (just class name)
+		// to correctly distinguish components with the same filename in different packages
+		if (ps instanceof PageSourceImpl) return getClassName().equals(((PageSourceImpl) ps).getClassName());
+		return getClassName().equals(ps.getClassName());
 
+	}
+
+	@Override
+	public int hashCode() {
+		// LDEV-6072: Implement hashCode() to satisfy Java equals/hashCode contract
+		// Must use same value as equals() - getClassName() returns fully qualified class name
+		return getClassName().hashCode();
 	}
 
 	@Override
