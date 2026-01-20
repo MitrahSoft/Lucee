@@ -980,7 +980,7 @@ public final class PageSourceImpl implements PageSource {
 	public int hashCode() {
 		// LDEV-6072: Implement hashCode() to satisfy Java equals/hashCode contract
 		// Must use same value as equals() - getClassName() returns fully qualified class name
-		return getMapping().hashCode() + getClassName().hashCode();
+		return getMapping().getVirtual().hashCode() + getClassName().hashCode();
 	}
 
 	@Override
