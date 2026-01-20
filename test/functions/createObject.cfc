@@ -468,16 +468,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 	private function cleanup(data){
 		try {
-			if(directoryExists(arguments.data.directory)) 
+			if(directoryExists(arguments.data.directory))
 				directoryDelete(arguments.data.directory, true);
 		} catch( e ){
-			if (!isWindows() || e.message does not contain "delete file") {
+			if (!isWindows() || (e.message does not contain "delete file" && e.message does not contain "another process")) {
 				rethrow;
 			} else if (isWindows()) {
 				systemOutput("ERROR: LDEV-5145 Windows locked jars", true);
+				systemOutput( e.message, true );
 				//systemOutput( e.stacktrace, true );
-				rethrow;
-				
+				//rethrow;
+
 			}
 		}
 	}
