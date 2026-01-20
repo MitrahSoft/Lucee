@@ -70,7 +70,6 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Md5;
 import lucee.commons.lang.PhysicalClassLoader;
 import lucee.commons.lang.PhysicalClassLoaderFactory;
-import lucee.commons.lang.SerializableObject;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.types.RefBoolean;
 import lucee.commons.net.IPRange;
@@ -190,6 +189,7 @@ import lucee.transformer.library.tag.TagLibTagScript;
 public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static final RHExtension[] RHEXTENSIONS_EMPTY = new RHExtension[0];
+	private static final long POOL_MAX_IDLE = 60000;
 
 	//////////////////////////
 	// no need to expose // TODO still use Prop
@@ -240,6 +240,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private SchedulerImpl scheduler;
 	private List<Object> consoleLayouts = new ArrayList<>();
 	private List<Object> resourceLayouts = new ArrayList<>();
+	private Resource logDir;
 	//////////////////////////
 	//////////////////////////
 
@@ -475,8 +476,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			.defaultValue(TimeZone.getDefault() != null ? TimeZone.getDefault() : TimeZoneConstants.UTC)
 			.description("Define the desired time zone for Lucee. This will also change the time for the context of the web.");
 	private TimeZone timeZone;
-
-	private ClassDefinition<SearchEngine> searchEngineClassDef;
 
 	private static Prop<String> metaSearchEngineDirectory = Prop.str().keys("directory").parent("search").defaultValue("{lucee-web}/search/")
 			.description("search engine directory");
@@ -981,6 +980,30 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 			.description("Enables and defines default caching for SOAP webservice calls. " + "Automatically caches remote responses for the specified duration.").deprecated();;
 	private String cachedWithinWebservice;
 
+	private static Prop<Boolean> metaSuppressWhitespaceBeforeArgument = Prop.bool().keys("suppressWhitespaceBeforeArgument", "suppressWhitespaceBeforecfargument")
+			.systemPropEnvVar("lucee.suppress.ws.before.arg").defaultValue(true)
+			.description("When enabled, Lucee automatically removes all white space (spaces, tabs, and newlines) "
+					+ "located between a <cffunction> start tag and its first <cfargument>, as well as "
+					+ "between consecutive <cfargument> tags. This ensures that source code formatting "
+					+ "inside a function definition does not produce unintended output in the response stream.");
+	private Boolean suppressWhitespaceBeforeArgument;
+	private static Prop<Boolean> metaBufferTagBodyOutput = Prop.bool().keys("bufferTagBodyOutput").defaultValue(DEFAULT_BUFFER_TAG_BODY_OUTPUT)
+			.description("Determines how Lucee handles content generated within a tag's body when an exception occurs. "
+					+ "If enabled (true), the body output is buffered and displayed even if the tag fails. "
+					+ "If disabled (false), any content generated within the body prior to a failure is ignored and not sent to the response stream.");
+	private Boolean bufferTagBodyOutput;
+
+	private Boolean dotNotationUpperCase;
+	private static Prop<Boolean> metaDefaultFunctionOutput = Prop.bool().keys("defaultFunctionOutput").defaultValue(true)
+			.description("Specifies the default value for the 'output' attribute of the <cffunction> tag. "
+					+ "If set to true, functions will allow white space and content within their body to be "
+					+ "rendered to the response stream by default. If false, output is suppressed unless " + "the function explicitly sets output='true'.");
+	private Boolean defaultFunctionOutput;
+
+	private static Prop<ClassDefinition> metacWsHandlerCD = Prop.custom(ClassDefinitionFactory.getInstance()).keys("webservice").deprecated();
+	private ClassDefinition wsHandlerCD;
+	private boolean initWsHandlerCD = true;
+
 	private Array scheduledTasks;
 
 	private final Resources resources = new ResourcesImpl();
@@ -1006,6 +1029,25 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private JavaSettings javaSettings;
 	private final Map<String, JavaSettings> javaSettingsInstances = new ConcurrentHashMap<>();
+
+	private Map<String, SoftReference<ConfigUtil.CacheElement>> applicationPathCache = null;// new ArrayList<Page>();
+	private Map<String, SoftReference<InitFile>> ctPatchCache = null;// new ArrayList<Page>();
+	private Map<String, SoftReference<UDF>> udfCache = new ConcurrentHashMap<String, SoftReference<UDF>>();
+	private Map<String, ComponentMetaData> componentMetaData = null;
+
+	private DebugEntry[] debugEntries;
+
+	//
+
+	private RestSettings restSetting = new RestSettingImpl(false, UDF.RETURN_FORMAT_JSON);
+
+	private Integer externalizeStringGTE;
+	private Map<String, BundleDefinition> extensionBundles;
+	private JDBCDriver[] drivers;
+
+	private static LogEngine logEngine;
+
+	private ClassDefinition<SearchEngine> searchEngineClassDef;
 
 	/**
 	 * @return the allowURLRequestTimeout
@@ -3953,13 +3995,10 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return PhysicalClassLoaderFactory.getRPCClassLoader(this, js != null ? js : getJavaSettings(), reload);
 	}
 
-	private static final Object dclt = new SerializableObject();
-	private static final long POOL_MAX_IDLE = 60000;
-
 	@Override
 	public PhysicalClassLoader getDirectClassLoader(boolean reload) throws IOException {
 		if (directClassLoader == null || reload) {
-			synchronized (dclt) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getDirectClassLoader")) {
 				if (directClassLoader == null || reload) {
 					Resource dir = getClassDirectory().getRealResource("direct/");
 					if (!dir.exists()) {
@@ -5622,10 +5661,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	private Map<String, SoftReference<ConfigUtil.CacheElement>> applicationPathCache = null;// new ArrayList<Page>();
-	private Map<String, SoftReference<InitFile>> ctPatchCache = null;// new ArrayList<Page>();
-	private Map<String, SoftReference<UDF>> udfCache = new ConcurrentHashMap<String, SoftReference<UDF>>();
-
 	@Override
 	public CIPage getCachedPage(PageContext pc, String pathWithCFC) throws PageException {
 		return componentPathCache.getPage(pc, pathWithCFC);
@@ -5888,8 +5923,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	private Map<String, ComponentMetaData> componentMetaData = null;
-
 	public ComponentMetaData getComponentMetadata(String key) {
 		if (componentMetaData == null) return null;
 		return componentMetaData.get(key.toLowerCase());
@@ -5904,8 +5937,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (componentMetaData == null) return;
 		componentMetaData.clear();
 	}
-
-	private DebugEntry[] debugEntries;
 
 	@Override
 	public DebugEntry[] getDebugEntries() {
@@ -5997,8 +6028,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	private Boolean dotNotationUpperCase;
-
 	@Override
 	public boolean getDotNotationUpperCase() {
 		if (dotNotationUpperCase == null) {
@@ -6035,15 +6064,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return !getDotNotationUpperCase();
 	}
 
-	private Boolean defaultFunctionOutput;
-
 	@Override
 	public boolean getDefaultFunctionOutput() {
 		if (defaultFunctionOutput == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDefaultFunctionOutput")) {
 				if (defaultFunctionOutput == null) {
-					String output = ConfigFactoryImpl.getAttr(this, root, "defaultFunctionOutput");
-					defaultFunctionOutput = Caster.toBooleanValue(output, true);
+					defaultFunctionOutput = metaDefaultFunctionOutput.get(this, root);
 				}
 			}
 		}
@@ -6061,36 +6087,28 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	private Boolean getSuppressWSBeforeArg;
-
 	@Override
 	public boolean getSuppressWSBeforeArg() {
-		if (getSuppressWSBeforeArg == null) {
+		if (suppressWhitespaceBeforeArgument == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSuppressWSBeforeArg")) {
-				if (getSuppressWSBeforeArg == null) {
-					String suppress = SystemUtil.getSystemPropOrEnvVar("lucee.suppress.ws.before.arg", null);
-					if (StringUtil.isEmpty(suppress, true)) {
-						suppress = ConfigFactoryImpl.getAttr(this, root, new String[] { "suppressWhitespaceBeforeArgument", "suppressWhitespaceBeforecfargument" });
-					}
-					getSuppressWSBeforeArg = Caster.toBooleanValue(suppress, true);
+				if (suppressWhitespaceBeforeArgument == null) {
+					suppressWhitespaceBeforeArgument = metaSuppressWhitespaceBeforeArgument.get(this, root);
 				}
 			}
 		}
-		return getSuppressWSBeforeArg;
+		return suppressWhitespaceBeforeArgument;
 	}
 
 	public ConfigImpl restSuppressWSBeforeArg() {
-		if (getSuppressWSBeforeArg != null) {
+		if (suppressWhitespaceBeforeArgument != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSuppressWSBeforeArg")) {
-				if (getSuppressWSBeforeArg != null) {
-					getSuppressWSBeforeArg = null;
+				if (suppressWhitespaceBeforeArgument != null) {
+					suppressWhitespaceBeforeArgument = null;
 				}
 			}
 		}
 		return this;
 	}
-
-	private RestSettings restSetting = new RestSettingImpl(false, UDF.RETURN_FORMAT_JSON);
 
 	protected void setRestSetting(RestSettings restSetting) {
 		this.restSetting = restSetting;
@@ -6154,34 +6172,23 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	private Boolean bufferOutput;
-
-	private Integer externalizeStringGTE;
-	private Map<String, BundleDefinition> extensionBundles;
-	private JDBCDriver[] drivers;
-	private Resource logDir;
-
 	@Override
 	public boolean getBufferOutput() {
-		if (bufferOutput == null) {
+		if (bufferTagBodyOutput == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getBufferOutput")) {
-				if (bufferOutput == null) {
-					String str = ConfigFactoryImpl.getAttr(this, root, "bufferTagBodyOutput");
-					if (!StringUtil.isEmpty(str, true)) {
-						bufferOutput = Caster.toBoolean(str.trim(), DEFAULT_BUFFER_TAG_BODY_OUTPUT);
-					}
-					else bufferOutput = DEFAULT_BUFFER_TAG_BODY_OUTPUT;
+				if (bufferTagBodyOutput == null) {
+					bufferTagBodyOutput = metaBufferTagBodyOutput.get(this, root);
 				}
 			}
 		}
-		return bufferOutput;
+		return bufferTagBodyOutput;
 	}
 
 	public ConfigImpl resetBufferOutput() {
-		if (bufferOutput != null) {
+		if (bufferTagBodyOutput != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getBufferOutput")) {
-				if (bufferOutput != null) {
-					bufferOutput = null;
+				if (bufferTagBodyOutput != null) {
+					bufferTagBodyOutput = null;
 				}
 			}
 		}
@@ -7150,14 +7157,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	private ClassDefinition wsHandlerCD;
-	private boolean initWsHandlerCD = true;
-
 	protected ClassDefinition getWSHandlerClassDefinition() {
 		if (initWsHandlerCD) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getWSHandlerClassDefinition")) {
 				if (initWsHandlerCD) {
-					wsHandlerCD = ConfigFactoryImpl.loadWS(this, root, null);
+					wsHandlerCD = metacWsHandlerCD.get(this, root);
 					initWsHandlerCD = false;
 				}
 			}
@@ -7203,8 +7207,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		}
 		return this;
 	}
-
-	private static LogEngine logEngine;
 
 	@Override
 	public LogEngine getLogEngine() {
