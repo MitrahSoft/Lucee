@@ -974,6 +974,13 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	@Override
+	public int hashCode() {
+		// LDEV-6072: Implement hashCode() to satisfy Java equals/hashCode contract
+		// Must use same value as equals() - getClassName() returns fully qualified class name
+		return getClassName().hashCode();
+	}
+
+	@Override
 	public PageSource getRealPage(String realPath) {
 		if (realPath.equals(".") || realPath.equals("..")) realPath += '/';
 		else realPath = realPath.replace('\\', '/');
