@@ -239,8 +239,7 @@ public final class PageSourceImpl implements PageSource {
 				try {
 					page = loadPhysical(pc, page);
 				}
-				catch (TemplateException e) {
-				}
+				catch (TemplateException e) {}
 			}
 			if (page != null) return page;
 		}
@@ -328,8 +327,7 @@ public final class PageSourceImpl implements PageSource {
 							try {
 								same = pp.getHash() == PageSourceCode.toString(this, config.getTemplateCharset()).hashCode();
 							}
-							catch (IOException e) {
-							}
+							catch (IOException e) {}
 
 						}
 						if (!same) {
@@ -949,35 +947,40 @@ public final class PageSourceImpl implements PageSource {
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj) return true;
-		// LDEV-6056: Use getClassName() (includes package) instead of _getClassName() (just class name)
-		// to correctly distinguish components with the same filename in different packages
-		if (obj instanceof PageSourceImpl) return getClassName().equals(((PageSourceImpl) obj).getClassName());
-		if (obj instanceof PageSource) return getClassName().equals(((PageSource) obj).getClassName());
-		return false;
+		if (!(obj instanceof PageSource)) return false;
 
+		// same class name (org.lucee.whatever.Test)
+		if (getClassName().equals(((PageSource) obj).getClassName())) {
+			// if 2 mappings have the same classname this is not equal
+			return getMapping() == ((PageSource) obj).getMapping();
+		}
+		// if the same component is loaded by 2 different mappings we consider that component as different
+		return false;
 	}
 
 	/**
 	 * is given object equal to this
-	 * 
+	 *
 	 * @param ps
 	 * @return is same
 	 */
 	public boolean equals(PageSource ps) {
 		if (this == ps) return true;
 
-		// LDEV-6056: Use getClassName() (includes package) instead of _getClassName() (just class name)
-		// to correctly distinguish components with the same filename in different packages
-		if (ps instanceof PageSourceImpl) return getClassName().equals(((PageSourceImpl) ps).getClassName());
-		return getClassName().equals(ps.getClassName());
-
+		// same class name (org.lucee.whatever.Test)
+		if (getClassName().equals(ps.getClassName())) {
+			// if 2 mappings have the same classname this is not equal
+			return getMapping() == ps.getMapping();
+		}
+		// if the same component is loaded by 2 different mappings we consider that component as different
+		return false;
 	}
 
 	@Override
 	public int hashCode() {
 		// LDEV-6072: Implement hashCode() to satisfy Java equals/hashCode contract
 		// Must use same value as equals() - getClassName() returns fully qualified class name
-		return getClassName().hashCode();
+		return getMapping().hashCode() + getClassName().hashCode();
 	}
 
 	@Override
