@@ -57,7 +57,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="pagesource,hashcod
 				}
 			});
 
-			xit( "HashCode bug manifests when pool is cleared between PageSource creations", function() {
+			it( "HashCode bug manifests when pool is cleared between PageSource creations", function() {
 				var mapping = getPageContext().getCurrentPageSource().getMapping();
 				var includeOnce = createObject( "java", "java.util.HashSet" ).init();
 
@@ -87,7 +87,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="pagesource,hashcod
 					"Equal PageSource objects must have same hashCode" );
 			});
 
-			xit( "Components with same name in different packages should have different hashCodes", function() {
+			it( "Components with same name in different packages should have different hashCodes", function() {
 				// Create test components in different directories
 				var baseDir = getTempDirectory() & "LDEV6072/";
 				directoryCreate( baseDir & "pkg1", true );
