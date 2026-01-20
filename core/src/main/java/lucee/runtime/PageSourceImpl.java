@@ -1127,6 +1127,6 @@ public final class PageSourceImpl implements PageSource {
 
 	@Override
 	public final int hashCode() {
-		return getDisplayPath().hashCode();
+		return getMapping().getVirtual().hashCode() + getClassName().hashCode();
 	}
 }
