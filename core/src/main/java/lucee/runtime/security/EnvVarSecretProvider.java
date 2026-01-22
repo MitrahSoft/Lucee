@@ -7,7 +7,7 @@ public class EnvVarSecretProvider extends SecretProviderSupport {
 	@Override
 	public String getSecret(String key) throws ApplicationException {
 		String sec = System.getenv(key);
-		if (sec == null) throw new ApplicationException("there was not enviroment variable found with the name [" + key + "]");
+		if (sec == null) throw new ApplicationException("there was no enviroment variable found with the name [" + key + "]");
 		return sec;
 	}
 
