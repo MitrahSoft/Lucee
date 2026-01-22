@@ -897,23 +897,19 @@ public final class PageSourceImpl implements PageSource {
 		if (this == obj) return true;
 		if (!(obj instanceof PageSource)) return false;
 
-		if (LogUtil.does(Log.LEVEL_DEBUG)) {
-			PageSource ps = ((PageSource) obj);
-			LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" + getDisplayPath() + "]\n"
+		/*
+		 * if (LogUtil.does(getMapping().getConfig().getLog("application"), Log.LEVEL_DEBUG)) { PageSource
+		 * ps = ((PageSource) obj); LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" +
+		 * getDisplayPath() + "]\n"
+		 * 
+		 * + "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" +
+		 * ps.getClassName() + "- mapping-virtual(" + (getMapping() == ps.getMapping()) + "): " +
+		 * getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
+		 * 
+		 * ); }
+		 */
 
-					+ "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" + ps.getClassName() + "- mapping-virtual("
-					+ (getMapping() == ps.getMapping()) + "): " + getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
-
-			);
-		}
-
-		// same class name (org.lucee.whatever.Test)
-		if (getClassName().equals(((PageSource) obj).getClassName())) {
-			// if 2 mappings have the same classname this is not equal
-			return getMapping() == ((PageSource) obj).getMapping();
-		}
-		// if the same component is loaded by 2 different mappings we consider that component as different
-		return false;
+		return getDisplayPath().equals(((PageSource) obj).getDisplayPath());
 	}
 
 	/**
@@ -924,23 +920,19 @@ public final class PageSourceImpl implements PageSource {
 	 */
 	public boolean equals(PageSource ps) {
 		if (this == ps) return true;
+		if (ps == null) return false;
 
-		if (LogUtil.does(Log.LEVEL_DEBUG)) {
-			LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" + getDisplayPath() + "]\n"
-
-					+ "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" + ps.getClassName() + "- mapping-virtual("
-					+ (getMapping() == ps.getMapping()) + "): " + getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
-
-			);
-		}
-
-		// same class name (org.lucee.whatever.Test)
-		if (getClassName().equals(ps.getClassName())) {
-			// if 2 mappings have the same classname this is not equal
-			return getMapping() == ps.getMapping();
-		}
-		// if the same component is loaded by 2 different mappings we consider that component as different
-		return false;
+		/*
+		 * if (LogUtil.does(getMapping().getConfig().getLog("application"), Log.LEVEL_DEBUG)) {
+		 * LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" + getDisplayPath() + "]\n"
+		 * 
+		 * + "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" +
+		 * ps.getClassName() + "- mapping-virtual(" + (getMapping() == ps.getMapping()) + "): " +
+		 * getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
+		 * 
+		 * ); }
+		 */
+		return getDisplayPath().equals(ps.getDisplayPath());
 	}
 
 	@Override
