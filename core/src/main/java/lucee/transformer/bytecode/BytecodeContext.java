@@ -19,7 +19,6 @@
 package lucee.transformer.bytecode;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicLong;
