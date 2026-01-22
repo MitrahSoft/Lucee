@@ -949,13 +949,7 @@ public final class PageSourceImpl implements PageSource {
 		if (this == obj) return true;
 		if (!(obj instanceof PageSource)) return false;
 
-		// same class name (org.lucee.whatever.Test)
-		if (getClassName().equals(((PageSource) obj).getClassName())) {
-			// if 2 mappings have the same classname this is not equal
-			return getMapping() == ((PageSource) obj).getMapping();
-		}
-		// if the same component is loaded by 2 different mappings we consider that component as different
-		return false;
+		return getDisplayPath().equals(((PageSource) obj).getDisplayPath());
 	}
 
 	/**
@@ -967,13 +961,7 @@ public final class PageSourceImpl implements PageSource {
 	public boolean equals(PageSource ps) {
 		if (this == ps) return true;
 
-		// same class name (org.lucee.whatever.Test)
-		if (getClassName().equals(ps.getClassName())) {
-			// if 2 mappings have the same classname this is not equal
-			return getMapping() == ps.getMapping();
-		}
-		// if the same component is loaded by 2 different mappings we consider that component as different
-		return false;
+		return getDisplayPath().equals(ps.getDisplayPath());
 	}
 
 	@Override
