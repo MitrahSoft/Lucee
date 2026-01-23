@@ -68,18 +68,16 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	private Map<String, Integer> allLoadedClasses = new ConcurrentHashMap<>(); // this includes all renames
 	private Map<String, String> unavaiClasses = new ConcurrentHashMap<>();
 
-	private PageSourcePool pageSourcePool;
-
 	private boolean rpc;
 
 	private String birthplace;
 
 	public final String id;
 
-	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
-			PageSourcePool pageSourcePool, boolean rpc) throws IOException {
+	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc)
+			throws IOException {
 		this(key, c, PhysicalClassLoaderFactory.doURLs(resources), resources, directory,
-				parentClassLoader == null ? (parentClassLoader = SystemUtil.getCoreClassLoader()) : parentClassLoader, addionalClassLoader, pageSourcePool, rpc);
+				parentClassLoader == null ? (parentClassLoader = SystemUtil.getCoreClassLoader()) : parentClassLoader, addionalClassLoader, rpc);
 
 		// check directory
 		if (!directory.exists()) directory.mkdirs();
@@ -87,28 +85,34 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		if (!directory.canRead()) throw new IOException("Access denied to [" + directory + "] directory");
 	}
 
-	private PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
-			PageSourcePool pageSourcePool, boolean rpc) {
+	PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
+			boolean rpc) {
 		super(urls, parentClassLoader);
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
 		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
-		this.pageSourcePool = pageSourcePool;
 
 		this.directory = directory;
 		this.rpc = rpc;
 		id = key;
 	}
 
-	public static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
-		if (existing.pageSourcePool != null) existing.pageSourcePool.clearPages(existing);
+	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
+
 		PhysicalClassLoader clone = new PhysicalClassLoader(existing.id, config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(),
-				existing.addionalClassLoader, null, existing.rpc);
+				existing.addionalClassLoader, existing.rpc);
+
+		// flush PageSourcePools
+		PageSourcePool.clearPages(config, existing, false);
+
+		// flush DynamicInvoker
 		DynamicInvoker instance = DynamicInvoker.getExistingInstance();
 		int count = 0;
 		if (instance != null) count += instance.remove(existing);
 		count += ClazzDynamic.remove(existing);
+
+		// create log entry
 		int all = existing.allLoadedClasses.size();
 		int unique = existing.loadedClasses.size();
 		int allClassesBytes = 0;
@@ -123,7 +127,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		return clone;
 	}
 
-	public static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
+	static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
 		double all;
 
 		if (LogUtil.does(Log.LEVEL_DEBUG)) {
@@ -496,11 +500,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	}
 
 	private void clear() {
-		clear(true);
-	}
-
-	private void clear(boolean clearPagePool) {
-		if (clearPagePool && pageSourcePool != null) pageSourcePool.clearPages(this);
+		PageSourcePool.clearPages(config, this, false);
 		this.loadedClasses.clear();
 		this.allLoadedClasses.clear();
 		this.unavaiClasses.clear();
