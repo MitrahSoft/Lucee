@@ -8,8 +8,8 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -60,7 +60,7 @@ public final class ClazzDynamic extends Clazz {
 	private String clid;
 	private String id;
 
-	private static Map<Integer, String> clids = new IdentityHashMap<>();
+	private static Map<Integer, String> clids = new HashMap<>();
 	private static String systemId;
 
 	private static Map<Class, Clazz> classes = new ConcurrentHashMap<>();
