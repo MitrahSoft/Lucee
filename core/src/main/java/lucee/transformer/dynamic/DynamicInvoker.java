@@ -408,7 +408,7 @@ public final class DynamicInvoker {
 				cl = ref == null ? null : ref.get();
 				if (cl != null) {
 					count++;
-					loaders.remove(parent.hashCode());
+					loaders.remove(hash);
 				}
 			}
 		}
