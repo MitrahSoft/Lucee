@@ -20,7 +20,7 @@ The Lucee code base was forked from the Railo Server Project (Version 4.2) in Ja
 Always from the `/loader` directory and piping the output to a file
 
 - Build and run specific test, execute `mvn test -DtestFilter="{testFilename}`
-- To just build, execute `mvn fast`
+- To just build, execute `ant fast`
 - To build and run the whole test suite, execute `mvn test`
 
 ### Development Environment
