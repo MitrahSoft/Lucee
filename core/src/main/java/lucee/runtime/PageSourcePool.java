@@ -20,6 +20,7 @@ package lucee.runtime;
 
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -32,8 +33,12 @@ import lucee.commons.io.SystemUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.watch.PageSourcePoolWatcher;
 import lucee.commons.lang.SerializableObject;
+import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
+import lucee.runtime.config.ConfigServer;
 import lucee.runtime.config.ConfigUtil;
+import lucee.runtime.config.ConfigWeb;
+import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.Constants;
 import lucee.runtime.dump.DumpData;
 import lucee.runtime.dump.DumpProperties;
@@ -270,6 +275,54 @@ public final class PageSourcePool implements Dumpable {
 		return table;
 	}
 
+	public final static void clearPages(Config config, ClassLoader cl, boolean unused) {
+		// FUTURE this should be always ConfigWeb
+		if (config instanceof ConfigServer) {
+			for (ConfigWeb cw: ((ConfigServer) config).getConfigWebs()) {
+				clearPages(cw, cl, unused);
+			}
+			return;
+		}
+		ConfigWebPro cw = (ConfigWebPro) config;
+
+		// application
+		clearPages(config, cw.getApplicationMappings(), cl, unused);
+
+		// config
+		clearPages(config, cw.getMappings(), cl, unused);
+		clearPages(config, cw.getCustomTagMappings(), cl, unused);
+		clearPages(config, cw.getComponentMappings(), cl, unused);
+		clearPages(config, cw.getFunctionMappings(), cl, unused);
+		clearPages(config, cw.getTagMappings(), cl, unused);
+
+	}
+
+	private final static void clearPages(Config config, Collection<Mapping> mappings, ClassLoader cl, boolean unused) {
+		if (mappings == null) return;
+		Iterator<Mapping> it = mappings.iterator();
+		while (it.hasNext()) {
+			clearPages(config, it.next(), cl, unused);
+		}
+	}
+
+	private final static void clearPages(Config config, Mapping[] mappings, ClassLoader cl, boolean unused) {
+		if (mappings == null) return;
+		for (int i = 0; i < mappings.length; i++) {
+			clearPages(config, mappings[i], cl, unused);
+		}
+	}
+
+	private final static void clearPages(Config config, Mapping mapping, ClassLoader cl, boolean unused) {
+		if (mapping == null) return;
+		MappingImpl mi = (MappingImpl) mapping;
+		if (unused) {
+			mi.clearUnused();
+		}
+		else {
+			mi.clearPages(cl);
+		}
+	}
+
 	/**
 	 * remove all Page from Pool using this classloader
 	 * 
@@ -338,8 +391,7 @@ public final class PageSourcePool implements Dumpable {
 			flush(pc, Caster.toResource(pc, file, false));
 			return;
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 	}
 
 	private void resetWatcherWhenEmpty(boolean force, boolean set2null) {
