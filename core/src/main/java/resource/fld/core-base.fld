@@ -15787,6 +15787,7 @@ For optimal results, ensure the input string contains valid URL encoding.
 	<function>
 		<name>val</name>
 		<class>lucee.runtime.functions.string.ValNumber</class>
+		<member-name>val</member-name>
 		<description>Converts numeric characters that occur at the beginning of a
         string to a number. If conversion fails, returns zero.</description>
 		<argument>

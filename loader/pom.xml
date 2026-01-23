@@ -3,7 +3,7 @@
 
   <groupId>org.lucee</groupId>
   <artifactId>lucee</artifactId>
-  <version>7.2.0.1-ALPHA</version>
+  <version>7.2.0.2-ALPHA</version>
   <packaging>jar</packaging>
 
   <name>Lucee Loader Build</name>
@@ -399,9 +399,6 @@
     <scope>compile</scope>
   </dependency>
 
-<!--
-  source: mvn
--->
   <dependency>
     <groupId>org.lucee</groupId>
     <artifactId>jzlib</artifactId>
@@ -446,12 +443,6 @@
     <groupId>org.apache.commons</groupId>
     <artifactId>commons-lang3</artifactId>
     <version>3.12.0</version>
-  </dependency>
-  <!-- needed for esapi ext -->
-  <dependency>
-    <groupId>commons-lang</groupId>
-    <artifactId>commons-lang</artifactId>
-    <version>2.6</version>
   </dependency>
   <dependency>
     <groupId>org.apache.commons</groupId>
@@ -617,12 +608,6 @@
     <version>1.1</version>
     <scope>provided</scope>
   </dependency>
-  <dependency>
-    <groupId>net.java.dev.jna</groupId>
-    <artifactId>jna</artifactId>
-    <version>5.13.0</version>
-    <scope>provided</scope>
-  </dependency>
     <dependency>
       <groupId>org.lucee</groupId>
       <artifactId>commonmark</artifactId>
@@ -645,13 +630,13 @@
       <dependency>
           <groupId>org.apache.tomcat.embed</groupId>
           <artifactId>tomcat-embed-core</artifactId>
-          <version>9.0.108</version>
+          <version>9.0.112</version>
       </dependency>
       <!-- https://mvnrepository.com/artifact/org.apache.tomcat/tomcat-annotations-api -->
       <dependency>
           <groupId>org.apache.tomcat</groupId>
           <artifactId>tomcat-annotations-api</artifactId>
-          <version>9.0.108</version>
+          <version>9.0.112</version>
       </dependency>
 
     <dependency>
