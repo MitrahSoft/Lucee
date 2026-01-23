@@ -470,7 +470,7 @@ public final class ScopeContext {
 		return null;
 	}
 
-	public void removeSessionScope(PageContext pc) throws PageException {
+	public void removeSessionScope(PageContext pc) {
 		removeCFSessionScope(pc);
 		removeJSessionScope(pc);
 	}
