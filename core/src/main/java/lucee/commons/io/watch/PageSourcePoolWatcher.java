@@ -3,7 +3,6 @@ package lucee.commons.io.watch;
 import java.lang.ref.SoftReference;
 import java.util.Map;
 
-import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.SerializableObject;
 import lucee.runtime.MappingImpl;
@@ -30,6 +29,9 @@ public final class PageSourcePoolWatcher {
 		if (thread == null || !thread.isAlive()) {
 			synchronized (token) {
 				if (thread == null || !thread.isAlive()) {
+					if (thread != null) {
+						thread.active(false);
+					}
 					thread = new PageSourcePoolWatcherThread();
 					thread.setPriority(Thread.MIN_PRIORITY);
 					thread.setName("PageSourcePoolWatcher");
@@ -45,6 +47,15 @@ public final class PageSourcePoolWatcher {
 			synchronized (token) {
 				if (thread != null) {
 					thread.active(false);
+
+					// Wait for thread to actually exit
+					try {
+						thread.interrupt(); // Wake it from sleep
+						thread.join(500); // Wait max 5 seconds
+					}
+					catch (InterruptedException e) {
+						// Handle
+					}
 					thread = null;
 				}
 			}
@@ -57,8 +68,7 @@ public final class PageSourcePoolWatcher {
 		private static final int INCREASE_FROM_FAST_TO_LOW = 5;
 		private boolean active = true;
 
-		public PageSourcePoolWatcherThread() {
-		}
+		public PageSourcePoolWatcherThread() {}
 
 		public void active(boolean active) {
 			this.active = active;
@@ -76,6 +86,7 @@ public final class PageSourcePoolWatcher {
 				}
 
 				for (SoftReference<PageSource> ref: pageSources.values()) {
+					if (!active) break;
 					try {
 						PageSourceImpl ps = (PageSourceImpl) ref.get();
 						if (ps == null) continue;
@@ -91,10 +102,16 @@ public final class PageSourcePoolWatcher {
 						LogUtil.log(mapping.getConfig(), "pagesource-pool", e);
 					}
 				}
-
-				SystemUtil.sleep(interval);
+				if (!active) break;
+				try {
+					Thread.sleep(interval);
+				}
+				catch (InterruptedException e) {
+					break; // Exit immediately on interrupt
+				}
 				if (interval < mapping.getInspectTemplateAutoInterval(true)) interval += INCREASE_FROM_FAST_TO_LOW;
 			}
 		}
 	}
+
 }

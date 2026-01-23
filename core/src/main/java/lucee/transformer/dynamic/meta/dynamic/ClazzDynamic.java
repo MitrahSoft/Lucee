@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -60,7 +59,7 @@ public final class ClazzDynamic extends Clazz {
 	private String clid;
 	private String id;
 
-	private static Map<ClassLoader, String> clids = new IdentityHashMap<>();
+	private static Map<Integer, String> clids = new ConcurrentHashMap<>();
 	private static String systemId;
 
 	private static Map<Class, Clazz> classes = new ConcurrentHashMap<>();
@@ -73,7 +72,7 @@ public final class ClazzDynamic extends Clazz {
 			synchronized (clazz) {
 				cd = classes.get(clazz);
 				if (cd == null) {
-					if (LogUtil.doesDebug(log)) log.debug("dynamic", "extract metadata from [" + clazz.getName() + "]");
+					if (LogUtil.doesTrace(log)) log.trace("dynamic", "extract metadata from [" + clazz.getName() + "]");
 					try {
 						cd = new ClazzDynamic(clazz, log);
 					}
@@ -112,6 +111,7 @@ public final class ClazzDynamic extends Clazz {
 				}
 			}
 		}
+
 		return count;
 	}
 
@@ -123,18 +123,18 @@ public final class ClazzDynamic extends Clazz {
 			return systemId;
 		}
 
-		String id = clids.get(cl);
+		String id = clids.get(System.identityHashCode(cl));
 		if (id != null) return id;
 
 		if (cl instanceof BundleClassLoader) {
 			Bundle b = ((BundleClassLoader) cl).getBundle();
 			id = "b" + HashUtil.create64BitHashAsString(b.getSymbolicName() + ":" + b.getVersion() + ":" + jv, Character.MAX_RADIX);
-			clids.put(cl, id);
+			clids.put(System.identityHashCode(cl), id);
 			return id;
 		}
 		if (cl instanceof PhysicalClassLoader) {
 			id = "p" + HashUtil.create64BitHashAsString(((PhysicalClassLoader) cl).getDirectory().getAbsolutePath() + ":" + jv, Character.MAX_RADIX);
-			clids.put(cl, id);
+			clids.put(System.identityHashCode(cl), id);
 			return id;
 		}
 
@@ -142,7 +142,7 @@ public final class ClazzDynamic extends Clazz {
 		CodeSource codeSource = protectionDomain.getCodeSource();
 		if (codeSource != null && codeSource.getLocation() != null) {
 			id = "j" + HashUtil.create64BitHashAsString(codeSource.getLocation().toString() + ":" + jv, Character.MAX_RADIX);
-			clids.put(cl, id);
+			clids.put(System.identityHashCode(cl), id);
 			return id;
 		}
 		return null;

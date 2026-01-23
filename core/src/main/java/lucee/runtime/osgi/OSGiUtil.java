@@ -172,6 +172,8 @@ public final class OSGiUtil {
 		// packageBundleMapping.put("org.apache.log4j", "log4j");
 		packageBundleMapping.put("com.fasterxml.jackson.annotation", "com.fasterxml.jackson.core.jackson-annotations");
 		packageBundleMapping.put("org.apache.lucene.analysis", "apache.lucene");
+		// Map JNA packages for older extensions like Argon
+		packageBundleMapping.put("com.sun.jna", "com.sun.jna");
 	}
 
 	/**

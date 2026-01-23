@@ -185,32 +185,6 @@ public final class MavenUpdateProvider {
 		return list;
 	}
 
-	public List<Version> listOld() throws IOException, GeneralSecurityException, SAXException {
-		try {
-			MetadataReader mr;
-
-			Set<Version> versions = new HashSet<>();
-			for (Repository repo: repos) {
-				mr = new MetadataReader(repo, group, artifact);
-				for (Version v: mr.read()) {
-					versions.add(v);
-				}
-			}
-
-			if (versions.size() > 0) {
-				List<Version> sortedList = new ArrayList<>(versions);
-				Collections.sort(sortedList, OSGiUtil::compare);
-				return sortedList;
-
-			}
-
-			return new ArrayList<>();
-		}
-		catch (UnknownHostException uhe) {
-			throw new IOException("cannot reach maven server", uhe);
-		}
-	}
-
 	public List<Version> list() throws IOException, GeneralSecurityException, SAXException, InterruptedException {
 		try {
 			Set<Version> versions = Collections.synchronizedSet(new HashSet<>());

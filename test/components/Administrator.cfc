@@ -279,6 +279,13 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 					}
 				});
 
+				it(title="checking verifyDatasource() without credentials", body=function( currentSpec ) {
+					if(structCount(getCredentials("mysql"))) {
+						// LDEV-6066: verifyDatasource should use stored credentials when not provided
+						adminWeb.verifyDatasource(name = 'TestDSN1');
+					}
+				});
+
 				it(title="testremoveDatasource()", body=function( currentSpec ) {
 					if(structCount(getCredentials("mysql"))) {
 						adminWeb.removeDatasource('testDSN1');
