@@ -69,19 +69,16 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	private Map<String, Integer> allLoadedClasses = new ConcurrentHashMap<>(); // this includes all renames
 	private Map<String, String> unavaiClasses = new ConcurrentHashMap<>();
 
-	private PageSourcePool pageSourcePool;
-
 	private boolean rpc;
 
 	private String birthplace;
 
 	public final String id;
 
-	PhysicalClassLoader(Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, PageSourcePool pageSourcePool,
-			boolean rpc) throws IOException {
+	PhysicalClassLoader(Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc) throws IOException {
 
 		this(c, PhysicalClassLoaderFactory.doURLs(resources), resources, directory,
-				parentClassLoader == null ? (parentClassLoader = SystemUtil.getCombinedClassLoader()) : parentClassLoader, addionalClassLoader, pageSourcePool, rpc);
+				parentClassLoader == null ? (parentClassLoader = SystemUtil.getCombinedClassLoader()) : parentClassLoader, addionalClassLoader, rpc);
 
 		// check directory
 		if (!directory.exists()) directory.mkdirs();
@@ -89,14 +86,12 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		if (!directory.canRead()) throw new IOException("Access denied to [" + directory + "] directory");
 	}
 
-	private PhysicalClassLoader(Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
-			PageSourcePool pageSourcePool, boolean rpc) {
+	private PhysicalClassLoader(Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc) {
 		super(urls, parentClassLoader == null ? (parentClassLoader = SystemUtil.getCombinedClassLoader()) : parentClassLoader);
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
 		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
-		this.pageSourcePool = pageSourcePool;
 
 		this.directory = directory;
 		this.rpc = rpc;
@@ -111,10 +106,14 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		id = HashUtil.create64BitHashAsString(sb.toString());
 	}
 
-	public static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
-		if (existing.pageSourcePool != null) existing.pageSourcePool.clearPages(existing);
+	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
 		PhysicalClassLoader clone = new PhysicalClassLoader(config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(), existing.addionalClassLoader,
-				null, existing.rpc);
+				existing.rpc);
+
+		// flush PageSourcePools
+		PageSourcePool.clearPages(config, existing, false);
+
+		// flush DynamicInvoker
 		DynamicInvoker instance = DynamicInvoker.getExistingInstance();
 		int count = 0;
 		if (instance != null) count += instance.remove(existing);
@@ -132,7 +131,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		return clone;
 	}
 
-	public static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
+	static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
 		double all;
 
 		if (LogUtil.does(Log.LEVEL_DEBUG)) {
@@ -221,16 +220,14 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 						try {
 							c = super.loadClass(name, resolve);
 						}
-						catch (Exception e) {
-						}
+						catch (Exception e) {}
 					}
 
 					if (c == null && addionalClassLoader != null) {
 						try {
 							c = addionalClassLoader.loadClass(name);
 						}
-						catch (Exception e) {
-						}
+						catch (Exception e) {}
 					}
 
 					if (c == null) {
@@ -435,11 +432,8 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	}
 
 	private void clear() {
-		clear(true);
-	}
+		PageSourcePool.clearPages(config, this, false);
 
-	private void clear(boolean clearPagePool) {
-		if (clearPagePool && pageSourcePool != null) pageSourcePool.clearPages(this);
 		this.loadedClasses.clear();
 		this.allLoadedClasses.clear();
 		this.unavaiClasses.clear();
