@@ -275,51 +275,58 @@ public final class PageSourcePool implements Dumpable {
 		return table;
 	}
 
-	public final static void clearPages(Config config, ClassLoader cl, boolean unused) {
+	public final static int clearPages(Config config, ClassLoader cl, boolean unused) {
+		int count = 0;
 		// FUTURE this should be always ConfigWeb
 		if (config instanceof ConfigServer) {
 			for (ConfigWeb cw: ((ConfigServer) config).getConfigWebs()) {
-				clearPages(cw, cl, unused);
+				count += clearPages(cw, cl, unused);
 			}
-			return;
+			return count;
 		}
 		ConfigWebPro cw = (ConfigWebPro) config;
 
 		// application
-		clearPages(config, cw.getApplicationMappings(), cl, unused);
+		count += clearPages(config, cw.getApplicationMappings(), cl, unused);
 
 		// config
-		clearPages(config, cw.getMappings(), cl, unused);
-		clearPages(config, cw.getCustomTagMappings(), cl, unused);
-		clearPages(config, cw.getComponentMappings(), cl, unused);
-		clearPages(config, cw.getFunctionMappings(), cl, unused);
-		clearPages(config, cw.getTagMappings(), cl, unused);
+		count += clearPages(config, cw.getMappings(), cl, unused);
+		count += clearPages(config, cw.getCustomTagMappings(), cl, unused);
+		count += clearPages(config, cw.getComponentMappings(), cl, unused);
+		count += clearPages(config, cw.getFunctionMappings(), cl, unused);
+		count += clearPages(config, cw.getTagMappings(), cl, unused);
 
+		return count;
 	}
 
-	private final static void clearPages(Config config, Collection<Mapping> mappings, ClassLoader cl, boolean unused) {
-		if (mappings == null) return;
+	private final static int clearPages(Config config, Collection<Mapping> mappings, ClassLoader cl, boolean unused) {
+		if (mappings == null) return 0;
+		int count = 0;
 		Iterator<Mapping> it = mappings.iterator();
 		while (it.hasNext()) {
-			clearPages(config, it.next(), cl, unused);
+			count += clearPages(config, it.next(), cl, unused);
 		}
+		return count;
 	}
 
-	private final static void clearPages(Config config, Mapping[] mappings, ClassLoader cl, boolean unused) {
-		if (mappings == null) return;
+	private final static int clearPages(Config config, Mapping[] mappings, ClassLoader cl, boolean unused) {
+		if (mappings == null) return 0;
+		int count = 0;
 		for (int i = 0; i < mappings.length; i++) {
-			clearPages(config, mappings[i], cl, unused);
+			count += clearPages(config, mappings[i], cl, unused);
 		}
+		return count;
 	}
 
-	private final static void clearPages(Config config, Mapping mapping, ClassLoader cl, boolean unused) {
-		if (mapping == null) return;
+	private final static int clearPages(Config config, Mapping mapping, ClassLoader cl, boolean unused) {
+		if (mapping == null) return 0;
 		MappingImpl mi = (MappingImpl) mapping;
 		if (unused) {
 			mi.clearUnused();
+			return 0;
 		}
 		else {
-			mi.clearPages(cl);
+			return mi.clearPages(cl);
 		}
 	}
 
@@ -328,16 +335,22 @@ public final class PageSourcePool implements Dumpable {
 	 * 
 	 * @param cl
 	 */
-	public void clearPages(ClassLoader cl) {
+	public int clearPages(ClassLoader cl) {
 		Iterator<SoftReference<PageSource>> it = this.pageSources.values().iterator();
 		PageSourceImpl psi;
 		SoftReference<PageSource> sr;
+		int count = 0;
 		while (it.hasNext()) {
 			sr = it.next();
 			psi = sr == null ? null : (PageSourceImpl) sr.get();
 			if (psi == null) continue;
-			if (cl != null) psi.clear(cl);
-			else psi.clear();
+			if (cl != null) {
+				if (psi.clear(cl)) count++;
+			}
+			else {
+				psi.clear();
+				count++;
+			}
 		}
 
 		if (cl == null) {
@@ -345,6 +358,7 @@ public final class PageSourcePool implements Dumpable {
 		}
 
 		resetWatcherWhenEmpty(false, true);
+		return count;
 	}
 
 	public void resetPages(ClassLoader cl) {
