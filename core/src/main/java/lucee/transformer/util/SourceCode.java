@@ -17,7 +17,7 @@
  */
 package lucee.transformer.util;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.SystemUtil;
@@ -64,27 +64,37 @@ public class SourceCode {
 		this.sourceOffset = sourceOffset;
 		lcText = new char[text.length];
 
-		ArrayList<Integer> arr = new ArrayList<Integer>();
+		int[] arr = new int[32];
+		int count = 0;
 
 		for (int i = 0; i < text.length; i++) {
 			pos = i;
 			if (text[i] == '\n') {
-				arr.add(Integer.valueOf(i));
+				if (count == arr.length) {
+					arr = Arrays.copyOf(arr, arr.length * 2);
+				}
+				arr[count++] = i;
 				lcText[i] = ' ';
 			}
 			else if (text[i] == '\r') {
 				if (isNextRaw('\n')) {
 					lcText[i++] = ' ';
 				}
-				arr.add(Integer.valueOf(i));
+				if (count == arr.length) {
+					arr = Arrays.copyOf(arr, arr.length * 2);
+				}
+				arr[count++] = i;
 				lcText[i] = ' ';
 			}
 			else if (text[i] == '\t') lcText[i] = ' ';
 			else lcText[i] = Character.toLowerCase(text[i]);
 		}
 		pos = 0;
-		arr.add(Integer.valueOf(text.length));
-		lines = arr.stream().mapToInt(Integer::intValue).toArray();
+		if (count == arr.length) {
+			arr = Arrays.copyOf(arr, arr.length + 1);
+		}
+		arr[count++] = text.length;
+		lines = Arrays.copyOf(arr, count);
 
 		this.writeLog = writeLog;
 	}
