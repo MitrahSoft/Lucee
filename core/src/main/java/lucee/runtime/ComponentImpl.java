@@ -53,6 +53,7 @@ import lucee.commons.lang.types.RefBooleanImpl;
 import lucee.runtime.component.AbstractFinal;
 import lucee.runtime.component.AbstractFinal.UDFB;
 import lucee.runtime.component.ComponentLoader;
+import lucee.runtime.component.ComponentPageRef;
 import lucee.runtime.component.DataMember;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.component.Member;
@@ -223,6 +224,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			synchronized (cp) {
 				is = this.cp.isJavaSettingsInitialized();
 				if (!is) {
+					boolean mergeConfig = false;
 					JavaSettings js = null;
 
 					// implements
@@ -230,18 +232,21 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						Iterator<InterfaceImpl> it = absFin.getInterfaceIt();
 						InterfaceImpl i;
 						Map tmp;
+						Struct sct;
 						while (it.hasNext()) {
 							i = it.next();
 							try {
 								tmp = i.meta;
 								if (tmp != null) {
+									sct = Caster.toStruct(tmp, false);
+									if (JavaSettingsImpl.doMerge(sct, false)) mergeConfig = true;
 									js = JavaSettingsImpl.merge(
 
 											pc.getConfig(),
 
 											js,
 
-											JavaSettingsImpl.readJavaSettings(pc, Caster.toStruct(tmp, false))
+											JavaSettingsImpl.readJavaSettings(pc, sct)
 
 									);
 								}
@@ -259,6 +264,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 					// current
 					js = JavaSettingsImpl.merge(pc.getConfig(), js, JavaSettingsImpl.readJavaSettings(pc, properties.meta));
+					if (mergeConfig) js = JavaSettingsImpl.merge(pc.getConfig(), ((ConfigPro) pc.getConfig()).getJavaSettings(), js);
+
 					return this.cp.setJavaSettings(js);
 				}
 			}
@@ -467,7 +474,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		if (base != null) {
 			this.dataMemberDefaultAccess = base.dataMemberDefaultAccess;
-			this._static = new StaticScope(base._static, this, componentPage, dataMemberDefaultAccess);
+			this._static = new StaticScope(base._static, this, new ComponentPageRef(componentPage), dataMemberDefaultAccess);
 			this.absFin = base.absFin;
 			_data = base._data;
 			_udfs = isRestEnabled ? new LinkedHashMap<Key, UDF>(base._udfs) : new HashMap<Key, UDF>(base._udfs);
@@ -478,7 +485,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		}
 		else {
 			this.dataMemberDefaultAccess = pageContext.getConfig().getComponentDataMemberDefaultAccess();
-			this._static = new StaticScope(null, this, componentPage, dataMemberDefaultAccess);
+			this._static = new StaticScope(null, this, new ComponentPageRef(componentPage), dataMemberDefaultAccess);
 			// TODO get per CFC setting
 			// this._triggerDataMember=pageContext.getConfig().getTriggerComponentDataMember();
 			_udfs = isRestEnabled ? new LinkedHashMap<Key, UDF>() : new HashMap<Key, UDF>();
@@ -741,8 +748,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			return Reflector.componentToClass(pc, this).getClass();
 		}
 
-		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, access);
-		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), access);
+		// When calling via super, use public access for error message since super calls should access inherited methods
+		int errorAccess = superAccess ? ACCESS_PUBLIC : access;
+		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, errorAccess);
+		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), errorAccess);
 	}
 
 	Object _call(PageContext pc, Collection.Key calledName, UDF udf, Struct namedArgs, Object[] args) throws PageException {
@@ -1023,7 +1032,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	public Member getMember(int access, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && access == ACCESS_PRIVATE && key.equalsIgnoreCase(KeyConstants._super)) {
-			Component ac = ComponentUtil.getActiveComponent(ThreadLocalPageContext.get(), this);
+			Component ac = ComponentUtil.getCurrentComponent(ThreadLocalPageContext.get(), this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 			// return SuperComponent . superMember(base);
 		}
@@ -1058,7 +1067,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	protected Member getMember(PageContext pc, Collection.Key key, boolean dataMember, boolean superAccess) {
 		// check super
 		if (dataMember && key.equalsIgnoreCase(KeyConstants._super) && isPrivate(pc)) {
-			Component ac = ComponentUtil.getActiveComponent(pc, this);
+			Component ac = ComponentUtil.getCurrentComponent(pc, this);
 			return SuperComponent.superMember((ComponentImpl) ac.getBaseComponent());
 		}
 		if (superAccess) {
@@ -2418,21 +2427,12 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	private void initProperties() throws PageException {
 		top.properties.properties = new LinkedHashMap<String, Property>();
 		// Call generated stub to initialize properties from static registry (zero overhead!)
-		if (top.cpRef != null) {
-			ComponentPageImpl cp = top.cpRef.get(null, null);
-			if (cp != null) {
-				cp.initPropertiesStub(this);
-			}
+		if (top.cp != null) {
+			top.cp.initPropertiesStub(this);
 		}
 
 		// LDEV-3335: Add static flyweight accessor UDFs to _data and scope
-		Map<Key, UDF> staticAccessorUDFs = null;
-		if (top.cpRef != null) {
-			ComponentPageImpl cp = top.cpRef.get(null, null);
-			if (cp != null) {
-				staticAccessorUDFs = cp.getStaticAccessorUDFs();
-			}
-		}
+		Map<Key, UDF> staticAccessorUDFs = top.cp != null ? top.cp.getStaticAccessorUDFs() : null;
 		if (staticAccessorUDFs != null && !staticAccessorUDFs.isEmpty()) {
 			Iterator<Map.Entry<Key, UDF>> it = staticAccessorUDFs.entrySet().iterator();
 			while (it.hasNext()) {

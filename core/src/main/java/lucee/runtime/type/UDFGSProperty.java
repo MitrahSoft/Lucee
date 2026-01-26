@@ -98,6 +98,11 @@ public abstract class UDFGSProperty extends MemberSupport implements UDFPlus {
 	}
 
 	@Override
+	protected int hash() {
+		return java.util.Objects.hash(getFunctionName(), getPageSource());
+	}
+
+	@Override
 	public String getSource() {
 		// LDEV-3335: Handle null srcComponent for stateless flyweight UDFs
 		if (srcComponent != null) {
