@@ -33,7 +33,7 @@ import lucee.commons.io.log.log4j2.LogAdapter;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourceProvider;
 import lucee.commons.io.res.ResourcesImpl;
-import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
+import lucee.commons.io.res.ResourcesImpl.InnerResourceProviderFactory;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
@@ -654,7 +654,7 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public ResourceProviderFactory[] getResourceProviderFactories() {
+	public InnerResourceProviderFactory[] getResourceProviderFactories() {
 		return cs.getResourceProviderFactories();
 	}
 

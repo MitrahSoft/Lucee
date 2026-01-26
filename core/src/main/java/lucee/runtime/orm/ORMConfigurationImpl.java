@@ -24,10 +24,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.w3c.dom.Attr;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.StringUtil;
 import lucee.loader.engine.CFMLEngine;
@@ -114,10 +110,6 @@ public final class ORMConfigurationImpl implements ORMConfiguration {
 		autogenmap = true;
 		flushAtRequestEnd = true;
 		useDBForMapping = true;
-	}
-
-	public static ORMConfiguration load(Config config, ApplicationContext ac, Element el, Resource defaultCFCLocation, ORMConfiguration defaultConfig) {
-		return _load(config, ac, new _GetElement(el), defaultCFCLocation, defaultConfig);
 	}
 
 	public static ORMConfiguration load(Config config, ApplicationContext ac, Struct settings, Resource defaultCFCLocation, ORMConfiguration defaultConfig) {
@@ -408,8 +400,7 @@ public final class ORMConfigurationImpl implements ORMConfiguration {
 				data.append(eng.getSystemUtil().hash64b(eng.getIOUtil().toString(res, null)));
 				return;
 			}
-			catch (IOException e) {
-			}
+			catch (IOException e) {}
 		}
 		data.append(res.getAbsolutePath()).append(':');
 	}
@@ -649,43 +640,6 @@ class _GetStruct implements _Get {
 	@Override
 	public String toString() {
 		return "_GetStruct:" + sct.toString();
-	}
-}
-
-class _GetElement implements _Get {
-
-	private Element el;
-
-	public _GetElement(Element el) {
-		this.el = el;
-	}
-
-	@Override
-	public Object get(Collection.Key name, Object defaultValue) {
-		String value = _get(name.getString());
-		if (value == null) value = _get(StringUtil.camelToHypenNotation(name.getString()));
-		if (value == null) value = _get(name.getLowerString());
-		if (value == null) {
-			NamedNodeMap map = el.getAttributes();
-			int len = map.getLength();
-			Attr attr;
-			String n;
-			for (int i = 0; i < len; i++) {
-				attr = (Attr) map.item(i);
-				n = attr.getName();
-				n = StringUtil.replace(n, "-", "", false).toLowerCase();
-				if (n.equalsIgnoreCase(name.getLowerString())) return attr.getValue();
-			}
-
-		}
-
-		if (value == null) return defaultValue;
-		return value;
-	}
-
-	private String _get(String name) {
-		if (el.hasAttribute(name)) return el.getAttribute(name);
-		return null;
 	}
 }
 

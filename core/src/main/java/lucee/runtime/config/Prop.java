@@ -67,6 +67,10 @@ public class Prop<T> {
 		instances.add(this);
 	}
 
+	public static Prop<Array> arr() {
+		return new Prop<Array>(PropFactory.ARRAY_FACTORY);
+	}
+
 	public static Prop<Struct> sct() {
 		return new Prop<Struct>(PropFactory.STRUCT_FACTORY);
 	}

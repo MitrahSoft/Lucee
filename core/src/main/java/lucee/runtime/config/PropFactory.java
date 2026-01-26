@@ -18,6 +18,7 @@ import lucee.runtime.type.util.KeyConstants;
 
 public interface PropFactory<T> {
 
+	public static ArrayPropFactory ARRAY_FACTORY = new ArrayPropFactory();
 	public static StructPropFactory STRUCT_FACTORY = new StructPropFactory();
 	public static StringPropFactory STRING_FACTORY = new StringPropFactory();
 	public static BooleanPropFactory BOOLEAN_FACTORY = new BooleanPropFactory();
@@ -36,6 +37,52 @@ public interface PropFactory<T> {
 	public Struct schema(Prop<T> prop);
 
 	public Object resolvedValue(T defaultValue);
+
+	public static class ArrayPropFactory implements PropFactory<Array> {
+		private ArrayPropFactory() {}
+
+		private static ArrayPropFactory instance;
+
+		public static ArrayPropFactory getInstance() {
+			if (instance == null) instance = new ArrayPropFactory();
+			return instance;
+		}
+
+		@Override
+		public Array evaluate(Config config, String name, Object val, Array defaultValue) {
+			Array arr = Caster.toArray(val, null);
+			if (arr == null) return defaultValue;
+			return arr;
+		}
+
+		@Override
+		public Struct schema(Prop<Array> prop) {
+			Struct sct = new StructImpl(Struct.TYPE_LINKED);
+			sct.setEL(KeyConstants._type, "array");
+
+			// Define the items allowed in the array
+			Struct items = new StructImpl(Struct.TYPE_LINKED);
+
+			Array simpleTypes = new ArrayImpl();
+			simpleTypes.appendEL("string");
+			simpleTypes.appendEL("number");
+			simpleTypes.appendEL("integer");
+			simpleTypes.appendEL("boolean");
+			simpleTypes.appendEL("null");
+
+			items.setEL(KeyConstants._type, simpleTypes);
+			items.setEL(KeyConstants._description, "Only simple values (string, number, boolean) are allowed within this array.");
+
+			sct.setEL("items", items);
+
+			return sct;
+		}
+
+		@Override
+		public Object resolvedValue(Array value) {
+			return value;
+		}
+	}
 
 	public static class StructPropFactory implements PropFactory<Struct> {
 		private StructPropFactory() {}

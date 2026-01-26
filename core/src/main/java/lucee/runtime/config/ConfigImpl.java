@@ -40,6 +40,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.osgi.framework.BundleException;
@@ -57,10 +59,17 @@ import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.log.LoggerAndSourceData;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourceProvider;
+import lucee.commons.io.res.ResourceProviderDef;
+import lucee.commons.io.res.ResourceProviderDefFactory;
 import lucee.commons.io.res.Resources;
 import lucee.commons.io.res.ResourcesImpl;
-import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
+import lucee.commons.io.res.ResourcesImpl.InnerResourceProviderFactory;
 import lucee.commons.io.res.filter.ExtensionResourceFilter;
+import lucee.commons.io.res.type.cache.CacheResourceProvider;
+import lucee.commons.io.res.type.http.HTTPResourceProvider;
+import lucee.commons.io.res.type.http.HTTPSResourceProvider;
+import lucee.commons.io.res.type.s3.DummyS3ResourceProvider;
+import lucee.commons.io.res.type.zip.ZipResourceProvider;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ByteSizeParser;
 import lucee.commons.lang.CharsetX;
@@ -88,6 +97,8 @@ import lucee.runtime.cache.CacheConnection;
 import lucee.runtime.cache.CacheConnectionFactory;
 import lucee.runtime.cache.ram.RamCache;
 import lucee.runtime.cache.tag.CacheHandler;
+import lucee.runtime.cache.tag.request.RequestCacheHandler;
+import lucee.runtime.cache.tag.timespan.TimespanCacheHandler;
 import lucee.runtime.cfx.CFXTagPool;
 import lucee.runtime.cfx.customtag.CFXTagClass;
 import lucee.runtime.cfx.customtag.CFXTagPoolImpl;
@@ -105,6 +116,7 @@ import lucee.runtime.db.DataSourceFactory;
 import lucee.runtime.db.DataSourcePro;
 import lucee.runtime.db.DatasourceConnectionFactory;
 import lucee.runtime.db.JDBCDriver;
+import lucee.runtime.db.JDBCDriverFactory;
 import lucee.runtime.dump.DumpWriter;
 import lucee.runtime.dump.DumpWriterEntry;
 import lucee.runtime.dump.HTMLDumpWriter;
@@ -118,8 +130,10 @@ import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.SecurityException;
 import lucee.runtime.extension.Extension;
 import lucee.runtime.extension.ExtensionDefintion;
+import lucee.runtime.extension.ExtensionDefintionFactory;
 import lucee.runtime.extension.ExtensionProvider;
 import lucee.runtime.extension.RHExtension;
+import lucee.runtime.extension.RHExtensionFactory;
 import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.functions.other.CreateUniqueId;
 import lucee.runtime.gateway.GatewayEntry;
@@ -135,8 +149,9 @@ import lucee.runtime.net.mail.ServerFactory;
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
-import lucee.runtime.op.Decision;
+import lucee.runtime.orm.DummyORMEngine;
 import lucee.runtime.orm.ORMConfiguration;
+import lucee.runtime.orm.ORMConfigurationImpl;
 import lucee.runtime.orm.ORMEngine;
 import lucee.runtime.osgi.BundleInfo;
 import lucee.runtime.osgi.EnvClassLoader;
@@ -148,6 +163,7 @@ import lucee.runtime.rest.RestSettingImpl;
 import lucee.runtime.rest.RestSettings;
 import lucee.runtime.schedule.Scheduler;
 import lucee.runtime.schedule.SchedulerImpl;
+import lucee.runtime.search.DummySearchEngine;
 import lucee.runtime.search.SearchEngine;
 import lucee.runtime.security.SecretProvider;
 import lucee.runtime.security.SecretProviderFactory;
@@ -155,6 +171,7 @@ import lucee.runtime.security.SecurityManager;
 import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.spooler.SpoolerEngine;
 import lucee.runtime.spooler.SpoolerEngineImpl;
+import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
 import lucee.runtime.type.Collection.Key;
@@ -171,6 +188,7 @@ import lucee.runtime.type.util.ListUtil;
 import lucee.runtime.video.VideoExecuterNotSupported;
 import lucee.transformer.dynamic.meta.Method;
 import lucee.transformer.library.ClassDefinitionFactory;
+import lucee.transformer.library.ClassDefinitionImpl;
 import lucee.transformer.library.function.FunctionLib;
 import lucee.transformer.library.function.FunctionLibException;
 import lucee.transformer.library.function.FunctionLibFactory;
@@ -188,8 +206,8 @@ import lucee.transformer.library.tag.TagLibTagScript;
  */
 public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
-	private static final RHExtension[] RHEXTENSIONS_EMPTY = new RHExtension[0];
 	private static final long POOL_MAX_IDLE = 60000;
+	public static final ClassDefinition<DummyORMEngine> DEFAULT_ORM_ENGINE = new ClassDefinitionImpl<DummyORMEngine>(DummyORMEngine.class);
 
 	//////////////////////////
 	// no need to expose // TODO still use Prop
@@ -198,8 +216,14 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private Resource tldFile;
 	private FunctionLib cfmlFlds;
 	private Resource fldFile;
+	protected Mapping defaultFunctionMapping;
+	protected final Map<String, Mapping> functionMappings = new ConcurrentHashMap<String, Mapping>();
+	protected Mapping defaultTagMapping;
+	protected final Map<String, Mapping> tagMappings = new ConcurrentHashMap<String, Mapping>();
 	private RHExtensionProvider[] rhextensionProviders;
 	private Class adminSyncClass;
+	private Map<String, ComponentMetaData> componentMetaData;
+	private DumpWriterEntry[] dumpWriters;
 
 	//////////////////////////
 	// not read from config //
@@ -209,6 +233,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	protected Struct root;
 	private Integer mode;
 	private static final double DEFAULT_VERSION = 5.0d;
+	private static final ClassDefinition DEFAULT_SEARCH_ENGINE = new ClassDefinitionImpl(DummySearchEngine.class);
 	private long loadTime;
 	private final Map<String, PhysicalClassLoader> rpcClassLoaders = new ConcurrentHashMap<String, PhysicalClassLoader>();
 	private PhysicalClassLoader directClassLoader;
@@ -233,7 +258,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private ClassLoader envClassLoader;
 	private static Object token = new Object();
 	private SpoolerEngine remoteClientSpoolerEngine;
-	private String extensionsMD5;
 	private Resource antiSamyPolicy;
 	private Resource extAvailable;
 	private Resource extInstalled;
@@ -241,6 +265,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private List<Object> consoleLayouts = new ArrayList<>();
 	private List<Object> resourceLayouts = new ArrayList<>();
 	private Resource logDir;
+	private Map<String, BundleDefinition> extensionBundles;
+	private Map<String, SoftReference<ConfigUtil.CacheElement>> applicationPathCache = null;// new ArrayList<Page>();
+	private Map<String, SoftReference<InitFile>> ctPatchCache = null;// new ArrayList<Page>();
+	private Map<String, SoftReference<UDF>> udfCache = new ConcurrentHashMap<String, SoftReference<UDF>>();
+
 	//////////////////////////
 	//////////////////////////
 
@@ -325,6 +354,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private static Prop<LoggerAndSourceData> metaLoggers = Prop.custom(LogFactory.getInstance(), Prop.TYPE_MAP).keys("loggers").logGlobal()
 			.description("definition of all logs for Lucee");
 	private Map<String, LoggerAndSourceData> loggers;
+	private static LogEngine logEngine;
 
 	private static Prop<Boolean> metaDebugLogOutput = Prop.bool().keys("debuggingLogOutput").defaultValue(false);
 	private Boolean debuggingLogOutput;
@@ -534,6 +564,30 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaRestList = Prop.bool().keys("list").parent("rest").defaultValue(false).description("List Services when \"/rest/\" is called");
 	private Boolean restList;
+
+	private static Prop<Boolean> metaRestSkipCFCWithError = Prop.bool().keys("skipCFCWithError").parent("rest").defaultValue(false)
+			.description("Determines how the REST engine handles components that fail to compile or initialize during service registration. "
+					+ "If enabled (true), Lucee will ignore problematic CFCs and continue registering the rest of the application. "
+					+ "If disabled (false), a single error in one CFC will prevent the entire REST service from being registered.");
+	private Boolean restSkipCFCWithError;
+
+	private static Prop<Integer> metaRestReturnFormat = Prop.integer().keys("returnFormat").parent("rest").defaultValue(UDF.RETURN_FORMAT_JSON).choices(
+			new Choice<Integer>(UDF.RETURN_FORMAT_WDDX, "wddx").description("Legacy CFML serialization format. Not recommended for modern web applications."),
+
+			new Choice<Integer>(UDF.RETURN_FORMAT_JSON, "json").description("Modern standard for web APIs. The default and most efficient format for client-side consumption."),
+
+			new Choice<Integer>(UDF.RETURN_FORMAT_PLAIN, "text", "plain").description("Returns the raw string output of the function without any automated serialization logic."),
+
+			new Choice<Integer>(UDF.RETURN_FORMAT_JAVA, "java").description("Binary-encoded Java objects. Only suitable for communication between compatible Java environments."),
+
+			new Choice<Integer>(UDF.RETURN_FORMAT_SERIALIZE, "cfm", "cfml", "serialize")
+					.description("Lucee's native serialization format. Best for transferring complex data between Lucee servers."),
+
+			new Choice<Integer>(UDF.RETURN_FORMAT_XML, "xml").description("Structured XML output. Used primarily for legacy integrations or specific document-based protocols."))
+
+			.description("Sets the default serialization format for REST responses when a specific format is not requested by the client or defined in the component.");
+	private Integer restReturnFormat;
+	private RestSettings restSetting;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Short> metaClientType = Prop.shor().keys("clientType").defaultValue(Config.CLIENT_SCOPE_TYPE_COOKIE)
@@ -753,8 +807,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static Prop<Boolean> metaExecutionLogEnabled = Prop.bool().keys("enabled").parent("executionLog").defaultValue(false);
 	private Boolean executionLogEnabled;
-
-	private ExecutionLogFactory executionLogFactory;
 
 	private static ImportDefintion DEFAULT_IMPORT_DEFINITION = new ImportDefintionImpl(Constants.DEFAULT_PACKAGE, "*");
 	private static Prop<String> metaComponentDefaultImport = Prop.str().keys("componentAutoImport", "componentDefaultImport").defaultValue(DEFAULT_IMPORT_DEFINITION.toString())
@@ -1004,50 +1056,92 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private ClassDefinition wsHandlerCD;
 	private boolean initWsHandlerCD = true;
 
-	private Array scheduledTasks;
+	private static Prop<JDBCDriver> metaJdbcDrivers = Prop.custom(JDBCDriverFactory.getInstance(), Prop.TYPE_MAP).keys("jdbcDrivers")
+			.description("A map of registered JDBC drivers, primarily managed by Lucee extensions. "
+					+ "Each entry maps a driver class name to its metadata (label, bundle, and connection string template). "
+					+ "DataSources reference these drivers by their 'id' or 'class', allowing Lucee to automatically "
+					+ "update the underlying driver version for all associated data sources when a driver extension is updated.");
+	private JDBCDriver[] jdbcDrivers;
 
-	private final Resources resources = new ResourcesImpl();
-	private boolean initResource = true;
-	private Map<String, Class<CacheHandler>> cacheHandlerClasses;
+	private static Prop<ClassDefinition> metaSearchEngineClassDef = Prop.custom(ClassDefinitionFactory.getInstance("engine")).keys("search").defaultValue(null)
+			.description("Defines the search engine implementation used by Lucee for features like <cfsearch> and <cfindex>. "
+					+ "By default, no search engine is defined. This property uses a standard ClassDefinition, "
+					+ "allowing the engine to be loaded via OSGi bundles or Maven coordinates (as seen with the " + "modern Maven-based Lucene extension).");
+	private ClassDefinition<SearchEngine> search;
 
-	private ResourceProvider defaultResourceProvider;
+	private static Prop<Integer> metaExternalizeStringGTE = Prop.integer().keys("externalizeStringGte").defaultValue(-1)
+			.description("Determines the character length threshold at which strings are moved from generated Java class files into separate external files. "
+					+ "Externalizing strings drastically reduces the memory footprint of loaded templates but can negatively impact execution time. "
+					+ "A lower breakpoint (smaller strings) results in more externalization and slower execution, while -1 (default) disables this feature entirely.");
+	private Integer externalizeStringGTE;
 
-	private List<ExtensionDefintion> extensionsDefs;
-	private RHExtension[] rhextensions = RHEXTENSIONS_EMPTY;
+	private static Prop<DebugEntry> metaDebugTemplates = Prop.custom(DebugEntryFactory.getInstance(), Prop.TYPE_LIST).keys("debugTemplates").description(
+			"A list of registered debugging templates available to the engine. " + "Each entry defines a specific debugging 'skin' (e.g., Classic, Modern, or Comment) "
+					+ "along with its physical path and access restrictions. While multiple templates can be "
+					+ "registered, only the templates matching the current request's IP range and security "
+					+ "settings will be executed to profile and display request execution details.");
+	private DebugEntry[] debugTemplates;
 
-	private DumpWriterEntry[] dmpWriterEntries;
-
-	protected Mapping defaultFunctionMapping;
-	protected final Map<String, Mapping> functionMappings = new ConcurrentHashMap<String, Mapping>();
-
-	protected Mapping defaultTagMapping;
-	protected final Map<String, Mapping> tagMappings = new ConcurrentHashMap<String, Mapping>();
-
-	private final Map<String, ORMEngine> ormengines = new HashMap<String, ORMEngine>();
-	private ClassDefinition<? extends ORMEngine> cdORMEngine;
-	private ORMConfiguration ormConfig;
-
+	// TODO more detailed defintion for Javasettings
+	private static Prop<Struct> metaJavaSettings = Prop.sct().keys("javasettings")
+			.description("Configures the dynamic Java class loading behavior for the Lucee engine. "
+					+ "The 'loadPaths' array specifies local directories or JAR files to be added to the classpath. "
+					+ "The 'maven' array allows for the declaration of remote artifacts using standard coordinates "
+					+ "(groupId:artifactId:version), which Lucee will automatically resolve and load. "
+					+ "These settings enable the use of external Java libraries within CFML without " + "requiring manual placement in the server's lib directory.");
 	private JavaSettings javaSettings;
 	private final Map<String, JavaSettings> javaSettingsInstances = new ConcurrentHashMap<>();
 
-	private Map<String, SoftReference<ConfigUtil.CacheElement>> applicationPathCache = null;// new ArrayList<Page>();
-	private Map<String, SoftReference<InitFile>> ctPatchCache = null;// new ArrayList<Page>();
-	private Map<String, SoftReference<UDF>> udfCache = new ConcurrentHashMap<String, SoftReference<UDF>>();
-	private Map<String, ComponentMetaData> componentMetaData = null;
+	private final Map<String, ORMEngine> ormengines = new HashMap<String, ORMEngine>();
+	// TODO make a ORM specific type for this that loads the orm config and the class defintion
+	private static Prop<Struct> metaOrm = Prop.sct().keys("orm").access(SecurityManagerImpl.TYPE_ORM).defaultValue(new StructImpl())
+			.description("Configures the Object-Relational Mapping (ORM) subsystem. " + "This property serves a dual purpose: it contains the 'engineClass', 'engineBundleName', "
+					+ "and 'engineBundleVersion' required to load the ORM implementation (e.g., Hibernate) via "
+					+ "OSGi or Maven, and it stores the ORM configuration settings. These settings include "
+					+ "database dialects, CFC locations, caching providers, and 'dbcreate' behaviors, " + "which can be defined globally or per-datasource.");
+	private Struct orm;
+	private ClassDefinition<? extends ORMEngine> ormCD;
+	private ORMConfiguration ormConfig;
+	private boolean initOrmConfig = true;
 
-	private DebugEntry[] debugEntries;
+	private static Prop<ExtensionDefintion> metaExtensions = Prop.custom(ExtensionDefintionFactory.getInstance(), Prop.TYPE_LIST).keys("extensions")
+			.description("Defines the Lucee extensions (LEX) to be managed by the engine. "
+					+ "Extensions can be specified by ID and version, or via a path to a .lex file using Lucee's virtual file system "
+					+ "(supporting local paths, 'https', 's3', etc.).  "
+					+ "On startup, Lucee synchronizes the environment: it installs missing extensions and removes any existing " + "extensions not present in this list. ");
+	private List<ExtensionDefintion> extensions;
+	private RHExtension[] extensionsX;
+	private int extensionsLoadCount = 0;
 
-	//
+	private static Prop<ResourceProviderDef> metaDefaultResourceProviderDef = Prop.custom(ResourceProviderDefFactory.getInstance(false)).keys("defaultResourceProvider")
+			.description("Defines the primary Resource Provider for the engine, responsible for handling standard file system operations. "
+					+ "If not explicitly configured, Lucee defaults to the standard local file system provider. "
+					+ "Changing this allows for advanced setups where the 'default' file operations are redirected to a different storage backend.");
 
-	private RestSettings restSetting = new RestSettingImpl(false, UDF.RETURN_FORMAT_JSON);
+	private ResourceProviderDef defaultResourceProvider;
+	private ResourceProvider defaultResourceProviderInstance;
+	private static Prop<ResourceProviderDef> metaResourceProviderDef = Prop.custom(ResourceProviderDefFactory.getInstance(true), Prop.TYPE_LIST).keys("resourceProviders")
+			.description("A list of secondary Resource Providers that register specific URI schemes (e.g., s3://, ftp://, ram://) into Lucee's Virtual File System. "
+					+ "Lucee automatically ensures that core providers for 'http', 'https', 'ram', 's3', and 'zip' are available with default settings "
+					+ "if they are not explicitly defined here. This property allows you to override those defaults or add entirely new custom storage providers.");
+	private List<ResourceProviderDef> resourceProviders;
+	private final ResourcesImpl resources = new ResourcesImpl();
 
-	private Integer externalizeStringGTE;
-	private Map<String, BundleDefinition> extensionBundles;
-	private JDBCDriver[] drivers;
+	private static Prop<ClassDefinition> metaCacheHandlers = Prop.custom(ClassDefinitionFactory.getInstance(), Prop.TYPE_MAP).keys("cacheHandlers")
+			.description("Registers custom Cache Handlers used to process the 'cachedWithin' attribute in tags like <cfquery>, <cfhttp>, and <cffunction>. "
+					+ "Lucee provides built-in handlers for 'request' (storing data for the duration of the current request) and 'timespan' "
+					+ "(standard duration-based caching). This property allows developers to extend this behavior with custom logic, "
+					+ "mapping unique keywords to specific Java-based cache handling implementations.");
+	private Map<String, ClassDefinition> cacheHandlers;
+	private Map<String, Class<CacheHandler>> cacheHandlersInstances;
 
-	private static LogEngine logEngine;
+	private static Prop<Array> metaScheduledTasks = Prop.arr().keys("scheduledTasks").defaultValue(new ArrayImpl()).deprecated()
+			.description("Defines the legacy 'classic' scheduled tasks for the engine. "
+					+ "In modern versions of Lucee, these have been largely superseded by the Quartz-based scheduler. "
+					+ "While this property remains for backward compatibility.");
+	private Array scheduledTasks;
 
-	private ClassDefinition<SearchEngine> searchEngineClassDef;
+	private ExecutionLogFactory executionLogFactory;
 
 	/**
 	 * @return the allowURLRequestTimeout
@@ -2125,8 +2219,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (scheduledTasks == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getScheduledTasks")) {
 				if (scheduledTasks == null) {
-					this.scheduledTasks = ConfigUtil.getAsArray("scheduledTasks", root);
-					if (this.scheduledTasks == null) this.scheduledTasks = new ArrayImpl();
+					scheduledTasks = metaScheduledTasks.get(this, root);
 				}
 			}
 		}
@@ -2945,21 +3038,26 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public ClassDefinition<SearchEngine> getSearchEngineClassDefinition() {
-		if (searchEngineClassDef == null) {
+		if (search == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSearchEngineClassDefinition")) {
-				if (searchEngineClassDef == null) {
-					searchEngineClassDef = ConfigFactoryImpl.loadSearchClass(this, root);
+				if (search == null) {
+
+					ClassDefinition cd = metaSearchEngineClassDef.get(this, root);
+					if (cd == null || !cd.hasClass() || "lucee.runtime.search.lucene.LuceneSearchEngine".equals(cd.getClassName())) {
+						cd = DEFAULT_SEARCH_ENGINE;
+					}
+					search = cd;
 				}
 			}
 		}
-		return this.searchEngineClassDef;
+		return this.search;
 	}
 
 	public ConfigImpl resetSearchEngineClassDefinition() {
-		if (searchEngineClassDef != null) {
+		if (search != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSearchEngineClassDefinition")) {
-				if (searchEngineClassDef != null) {
-					searchEngineClassDef = null;
+				if (search != null) {
+					search = null;
 				}
 			}
 		}
@@ -3420,44 +3518,49 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	/**
-	 * @param defaultResourceProvider the defaultResourceProvider to set
-	 */
-	protected void setDefaultResourceProvider(ResourceProvider defaultResourceProvider) {
-		if (defaultResourceProvider == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheHandlers")) {
-				if (cacheHandlerClasses == null) {
-					cacheHandlerClasses = ConfigFactoryImpl.loadCacheHandler(this, root);
-				}
-			}
-		}
-		getResources().registerDefaultResourceProvider(defaultResourceProvider);
-	}
-
-	/**
-	 * @return the defaultResourceProvider
-	 */
 	@Override
 	public ResourceProvider getDefaultResourceProvider() {
-		Resources resources = getResources();
-		if (defaultResourceProvider == null) {
+		if (defaultResourceProviderInstance == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDefaultResourceProvider")) {
-				if (defaultResourceProvider == null) {
-					defaultResourceProvider = ConfigFactoryImpl.loadDefaultResourceProvider(this, root);
-					if (defaultResourceProvider == null) defaultResourceProvider = ResourcesImpl.getFileResourceProvider();
-					if (defaultResourceProvider != resources.getDefaultResourceProvider()) resources.registerDefaultResourceProvider(defaultResourceProvider);
+				if (defaultResourceProviderInstance == null) {
+
+					ResourceProviderDef def = metaDefaultResourceProviderDef.get(this, root);
+					if (def != null) {
+						try {
+							defaultResourceProviderInstance = ConfigFactoryImpl.toDefaultResourceProvider(def.getClassDefinition().getClazz(), def.getArgs());
+							defaultResourceProvider = def;
+							Resources resources = getResources();
+							resources.registerDefaultResourceProvider(defaultResourceProviderInstance);
+						}
+						catch (Exception e) {
+							ConfigFactoryImpl.log(this, e);
+							defaultResourceProviderInstance = ResourcesImpl.getFileResourceProvider();
+							defaultResourceProvider = null;
+						}
+
+					}
+					else {
+						defaultResourceProviderInstance = ResourcesImpl.getFileResourceProvider();
+						defaultResourceProvider = null;
+					}
+
 				}
 			}
 		}
-		return resources.getDefaultResourceProvider();
+		return defaultResourceProviderInstance;
 	}
 
 	public ConfigImpl resetDefaultResourceProvider() {
 		if (defaultResourceProvider != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDefaultResourceProvider")) {
 				if (defaultResourceProvider != null) {
+					ResourceProvider frp = ResourcesImpl.getFileResourceProvider();
+					if (defaultResourceProvider != frp) {
+						getResources().registerDefaultResourceProvider(frp);
+					}
 					defaultResourceProvider = null;
-					getResources().registerDefaultResourceProvider(ResourcesImpl.getFileResourceProvider());
+					defaultResourceProviderInstance = null;
+
 				}
 			}
 		}
@@ -3466,34 +3569,125 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public Iterator<Entry<String, Class<CacheHandler>>> getCacheHandlers() {
-		if (cacheHandlerClasses == null) {
+		if (cacheHandlersInstances == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheHandlers")) {
-				if (cacheHandlerClasses == null) {
-					cacheHandlerClasses = ConfigFactoryImpl.loadCacheHandler(this, root);
+				if (cacheHandlersInstances == null) {
+					Map<String, Class<CacheHandler>> map = new HashMap<>();
+
+					try {
+						addCacheHandler(map, "request", new ClassDefinitionImpl(RequestCacheHandler.class));
+						addCacheHandler(map, "timespan", new ClassDefinitionImpl(TimespanCacheHandler.class));
+					}
+					catch (Exception ex) {
+						ConfigFactoryImpl.log(this, ex);
+					}
+					String strId;
+					ClassDefinition cd;
+					Map<String, ClassDefinition> handlersMap = metaCacheHandlers.map(this, root);
+					for (Entry<String, ClassDefinition> entry: handlersMap.entrySet()) {
+
+						strId = entry.getKey();
+						cd = entry.getValue();
+						if (cd.hasClass() && !StringUtil.isEmpty(strId)) {
+							strId = strId.trim().toLowerCase();
+							try {
+								addCacheHandler(map, strId, cd);
+							}
+							catch (Exception ex) {
+								ConfigFactoryImpl.log(this, ex);
+							}
+						}
+
+					}
+					cacheHandlers = handlersMap;
+					cacheHandlersInstances = map;
 				}
 			}
 		}
-		return cacheHandlerClasses.entrySet().iterator();
+		return cacheHandlersInstances.entrySet().iterator();
 	}
 
 	public ConfigImpl resetCacheHandlers() {
-		if (cacheHandlerClasses != null) {
+		if (cacheHandlersInstances != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getCacheHandlers")) {
-				if (cacheHandlerClasses != null) {
-					cacheHandlerClasses = null;
+				if (cacheHandlersInstances != null) {
+					cacheHandlersInstances = null;
+					cacheHandlers = null;
 				}
 			}
 		}
 		return this;
 	}
 
+	private static void addCacheHandler(Map<String, Class<CacheHandler>> cacheHandlers, String id, ClassDefinition<CacheHandler> cd) throws ClassException, BundleException {
+		Class<CacheHandler> clazz = cd.getClazz();
+		Object o = ClassUtil.loadInstance(clazz); // just try to load and forget afterwards
+		if (o instanceof CacheHandler) {
+			cacheHandlers.put(id, clazz);
+		}
+		else throw new ClassException("object [" + Caster.toClassName(o) + "] must implement the interface " + CacheHandler.class.getName());
+	}
+
 	private Resources getResources() {
-		if (initResource) {
+		if (resourceProviders == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getResources")) {
-				if (initResource) {
-					ConfigFactoryImpl.loadResourceProvider(this, root);
-					initResource = false;
-					cacheHandlerClasses = null;
+				if (resourceProviders == null) {
+
+					List<ResourceProviderDef> list = metaResourceProviderDef.list(this, root);
+
+					boolean hasHTTP = false;
+					boolean hasHTTPs = false;
+					boolean hasRAM = false;
+					boolean hasZip = false;
+					boolean hasS3 = false;
+					String scheme;
+					for (ResourceProviderDef def: list) {
+						scheme = def.getScheme();
+						if ("http".equalsIgnoreCase(scheme)) hasHTTP = true;
+						else if ("https".equalsIgnoreCase(scheme)) hasHTTPs = true;
+						else if ("ram".equalsIgnoreCase(scheme)) hasRAM = true;
+						else if ("s3".equalsIgnoreCase(scheme)) hasS3 = true;
+						else if ("zip".equalsIgnoreCase(scheme)) hasZip = true;
+					}
+
+					// adding missing providers
+					if (!hasHTTP) {
+						Map<String, String> args = new HashMap<>();
+						args.put("lock-timeout", "10000");
+						args.put("case-sensitive", "false");
+						list.add(new ResourceProviderDef("http", new ClassDefinitionImpl<>(HTTPResourceProvider.class), args));
+					}
+					if (!hasHTTPs) {
+						Map<String, String> args = new HashMap<>();
+						args.put("lock-timeout", "10000");
+						args.put("case-sensitive", "false");
+						list.add(new ResourceProviderDef("https", new ClassDefinitionImpl<>(HTTPSResourceProvider.class), args));
+					}
+					if (!hasRAM) {
+						Map<String, String> args = new HashMap<>();
+						args.put("lock-timeout", "1000");
+						args.put("case-sensitive", "true");
+						list.add(new ResourceProviderDef("tar", new ClassDefinitionImpl<>(CacheResourceProvider.class), args));
+					}
+					if (!hasS3) {
+						ClassDefinition s3Class = new ClassDefinitionImpl(DummyS3ResourceProvider.class);
+						Map<String, String> args = new HashMap<>();
+						args.put("lock-timeout", "10000");
+						list.add(new ResourceProviderDef("s3", new ClassDefinitionImpl<>(DummyS3ResourceProvider.class), args));
+					}
+					if (!hasZip) {
+						Map<String, String> args = new HashMap<>();
+						args.put("lock-timeout", "1000");
+						args.put("case-sensitive", "1000");
+						list.add(new ResourceProviderDef("zip", new ClassDefinitionImpl<>(ZipResourceProvider.class), args));
+					}
+
+					for (ResourceProviderDef def: list) {
+						resources.registerResourceProvider(def.getScheme(), def.getClassDefinition(), def.getArgs());
+					}
+
+					resourceProviders = list;
+
 				}
 			}
 		}
@@ -3501,19 +3695,15 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	public ConfigImpl resetResources() {
-		if (!initResource) {
+		if (resourceProviders != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getResources")) {
-				if (!initResource) {
-					initResource = true;
+				if (resourceProviders != null) {
+					resourceProviders = null;
 					resources.reset();
 				}
 			}
 		}
 		return this;
-	}
-
-	protected void addResourceProvider(String strProviderScheme, ClassDefinition cd, Map arguments) {
-		((ResourcesImpl) resources).registerResourceProvider(strProviderScheme, cd, arguments);
 	}
 
 	/**
@@ -3528,13 +3718,13 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	 * @return return the resource providers
 	 */
 	@Override
-	public ResourceProviderFactory[] getResourceProviderFactories() {
+	public InnerResourceProviderFactory[] getResourceProviderFactories() {
 		return ((ResourcesImpl) getResources()).getResourceProviderFactories();
 	}
 
 	@Override
 	public boolean hasResourceProvider(String scheme) {
-		ResourceProviderFactory[] factories = ((ResourcesImpl) getResources()).getResourceProviderFactories();
+		InnerResourceProviderFactory[] factories = ((ResourcesImpl) getResources()).getResourceProviderFactories();
 		for (int i = 0; i < factories.length; i++) {
 			if (factories[i].getScheme().equalsIgnoreCase(scheme)) return true;
 		}
@@ -4072,22 +4262,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	public DumpWriterEntry[] getDumpWritersEntries() {
-		if (dmpWriterEntries == null) {
+		if (dumpWriters == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDumpWritersEntries")) {
-				if (dmpWriterEntries == null) {
-					dmpWriterEntries = ConfigFactoryImpl.loadDumpWriter(this, root, null);
+				if (dumpWriters == null) {
+					dumpWriters = ConfigFactoryImpl.loadDumpWriter(this, root, null);
 					// MUST handle default value was returned
 				}
 			}
 		}
-		return dmpWriterEntries;
+		return dumpWriters;
 	}
 
 	public ConfigImpl resetDumpWritersEntries() {
-		if (dmpWriterEntries != null) {
+		if (dumpWriters != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDumpWritersEntries")) {
-				if (dmpWriterEntries != null) {
-					dmpWriterEntries = null;
+				if (dumpWriters != null) {
+					dumpWriters = null;
 				}
 			}
 		}
@@ -4792,38 +4982,174 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public RHExtension[] getRHExtensions() {
-		return rhextensions;
-	}
+		if (extensionsX == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "extensions")) {
+				if (extensionsX == null) {
+					boolean firstLoad = extensionsLoadCount == 0;
+					extensionsLoadCount++;
+					Log deployLog = getLog("deploy");
 
-	public ConfigImpl resetRHExtensions() {
-		return this;
-	}
+					Map<String, RHExtension> exts = new HashMap<>();
+					for (ExtensionDefintion ed: getExtensionDefinitions()) {
+						RHExtension ext;
+						try {
+							ext = ed.toRHExtension();
+							exts.put(ext.getExtensionInstalledName(), ext);
+						}
+						catch (PageException ex) {
+							if (deployLog != null) deployLog.error("start-bundles", ex);
+						}
 
-	public String getExtensionsMD5() {
-		return extensionsMD5;
-	}
+					}
 
-	protected void setExtensions(RHExtension[] extensions, String md5) {
-		this.rhextensions = extensions;
-		this.extensionsMD5 = md5;
-	}
+					////
+					// start bundles in parallel but wait for them to finish
+					CountDownLatch latch = new CountDownLatch(exts.size());
+					ExecutorService executor = ThreadUtil.createExecutorService();
+					try {
 
-	public List<ExtensionDefintion> getExtensionDefinitions() {
-		if (extensionsDefs == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getExtensionDefinitions")) {
-				if (extensionsDefs == null) {
-					extensionsDefs = ConfigFactoryImpl.loadExtensionDefinition(this, root);
+						for (RHExtension ext: exts.values()) {
+							executor.submit(() -> {
+								try {
+									// Call the startBundles method for each extension
+									RHExtensionFactory.startBundles(this, ext, firstLoad);
+								}
+								catch (Exception e) {
+									if (deployLog != null) deployLog.error("start-bundles", e);
+								}
+								finally {
+									// Count down the latch regardless of success or failure
+									latch.countDown();
+								}
+							});
+						}
+
+						// Wait for all virtual threads to complete
+						try {
+							latch.await();
+						}
+						catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+							throw new RuntimeException("Interrupted while waiting for extension processing", e);
+						}
+					}
+					finally {
+						try {
+							ThreadUtil.close(executor);
+						}
+						catch (Exception e) {
+							if (deployLog != null) deployLog.error("start-bundles", e);
+						}
+					}
+
+					// uninstall extensions no longer used
+					Boolean cleanupExtension = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.cleanup.extension", null), true);
+					if (cleanupExtension) {
+						Map<String, Resource> installed = RHExtension.loadExtensionInstalledFiles(this);
+						if (installed != null) {
+							ResetFilter filter = new ResetFilter();
+							try {
+
+								for (Resource r: installed.values()) {
+
+									// is this extension file not in the config
+									if (!exts.containsKey(r.getName())) {
+										RHExtension ext = RHExtension.getInstance(this, r);
+
+										RHExtension match = null;
+										for (RHExtension e: exts.values()) {
+											if (e.getId().equals(ext.getId())) {
+												match = e;
+												break;
+											}
+										}
+
+										// maybe it got updated and the extension file was not removed
+										if (match != null) {
+
+											if (deployLog != null) deployLog.info("extension",
+													"Found the extension [" + ext + "] in the installed folder that is in a different version in the configuraton [" + match
+															+ "], so we delete that extension file.");
+											try {
+												RHExtension.removeExtensionInstalledFile(this, r.getName());
+											}
+											catch (Exception ex) {
+												if (deployLog != null) deployLog.error("start-bundles", ex);
+											}
+										}
+										// the extension no longer configured, sowe remove it
+										else {
+											if (deployLog != null) deployLog.info("extension", "Found the extension [" + ext
+													+ "] in the installed folder that is not present in the configuration in any version, so we will uninstall it");
+											try {
+												ConfigAdmin._removeRHExtension(this, ext, null, filter, true);
+												if (deployLog != null) deployLog.info("extension", "removed extension [" + ext + "]");
+											}
+											catch (PageException ex) {
+												if (deployLog != null) deployLog.error("start-bundles", ex);
+											}
+										}
+									}
+								}
+							}
+							finally {
+								try {
+									filter.reset(this);
+								}
+								catch (Exception e) {
+									if (deployLog != null) deployLog.error("start-bundles", e);
+								}
+							}
+						}
+					}
+					extensionsX = exts.values().toArray(new RHExtension[exts.size()]);
 				}
 			}
 		}
-		return this.extensionsDefs;
+		return extensionsX;
+	}
+
+	public ConfigImpl resetRHExtensions() {
+		if (extensionsX != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "extensions")) {
+				if (extensionsX != null) {
+					extensionsX = null;
+				}
+			}
+		}
+		// force a new build
+		getRHExtensions();
+
+		return this;
+	}
+
+	public List<ExtensionDefintion> getExtensionDefinitions() {
+		if (extensions == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getExtensionDefinitions")) {
+				if (extensions == null) {
+
+					// remove duplicates
+					Array raw = ConfigUtil.getAsArray("extensions", root);
+					try {
+						RHExtension.removeDuplicates(raw);
+					}
+					catch (Throwable t) {
+						ExceptionUtil.rethrowIfNecessary(t);
+						ConfigFactoryImpl.log(this, t);
+					}
+
+					extensions = metaExtensions.list(this, root);
+				}
+			}
+		}
+		return extensions;
 	}
 
 	public ConfigImpl resetExtensionDefinitions() {
-		if (extensionsDefs != null) {
+		if (extensions != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getExtensionDefinitions")) {
-				if (extensionsDefs != null) {
-					extensionsDefs = null;
+				if (extensions != null) {
+					extensions = null;
 				}
 			}
 		}
@@ -5608,26 +5934,60 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean hasORMEngine() {
-		return getORMEngineClassDefintion().equals(ConfigFactoryImpl.DUMMY_ORM_ENGINE);
+		return getORMEngineClassDefintion().equals(DEFAULT_ORM_ENGINE);
+	}
+
+	public Struct getORM() {
+		if (orm == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getORMConfig")) {
+				if (orm == null) {
+
+					orm = metaOrm.get(this, root);
+				}
+			}
+		}
+		return orm;
+	}
+
+	public ConfigImpl resetORM() {
+		if (orm != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "orm")) {
+				if (orm != null) {
+					orm = null;
+				}
+			}
+		}
+		return this;
 	}
 
 	@Override
 	public ClassDefinition<? extends ORMEngine> getORMEngineClassDefintion() {
-		if (cdORMEngine == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getORMEngineClassDefintion")) {
-				if (cdORMEngine == null) {
-					cdORMEngine = ConfigFactoryImpl.loadORMClass(this, root);
+		if (ormCD == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "ormCD")) {
+				if (ormCD == null) {
+
+					// class
+					ClassDefinition cd = null;
+					try {
+						cd = ConfigFactoryImpl.getClassDefinition(this, getORM(), "engine", getIdentification());
+					}
+					catch (Exception ex) {
+						ConfigFactoryImpl.log(this, ex);
+
+					}
+					ormCD = cd == null || !cd.hasClass() ? DEFAULT_ORM_ENGINE : cd;
 				}
 			}
 		}
-		return cdORMEngine;
+		return ormCD;
 	}
 
 	public ConfigImpl resetORMEngineClassDefintion() {
-		if (cdORMEngine != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getORMEngineClassDefintion")) {
-				if (cdORMEngine != null) {
-					cdORMEngine = null;
+		if (ormCD != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "ormCD")) {
+				if (ormCD != null) {
+					resetORM();
+					ormCD = null;
 				}
 			}
 		}
@@ -5640,10 +6000,15 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public ORMConfiguration getORMConfig() {
-		if (ormConfig == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getORMConfig")) {
-				if (ormConfig == null) {
-					ormConfig = ConfigFactoryImpl.loadORMConfig(this, root, null);
+		if (initOrmConfig) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "ormConfig")) {
+				if (initOrmConfig) {
+
+					Struct data = getORM();
+					// class
+
+					ormConfig = data == null ? null : ORMConfigurationImpl.load(this, null, data, this.getRootDirectory(), null);
+					initOrmConfig = false;
 				}
 			}
 		}
@@ -5651,10 +6016,12 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	}
 
 	public ConfigImpl resetORMConfig() {
-		if (ormConfig != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getORMConfig")) {
-				if (ormConfig != null) {
+		if (!initOrmConfig) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "ormCD")) {
+				if (!initOrmConfig) {
+					resetORM();
 					ormConfig = null;
+					initOrmConfig = true;
 				}
 			}
 		}
@@ -5940,44 +6307,29 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public DebugEntry[] getDebugEntries() {
-		if (debugEntries == null) {
+		if (debugTemplates == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDebugEntries")) {
-				if (debugEntries == null) {
-					Array entries = ConfigUtil.getAsArray("debugTemplates", root);
-					Map<String, DebugEntry> list = new HashMap<String, DebugEntry>();
+				if (debugTemplates == null) {
+					List<DebugEntry> list = metaDebugTemplates.list(this, root);
 
-					String id;
-					if (entries != null) {
-						Iterator<?> it = entries.getIterator();
-						Struct e;
-						while (it.hasNext()) {
-							try {
-								e = Caster.toStruct(it.next(), null);
-								if (e == null) continue;
-								id = ConfigFactoryImpl.getAttr(this, e, "id");
-								list.put(id,
-										new DebugEntry(id, ConfigFactoryImpl.getAttr(this, e, "type"), ConfigFactoryImpl.getAttr(this, e, "iprange"),
-												ConfigFactoryImpl.getAttr(this, e, "label"), ConfigFactoryImpl.getAttr(this, e, "path"),
-												ConfigFactoryImpl.getAttr(this, e, "fullname"), ConfigUtil.getAsStruct(this, e, true, "custom")));
-							}
-							catch (Throwable t) {
-								ExceptionUtil.rethrowIfNecessary(t);
-								ConfigFactoryImpl.log(this, t);
-							}
-						}
+					// remove duplicates
+					Map<String, DebugEntry> map = new HashMap<String, DebugEntry>();
+					for (DebugEntry de: list) {
+						map.put(de.getId(), de);
+
 					}
-					debugEntries = list.values().toArray(new DebugEntry[list.size()]);
+					debugTemplates = map.values().toArray(new DebugEntry[map.size()]);
 				}
 			}
 		}
-		return debugEntries;
+		return debugTemplates;
 	}
 
 	public ConfigImpl resetDebugEntries() {
-		if (debugEntries != null) {
+		if (debugTemplates != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getDebugEntries")) {
-				if (debugEntries != null) {
-					debugEntries = null;
+				if (debugTemplates != null) {
+					debugTemplates = null;
 				}
 			}
 		}
@@ -6099,7 +6451,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return suppressWhitespaceBeforeArgument;
 	}
 
-	public ConfigImpl restSuppressWSBeforeArg() {
+	public ConfigImpl resetSuppressWSBeforeArg() {
 		if (suppressWhitespaceBeforeArgument != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getSuppressWSBeforeArg")) {
 				if (suppressWhitespaceBeforeArgument != null) {
@@ -6110,13 +6462,73 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return this;
 	}
 
-	protected void setRestSetting(RestSettings restSetting) {
-		this.restSetting = restSetting;
-	}
-
 	@Override
 	public RestSettings getRestSetting() {
+		if (restSetting == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "restSkipCFCWithError")) {
+				if (restSetting == null) {
+					restSetting = new RestSettingImpl(getRestSkipCFCWithError(), getRestReturnFormat());
+				}
+			}
+		}
 		return restSetting;
+	}
+
+	public ConfigImpl resetRestSetting() {
+		if (restSetting != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getSuppressWSBeforeArg")) {
+				if (restSetting != null) {
+					resetRestSkipCFCWithError();
+					resetRestReturnFormat();
+					restSetting = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public boolean getRestSkipCFCWithError() {
+		if (restSkipCFCWithError == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "restSkipCFCWithError")) {
+				if (restSkipCFCWithError == null) {
+					restSkipCFCWithError = metaRestSkipCFCWithError.get(this, root);
+				}
+			}
+		}
+		return restSkipCFCWithError;
+	}
+
+	public ConfigImpl resetRestSkipCFCWithError() {
+		if (restSkipCFCWithError != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "restSkipCFCWithError")) {
+				if (restSkipCFCWithError != null) {
+					restSkipCFCWithError = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	public int getRestReturnFormat() {
+		if (restReturnFormat == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "restReturnFormat")) {
+				if (restReturnFormat == null) {
+					restReturnFormat = metaRestReturnFormat.get(this, root);
+				}
+			}
+		}
+		return restReturnFormat;
+	}
+
+	public ConfigImpl resetRestReturnFormat() {
+		if (restReturnFormat != null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "restSkipCFCWithError")) {
+				if (restReturnFormat != null) {
+					restReturnFormat = null;
+				}
+			}
+		}
+		return this;
 	}
 
 	public int getMode() {
@@ -6454,11 +6866,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (externalizeStringGTE == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getExternalizeStringGTE")) {
 				if (externalizeStringGTE == null) {
-					String str = ConfigFactoryImpl.getAttr(this, root, "externalizeStringGte");
-					if (Decision.isNumber(str)) {
-						externalizeStringGTE = Caster.toIntValue(str, -1);
-					}
-					else externalizeStringGTE = -1;
+					externalizeStringGTE = metaExternalizeStringGTE.get(this, root);
 				}
 			}
 		}
@@ -6592,7 +7000,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 			ClassDefinition appender = getLogEngine().appenderClassDefintion("console");
 			ClassDefinition layout = getLogEngine().layoutClassDefintion("pattern");
-			las = ConfigFactoryImpl.createLogger(this, name, Log.LEVEL_ERROR, appender, null, layout, null, true, true);
+			las = LogFactory.createLogger(this, name, Log.LEVEL_ERROR, appender, null, layout, null, true, true);
 
 			String id = LoggerAndSourceData.id(name.toLowerCase(), appender, null, layout, null, Log.LEVEL_ERROR, true);
 			LoggerAndSourceData existing = loggers.get(name.toLowerCase());
@@ -6910,21 +7318,22 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public JDBCDriver[] getJDBCDrivers() {
-		if (drivers == null) {
+		if (jdbcDrivers == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getJDBCDrivers")) {
-				if (drivers == null) {
-					drivers = ConfigFactoryImpl.loadJDBCDrivers(this, root);
+				if (jdbcDrivers == null) {
+					Map<String, JDBCDriver> map = metaJdbcDrivers.map(this, root);
+					jdbcDrivers = map.values().toArray(new JDBCDriver[map.size()]);
 				}
 			}
 		}
-		return drivers;
+		return jdbcDrivers;
 	}
 
 	public ConfigImpl resetJDBCDrivers() {
-		if (drivers != null) {
+		if (jdbcDrivers != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getJDBCDrivers")) {
-				if (drivers != null) {
-					drivers = null;
+				if (jdbcDrivers != null) {
+					jdbcDrivers = null;
 				}
 			}
 		}
@@ -7420,9 +7829,15 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	@Override
 	public JavaSettings getJavaSettings() {
 		if (javaSettings == null) {
-			synchronized (javaSettingsInstances) {
+			synchronized (SystemUtil.createToken("extensions", "javaSettings")) {
 				if (javaSettings == null) {
-					javaSettings = ConfigFactoryImpl.loadJavaSettings(this, root, null);
+
+					Resource lib = getLibraryDirectory();
+					Resource[] libs = lib.listResources(ExtensionResourceFilter.EXTENSION_JAR_NO_DIR);
+
+					Struct javasettings = metaJavaSettings.get(this, root);
+
+					javaSettings = JavaSettingsImpl.getInstance(this, javasettings, libs);
 					if (javaSettings == null) javaSettings = JavaSettingsImpl.getInstance(this, new StructImpl(), null);
 				}
 			}

@@ -12,7 +12,7 @@ import org.osgi.framework.Version;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogEngine;
 import lucee.commons.io.res.Resource;
-import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
+import lucee.commons.io.res.ResourcesImpl.InnerResourceProviderFactory;
 import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.PhysicalClassLoader;
@@ -305,7 +305,7 @@ public interface ConfigPro extends Config {
 
 	public Map<Key, Map<Key, Object>> getTagDefaultAttributeValues();
 
-	public ResourceProviderFactory[] getResourceProviderFactories();
+	public InnerResourceProviderFactory[] getResourceProviderFactories();
 
 	public boolean hasResourceProvider(String scheme);
 

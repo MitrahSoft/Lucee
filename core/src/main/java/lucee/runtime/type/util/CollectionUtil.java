@@ -175,6 +175,15 @@ public final class CollectionUtil {
 		return Hash.md5(coll.toString());
 	}
 
+	public static String md5(Collection coll, String defaultValue) {
+		try {
+			return md5(coll);
+		}
+		catch (Exception e) {
+			return defaultValue;
+		}
+	}
+
 	public static boolean hasKey(Struct sct, Key key) {
 		for (Object k: sct.keys()) {
 			if (key.equals(k)) return true;

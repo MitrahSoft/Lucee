@@ -921,7 +921,7 @@ public final class RHExtension implements Serializable {
 		return getExtensionInstalledDir(config).getRealResource(fileName);
 	}
 
-	private static String toHash(String id, String version, String ext) {
+	public static String toHash(String id, String version, String ext) {
 		if (ext == null) ext = "mf";
 		return HashUtil.create64BitHashAsString(id + "-" + version + "-" + ExtensionMetadata.serialVersionUID, Character.MAX_RADIX) + "." + ext;
 	}
@@ -1177,8 +1177,7 @@ public final class RHExtension implements Serializable {
 			try {
 				qryBundles = new QueryImpl(new Key[] { KeyConstants._name, KeyConstants._version }, bfs == null ? 0 : bfs.length, "bundles");
 			}
-			catch (DatabaseException e) {
-			}
+			catch (DatabaseException e) {}
 			if (qryBundles != null) {
 				for (int i = 0; i < bfs.length; i++) {
 					qryBundles.setAtEL(KeyConstants._name, i + 1, bfs[i].getSymbolicName());
