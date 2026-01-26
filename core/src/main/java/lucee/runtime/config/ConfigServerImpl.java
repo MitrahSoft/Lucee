@@ -45,7 +45,6 @@ import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.URLDecoder;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.loader.util.ExtensionFilter;
@@ -55,7 +54,6 @@ import lucee.runtime.Mapping;
 import lucee.runtime.MappingImpl;
 import lucee.runtime.ai.AIEnginePool;
 import lucee.runtime.config.ConfigFactory.UpdateInfo;
-import lucee.runtime.config.gateway.GatewayMap;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ThreadLocalPageContext;
@@ -84,7 +82,6 @@ import lucee.runtime.type.scope.Cluster;
 import lucee.runtime.type.scope.ClusterRemote;
 import lucee.runtime.type.scope.ClusterWrap;
 import lucee.runtime.type.util.ArrayUtil;
-import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.library.function.FunctionLib;
 import lucee.transformer.library.function.FunctionLibException;
 import lucee.transformer.library.function.FunctionLibFactory;
@@ -101,15 +98,18 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 
 	public static Config instance;
 
+	// not affected by config
 	private final CFMLEngineImpl engine;
+	private String libHash;
+	private long localExtHash;
+	private int localExtSize = -1;
+
 	private Map<String, CFMLFactory> initContextes;
 	// private Map contextes;
 	private SecurityManager defaultSecurityManager;
 	private Map<String, SecurityManager> managers = MapFactory.<String, SecurityManager>getConcurrentMap();
 	Password defaultPassword;
 	private Resource rootDir;
-	private URL updateLocation;
-	private String updateType;
 	private ConfigListener configListener;
 	private boolean initConfigListener;
 	private Map<String, String> labels;
@@ -117,15 +117,8 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 	private IntervallMonitor[] intervallMonitors;
 	private ActionMonitorCollector actionMonitorCollector;
 
-	private Boolean monitoringEnabled;
 	private int delay = -1;
-	private Boolean captcha;
-	private Boolean rememberMe;
-	private Boolean classicStyle;
 	// private static ConfigServerImpl instance;
-
-	private String[] authKeys;
-	private String idPro;
 
 	private LinkedHashMapMaxSize<Long, String> previousNonces = new LinkedHashMapMaxSize<Long, String>(100);
 
@@ -138,18 +131,11 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 
 	private IdentificationServer id;
 
-	private String libHash;
-
 	private ClassDefinition<AMFEngine> amfEngineCD;
 
 	private Map<String, String> amfEngineArgs;
 
 	private List<ExtensionDefintion> localExtensions;
-
-	private long localExtHash;
-	private int localExtSize = -1;
-
-	private GatewayMap gatewayEntries;
 
 	private Resource mvnDir;
 
@@ -420,56 +406,8 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 	}
 
 	@Override
-	public String getUpdateType() {
-		if (updateType == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateType")) {
-				if (updateType == null) {
-					String ut = ConfigFactoryImpl.getAttr(this, root, "updateType");
-					if (StringUtil.isEmpty(ut, true)) updateType = "manual";
-					else updateType = ut.trim();
-				}
-			}
-		}
-		return updateType;
-	}
-
-	public ConfigServerImpl resetUpdateType() {
-		if (updateType != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateType")) {
-				if (updateType != null) {
-					updateType = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
 	public void setUpdateType(String updateType) {
 		throw new RuntimeException("this action is no longer allowed");
-	}
-
-	@Override
-	public URL getUpdateLocation() {
-		if (updateLocation == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateLocation")) {
-				if (updateLocation == null) {
-					updateLocation = ConfigFactoryImpl.loadUpdate(this, root);
-				}
-			}
-		}
-		return updateLocation;
-	}
-
-	public ConfigServerImpl resetUpdateLocation() {
-		if (updateLocation != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateLocation")) {
-				if (updateLocation != null) {
-					updateLocation = null;
-				}
-			}
-		}
-		return this;
 	}
 
 	@Override
@@ -619,30 +557,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 	}
 
 	@Override
-	public boolean isMonitoringEnabled() {
-		if (monitoringEnabled == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "isMonitoringEnabled")) {
-				if (monitoringEnabled == null) {
-					Struct parent = ConfigUtil.getAsStruct("monitoring", root);
-					monitoringEnabled = Caster.toBoolean(ConfigFactoryImpl.getAttr(this, parent, "enabled"), Boolean.FALSE);
-				}
-			}
-		}
-		return monitoringEnabled;
-	}
-
-	public ConfigServerImpl resetMonitoringEnabled() {
-		if (monitoringEnabled != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "isMonitoringEnabled")) {
-				if (monitoringEnabled != null) {
-					monitoringEnabled = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
 	public int getLoginDelay() {
 		if (delay == -1) {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
@@ -659,76 +573,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
 				if (delay != -1) {
 					delay = -1;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
-	public boolean getLoginCaptcha() {
-		if (captcha == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginCaptcha")) {
-				if (captcha == null) {
-					captcha = Caster.toBooleanValue(ConfigFactoryImpl.getAttr(this, root, "loginCaptcha"), false);
-				}
-			}
-		}
-		return captcha;
-	}
-
-	public ConfigServerImpl resetLoginCaptcha() {
-		if (captcha != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginCaptcha")) {
-				if (captcha != null) {
-					captcha = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
-	public boolean getRememberMe() {
-		if (rememberMe == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getRememberMe")) {
-				if (rememberMe == null) {
-					rememberMe = Caster.toBooleanValue(ConfigFactoryImpl.getAttr(this, root, "loginRememberme"), true);
-				}
-			}
-		}
-		return rememberMe;
-	}
-
-	public ConfigServerImpl resetRememberMe() {
-		if (rememberMe != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getRememberMe")) {
-				if (rememberMe != null) {
-					rememberMe = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
-	public boolean getDateCasterClassicStyle() {
-		if (classicStyle == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getDateCasterClassicStyle")) {
-				if (classicStyle == null) {
-					String strClassicDateParsing = ConfigFactoryImpl.getAttr(this, root, "classicDateParsing");
-					classicStyle = Caster.toBoolean(strClassicDateParsing, Boolean.FALSE);
-				}
-			}
-		}
-		return classicStyle;
-	}
-
-	public ConfigImpl resetDateCasterClassicStyle() {
-		if (classicStyle != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getDateCasterClassicStyle")) {
-				if (classicStyle != null) {
-					classicStyle = null;
 				}
 			}
 		}
@@ -894,29 +738,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 	@Override
 	public boolean allowRequestTimeout() {
 		return engine.allowRequestTimeout();
-	}
-
-	public String[] getAuthenticationKeys() {
-		if (authKeys == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getAuthenticationKeys")) {
-				if (authKeys == null) {
-					String keyList = ConfigFactoryImpl.getAttr(this, root, "authKeys");
-					if (!StringUtil.isEmpty(keyList)) {
-						String[] keys = ListUtil.trimItems(ListUtil.toStringArray(ListUtil.toListRemoveEmpty(keyList, ',')));
-						for (int i = 0; i < keys.length; i++) {
-							try {
-								keys[i] = URLDecoder.decode(keys[i], "UTF-8", true);
-							}
-							catch (Exception e) {
-							}
-						}
-						authKeys = keys;
-					}
-					else authKeys = new String[0];
-				}
-			}
-		}
-		return authKeys;
 	}
 
 	public ConfigServer getConfigServer(String key, String nonce) {

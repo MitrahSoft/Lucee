@@ -4839,7 +4839,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		int delay = getInt("admin", "UpdateLoginSettings", "delay");
 		admin.updateLoginSettings(captcha, rememberMe, delay);
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetLoginCaptcha().resetLoginDelay().resetRememberMe();
+		ConfigUtil.getConfigServerImpl(config).resetLoginDelay().resetLoginCaptcha().resetRememberMe();
 	}
 
 	private void doUpdateLogSettings() throws PageException {

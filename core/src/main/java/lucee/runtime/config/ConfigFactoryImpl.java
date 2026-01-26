@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
@@ -62,7 +61,6 @@ import lucee.commons.lang.ClassException;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.URLDecoder;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -1233,37 +1231,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			}
 
 		}
-	}
-
-	/**
-	 * @param configServer
-	 * @param config
-	 * @param doc
-	 * @return
-	 */
-	public static URL loadUpdate(ConfigImpl config, Struct root) {
-		try {
-			// Server
-			if (root != null) {
-				ConfigServerImpl cs = (ConfigServerImpl) config;
-
-				String location = getAttr(config, root, "updateLocation");
-				if (StringUtil.isEmpty(location, true)) location = getAttr(config, root, "updateSiteURL");
-				if (!StringUtil.isEmpty(location, true)) {
-					location = location.trim();
-					if ("http://update.lucee.org".equals(location)) location = DEFAULT_LOCATION;
-					if ("http://snapshot.lucee.org".equals(location) || "https://snapshot.lucee.org".equals(location)) location = DEFAULT_LOCATION;
-					if ("http://release.lucee.org".equals(location) || "https://release.lucee.org".equals(location)) location = DEFAULT_LOCATION;
-					return HTTPUtil.toURL(location, HTTPUtil.ENCODED_AUTO);
-				}
-
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return Constants.DEFAULT_UPDATE_URL;
 	}
 
 	public static PrintStream toPrintStream(Config config, String streamtype, boolean iserror) {

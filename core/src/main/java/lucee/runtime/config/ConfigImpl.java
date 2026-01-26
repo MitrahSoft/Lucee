@@ -26,6 +26,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.ref.SoftReference;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -81,7 +82,9 @@ import lucee.commons.lang.PhysicalClassLoader;
 import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.types.RefBoolean;
+import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.IPRange;
+import lucee.commons.net.URLDecoder;
 import lucee.loader.TP;
 import lucee.runtime.CIPage;
 import lucee.runtime.Component;
@@ -1141,7 +1144,210 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 					+ "While this property remains for backward compatibility.");
 	private Array scheduledTasks;
 
+	private static Prop<Boolean> metaMonitoringEnabled = Prop.bool().keys("enabled").parent("monitoring").defaultValue(false).description(
+			"Enables the background monitoring service in Lucee. When active, the engine collects real-time performance data and health metrics at regular intervals.");
+	private Boolean monitoringEnabled;
+
+	private static Prop<Boolean> metaCaptcha = Prop.bool().keys("loginCaptcha").defaultValue(false).deprecated();
+	private Boolean loginCaptcha;
+
+	private static Prop<Boolean> metaClassicDateParsing = Prop.bool().keys("classicDateParsing").defaultValue(false).deprecated();
+	private Boolean classicDateParsing;
+
+	private static Prop<Boolean> metaRememberMe = Prop.bool().keys("loginRememberme").defaultValue(true).deprecated();
+	private Boolean rememberMe;
+
+	private static Prop<String> metaUpdateLocation = Prop.str().keys("updateLocation", "updateSiteURL").defaultValue(Constants.DEFAULT_UPDATE_URL.toExternalForm()).deprecated();
+	private String updateLocation;
+	private URL updateLocationURL;
+
+	private static Prop<String> metaUpdateType = Prop.str().keys("updateType").defaultValue("manual").deprecated();
+	private String updateType;
+
+	private static Prop<String> metaAuthKeys = Prop.str().keys("authKeys").defaultValue(null).deprecated();
+	private String[] authKeys;
+
 	private ExecutionLogFactory executionLogFactory;
+
+	public String[] getAuthenticationKeys() {
+		if (authKeys == null) {
+			synchronized (SystemUtil.createToken("ConfigImpl", "getAuthenticationKeys")) {
+				if (authKeys == null) {
+					String keyList = metaAuthKeys.get(this, root);
+
+					if (!StringUtil.isEmpty(keyList)) {
+						String[] keys = ListUtil.trimItems(ListUtil.toStringArray(ListUtil.toListRemoveEmpty(keyList, ',')));
+						for (int i = 0; i < keys.length; i++) {
+							try {
+								keys[i] = URLDecoder.decode(keys[i], "UTF-8", true);
+							}
+							catch (Exception e) {}
+						}
+						authKeys = keys;
+					}
+					else authKeys = new String[0];
+				}
+			}
+		}
+		return authKeys;
+	}
+
+	public ConfigImpl resetAuthenticationKeys() {
+		if (authKeys != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getAuthenticationKeys")) {
+				if (authKeys != null) {
+					authKeys = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public String getUpdateType() {
+		if (updateType == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateType")) {
+				if (updateType == null) {
+					updateType = metaUpdateType.get(this, root);
+				}
+			}
+		}
+		return updateType;
+	}
+
+	public ConfigImpl resetUpdateType() {
+		if (updateType != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateType")) {
+				if (updateType != null) {
+					updateType = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public URL getUpdateLocation() {
+		if (updateLocationURL == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateLocation")) {
+				if (updateLocationURL == null) {
+
+					updateLocation = metaUpdateLocation.get(this, root);
+					try {
+						updateLocationURL = HTTPUtil.toURL(updateLocation, HTTPUtil.ENCODED_AUTO);
+					}
+					catch (MalformedURLException e) {
+						updateLocationURL = Constants.DEFAULT_UPDATE_URL;
+					}
+				}
+			}
+		}
+		return updateLocationURL;
+	}
+
+	public ConfigImpl resetUpdateLocation() {
+		if (updateLocationURL != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getUpdateLocation")) {
+				if (updateLocationURL != null) {
+					updateLocation = null;
+					updateLocationURL = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public boolean getRememberMe() {
+		if (rememberMe == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getRememberMe")) {
+				if (rememberMe == null) {
+					rememberMe = metaRememberMe.get(this, root);
+				}
+			}
+		}
+		return rememberMe;
+	}
+
+	public ConfigImpl resetRememberMe() {
+		if (rememberMe != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getRememberMe")) {
+				if (rememberMe != null) {
+					rememberMe = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public boolean getDateCasterClassicStyle() {
+		if (classicDateParsing == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getDateCasterClassicStyle")) {
+				if (classicDateParsing == null) {
+					classicDateParsing = metaClassicDateParsing.get(this, root);
+				}
+			}
+		}
+		return classicDateParsing;
+	}
+
+	public ConfigImpl resetDateCasterClassicStyle() {
+		if (classicDateParsing != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getDateCasterClassicStyle")) {
+				if (classicDateParsing != null) {
+					classicDateParsing = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public boolean getLoginCaptcha() {
+		if (loginCaptcha == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginCaptcha")) {
+				if (loginCaptcha == null) {
+					loginCaptcha = metaCaptcha.get(this, root);
+				}
+			}
+		}
+		return loginCaptcha;
+	}
+
+	public ConfigImpl resetLoginCaptcha() {
+		if (loginCaptcha != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginCaptcha")) {
+				if (loginCaptcha != null) {
+					loginCaptcha = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public final boolean isMonitoringEnabled() {
+		if (monitoringEnabled == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "isMonitoringEnabled")) {
+				if (monitoringEnabled == null) {
+					monitoringEnabled = metaMonitoringEnabled.get(this, root);
+				}
+			}
+		}
+		return monitoringEnabled;
+	}
+
+	public ConfigImpl resetMonitoringEnabled() {
+		if (monitoringEnabled != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "isMonitoringEnabled")) {
+				if (monitoringEnabled != null) {
+					monitoringEnabled = null;
+				}
+			}
+		}
+		return this;
+	}
 
 	/**
 	 * @return the allowURLRequestTimeout
@@ -3218,12 +3424,6 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		}
 		return this;
 	}
-
-	@Override
-	public abstract String getUpdateType();
-
-	@Override
-	public abstract URL getUpdateLocation();
 
 	@Override
 	public Resource getLibraryDirectory() {
