@@ -108,8 +108,10 @@ import lucee.runtime.cfx.customtag.CFXTagPoolImpl;
 import lucee.runtime.cfx.customtag.JavaCFXTagClassFactory;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.component.ImportDefintionImpl;
+import lucee.runtime.config.ConfigFactoryImpl.MonitorTemp;
 import lucee.runtime.config.ConfigFactoryImpl.Path;
 import lucee.runtime.config.ConfigUtil.CacheElement;
+import lucee.runtime.config.LabelFactory.Label;
 import lucee.runtime.config.Prop.Choice;
 import lucee.runtime.config.gateway.GatewayMap;
 import lucee.runtime.customtag.InitFile;
@@ -147,6 +149,13 @@ import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.listener.JavaSettings;
 import lucee.runtime.listener.JavaSettingsImpl;
 import lucee.runtime.listener.ModernAppListener;
+import lucee.runtime.monitor.ActionMonitor;
+import lucee.runtime.monitor.ActionMonitorCollector;
+import lucee.runtime.monitor.ActionMonitorFatory;
+import lucee.runtime.monitor.IntervallMonitor;
+import lucee.runtime.monitor.Monitor;
+import lucee.runtime.monitor.MonitorFactory;
+import lucee.runtime.monitor.RequestMonitor;
 import lucee.runtime.net.mail.Server;
 import lucee.runtime.net.mail.ServerFactory;
 import lucee.runtime.net.proxy.ProxyData;
@@ -1167,7 +1176,238 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 	private static Prop<String> metaAuthKeys = Prop.str().keys("authKeys").defaultValue(null).deprecated();
 	private String[] authKeys;
 
+	private static Prop<Integer> metaLoginDelay = Prop.integer().keys("loginDelay").defaultValue(1).deprecated();
+	private Integer loginDelay;
+
+	private static Prop<String> metaMavenDirectory = Prop.str().keys("mavenDirectory").systemPropEnvVar("lucee.maven.local.repository")
+			.description("Specifies the local directory where Lucee's internal Maven provider stores and caches " + "downloaded artifacts. "
+					+ "By default, this is managed within the Lucee server directory, but centralizing it "
+					+ "allows multiple Lucee instances to share the same cache, reducing redundant downloads "
+					+ "and improving startup times in containerized or clustered environments.");
+	private Resource mavenDirectory;
+
+	private static Prop<LabelFactory.Label> metaLabelsLabel = Prop.custom(LabelFactory.getInstance(), Prop.TYPE_LIST).keys("label").parent("labels")
+			.description("Defines a mapping of Web Context identifiers to human-readable names (labels). "
+					+ "The 'id' is a hash of the physical webroot path, and the 'label' is the descriptive name. "
+					+ "These labels are used in the Lucee Administrator and monitoring output. They also function "
+					+ "as the dynamic placeholder '{web-context-label}' in file paths. " + "The unique ID for any context can be retrieved in CFML using: "
+					+ "lucee.commons.io.SystemUtil::hash(getPageContext().getConfig().getServletContext())");
+	private List<LabelFactory.Label> labelsLabel;
+	private Map<String, String> labels;
+
+	private static Prop<Monitor> metaMonitors = Prop.custom(MonitorFactory.getInstance(), Prop.TYPE_LIST).keys("monitor").parent("monitoring")
+			.description("Registers a list of active monitors to observe engine behavior and performance. Lucee supports three distinct monitoring strategies: "
+					+ "1. 'request': Hooks into every single request for high-fidelity profiling (can be run 'async' to reduce overhead). "
+					+ "2. 'action': Responds to specific internal engine events or actions. "
+					+ "3. 'interval': Runs background tasks at fixed periods to capture system snapshots. "
+					+ "Monitors are loaded as standard ClassDefinitions, allowing for custom implementations " + "via local classes, OSGi bundles, or Maven artifacts.");
+	private List<Monitor> monitors;
+	private RequestMonitor[] requestMonitors;
+	private IntervallMonitor[] intervallMonitors;
+	private ActionMonitorCollector actionMonitorCollector;
+
 	private ExecutionLogFactory executionLogFactory;
+
+	public List<Monitor> getMonitors() {
+		if (monitors == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
+				if (monitors == null) {
+					monitors = metaMonitors.list(this, root);
+				}
+			}
+		}
+		return monitors;
+	}
+
+	public ConfigImpl resetMonitors() {
+		if (monitors != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
+				if (monitors != null) {
+					monitors = null;
+					requestMonitors = null;
+					intervallMonitors = null;
+					actionMonitorCollector = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public RequestMonitor[] getRequestMonitors() {
+		if (requestMonitors == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getRequestMonitors")) {
+				if (requestMonitors == null) {
+					java.util.List<RequestMonitor> list = new ArrayList<RequestMonitor>();
+					for (Monitor m: getMonitors()) {
+						if (Monitor.TYPE_REQUEST == m.getType() && m instanceof RequestMonitor) {
+							list.add((RequestMonitor) m);
+						}
+					}
+					requestMonitors = list.toArray(new RequestMonitor[list.size()]);
+				}
+			}
+		}
+		return requestMonitors;
+	}
+
+	@Override
+	public IntervallMonitor[] getIntervallMonitors() {
+		if (intervallMonitors == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
+				if (intervallMonitors == null) {
+					java.util.List<IntervallMonitor> list = new ArrayList<IntervallMonitor>();
+					for (Monitor m: getMonitors()) {
+						if (Monitor.TYPE_INTERVAL == m.getType() && m instanceof IntervallMonitor) {
+							list.add((IntervallMonitor) m);
+						}
+					}
+					intervallMonitors = list.toArray(new IntervallMonitor[list.size()]);
+				}
+			}
+		}
+		return intervallMonitors;
+	}
+
+	public ActionMonitorCollector getActionMonitorCollector() {
+		if (actionMonitorCollector == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
+				if (actionMonitorCollector == null) {
+					java.util.List<MonitorTemp> list = new ArrayList<MonitorTemp>();
+					for (Monitor m: getMonitors()) {
+						if (Monitor.TYPE_ACTION == m.getType() && m instanceof MonitorTemp) {
+							list.add((MonitorTemp) m);
+						}
+					}
+					actionMonitorCollector = ActionMonitorFatory.getActionMonitorCollector((ConfigServer) this, list.toArray(new MonitorTemp[list.size()]));
+				}
+			}
+		}
+		return actionMonitorCollector;
+	}
+
+	@Override
+	public RequestMonitor getRequestMonitor(String name) throws ApplicationException {
+		for (RequestMonitor rm: getRequestMonitors()) {
+			if (rm.getName().equalsIgnoreCase(name)) return rm;
+		}
+		throw new ApplicationException("there is no request monitor registered with name [" + name + "]");
+	}
+
+	@Override
+	public IntervallMonitor getIntervallMonitor(String name) throws ApplicationException {
+		for (IntervallMonitor im: getIntervallMonitors()) {
+			if (im.getName().equalsIgnoreCase(name)) return im;
+		}
+		throw new ApplicationException("there is no intervall monitor registered with name [" + name + "]");
+	}
+
+	@Override
+	public ActionMonitor getActionMonitor(String name) {
+		ActionMonitorCollector am = getActionMonitorCollector();
+		return am == null ? null : am.getActionMonitor(name);
+	}
+
+	public Map<String, String> getLabels() {
+		if (labels == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLabels")) {
+				if (labels == null) {
+					labelsLabel = metaLabelsLabel.list(this, root);
+					Map<String, String> map = new HashMap<String, String>();
+					for (Label label: labelsLabel) {
+						map.put(label.id, label.name);
+					}
+					labels = map;
+				}
+			}
+		}
+		return labels;
+	}
+
+	public ConfigImpl resetLabels() {
+		if (labels != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLabels")) {
+				if (labels != null) {
+					labels = null;
+					labelsLabel = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public Resource getMavenDir() {
+		if (mavenDirectory == null) {
+			synchronized (this) {
+				if (mavenDirectory == null) {
+
+					String repoDir = metaMavenDirectory.get(this, root);
+
+					Resource tmp = null;
+					if (!StringUtil.isEmpty(repoDir, true)) {
+						tmp = getResource(repoDir);
+						// at least the grand parent need to exist
+						if (ResourceUtil.doesGrandParentExists(tmp)) {
+							try {
+								tmp.createDirectory(true);
+							}
+							catch (IOException e) {
+								tmp = null;
+								LogUtil.log(this, "maven", e);
+							}
+						}
+						else {
+							tmp = null;
+							LogUtil.log(this, Log.LEVEL_ERROR, "maven",
+									"Cannot use directory [" + repoDir + "] because the directory structure two levels above it does not exist");
+						}
+					}
+					if (tmp == null) {
+						tmp = ResourceUtil.getCanonicalResourceEL(getConfigDir().getRealResource("../mvn/"));
+						tmp.mkdirs();
+
+					}
+					mavenDirectory = tmp;
+				}
+			}
+		}
+		return mavenDirectory;
+	}
+
+	public ConfigImpl resetMavenDir() {
+		if (mavenDirectory != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
+				if (mavenDirectory != null) {
+					mavenDirectory = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public int getLoginDelay() {
+		if (loginDelay == null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
+				if (loginDelay == null) {
+					loginDelay = metaLoginDelay.get(this, root);
+				}
+			}
+		}
+		return loginDelay;
+	}
+
+	public ConfigImpl resetLoginDelay() {
+		if (loginDelay != null) {
+			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
+				if (loginDelay != null) {
+					loginDelay = null;
+				}
+			}
+		}
+		return this;
+	}
 
 	public String[] getAuthenticationKeys() {
 		if (authKeys == null) {

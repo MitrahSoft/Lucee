@@ -36,15 +36,12 @@ import lucee.commons.collection.MapFactory;
 import lucee.commons.digest.Hash;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.SystemUtil;
-import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourcesImpl;
 import lucee.commons.io.res.filter.ExtensionResourceFilter;
-import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
-import lucee.commons.lang.StringUtil;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.loader.util.ExtensionFilter;
@@ -54,7 +51,6 @@ import lucee.runtime.Mapping;
 import lucee.runtime.MappingImpl;
 import lucee.runtime.ai.AIEnginePool;
 import lucee.runtime.config.ConfigFactory.UpdateInfo;
-import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.engine.ThreadQueue;
@@ -65,11 +61,6 @@ import lucee.runtime.exp.PageException;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.functions.system.IsZipFile;
-import lucee.runtime.monitor.ActionMonitor;
-import lucee.runtime.monitor.ActionMonitorCollector;
-import lucee.runtime.monitor.IntervallMonitor;
-import lucee.runtime.monitor.RequestMonitor;
-import lucee.runtime.net.amf.AMFEngine;
 import lucee.runtime.net.http.ReqRspUtil;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
@@ -103,41 +94,18 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 	private String libHash;
 	private long localExtHash;
 	private int localExtSize = -1;
-
-	private Map<String, CFMLFactory> initContextes;
-	// private Map contextes;
+	private Resource rootDir;
+	private final UpdateInfo updateInfo;
+	private IdentificationServer id;
+	private List<ExtensionDefintion> localExtensions;
 	private SecurityManager defaultSecurityManager;
 	private Map<String, SecurityManager> managers = MapFactory.<String, SecurityManager>getConcurrentMap();
-	Password defaultPassword;
-	private Resource rootDir;
-	private ConfigListener configListener;
-	private boolean initConfigListener;
-	private Map<String, String> labels;
-	private RequestMonitor[] requestMonitors;
-	private IntervallMonitor[] intervallMonitors;
-	private ActionMonitorCollector actionMonitorCollector;
-
-	private int delay = -1;
-	// private static ConfigServerImpl instance;
-
-	private LinkedHashMapMaxSize<Long, String> previousNonces = new LinkedHashMapMaxSize<Long, String>(100);
-
-	private int permGenCleanUpThreshold = 60;
-
+	private Map<String, CFMLFactory> initContextes;
 	private TagLib coreTLDs;
 	private FunctionLib coreFLDs;
+	private LinkedHashMapMaxSize<Long, String> previousNonces = new LinkedHashMapMaxSize<Long, String>(100);
 
-	private final UpdateInfo updateInfo;
-
-	private IdentificationServer id;
-
-	private ClassDefinition<AMFEngine> amfEngineCD;
-
-	private Map<String, String> amfEngineArgs;
-
-	private List<ExtensionDefintion> localExtensions;
-
-	private Resource mvnDir;
+	//////////////////////////////////////////
 
 	/**
 	 * @param engine
@@ -196,33 +164,12 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 
 	@Override
 	public ConfigListener getConfigListener() {
-		if (initConfigListener) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getConfigListener")) {
-				if (initConfigListener) {
-					configListener = ConfigFactoryImpl.loadListener(this, root, null);
-					initConfigListener = false;
-				}
-			}
-		}
-		return configListener;
-	}
-
-	public ConfigServerImpl resetConfigListener() {
-		if (!initConfigListener) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getConfigListener")) {
-				if (!initConfigListener) {
-					configListener = null;
-					initConfigListener = true;
-				}
-			}
-		}
-		return this;
+		throw new RuntimeException("no longer supported");
 	}
 
 	@Override
 	public void setConfigListener(ConfigListener configListener) {
-		this.configListener = configListener;
-		this.initConfigListener = false;
+
 	}
 
 	@Override
@@ -351,42 +298,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		return this;
 	}
 
-	/**
-	 * @return Returns the defaultPassword.
-	 */
-	protected Password getDefaultPassword() {
-		defaultPassword = null;// TEST PW
-		if (defaultPassword == null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getDefaultPassword")) {
-				if (defaultPassword == null) {
-					Password pw = PasswordImpl.readFromStruct(this, root, getSalt(), true, true);
-					if (pw != null) defaultPassword = pw;
-					else defaultPassword = getPassword();
-				}
-			}
-		}
-		return defaultPassword;
-	}
-
-	protected ConfigImpl resetDefaultPassword() {
-		if (defaultPassword != null) {
-			synchronized (SystemUtil.createToken("ConfigImpl", "getDefaultPassword")) {
-				if (defaultPassword != null) {
-					defaultPassword = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	protected void setDefaultPassword(Password defaultPassword) {
-		this.defaultPassword = defaultPassword;
-	}
-
-	protected boolean hasCustomDefaultPassword() {
-		return getDefaultPassword() != null;
-	}
-
 	@Override
 	public CFMLEngine getCFMLEngine() {
 		return getEngine();
@@ -433,32 +344,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		return sm;
 	}
 
-	public Map<String, String> getLabels() {
-		if (labels == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLabels")) {
-				if (labels == null) {
-					labels = ConfigFactoryImpl.loadLabel(null, root);
-					// Only create empty map if loadLabel returns null
-					if (labels == null) {
-						labels = new HashMap<String, String>();
-					}
-				}
-			}
-		}
-		return labels;
-	}
-
-	public ConfigServerImpl resetLabels() {
-		if (labels != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLabels")) {
-				if (labels != null) {
-					labels = null;
-				}
-			}
-		}
-		return this;
-	}
-
 	private ThreadQueue threadQueue = new ThreadQueueImpl(ThreadQueue.MODE_BLOCKING, null); // before the queue is loaded we block all requests
 
 	private AIEnginePool aiEnginePool;
@@ -472,111 +357,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 	@Override
 	public ThreadQueue getThreadQueue() {
 		return threadQueue;
-	}
-
-	protected void setRequestMonitors(RequestMonitor[] monitors) {
-		this.requestMonitors = monitors;
-	}
-
-	protected void setIntervallMonitors(IntervallMonitor[] monitors) {
-		this.intervallMonitors = monitors;
-	}
-
-	protected void setActionMonitorCollector(ActionMonitorCollector actionMonitorCollector) {
-		this.actionMonitorCollector = actionMonitorCollector;
-	}
-
-	@Override
-	public RequestMonitor[] getRequestMonitors() {
-		if (requestMonitors == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
-				if (requestMonitors == null) {
-					ConfigFactoryImpl.loadMonitors(this, root);
-				}
-			}
-		}
-		return requestMonitors;
-	}
-
-	@Override
-	public RequestMonitor getRequestMonitor(String name) throws ApplicationException {
-		for (RequestMonitor rm: getRequestMonitors()) {
-			if (rm.getName().equalsIgnoreCase(name)) return rm;
-		}
-		throw new ApplicationException("there is no request monitor registered with name [" + name + "]");
-	}
-
-	@Override
-	public IntervallMonitor[] getIntervallMonitors() {
-		if (intervallMonitors == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
-				if (intervallMonitors == null) {
-					ConfigFactoryImpl.loadMonitors(this, root);
-				}
-			}
-		}
-		return intervallMonitors;
-	}
-
-	@Override
-	public IntervallMonitor getIntervallMonitor(String name) throws ApplicationException {
-		for (IntervallMonitor im: getIntervallMonitors()) {
-			if (im.getName().equalsIgnoreCase(name)) return im;
-		}
-		throw new ApplicationException("there is no intervall monitor registered with name [" + name + "]");
-	}
-
-	public ActionMonitorCollector getActionMonitorCollector() {
-		if (actionMonitorCollector == null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
-				if (actionMonitorCollector == null) {
-					ConfigFactoryImpl.loadMonitors(this, root);
-				}
-			}
-		}
-		return actionMonitorCollector;
-	}
-
-	@Override
-	public ActionMonitor getActionMonitor(String name) {
-		ActionMonitorCollector am = getActionMonitorCollector();
-		return am == null ? null : am.getActionMonitor(name);
-	}
-
-	public ConfigServerImpl resetMonitors() {
-		if (actionMonitorCollector != null) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "monitors")) {
-				if (actionMonitorCollector != null) {
-					requestMonitors = null;
-					intervallMonitors = null;
-					actionMonitorCollector = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
-	public int getLoginDelay() {
-		if (delay == -1) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
-				if (delay == -1) {
-					delay = Caster.toIntValue(ConfigFactoryImpl.getAttr(this, root, "loginDelay"), 1);
-				}
-			}
-		}
-		return delay;
-	}
-
-	public ConfigServerImpl resetLoginDelay() {
-		if (delay != -1) {
-			synchronized (SystemUtil.createToken("ConfigServerImpl", "getLoginDelay")) {
-				if (delay != -1) {
-					delay = -1;
-				}
-			}
-		}
-		return this;
 	}
 
 	@Override
@@ -654,19 +434,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 			ExceptionUtil.rethrowIfNecessary(t);
 		}
 		return 0;
-	}
-
-	public int getPermGenCleanUpThreshold() {
-		return permGenCleanUpThreshold;
-	}
-
-	public void setPermGenCleanUpThreshold(int permGenCleanUpThreshold) {
-		this.permGenCleanUpThreshold = permGenCleanUpThreshold;
-	}
-
-	public long countLoadedPages() {
-		return -1;
-		// MUST implement
 	}
 
 	@Override
@@ -865,24 +632,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 		return dir;
 	}
 
-	protected void setAMFEngine(ClassDefinition<AMFEngine> cd, Map<String, String> args) {
-		amfEngineCD = cd;
-		amfEngineArgs = args;
-	}
-
-	public ClassDefinition<AMFEngine> getAMFEngineClassDefinition() {
-		return amfEngineCD;
-	}
-
-	public Map<String, String> getAMFEngineArgs() {
-		return amfEngineArgs;
-	}
-
-	@Override
-	public RHExtension[] getServerRHExtensions() {
-		return getRHExtensions();
-	}
-
 	@Override
 	public List<ExtensionDefintion> loadLocalExtensions(boolean validate) {
 		Resource[] locReses = getLocalExtensionProviderDirectory().listResources(new ExtensionResourceFilter(".lex"));
@@ -964,43 +713,6 @@ public final class ConfigServerImpl extends ConfigImpl implements ConfigServer {
 			throw Caster.toPageException(e);
 		}
 
-	}
-
-	@Override
-	public Resource getMavenDir() {
-		if (mvnDir == null) {
-			synchronized (this) {
-				if (mvnDir == null) {
-					String repoDir = SystemUtil.getSystemPropOrEnvVar("lucee.maven.local.repository", null);
-					Resource tmp = null;
-					if (!StringUtil.isEmpty(repoDir, true)) {
-						tmp = getResource(repoDir);
-						// at least the grand parent need to exist
-						if (ResourceUtil.doesGrandParentExists(tmp)) {
-							try {
-								tmp.createDirectory(true);
-							}
-							catch (IOException e) {
-								tmp = null;
-								LogUtil.log(this, "maven", e);
-							}
-						}
-						else {
-							tmp = null;
-							LogUtil.log(this, Log.LEVEL_ERROR, "maven",
-									"Cannot use directory [" + repoDir + "] because the directory structure two levels above it does not exist");
-						}
-					}
-					if (tmp == null) {
-						tmp = ResourceUtil.getCanonicalResourceEL(getConfigDir().getRealResource("../mvn/"));
-						tmp.mkdirs();
-
-					}
-					mvnDir = tmp;
-				}
-			}
-		}
-		return mvnDir;
 	}
 
 	@Override

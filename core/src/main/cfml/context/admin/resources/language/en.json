@@ -550,8 +550,6 @@
       "changepassworddescription": "Change the password for this administrator",
       "chooseWebContext": " - choose web context",
       "d": "one Day",
-      "defaultpassword": "Set default password",
-      "defaultpassworddescription": "Set the default password for all web administrators",
       "delay": "Delay",
       "delayDesc": "Sets the delay between login attempts. This is a global setting for all user requests.",
       "language": "Language",

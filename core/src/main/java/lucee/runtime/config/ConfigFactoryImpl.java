@@ -102,27 +102,15 @@ import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.functions.other.CreateUUID;
 import lucee.runtime.gateway.GatewayEngineImpl;
 import lucee.runtime.monitor.ActionMonitor;
-import lucee.runtime.monitor.ActionMonitorCollector;
-import lucee.runtime.monitor.ActionMonitorFatory;
-import lucee.runtime.monitor.ActionMonitorWrap;
-import lucee.runtime.monitor.AsyncRequestMonitor;
-import lucee.runtime.monitor.IntervallMonitor;
-import lucee.runtime.monitor.IntervallMonitorWrap;
-import lucee.runtime.monitor.Monitor;
-import lucee.runtime.monitor.RequestMonitor;
-import lucee.runtime.monitor.RequestMonitorPro;
-import lucee.runtime.monitor.RequestMonitorProImpl;
-import lucee.runtime.monitor.RequestMonitorWrap;
 import lucee.runtime.net.http.ReqRspUtil;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
-import lucee.runtime.reflection.Reflector;
-import lucee.runtime.reflection.pairs.ConstructorInstance;
 import lucee.runtime.security.SecurityManager;
 import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.tag.listener.TagListener;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.Collection.Key;
+import lucee.runtime.type.Query;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.util.KeyConstants;
@@ -637,34 +625,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	private static String dec(String str, boolean decode) {
 		if (!decode) return str;
 		return URLDecoder.decode(str, false);
-	}
-
-	public static ConfigListener loadListener(ConfigServerImpl config, Struct root, ConfigListener defaultValue) {
-		try {
-			Struct listener = ConfigUtil.getAsStruct("listener", root);
-			ClassDefinition cd = listener != null ? getClassDefinition(config, listener, "", config.getIdentification()) : null;
-			String strArguments = getAttr(config, listener, "arguments");
-			if (strArguments == null) strArguments = "";
-
-			if (cd != null && cd.hasClass()) {
-				try {
-					Object obj = ClassUtil.loadInstance(cd.getClazz(), new Object[] { strArguments }, null);
-					if (obj instanceof ConfigListener) {
-						ConfigListener cl = (ConfigListener) obj;
-						return cl;
-					}
-				}
-				catch (Throwable t) {
-					ExceptionUtil.rethrowIfNecessary(t);
-					log(config, t);
-				}
-			}
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return defaultValue;
 	}
 
 	public static IdentificationServerImpl loadId(ConfigServerImpl config, Struct root, Log log, IdentificationServerImpl defaultValue) {
@@ -1307,102 +1267,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 	}
 
-	/**
-	 * @param configServer
-	 * @param config
-	 * @param doc
-	 * @throws IOException
-	 */
-
-	public static void loadMonitors(ConfigImpl config, Struct root) {
-		try {
-			// only load in server context
-			ConfigServerImpl configServer = (ConfigServerImpl) config;
-			Struct parent = ConfigUtil.getAsStruct("monitoring", root);
-			Array children = ConfigUtil.getAsArray("monitor", parent);
-
-			java.util.List<IntervallMonitor> intervalls = new ArrayList<IntervallMonitor>();
-			java.util.List<RequestMonitor> requests = new ArrayList<RequestMonitor>();
-			java.util.List<MonitorTemp> actions = new ArrayList<MonitorTemp>();
-			String strType, name;
-			ClassDefinition cd;
-			boolean _log, async;
-			short type;
-			Iterator<?> it = children.getIterator();
-			Struct el;
-			while (it.hasNext()) {
-				try {
-					el = Caster.toStruct(it.next(), null);
-					if (el == null) continue;
-
-					cd = getClassDefinition(config, el, "", config.getIdentification());
-					strType = getAttr(config, el, "type");
-					name = getAttr(config, el, "name");
-					async = Caster.toBooleanValue(getAttr(config, el, "async"), false);
-					_log = Caster.toBooleanValue(getAttr(config, el, "log"), true);
-
-					if ("request".equalsIgnoreCase(strType)) type = IntervallMonitor.TYPE_REQUEST;
-					else if ("action".equalsIgnoreCase(strType)) type = Monitor.TYPE_ACTION;
-					else type = IntervallMonitor.TYPE_INTERVAL;
-
-					if (cd.hasClass() && !StringUtil.isEmpty(name)) {
-						name = name.trim();
-						try {
-							Class clazz = cd.getClazz();
-							Object obj;
-							ConstructorInstance constr = Reflector.getConstructorInstance(clazz, new Object[] { configServer }, false);
-							if (constr.getConstructor(null) != null) obj = constr.invoke();
-							else obj = ClassUtil.newInstance(clazz);
-							LogUtil.logGlobal(ThreadLocalPageContext.getConfig(configServer == null ? config : configServer), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(),
-									"loaded " + (strType) + " monitor [" + clazz.getName() + "]");
-							if (type == IntervallMonitor.TYPE_INTERVAL) {
-								IntervallMonitor m = obj instanceof IntervallMonitor ? (IntervallMonitor) obj : new IntervallMonitorWrap(obj);
-								m.init(configServer, name, _log);
-								intervalls.add(m);
-							}
-							else if (type == Monitor.TYPE_ACTION) {
-								ActionMonitor am = obj instanceof ActionMonitor ? (ActionMonitor) obj : new ActionMonitorWrap(obj);
-								actions.add(new MonitorTemp(am, name, _log));
-							}
-							else {
-								RequestMonitorPro m = new RequestMonitorProImpl(obj instanceof RequestMonitor ? (RequestMonitor) obj : new RequestMonitorWrap(obj));
-								if (async) m = new AsyncRequestMonitor(m);
-								m.init(configServer, name, _log);
-								LogUtil.logGlobal(ThreadLocalPageContext.getConfig(configServer == null ? config : configServer), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(),
-										"initialize " + (strType) + " monitor [" + clazz.getName() + "]");
-								requests.add(m);
-							}
-						}
-						catch (Throwable t) {
-							ExceptionUtil.rethrowIfNecessary(t);
-							LogUtil.logGlobal(ThreadLocalPageContext.getConfig(configServer == null ? config : configServer), ConfigFactoryImpl.class.getName(), t);
-						}
-					}
-				}
-				catch (Throwable t) {
-					ExceptionUtil.rethrowIfNecessary(t);
-					log(config, t);
-				}
-			}
-			configServer.setRequestMonitors(requests.toArray(new RequestMonitor[requests.size()]));
-			configServer.setIntervallMonitors(intervalls.toArray(new IntervallMonitor[intervalls.size()]));
-			ActionMonitorCollector actionMonitorCollector = ActionMonitorFatory.getActionMonitorCollector(configServer, actions.toArray(new MonitorTemp[actions.size()]));
-			configServer.setActionMonitorCollector(actionMonitorCollector);
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-	}
-
-	private static boolean extractDebugOption(String name, String[] values) {
-		for (String val: values) {
-			if (StringUtil.emptyIfNull(val).trim().equalsIgnoreCase(name)) return true;
-		}
-		return false;
-	}
-
 	public static RHExtensionProvider[] loadExtensionProviders(ConfigImpl config, Struct root) {
 		Map<RHExtensionProvider, String> providers = new LinkedHashMap<RHExtensionProvider, String>();
 		try {
@@ -1535,26 +1399,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			if (fn.equalsIgnoreCase(fileName)) return true;
 		}
 		return false;
-	}
-
-	public static Map<String, String> loadLabel(ConfigImpl configServer, Struct root) {
-		Array children = ConfigUtil.getAsArray("labels", "label", root);
-
-		Map<String, String> labels = new HashMap<String, String>();
-		if (children != null) {
-			Iterator<?> it = children.getIterator();
-			Struct data;
-			while (it.hasNext()) {
-				data = Caster.toStruct(it.next(), null);
-				if (data == null) continue;
-				String id = ConfigUtil.getAsString("id", data, null);
-				String name = ConfigUtil.getAsString("name", data, null);
-				if (id != null && name != null) {
-					labels.put(id, name);
-				}
-			}
-		}
-		return labels;
 	}
 
 	private static void createContextFiles(Resource configDir, ConfigServer config, boolean doNew) {
@@ -1717,7 +1561,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 	}
 
-	public static class MonitorTemp {
+	public static class MonitorTemp implements ActionMonitor {
 
 		public final ActionMonitor am;
 		public final String name;
@@ -1729,5 +1573,46 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			this.log = log;
 		}
 
+		@Override
+		public void init(ConfigServer configServer, String name, boolean logEnabled) {
+			am.init(configServer, name, logEnabled);
+		}
+
+		@Override
+		public short getType() {
+			return am.getType();
+		}
+
+		@Override
+		public String getName() {
+			return am.getName();
+		}
+
+		@Override
+		public Class getClazz() {
+			return am.getClazz();
+		}
+
+		@Override
+		public boolean isLogEnabled() {
+			return am.isLogEnabled();
+		}
+
+		@Override
+		public void log(PageContext pc, String type, String label, long executionTime, Object data) throws IOException {
+			am.log(pc, type, label, executionTime, data);
+		}
+
+		@Override
+		public void log(ConfigWeb config, String type, String label, long executionTime, Object data) throws IOException {
+			am.log(config, type, label, executionTime, data);
+		}
+
+		@Override
+		public Query getData(Map<String, Object> arguments) throws PageException {
+			return am.getData(arguments);
+		}
+
 	}
+
 }

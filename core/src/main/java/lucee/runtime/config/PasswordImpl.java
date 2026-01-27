@@ -124,13 +124,13 @@ public final class PasswordImpl implements Password {
 		}
 	}
 
-	public static Password read(Config config, String name, String value, String salt, boolean isDefault) {
+	public static Password read(Config config, String name, String value, String salt) {
 
 		// "adminPasswordDefault"
 
-		String prefix = isDefault ? "adminDefault" : "admin";
-		String prefixOlder = isDefault ? "default" : "";
-		String env = isDefault ? "lucee.admin.default.password" : "lucee.admin.password";
+		String prefix = "admin";
+		String prefixOlder = "";
+		String env = "lucee.admin.password";
 
 		// first we look for the hashed and salted password
 		// preferred adminDefaultHSPW adminHSPW

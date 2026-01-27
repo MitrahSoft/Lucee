@@ -539,8 +539,6 @@
 			"changepassworddescription": "Cambiar la contraseña de este administrador",
 			"chooseWebContext": " - elegir contexto web",
 			"d": "un día",
-			"defaultpassword": "Establecer contraseña predeterminada",
-			"defaultpassworddescription": "Establecer la contraseña predeterminada para todos los administradores web",
 			"delay": "Retraso",
 			"delayDesc": "Establece el retraso entre intentos de inicio de sesión. Esta es una configuración global para todas las solicitudes de usuario.",
 			"language": "Idioma",

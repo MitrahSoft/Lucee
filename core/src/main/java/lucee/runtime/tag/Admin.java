@@ -536,17 +536,15 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		}
 
 		if (action.equals("getextension")) {
-			if (type == TYPE_SERVER) doGetRHServerExtension();
-			else doGetRHExtension();
+			doGetRHExtension();
 			return;
 		}
 		if (action.equals("getextensions") || action.equals("getrhextensions")) {
-			if (type == TYPE_SERVER) doGetRHServerExtensions();
-			else doGetRHExtensions();
+			doGetRHExtensions();
 			return;
 		}
 		if (action.equals("getserverextensions") || action.equals("getrhserverextensions")) {
-			doGetRHServerExtensions();
+			doGetRHExtensions();
 			return;
 		}
 
@@ -785,7 +783,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("removeExtension", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtension();
 		else if (check("removeExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtensionProvider();
 		else if (check("removeRHExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveRHExtensionProvider();
-		else if (check("removeDefaultPassword", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveDefaultPassword();
 		else if (check("removeGatewayEntry", ACCESS_NOT_WHEN_SERVER) && check2(ACCESS_WRITE)) doRemoveGatewayEntry();
 		else if (check("removeDebugEntry", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveDebugEntry();
 		else if (check("removeCacheDefaultConnection", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveCacheDefaultConnection();
@@ -794,10 +791,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("storageGet", ACCESS_FREE) && check2(ACCESS_READ)) doStorageGet();
 		else if (check("storageSet", ACCESS_FREE) && check2(ACCESS_WRITE)) doStorageSet();
 
-		else if (check("getdefaultpassword", ACCESS_FREE) && check2(ACCESS_READ)) doGetDefaultPassword();
 		else if (check("getContexts", ACCESS_FREE) && check2(ACCESS_READ)) doGetContexts();
 		else if (check("getContextes", ACCESS_FREE) && check2(ACCESS_READ)) doGetContexts();
-		else if (check("updatedefaultpassword", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateDefaultPassword();
 		else if (check("hasindividualsecurity", ACCESS_FREE) && check2(ACCESS_READ)) doHasIndividualSecurity();
 		else if (check("resetpassword", ACCESS_FREE) && check2(ACCESS_WRITE)) doResetPassword();
 		else if (check("stopThread", ACCESS_NOT_WHEN_WEB) && check2(ACCESS_WRITE)) doStopThread();
@@ -1464,45 +1459,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			throw Caster.toPageException(e);
 		}
 	}
-
-	/**
-	 * @throws PageException
-	 * 
-	 */
-	private void doGetDefaultPassword() throws PageException {
-		Password password = admin.getDefaultPassword();
-
-		pageContext.setVariable(getString("admin", action, "returnVariable"), password == null ? "" : password.getPassword());
-	}
-
-	/**
-	 * @throws PageException
-	 * 
-	 */
-	private void doUpdateDefaultPassword() throws PageException {
-		try {
-			admin.updateDefaultPassword(getString("admin", action, "newPassword"));
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-		store();
-	}
-
-	private void doRemoveDefaultPassword() throws PageException {
-		admin.removeDefaultPassword();
-		store();
-	}
-
-	/*
-	 * *
-	 * 
-	 * @throws PageException
-	 * 
-	 * / private void doUpdatePassword() throws PageException { try {
-	 * ConfigWebAdmin.setPassword(config,password==null?null:Caster.toString(password),getString("admin"
-	 * ,action,"newPassword")); } catch (Exception e) { throw Caster.toPageException(e); } //store(); }
-	 */
 
 	private void doGetSecurity() throws PageException {
 		Struct sct = new StructImpl();
@@ -2562,10 +2518,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
 	}
 
-	private void doGetRHServerExtension() throws PageException {
-		_doGetRHExtension(config.getServerRHExtensions());
-	}
-
 	private void doGetRHExtension() throws PageException {
 		_doGetRHExtension(config.getRHExtensions());
 	}
@@ -2584,10 +2536,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private void doGetRHExtensions() throws PageException {
 		pageContext.setVariable(getString("admin", action, "returnVariable"), RHExtension.toQuery(config, config.getRHExtensions(), null));
-	}
-
-	private void doGetRHServerExtensions() throws PageException {
-		pageContext.setVariable(getString("admin", action, "returnVariable"), RHExtension.toQuery(config, config.getServerRHExtensions(), null));
 	}
 
 	private void doGetLocalExtension() throws PageException {
@@ -3666,7 +3614,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	private void findExtension(Set<String> extensions, BundleDefinition bd) {
 		ConfigPro ci = config;
 		_findExtension(ci.getRHExtensions(), bd, extensions);
-		_findExtension(ci.getServerRHExtensions(), bd, extensions);
 	}
 
 	private void _findExtension(RHExtension[] extensions, BundleDefinition bd, Set set) {

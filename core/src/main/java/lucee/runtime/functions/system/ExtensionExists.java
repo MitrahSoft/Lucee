@@ -21,7 +21,6 @@ public final class ExtensionExists extends BIF implements Function {
 	}
 
 	public static boolean call(PageContext pc, String id, String version) {
-		if (find(id, version, ((ConfigWebPro) pc.getConfig()).getServerRHExtensions())) return true;
 		if (find(id, version, ((ConfigWebPro) pc.getConfig()).getRHExtensions())) return true;
 		return false;
 	}
@@ -43,7 +42,7 @@ public final class ExtensionExists extends BIF implements Function {
 	}
 
 	public static boolean has(Config config, String id) {
-		if (find(id, null, ((ConfigPro) config).getServerRHExtensions())) return true;
+		if (find(id, null, ((ConfigPro) config).getRHExtensions())) return true;
 		return false;
 	}
 }

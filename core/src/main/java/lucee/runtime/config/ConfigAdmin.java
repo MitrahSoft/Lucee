@@ -3476,33 +3476,6 @@ public final class ConfigAdmin {
 	}
 
 	/**
-	 * @return returns the default password
-	 * @throws SecurityException
-	 */
-	public Password getDefaultPassword() throws SecurityException {
-		checkReadAccess();
-		return config.getDefaultPassword();
-	}
-
-	/**
-	 * @param password
-	 * @throws SecurityException
-	 * @throws IOException
-	 * @throws DOMException
-	 */
-	public void updateDefaultPassword(String password) throws SecurityException, IOException {
-		// MUST this is not very good, make it better
-		checkWriteAccess();
-		config.setDefaultPassword(PasswordImpl.writeToStruct(root, password, true));
-	}
-
-	public void removeDefaultPassword() throws SecurityException {
-		checkWriteAccess();
-		PasswordImpl.removeFromStruct(root, true);
-		config.resetDefaultPassword();
-	}
-
-	/**
 	 * session type update
 	 * 
 	 * @param type

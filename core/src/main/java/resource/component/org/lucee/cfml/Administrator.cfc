@@ -2301,40 +2301,6 @@ component {
 	}
 
 	/**
-	* @hint to get default password.
-	*/
-	public string function getDefaultPassword() {
-		admin
-			action="getDefaultPassword"
-			type="#variables.type#"
-			password="#variables.password#"
-			returnVariable="defaultPassword";
-		return defaultPassword;
-	}
-
-	/**
-	* @hint update the default password.
-	* @newPassword the new password to set.
-	*/
-	public void function updateDefaultPassword( required string newPassword) {
-		admin
-			action="updateDefaultPassword"
-			type="#variables.type#"
-			password="#variables.password#"
-			newPassword="#arguments.newPassword#";
-	}
-
-	/**
-	* @hint remove the default password.
-	*/
-	public void function removeDefaultPassword() {
-		admin
-			action="removeDefaultPassword"
-			type="#variables.type#"
-			password="#variables.password#";
-	}
-
-	/**
 	* @hint to get hashedPassword.
 	*/
 	public string function hashpassword() {

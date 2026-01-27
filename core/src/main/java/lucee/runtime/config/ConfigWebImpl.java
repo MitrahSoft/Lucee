@@ -1345,11 +1345,6 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public RHExtension[] getServerRHExtensions() {
-		return cs.getRHExtensions();
-	}
-
-	@Override
 	public Cluster createClusterScope() throws PageException {
 		return cs.createClusterScope();
 	}

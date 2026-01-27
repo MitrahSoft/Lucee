@@ -153,8 +153,6 @@ public interface ConfigPro extends Config {
 
 	public void putToFunctionCache(String key, UDF udf);
 
-	public RHExtension[] getServerRHExtensions();
-
 	// zhis only exists for the hibernate extension that uses this
 	public MockPool getDatasourceConnectionPool();
 

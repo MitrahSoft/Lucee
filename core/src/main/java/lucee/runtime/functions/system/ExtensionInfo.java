@@ -41,8 +41,7 @@ public final class ExtensionInfo extends BIF implements Function {
 
 	public static Struct call(PageContext pc, String id) throws PageException {
 		if (StringUtil.isEmpty(id, true)) return new StructImpl();
-		Struct info = getInfo(id.trim(), ((ConfigWebPro) pc.getConfig()).getRHExtensions());
-		return info.size() > 0 ? info : getInfo(id.trim(), ((ConfigWebPro) pc.getConfig()).getServerRHExtensions());
+		return getInfo(id.trim(), ((ConfigWebPro) pc.getConfig()).getRHExtensions());
 	}
 
 	private static Struct getInfo(String id, RHExtension[] extensions) throws PageException {

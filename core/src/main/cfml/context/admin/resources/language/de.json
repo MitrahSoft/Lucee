@@ -541,8 +541,6 @@
 			"changepassworddescription": "Passwort für diesen Administrator ändern.",
 			"chooseWebContext": " - choose web context",
 			"d": "einen Tag",
-			"defaultpassword": "Standard Passwort setzen",
-			"defaultpassworddescription": "Legen Sie das Standard Passwort für alle Web Administratoren fest.",
 			"delay": "Verzögerung",
 			"delayDesc": "Die Verzögerungszeit zwischen Loginversuchen. Diese Einstellung gilt für alle Benutzer.",
 			"language": "Sprache",
