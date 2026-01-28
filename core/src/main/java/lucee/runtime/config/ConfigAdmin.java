@@ -1765,7 +1765,7 @@ public final class ConfigAdmin {
 	}
 
 	private void unloadStartupIfNecessary(ConfigPro config, ClassDefinition<?> cd, boolean force) {
-		ConfigBase.Startup startup = config.getStartups().get(cd.getClassName());
+		Startup startup = config.getStartups().get(cd.getClassName());
 		if (startup == null) return;
 		if (startup.cd.equals(cd) && !force) return;
 
@@ -5153,7 +5153,7 @@ public final class ConfigAdmin {
 
 			// Trigger startup hooks if they were added/updated
 			if (filter.allow("resetStartups")) {
-				((ConfigImpl) config).resetStartups().getStartups();
+				ConfigUtil.getConfigServerImpl(config).resetStartups().getStartups();
 			}
 
 		}
