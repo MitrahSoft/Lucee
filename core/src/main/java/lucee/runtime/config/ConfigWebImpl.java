@@ -115,7 +115,7 @@ import lucee.runtime.writer.CFMLWriter;
 import lucee.transformer.library.function.FunctionLib;
 import lucee.transformer.library.tag.TagLib;
 
-public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
+public final class ConfigWebImpl implements ConfigWebPro {
 
 	private ConfigServerImpl cs;
 	private ConfigWebHelper helper;
