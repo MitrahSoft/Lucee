@@ -33,11 +33,10 @@ public class ExtensionDefintionFactory implements PropFactory<ExtensionDefintion
 			Struct childSct = Caster.toStruct(val, null);
 			if (childSct == null) return defaultValue;
 
-			String id = ConfigFactoryImpl.getAttr(config, childSct, KeyConstants._id);
 			try {
 				Map<String, String> child = Caster.toStringMap(childSct, null);
 				if (child == null) return defaultValue;
-
+				String id = ConfigFactoryImpl.getAttr(config, childSct, KeyConstants._id);
 				return RHExtension.toExtensionDefinition(config, id, child);
 			}
 			catch (Exception e) {

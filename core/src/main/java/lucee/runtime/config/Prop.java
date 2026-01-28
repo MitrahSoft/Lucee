@@ -268,7 +268,7 @@ public class Prop<T> {
 		return factory.resolvedValue(defaultValue);
 	}
 
-	public T get(ConfigImpl config, Struct root) {
+	public T get(ConfigServerImpl config, Struct root) {
 		if (type != TYPE_SIMPLE) { // only happens when set wrong in code
 			throw new RuntimeException("Invalid type [" + type + "]");
 		}
@@ -330,11 +330,11 @@ public class Prop<T> {
 		return defaultValue;
 	}
 
-	public Map<String, T> map(ConfigImpl config, Struct root) {
+	public Map<String, T> map(ConfigServerImpl config, Struct root) {
 		return map(config, root, new ConcurrentHashMap<>());
 	}
 
-	public Map<String, T> map(ConfigImpl config, Struct root, Map<String, T> map) {
+	public Map<String, T> map(ConfigServerImpl config, Struct root, Map<String, T> map) {
 		if (type != TYPE_MAP) { // only happens when set wrong in code
 			throw new RuntimeException("Invalid type [" + type + "]");
 		}
@@ -379,7 +379,7 @@ public class Prop<T> {
 		return map;
 	}
 
-	public List<T> list(ConfigImpl config, Struct root) {
+	public List<T> list(ConfigServerImpl config, Struct root) {
 		if (type != TYPE_LIST) { // only happens when set wrong in code
 			throw new RuntimeException("Invalid type [" + type + "]");
 		}
@@ -434,7 +434,7 @@ public class Prop<T> {
 		// because we have lazy loading we need to make sure all props are loaded first
 
 		Map<Key, Field> fields = new HashMap<>();
-		for (Field f: ConfigImpl.class.getDeclaredFields()) {
+		for (Field f: ConfigServerImpl.class.getDeclaredFields()) {
 			if (Modifier.isStatic(f.getModifiers())) continue;
 			// print.e(f.getName());
 			fields.put(KeyImpl.init(f.getName()), f);

@@ -181,8 +181,7 @@ public final class ConfigWebHelper {
 
 	public WSHandler getWSHandler() throws PageException {
 		if (wsHandler == null) {
-			ClassDefinition cd = cw instanceof ConfigImpl ? ((ConfigImpl) cw).getWSHandlerClassDefinition() : null;
-			if (isEmpty(cd)) cd = cs.getWSHandlerClassDefinition();
+			ClassDefinition cd = ConfigUtil.getConfigServerImpl(cw).getWSHandlerClassDefinition();
 			try {
 				if (isEmpty(cd)) return new DummyWSHandler();
 				Object obj = ClassUtil.newInstance(cd.getClazz());

@@ -314,7 +314,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	 * @throws BundleException
 	 */
 	synchronized static void load(ConfigServerImpl config, Struct root, boolean isReload, boolean doNew, boolean essentialOnly) throws IOException {
-		ConfigBase.onlyFirstMatch = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.mapping.first", null), true); // changed behaviour in 6.0
 		if (LOG) LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(), "start reading config");
 		ThreadLocalConfig.register(config);
 		boolean reload = false;
@@ -424,7 +423,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return rtn;
 	}
 
-	private static Struct reload(Struct root, ConfigImpl config, ConfigServerImpl cs) throws IOException, ConverterException {
+	private static Struct reload(Struct root, ConfigServerImpl config, ConfigServerImpl cs) throws IOException, ConverterException {
 		// store as json
 
 		root = ConfigFile.reload(config.getConfigFile(), root);
@@ -464,7 +463,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return cd;
 	}
 
-	public static Map<String, AIEngine> loadAI(ConfigImpl config, Struct root, Map<String, AIEngine> defaultValue) {
+	public static Map<String, AIEngine> loadAI(ConfigServerImpl config, Struct root, Map<String, AIEngine> defaultValue) {
 		try {
 			// we only load this for the server context
 			Struct ai = ConfigUtil.getAsStruct(config, root, false, "ai");
@@ -504,7 +503,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return engines;
 	}
 
-	public static DumpWriterEntry[] loadDumpWriter(ConfigImpl config, Struct root, DumpWriterEntry[] defaultValue) {
+	public static DumpWriterEntry[] loadDumpWriter(ConfigServerImpl config, Struct root, DumpWriterEntry[] defaultValue) {
 		try {
 			Array writers = ConfigUtil.getAsArray("dumpWriters", root);
 
@@ -827,7 +826,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 	}
 
-	public static ExecutionLogFactory loadExeLog(ConfigImpl config, Struct root) {
+	public static ExecutionLogFactory loadExeLog(ConfigServerImpl config, Struct root) {
 		try {
 			Struct el = ConfigUtil.getAsStruct("executionLog", root);
 			boolean hasChanged = false;
@@ -902,7 +901,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return new ExecutionLogFactory(ConsoleExecutionLog.class, new HashMap<String, String>());
 	}
 
-	private static void setDatasource(ConfigImpl config, Map<String, DataSource> datasources, String datasourceName, ClassDefinition cd, String server, String databasename,
+	private static void setDatasource(ConfigServerImpl config, Map<String, DataSource> datasources, String datasourceName, ClassDefinition cd, String server, String databasename,
 			int port, String dsn, String bundleName, String bundleVersion, String user, String pass, TagListener listener, int connectionLimit, int idleTimeout, int liveTimeout,
 			int minIdle, int maxIdle, int maxTotal, long metaCacheTimeout, boolean blob, boolean clob, int allow, boolean validate, boolean storage, String timezone, Struct custom,
 			String dbdriver, ParamSyntax ps, boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout, boolean requestExclusive, boolean alwaysResetConnections)
@@ -929,7 +928,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	 * @throws TagLibException
 	 * @throws FunctionLibException
 	 */
-	public static void loadTag(ConfigImpl config, Struct root, boolean doNew) {
+	public static void loadTag(ConfigServerImpl config, Struct root, boolean doNew) {
 		try {
 			Resource configDir = config.getConfigDir();
 			String strDefaultTLDDirectory = null;
@@ -1004,7 +1003,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 	}
 
-	public static void loadFunctions(ConfigImpl config, Struct rootMayNull, boolean doNew) {
+	public static void loadFunctions(ConfigServerImpl config, Struct rootMayNull, boolean doNew) {
 		try {
 			Resource configDir = config.getConfigDir();
 
@@ -1267,7 +1266,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		}
 	}
 
-	public static RHExtensionProvider[] loadExtensionProviders(ConfigImpl config, Struct root) {
+	public static RHExtensionProvider[] loadExtensionProviders(ConfigServerImpl config, Struct root) {
 		Map<RHExtensionProvider, String> providers = new LinkedHashMap<RHExtensionProvider, String>();
 		try {
 			// providers

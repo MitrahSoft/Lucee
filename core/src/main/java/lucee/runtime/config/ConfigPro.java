@@ -245,7 +245,7 @@ public interface ConfigPro extends Config {
 
 	public void clearApplicationCache();
 
-	public Map<String, ConfigBase.Startup> getStartups();
+	public Map<String, Startup> getStartups();
 
 	public AdminSync getAdminSync() throws ClassException;
 

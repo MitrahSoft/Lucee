@@ -956,8 +956,7 @@ public final class ConfigUtil {
 				else if (item.length == 1) sct.setEL(KeyImpl.init(URLDecoder.decode(item[0], true).trim()), "");
 			}
 		}
-		catch (PageException ee) {
-		}
+		catch (PageException ee) {}
 
 		return sct;
 	}
@@ -1622,6 +1621,10 @@ public final class ConfigUtil {
 		if (config instanceof ConfigWebImpl) return ((ConfigWebImpl) config).getConfigServerImpl();
 		// MUST remove
 		throw new RuntimeException("getConfigServerImpl: " + config.getClass().getName());
+	}
+
+	public static ConfigServerImpl getConfigServerImpl(PageContext pc) {
+		return ((ConfigWebImpl) pc.getConfig()).getConfigServerImpl();
 	}
 
 	/**

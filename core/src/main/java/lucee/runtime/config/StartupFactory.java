@@ -2,7 +2,6 @@ package lucee.runtime.config;
 
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
-import lucee.runtime.config.ConfigBase.Startup;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.op.Caster;
 import lucee.runtime.reflection.Reflector;
@@ -37,8 +36,8 @@ public class StartupFactory implements PropFactory<Startup> {
 			Class clazz = cd.getClazz();
 
 			Constructor constr = Reflector.getConstructor(clazz, new Class[] { Config.class }, null);
-			if (constr != null) return new ConfigBase.Startup(cd, constr.newInstance(new Object[] { config }));
-			return new ConfigBase.Startup(cd, ClassUtil.loadInstance(clazz));
+			if (constr != null) return new Startup(cd, constr.newInstance(new Object[] { config }));
+			return new Startup(cd, ClassUtil.loadInstance(clazz));
 
 		}
 		catch (Throwable t) {

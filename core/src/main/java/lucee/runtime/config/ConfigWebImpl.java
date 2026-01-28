@@ -403,13 +403,13 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 
 	@Override
 	public PageSource[] getPageSources(PageContext pc, Mapping[] mappings, String realPath, boolean onlyTopLevel, boolean useSpecialMappings, boolean useDefaultMapping) {
-		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, false, onlyFirstMatch);
+		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, false, cs.getOnlyFirstMatch());
 	}
 
 	@Override
 	public PageSource[] getPageSources(PageContext pc, Mapping[] mappings, String realPath, boolean onlyTopLevel, boolean useSpecialMappings, boolean useDefaultMapping,
 			boolean useComponentMappings) {
-		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, useComponentMappings, onlyFirstMatch);
+		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, useComponentMappings, cs.getOnlyFirstMatch());
 	}
 
 	@Override

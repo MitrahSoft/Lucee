@@ -691,10 +691,6 @@ public final class DynamicInvoker {
 
 			// methods = Reflector.getMethods(lucee.runtime.config.ConfigServerImpl.class);
 			methods = Reflector.getMethods(lucee.runtime.config.ConfigServerImpl.class);
-			// methods = Reflector.getMethods(lucee.runtime.config.ConfigImpl.class);
-			// methods = Reflector.getMethods(lucee.runtime.config.ConfigWebPro.class);
-
-			// methods = Reflector.getMethods(lucee.runtime.config.ConfigServerImpl.class);
 
 			// int max = 500;
 			aprint.e("xxxxxxxxxxxxxxxx ConfigServerImpl  xxxxxxxxxxxxxxxxx");
