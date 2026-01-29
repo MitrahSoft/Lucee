@@ -298,7 +298,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 				return c;
 			}
 			catch (ClassNotFoundException e1) {
-				if (LogUtil.doesDebug(null)) {
+				if (LogUtil.doesDebug(LogUtil.getLog(config, "application"))) {
 					LogUtil.log(Log.LEVEL_DEBUG, "classloader", "validate classloader");
 					LogUtil.log("classloader", e1);
 					// fallback 1
