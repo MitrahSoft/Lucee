@@ -97,11 +97,9 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		if (!directory.canRead()) throw new IOException("Access denied to [" + directory + "] directory");
 	}
 
-	PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
+	private PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
 			boolean rpc) {
-		super(urls, parentClassLoader);
-
-		fallback = new URLClassLoader(urls);
+		super(new URL[0], parentClassLoader);
 
 		this.resources = resources;
 		config = (ConfigPro) c;
@@ -111,6 +109,17 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.directory = directory;
 		this.rpc = rpc;
 		id = key;
+		populateURLs(urls);
+	}
+
+	private void populateURLs(URL[] urls) {
+		fallback = new URLClassLoader(urls);
+
+		// Use the diagnostic/validating method we created
+
+		for (URL url: urls) {
+			this.addURL(url);
+		}
 	}
 
 	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
