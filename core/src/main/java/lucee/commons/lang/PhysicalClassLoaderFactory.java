@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import org.apache.felix.framework.BundleWiringImpl.BundleClassLoader;
 
@@ -57,10 +59,55 @@ public class PhysicalClassLoaderFactory {
 		return start + "_" + Long.toString(currentCounter, Character.MAX_RADIX);
 	}
 
-	static URL[] doURLs(Collection<Resource> reses) throws IOException {
+	static URL[] doURLsQuick(Collection<Resource> reses) throws IOException {
 		List<URL> list = new ArrayList<URL>();
 		for (Resource r: reses) {
 			if ("jar".equalsIgnoreCase(ResourceUtil.getExtension(r, null)) || r.isDirectory()) list.add(doURL(r));
+		}
+		return list.toArray(new URL[list.size()]);
+	}
+
+	static URL[] doURLs(Collection<Resource> reses) throws IOException {
+		List<URL> list = new ArrayList<URL>();
+		for (Resource r: reses) {
+			String ext = ResourceUtil.getExtension(r, null);
+			boolean isJar = "jar".equalsIgnoreCase(ext);
+
+			if (isJar || r.isDirectory()) {
+
+				// 1. Basic IO Checks
+				if (!r.exists()) {
+					throw new IOException("DIAGNOSTIC FAILURE: Resource missing: " + r.getAbsolutePath());
+				}
+				if (!r.canRead()) {
+					throw new IOException("DIAGNOSTIC FAILURE: Resource not readable: " + r.getAbsolutePath());
+				}
+
+				// 2. Strict ZIP Validation (Only for JARs)
+				if (isJar) {
+					if (r.length() == 0) {
+						throw new IOException("DIAGNOSTIC FAILURE: JAR is empty (0 bytes): " + r.getAbsolutePath());
+					}
+
+					// Try to actually open the ZIP structure
+					try (ZipFile zf = new ZipFile((FileResource) r)) {
+						// Just opening it is usually enough to validate the Central Directory.
+						// If you want to be 100% sure, you could try reading an entry:
+						if (zf.size() == 0) {
+							throw new IOException("DIAGNOSTIC FAILURE: JAR is a valid zip but contains 0 entries: " + r.getAbsolutePath());
+						}
+					}
+					catch (ZipException ze) {
+						throw new IOException("DIAGNOSTIC FAILURE: JAR is corrupted/incomplete (ZipException): " + r.getAbsolutePath(), ze);
+					}
+					catch (IOException ie) {
+						throw new IOException("DIAGNOSTIC FAILURE: JAR IO error during validation: " + r.getAbsolutePath(), ie);
+					}
+				}
+
+				// If we survived the gauntlet, add the URL
+				list.add(doURL(r));
+			}
 		}
 		return list.toArray(new URL[list.size()]);
 	}
