@@ -84,6 +84,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	private String birthplace;
 
 	public final String id;
+	private URLClassLoader fallback;
 
 	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc)
 			throws IOException {
@@ -99,6 +100,9 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
 			boolean rpc) {
 		super(urls, parentClassLoader);
+
+		fallback = new URLClassLoader(urls);
+
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
@@ -132,9 +136,8 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			allClassesBytes += i.intValue();
 		}
 		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
-		LogUtil.log(level, "physical-classloader",
-				"flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", " + StringUtil.byteFormat(allClassesBytes)
-						+ ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
+		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
+				+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
 
 		return clone;
 	}
@@ -295,6 +298,29 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 				return c;
 			}
 			catch (ClassNotFoundException e1) {
+				if (LogUtil.doesDebug(null)) {
+					LogUtil.log(Log.LEVEL_DEBUG, "classloader", "validate classloader");
+					LogUtil.log("classloader", e1);
+					// fallback 1
+
+					try {
+						fallback.loadClass(name);
+						LogUtil.log(Log.LEVEL_DEBUG, "classloader", "Fallback with classloader loaded at the same time worked for [" + name + "]!");
+
+					}
+					catch (ClassNotFoundException e2) {
+						LogUtil.log("classloader", e2);
+						try {
+							new URLClassLoader(getURLs()).loadClass(name);
+							LogUtil.log(Log.LEVEL_DEBUG, "classloader", "Fallback with classloader just loaded worked for [" + name + "]!");
+
+						}
+						catch (ClassNotFoundException e3) {
+							LogUtil.log("classloader", e2);
+						}
+					}
+				}
+
 				// Resources didn't have it, try parent if not already tried
 				if (!isBootDelegated) {
 					ClassLoader parent = getParent();
