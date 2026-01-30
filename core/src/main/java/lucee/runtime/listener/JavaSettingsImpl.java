@@ -434,6 +434,18 @@ public final class JavaSettingsImpl implements JavaSettings {
 		return js;
 	}
 
+	public static boolean doMerge(Struct data, boolean defaultValue) {
+		if (data == null) return defaultValue;
+		String strMode = Caster.toString(data.get(KeyConstants._mode, null), null);
+		if (StringUtil.isEmpty(strMode)) return defaultValue;
+		strMode = strMode.trim();
+		if ("replace".equalsIgnoreCase(strMode)) return false;
+		if ("extend".equalsIgnoreCase(strMode)) return true;
+		if ("inherit".equalsIgnoreCase(strMode)) return true;
+
+		return defaultValue;
+	}
+
 	public static JavaSettings getInstance(Config config, Struct data, Object addionalResources) {
 
 		List<String> names = new ArrayList<>();

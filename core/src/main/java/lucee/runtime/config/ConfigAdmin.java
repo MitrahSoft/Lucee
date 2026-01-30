@@ -72,6 +72,7 @@ import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.IPRange;
@@ -1288,7 +1289,8 @@ public final class ConfigAdmin {
 
 		// if there is an existing, has the file changed?
 		if (fileLib.length() != resJar.length()) {
-			IOUtil.closeEL(config.getClassLoader());
+			PhysicalClassLoaderFactory.flush(config);
+			// IOUtil.closeEL(config.getClassLoader());
 			ResourceUtil.copy(resJar, fileLib);
 			// NEXT if (reloadWhenClassicJar) ConfigUtil.reloadLib(config);
 		}
@@ -1710,8 +1712,7 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -1742,8 +1743,7 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -1778,8 +1778,7 @@ public final class ConfigAdmin {
 			}
 			config.getStartups().remove(cd.getClassName());
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 	}
 
 	public void updateJDBCDriver(String label, String id, ClassDefinition cd, String connectionString) throws PageException {
@@ -1830,8 +1829,7 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -5049,8 +5047,9 @@ public final class ConfigAdmin {
 					}
 					// neither valid class nor component - log error
 					else {
-						logger.error("extension", "Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion()
-								+ "] could not be registered: class definition [" + cd + "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
+						logger.error("extension",
+								"Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "] could not be registered: class definition [" + cd
+										+ "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
 					}
 				}
 			}
@@ -6218,7 +6217,7 @@ public final class ConfigAdmin {
 		Resource context = config.getConfigDir().getRealResource("context");
 		Resource trg = context.getRealResource(realpath);
 		if (trg.exists()) {
-			LogUtil.log( config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath() );
+			LogUtil.log(config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath());
 			trg.remove(true);
 			if (_store) ConfigAdmin._storeAndReload((ConfigPro) config);
 			ResourceUtil.removeEmptyFolders(context, null);
@@ -6602,8 +6601,7 @@ public final class ConfigAdmin {
 								return old;
 							}
 						}
-						catch (Exception ee) {
-						}
+						catch (Exception ee) {}
 					}
 				}
 				catch (Exception e) {
