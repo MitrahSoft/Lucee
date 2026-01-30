@@ -24,8 +24,7 @@ public final class ExtensionDefintion {
 	private RHExtension rhe;
 	private GAVSO gavso;
 
-	public ExtensionDefintion() {
-	}
+	public ExtensionDefintion() {}
 
 	public ExtensionDefintion(String id) {
 		this.id = id;
@@ -153,14 +152,10 @@ public final class ExtensionDefintion {
 		return rhe;
 	}
 
-	public RHExtension toRHExtension() throws PageException {
+	public RHExtension toRHExtension(Config config) throws PageException {
 		if (rhe != null) return rhe;
 
-		if (source == null) {
-			// MUST try to load the Extension
-			throw new ApplicationException("ExtensionDefinition does not contain the necessary data to create the requested object.");
-		}
-		rhe = RHExtension.getInstance(config, source);
+		rhe = RHExtension.getInstance(config, this);
 		return rhe;
 	}
 
@@ -181,6 +176,13 @@ public final class ExtensionDefintion {
 		if (rhe != null) return rhe.getExtensionFile();
 
 		return source = RHExtension.getExtensionInstalledFile(config, getId(), getVersion(), false);
+	}
+
+	Resource _getSource(Resource defaultValue) {
+		if (source != null) return source;
+		if (rhe != null) return rhe.getExtensionFile();
+
+		return defaultValue;
 	}
 
 }

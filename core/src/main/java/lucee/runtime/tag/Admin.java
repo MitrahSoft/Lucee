@@ -2560,7 +2560,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		}
 		else {
-			List<RHExtension> locals = RHExtension.toRHExtensions(DeployHandler.getLocalExtensions(config, false));
+			List<RHExtension> locals = RHExtension.toRHExtensions(config, DeployHandler.getLocalExtensions(config, false));
 			Query qry = RHExtension.toQuery(config, locals, null);
 			int rows = qry.getRecordcount();
 			String _id;
@@ -2578,7 +2578,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doGetLocalExtensions() throws PageException {
-		List<RHExtension> locals = RHExtension.toRHExtensions(DeployHandler.getLocalExtensions(config, false));
+		List<RHExtension> locals = RHExtension.toRHExtensions(config, DeployHandler.getLocalExtensions(config, false));
 		Query qry = RHExtension.toQuery(config, locals, null);
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
 	}
@@ -3598,10 +3598,12 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		Iterator<BundleDefinition> itt = extBundles.iterator();
 		BundleDefinition bd;
+		ConfigPro ci = config;
+		RHExtension[] rhextensions = ci.getRHExtensions();
 		while (itt.hasNext()) {
 			bd = itt.next();
 			if (_eq(name, version, bd.getName(), bd.getVersion())) {
-				findExtension(extensions, bd);
+				_findExtension(rhextensions, bd, extensions);
 			}
 		}
 
@@ -3609,11 +3611,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		if (extensions.size() == 1) return extensions.iterator().next();
 
 		return ListUtil.arrayToList(extensions.toArray(new String[extensions.size()]), ", ");
-	}
-
-	private void findExtension(Set<String> extensions, BundleDefinition bd) {
-		ConfigPro ci = config;
-		_findExtension(ci.getRHExtensions(), bd, extensions);
 	}
 
 	private void _findExtension(RHExtension[] extensions, BundleDefinition bd, Set set) {
@@ -4415,7 +4412,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			Resource src = ResourceUtil.toResourceExisting(config, (String) obj);
 			ResetFilter filter = new ResetFilter();
 			try {
-				ConfigAdmin._updateRHExtension(config, src, filter, true, true, RHExtension.ACTION_MOVE);
+				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, src), filter, true, true, RHExtension.ACTION_COPY);
 			}
 			finally {
 				filter.resetThrowPageException(config);
@@ -4426,7 +4423,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			try {
 				Resource tmp = SystemUtil.getTempFile("lex", true);
 				IOUtil.copy(new ByteArrayInputStream(Caster.toBinary(obj)), tmp, true);
-				ConfigAdmin._updateRHExtension(config, tmp, filter, true, true, RHExtension.ACTION_MOVE);
+				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, tmp), filter, true, true, RHExtension.ACTION_COPY);
 			}
 			catch (IOException ioe) {
 				throw Caster.toPageException(ioe);

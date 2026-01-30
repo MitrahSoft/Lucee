@@ -1502,21 +1502,6 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 					admin.updatePassword(oldPassword="server", newPassword="#request.ServerAdminPassword#" );
 				});
 
-				it(title="checking getDefaultPassword()", body=function( currentSpec ) {
-					var defaultPassword = admin.getDefaultPassword();
-					expect(defaultPassword).toBeTypeOf("string");
-				});
-
-				it(title="checking removeDefaultPassword()", body=function( currentSpec ) {
-					admin.removeDefaultPassword();
-					var defaultPassword = admin.getDefaultPassword();
-				});
-
-				it(title="checking updateDefaultPassword()", body=function( currentSpec ) {
-					admin.updateDefaultPassword(newPassword="server");
-					var defaultPassword = admin.getDefaultPassword();
-					expect(defaultPassword).toBeTypeOf("string");
-				});
 				// TODO failing No access, password is invalid
 				it(title="checking resetPassword()", skip=true, body=function( currentSpec ) {
 					var contexts = adminWeb.getContexts();

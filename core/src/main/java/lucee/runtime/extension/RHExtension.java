@@ -45,6 +45,7 @@ import org.osgi.framework.BundleException;
 import org.osgi.framework.Version;
 
 import lucee.Info;
+import lucee.commons.digest.Hash;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
@@ -128,21 +129,23 @@ public final class RHExtension implements Serializable {
 	private static final ExtensionResourceFilter LEX_FILTER = new ExtensionResourceFilter("lex");
 
 	private static Set<String> metadataFilesChecked = new HashSet<>();
-	private static Map<String, RHExtension> instances = new ConcurrentHashMap<>();
+	private static Map<String, RHExtension> instancesFileName;
+	private static Map<String, RHExtension> instancesHashes;
 	private static Map<String, Resource> installedFiles = null;
 	private static Map<String, Resource> availableFiles = null;
 
 	private ExtensionMetadata metadata;
-	private Resource extensionFile;
+	private Resource extensionFile = null;
 
 	// may not exist, only used for init
 	private String _id;
 	private String _version;
 	private Config config;
+	private boolean installed;
 
 	public static RHExtension getInstance(Config config, Resource ext, RHExtension defaultValue) {
 		try {
-			return getInstance(config, ext);
+			return getInstance(config, ext, null, null);
 		}
 		catch (Exception e) {
 			return defaultValue;
@@ -153,58 +156,137 @@ public final class RHExtension implements Serializable {
 		return getInstance(config, new ExtensionDefintion(id, version).setSource(config, getExtensionFile(config, id, version, null)));
 	}
 
-	public static RHExtension getInstance(Config config, Resource ext) {
+	private static void init(Config config) {
+		// load installed extensions
+		synchronized (SystemUtil.createToken("RHExtension.getInstance", "init")) {
+			if (instancesHashes == null) {
+				Log log = config.getLog("deploy");
+				if (LogUtil.doesDebug(log)) {
+					log.debug("extension", "load installed extensions from directory [" + ((ConfigPro) config).getExtensionInstalledDir() + "] ");
+				}
 
-		RHExtension instance = instances.get(ext.getAbsolutePath());
+				Map<String, RHExtension> tmpHash = new ConcurrentHashMap<>();
+				Map<String, RHExtension> tmpFilename = new ConcurrentHashMap<>();
+				for (Entry<String, Resource> e: loadExtensionInstalledFiles(config).entrySet()) {
+					tmpFilename.put(e.getKey(), new RHExtension(config, e.getValue(), null, null, true).asyncInit());
+					tmpHash.put(hash(e.getValue()), new RHExtension(config, e.getValue(), null, null, true).asyncInit());
+					if (LogUtil.doesDebug(log)) {
+						log.debug("extension", "load installed extension [" + e.getKey() + "] ");
+					}
+
+				}
+				instancesFileName = tmpFilename;
+				instancesHashes = tmpHash;
+			}
+		}
+	}
+
+	public static boolean flush(RHExtension ext) {
+		instancesFileName.remove(ext.getExtensionInstalledName());
+		return instancesHashes.remove(hash(ext.getExtensionFile())) != null;
+	}
+
+	public static List<RHExtension> getInstalledExtensions(Config config) {
+		if (instancesHashes == null) {
+			init(config);
+		}
+
+		List<RHExtension> rtn = new ArrayList<>();
+		for (Entry<String, RHExtension> e: instancesHashes.entrySet()) {
+			if (e.getValue().installed()) {
+				rtn.add(e.getValue());
+			}
+		}
+		return rtn;
+	}
+
+	public static RHExtension getInstance(Config config, Resource ext) {
+		return getInstance(config, ext, null, null);
+	}
+
+	private static RHExtension getInstance(Config config, Resource ext, String id, String version) {
+		if (instancesHashes == null) {
+			init(config);
+		}
+
+		String hash = hash(ext);
+
+		RHExtension instance = instancesHashes.get(hash);
 		if (instance == null) {
 			synchronized (SystemUtil.createToken("RHExtension.getInstance", ext.getAbsolutePath())) {
-				instance = instances.get(ext.getAbsolutePath());
+				instance = instancesHashes.get(hash);
 				if (instance == null) {
-					instance = new RHExtension(config, ext).asyncInit();
-					instances.put(ext.getAbsolutePath(), instance);
+					instance = new RHExtension(config, ext, id, version, false).asyncInit();
+					instancesHashes.put(hash, instance);
+					instancesFileName.put(instance.getExtensionInstalledName(), instance);
+					return instance;
 				}
 			}
 		}
 		return instance;
 	}
 
-	public static RHExtension getInstance(Config config, ExtensionDefintion ext) throws PageException {
-		Resource src = ext.getSource();
+	public static String hash(Resource ext) {
+		String key;
+		try {
+			key = Hash.md5(ext, 8192) + "-" + Caster.toString(ext.length());
+		}
+		catch (IOException e) {
+			key = ext.getAbsolutePath();
+		}
+		return key;
+	}
 
-		RHExtension instance = instances.get(src.getAbsolutePath());
-		if (instance == null) {
-			synchronized (SystemUtil.createToken("RHExtension.getInstance", src.getAbsolutePath())) {
-				instance = instances.get(src.getAbsolutePath());
-				if (instance == null) {
-					if (ext.getId() != null) {
-						instance = new RHExtension(config, src, ext.getId(), ext.getVersion()).asyncInit();
-					}
-					else instance = new RHExtension(config, src).asyncInit();
-					instances.put(src.getAbsolutePath(), instance);
+	public static RHExtension getInstance(Config config, ExtensionDefintion ed) throws PageException {
+		// has source
+		if (ed._getSource(null) != null) {
+			return getInstance(config, ed._getSource(null), ed.getId(), ed.getVersion());
+		}
+
+		// if we have no source and no id, there is nothing we can do
+		if (StringUtil.isEmpty(ed.getId())) {
+			throw new ApplicationException("inavlid Extension Defininition: " + ed);
+		}
+
+		// we have no version definition, we need to know the latest versions
+		if (StringUtil.isEmpty(ed.getVersion())) {
+			ed.setParam("version", DeployHandler.getLatestVersionFor(config, ed, null, true).toString());
+		}
+
+		// check in existing instances
+		if (instancesHashes == null) {
+			init(config);
+		}
+		if (ed.getId() != null && ed.getVersion() != null) {
+			for (RHExtension ext: instancesHashes.values()) {
+				if (ed.getId().equals(ext.getId()) && ed.getVersion().equals(ext.getVersion())) {
+					return ext;
 				}
 			}
 		}
-		return instance;
+
+		// check in available files
+		for (Entry<String, Resource> e: loadExtensionAvailableFiles(config).entrySet()) {
+			if ((ed.getId() + "-" + ed.getVersion() + ".lex").equals(e.getKey())) {
+				return getInstance(config, e.getValue(), ed.getId(), ed.getVersion());
+			}
+		}
+		return getInstance(config, DeployHandler.downloadExtension(config, ed, null, true), ed.getId(), ed.getVersion());
 	}
 
-	private RHExtension(Config config, Resource ext) {
+	/*
+	 * private RHExtension(Config config, String id, String version) throws PageException { this.config
+	 * = config; this._id = id; this._version = version; this.extensionFile =
+	 * getExtensionInstalledFile(config, id, version, false); // softLoaded = false; }
+	 */
+
+	private RHExtension(Config config, Resource ext, String id, String version, boolean installed) {
 		this.config = config;
+		if (ext == null) throw new NullPointerException();
 		this.extensionFile = ext;
-	}
-
-	private RHExtension(Config config, String id, String version) throws PageException {
-		this.config = config;
-		this._id = id;
-		this._version = version;
-		this.extensionFile = getExtensionInstalledFile(config, id, version, false);
-		// softLoaded = false;
-	}
-
-	private RHExtension(Config config, Resource ext, String id, String version) {
-		this.config = config;
-		this.extensionFile = ext;
-		this._id = id;
-		this._version = version;
+		this._id = StringUtil.isEmpty(id) ? null : id;
+		this._version = StringUtil.isEmpty(version) ? null : version;
+		this.installed = installed;
 	}
 
 	private RHExtension asyncInit() {
@@ -276,6 +358,10 @@ public final class RHExtension implements Serializable {
 		}
 	}
 
+	public boolean installed() {
+		return installed;
+	}
+
 	public static RHExtension installExtension(ConfigPro config, String id, String version, Resource resource, boolean force) throws PageException, IOException {
 
 		// get installed res
@@ -333,7 +419,6 @@ public final class RHExtension implements Serializable {
 		if (extensionFile == null) throw new IOException("no extension file defined");
 		if (!extensionFile.isFile()) throw new IOException("given extension file [" + extensionFile + "] does not exist");
 
-		addToAvailable(config, extensionFile);
 		return act(config, extensionFile, RHExtension.ACTION_COPY);
 	}
 
@@ -349,7 +434,6 @@ public final class RHExtension implements Serializable {
 		if (extensionFile == null) throw new IOException("no extension file defined");
 		if (!extensionFile.isFile()) throw new IOException("given extension file [" + extensionFile + "] does not exist");
 
-		addToAvailable(config, extensionFile);
 		return act(config, extensionFile, RHExtension.ACTION_MOVE);
 	}
 
@@ -412,6 +496,7 @@ public final class RHExtension implements Serializable {
 						ResourceUtil.moveTo(ext, trg, true);
 					}
 					this.extensionFile = trg;
+					installed = true;
 				}
 			}
 			catch (Exception e) {
@@ -424,6 +509,11 @@ public final class RHExtension implements Serializable {
 
 	public void addToAvailable(Config config) {
 		addToAvailable(config, getExtensionFile());
+	}
+
+	public void moveToFailed(Config config) {
+		extensionFile = DeployHandler.moveToFailedFolder(config.getDeployDirectory(), getExtensionFile());
+		resetExtensionAvailableFile(config, getId(), getVersion());
 	}
 
 	private void addToAvailable(Config config, Resource ext) {
@@ -787,7 +877,7 @@ public final class RHExtension implements Serializable {
 		}
 	}
 
-	public static Map<String, Resource> loadExtensionInstalledFiles(Config config) {
+	private static Map<String, Resource> loadExtensionInstalledFiles(Config config) {
 		if (installedFiles == null) {
 			synchronized (SystemUtil.createToken("RHExtension", "installedFiles")) {
 				if (installedFiles == null) {
@@ -802,7 +892,7 @@ public final class RHExtension implements Serializable {
 		return installedFiles;
 	}
 
-	public static Map<String, Resource> loadExtensionAvailableFiles(Config config) {
+	private static Map<String, Resource> loadExtensionAvailableFiles(Config config) {
 		if (availableFiles == null) {
 			synchronized (SystemUtil.createToken("RHExtension", "availableFiles")) {
 				if (availableFiles == null) {
@@ -900,6 +990,14 @@ public final class RHExtension implements Serializable {
 
 	public String getExtensionInstalledName() {
 		return toHash(getId(), getVersion(), "lex");
+	}
+
+	public static String getExtensionInstalledName(String id, String version) {
+		return toHash(id, version, "lex");
+	}
+
+	public static String getExtensionInstalledName(ExtensionDefintion ed) {
+		return toHash(ed.getId(), ed.getVersion(), "lex");
 	}
 
 	public static Resource getExtensionInstalledFile(Config config, String id, String version, Resource defaultValue) {
@@ -1010,7 +1108,7 @@ public final class RHExtension implements Serializable {
 				xmlExt = xmlExtensions.get(ext.getId());
 				if (xmlExt != null && (xmlExt.getVersion() + "").equals(ext.getVersion() + "")) continue;
 				rt = ext.getMetadata().getReleaseType();
-				ConfigAdmin._updateRHExtension((ConfigPro) config, resources[i], filter, true, true, RHExtension.ACTION_MOVE);
+				ConfigAdmin._updateRHExtension((ConfigPro) config, RHExtension.getInstance(config, resources[i]), filter, true, true, RHExtension.ACTION_COPY);
 			}
 		}
 		finally {
@@ -1498,14 +1596,14 @@ public final class RHExtension implements Serializable {
 
 	}
 
-	public static List<RHExtension> toRHExtensions(List<ExtensionDefintion> eds) throws PageException {
+	public static List<RHExtension> toRHExtensions(Config config, List<ExtensionDefintion> eds) throws PageException {
 		try {
 			final List<RHExtension> rtn = new ArrayList<RHExtension>();
 			Iterator<ExtensionDefintion> it = eds.iterator();
 			ExtensionDefintion ed;
 			while (it.hasNext()) {
 				ed = it.next();
-				if (ed != null) rtn.add(ed.toRHExtension());
+				if (ed != null) rtn.add(ed.toRHExtension(config));
 			}
 			return rtn;
 		}
@@ -1577,5 +1675,4 @@ public final class RHExtension implements Serializable {
 			}
 		}
 	}
-
 }

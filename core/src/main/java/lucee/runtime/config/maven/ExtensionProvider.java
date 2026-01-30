@@ -62,57 +62,56 @@ public class ExtensionProvider {
 		uuidMapping.put("6E2CB28F-98FB-4B51-B6BE6C64ADF35473", "ajax-extension");
 		uuidMapping.put("7891D723-8F78-45F5-B7E333A22F8467CA", "argon2-extension");
 		uuidMapping.put("58110B5E-E7CB-47AF-8E80D70DDD80C46F", "argus-monitor-extension");
+		uuidMapping.put("DFE10517-14CE-4D8B-89A68091D9A6C81E", "athena-jdbc-extension");
+		uuidMapping.put("16953C9D-0A26-4283-904AD851B30506AF", "aws-sm-extension");
 		uuidMapping.put("DF28D0A4-6748-44B9-A2FDC12E4E2E4D38", "axis-extension");
+		uuidMapping.put("D46B46A9-A0E3-44E1-D972A04AC3A8DC10", "chart-extension");
 		uuidMapping.put("8D7FB0DF-08BB-1589-FE3975678F07DB17", "compress-extension");
 		uuidMapping.put("0F6E1F35-32A0-4B8C-B5A4BBA87EE621A8", "couchbase-extension");
+		uuidMapping.put("F81ADA62-BB10-552D-9ACEE5D43F3FFC46", "derby-jdbc-extension");
 		uuidMapping.put("1E12B23C-5B38-4764-8FF41B7FD9428468", "distrokid-extension");
 		uuidMapping.put("D46D49C3-EB85-8D97-30BEC2F38561E985", "documentation-extension");
+		uuidMapping.put("811918E2-796C-4354-8374B1F331118AEB", "duckdb-extension");
 		uuidMapping.put("261114AC-7372-4CA8-BA7090895E01682D", "ec2-extension");
 		uuidMapping.put("87FE44E5-179C-43A3-A87B3D38BEF4652E", "ehcache-extension");
 		uuidMapping.put("37C61C0A-5D7E-4256-8572639BE0CF5838", "esapi-extension");
-		uuidMapping.put("B737ABC4-D43F-4D91-8E8E973E37C40D1B", "image-extension");
-		uuidMapping.put("E6634E1A-4CC5-4839-A83C67549ECA8D5B", "mongodb-extension");
-		uuidMapping.put("FAD67145-E3AE-30F8-1C11A6CCF544F0B7", "form-extension");
-		uuidMapping.put("1A1FA05C-CF89-4834-9BC71D617046A6A8", "git-extension");
-		uuidMapping.put("FAD1E8CB-4F45-4184-86359145767C29DE", "hibernate-extension");
-		uuidMapping.put("71BF38A8-6AC8-4704-8BC02C29893F56B3", "infinispan-extension");
-		uuidMapping.put("DFE10517-14CE-4D8B-89A68091D9A6C81E", "athena-jdbc-extension");
-		uuidMapping.put("F81ADA62-BB10-552D-9ACEE5D43F3FFC46", "derby-jdbc-extension");
-		uuidMapping.put("811918E2-796C-4354-8374B1F331118AEB", "duckdb-extension");
 		uuidMapping.put("0F5DEC68-DB34-42BB-A1C1B609175D7C57", "exasol-jdbc-extension");
+		uuidMapping.put("FAD67145-E3AE-30F8-1C11A6CCF544F0B7", "form-extension");
+		uuidMapping.put("C09479BE-3309-47AB-BD2D89F9973D8A03", "ftp-extension");
+		uuidMapping.put("1A1FA05C-CF89-4834-9BC71D617046A6A8", "git-extension");
 		uuidMapping.put("465E1E35-2425-4F4E-8B3FAB638BD7280A", "h2-jdbc-extension");
+		uuidMapping.put("FAD1E8CB-4F45-4184-86359145767C29DE", "hibernate-extension");
 		uuidMapping.put("6DD4728A-AB0C-4F67-9DCE1A91A8ACD114", "hsqldb-jdbc-extension");
+		uuidMapping.put("B737ABC4-D43F-4D91-8E8E973E37C40D1B", "image-extension");
+		uuidMapping.put("71BF38A8-6AC8-4704-8BC02C29893F56B3", "infinispan-extension");
+		uuidMapping.put("A03F4335-BDEF-44DE-946FB16C47802F96", "json-extension");
 		uuidMapping.put("2BCD080F-4E1E-48F5-BEFE794232A21AF6", "jtds-jdbc-extension");
+		uuidMapping.put("D6700FE4-E168-4512-9B95E1AE7784A3A5", "kinesis-extension");
+		uuidMapping.put("1C9A7C34-2555-4AAA-92FBB7FC7111140C", "loganalyzer-extension");
+		uuidMapping.put("EAF0AAF1-E068-4BA7-B72FF3D8E730696C", "lsp-extension");
+		uuidMapping.put("EFDEB172-F52E-4D84-9CD1A1F561B3DFC8", "lucene-search-extension");
+		uuidMapping.put("212BA548-F15A-4EBD-8B1EEDF8DD8A844D", "mail-extension");
+		uuidMapping.put("16FF9B13-C595-4FA7-B87DED467B7E61A0", "memcached-extension");
+		uuidMapping.put("E6634E1A-4CC5-4839-A83C67549ECA8D5B", "mongodb-extension");
+		uuidMapping.put("3A2EFA5E-94BA-CB7B-1D8DF106CBF81AE4", "monitor-runningrequests-extension");
 		uuidMapping.put("99A4EF8D-F2FD-40C8-8FB8C2E67A4EEEB6", "mssql-jdbc-extension");
 		uuidMapping.put("7E673D15-D87C-41A6-8B5F1956528C605F", "mysql-jdbc-extension");
-		uuidMapping.put("D4EDFDBD-A9A3-E9AF-597322D767E0C949", "oracle-jdbc-extension");
-		uuidMapping.put("671B01B8-B3B3-42B9-AC055A356BED5281", "postgresql-jdbc-extension");
-		uuidMapping.put("337A9955-C0FA-848F-0B3F0AEBA155CA9B", "teradata-jdbc-extension");
-		uuidMapping.put("D46B46A9-A0E3-44E1-D972A04AC3A8DC10", "chart-extension");
-		uuidMapping.put("A03F4335-BDEF-44DE-946FB16C47802F96", "json-extension");
-		uuidMapping.put("D6700FE4-E168-4512-9B95E1AE7784A3A5", "kinesis-extension");
-		uuidMapping.put("EAF0AAF1-E068-4BA7-B72FF3D8E730696C", "lsp-extension");
-		uuidMapping.put("1C9A7C34-2555-4AAA-92FBB7FC7111140C", "loganalyzer-extension");
-		uuidMapping.put("EFDEB172-F52E-4D84-9CD1A1F561B3DFC8", "lucene-search-extension");
-		uuidMapping.put("16FF9B13-C595-4FA7-B87DED467B7E61A0", "memcached-extension");
-		uuidMapping.put("3A2EFA5E-94BA-CB7B-1D8DF106CBF81AE4", "monitor-runningrequests-extension");
 		uuidMapping.put("08C17A44-1AAE-41B1-8E31D8B6E3F30A28", "oauth-extension");
+		uuidMapping.put("D4EDFDBD-A9A3-E9AF-597322D767E0C949", "oracle-jdbc-extension");
 		uuidMapping.put("66E312DD-D083-27C0-64189D16753FD6F0", "pdf-extension");
 		uuidMapping.put("64B91581-2F6D-4316-8F21279369EB6F82", "poi-extension");
+		uuidMapping.put("671B01B8-B3B3-42B9-AC055A356BED5281", "postgresql-jdbc-extension");
 		uuidMapping.put("E99E43A5-C10E-41E9-878BFC82BAAD99CE", "quartz-extension");
 		uuidMapping.put("99614730-61EC-4F65-B78229B9555CDEFE", "querybuilder-extension");
 		uuidMapping.put("60772C12-F179-D555-8E2CD2B4F7428718", "redis-extension");
 		uuidMapping.put("17AB52DE-B300-A94B-E058BD978511E39E", "s3-extension");
-		// uuidMapping.put("0B018E86-DC57-ACA6-C3AB0FCE9A1F510A", "scheduledtask-extension");
 		uuidMapping.put("97EB5427-F051-4684-91EBA6DBB5C5203F", "scheduler-classic-extension");
-		uuidMapping.put("16953C9D-0A26-4283-904AD851B30506AF", "aws-sm-extension");
 		uuidMapping.put("83062C18-FA1F-4647-815BB663BCF98AC0", "sentry-extension");
 		uuidMapping.put("287B6309-9D31-8865-EA453D209B13882B", "socket-server-extension");
 		uuidMapping.put("947C02B0-7AE4-4054-938A8E059DD7625A", "tasks-extension");
-		uuidMapping.put("3F9DFF32-B555-449D-B0EB5DB723044045", "websocket-extension");
+		uuidMapping.put("337A9955-C0FA-848F-0B3F0AEBA155CA9B", "teradata-jdbc-extension");
 		uuidMapping.put("058215B3-5544-4392-A187A1649EB5CA90", "websocket-client-extension");
-		uuidMapping.put("212BA548-F15A-4EBD-8B1EEDF8DD8A844D", "mail-extension");
-		uuidMapping.put("C09479BE-3309-47AB-BD2D89F9973D8A03", "ftp-extension");
+		uuidMapping.put("3F9DFF32-B555-449D-B0EB5DB723044045", "websocket-extension");
 
 	}
 
@@ -245,6 +244,7 @@ public class ExtensionProvider {
 	public String toArtifact(String uuid, boolean investigate) throws PageException {
 		uuid = uuid.toUpperCase().trim();
 		String artifact = uuidMapping.get(uuid);
+
 		if (artifact != null) return artifact;
 		if (investigate) {
 			try {
@@ -436,8 +436,7 @@ public class ExtensionProvider {
 			detail = mup.detail(version, EXTENSION_EXTENSION, false);
 			if (detail != null) return detail;
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 
 		return defaultValue;
 	}
@@ -447,12 +446,7 @@ public class ExtensionProvider {
 		if (detail != null) {
 			URL url = HTTPUtil.toURL(Caster.toString(detail.get(EXTENSION_EXTENSION), null), Http.ENCODED_NO, null);
 			if (url != null) {
-				return HTTPDownloader.get(
-					url,
-					DOWNLOAD_CONNECT_TIMEOUT,
-					DOWNLOAD_READ_TIMEOUT,
-					DOWNLOAD_USER_AGENT
-				);
+				return HTTPDownloader.get(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 			}
 		}
 		throw new ApplicationException("there is no [" + EXTENSION_EXTENSION + "] artifact for [" + this.group + ":" + artifact + ":" + version + "]");
@@ -464,15 +458,9 @@ public class ExtensionProvider {
 			URL url = HTTPUtil.toURL(Caster.toString(detail.get(EXTENSION_EXTENSION), null), Http.ENCODED_NO, null);
 			if (url != null) {
 				try {
-					return HTTPDownloader.get(
-						url,
-						DOWNLOAD_CONNECT_TIMEOUT,
-						DOWNLOAD_READ_TIMEOUT,
-						DOWNLOAD_USER_AGENT
-					);
+					return HTTPDownloader.get(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 		}
 		return defaultValue;
@@ -509,8 +497,7 @@ public class ExtensionProvider {
 				zipStream.closeEntry();
 			}
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 
 		return null;
 	}

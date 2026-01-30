@@ -307,8 +307,7 @@ public final class OSGiUtil {
 				try {
 					return new Version(version);
 				}
-				catch (IllegalArgumentException e) {
-				}
+				catch (IllegalArgumentException e) {}
 			}
 			return defaultValue;
 		}
@@ -356,8 +355,7 @@ public final class OSGiUtil {
 				return bc.core.loadClass(className);
 			}
 		}
-		catch (Exception e) {
-		} // class is not visible to the Lucee core
+		catch (Exception e) {} // class is not visible to the Lucee core
 
 		// now we check all started bundled (not only bundles used by core)
 		Bundle[] bundles = bc.getBundleContext().getBundles();
@@ -366,8 +364,7 @@ public final class OSGiUtil {
 				try {
 					return b.loadClass(className);
 				}
-				catch (Exception e) {
-				} // class is not visible to that bundle
+				catch (Exception e) {} // class is not visible to that bundle
 			}
 		}
 
@@ -380,8 +377,7 @@ public final class OSGiUtil {
 					// print.e("loader:");
 					return cl.loadClass(className);
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 		}
 
@@ -406,8 +402,7 @@ public final class OSGiUtil {
 						try {
 							b = _loadBundle(bc.getBundleContext(), bf);
 						}
-						catch (IOException e) {
-						}
+						catch (IOException e) {}
 
 						if (b != null) {
 							startIfNecessary(b);
@@ -415,8 +410,7 @@ public final class OSGiUtil {
 								try {
 									return b.loadClass(className);
 								}
-								catch (Exception e) {
-								} // class is not visible to that bundle
+								catch (Exception e) {} // class is not visible to that bundle
 							}
 						}
 					}
@@ -824,15 +818,13 @@ public final class OSGiUtil {
 		try {
 			localDir = " (" + factory.getBundleDirectory() + ")";
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 		String upLoc = "";
 		if (!ThreadLocalPageContext.insideServerNewInstance()) {
 			try {
 				upLoc = " (" + factory.getUpdateLocation() + ")";
 			}
-			catch (IOException e) {
-			}
+			catch (IOException e) {}
 		}
 		else {
 			upLoc = " (" + ConfigFactoryImpl.DEFAULT_LOCATION + ")";
@@ -1331,8 +1323,7 @@ public final class OSGiUtil {
 				}
 			}
 		}
-		catch (IOException ioe) {
-		}
+		catch (IOException ioe) {}
 
 		return list;
 	}
@@ -1381,8 +1372,7 @@ public final class OSGiUtil {
 			try {
 				return _loadBundle(bc, bf);
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 
 		return defaultValue;
@@ -1423,8 +1413,7 @@ public final class OSGiUtil {
 		try {
 			removeLocalBundle(name, version, addional, removePhysical, true);
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 	}
 
 	// bundle stuff
@@ -1549,17 +1538,16 @@ public final class OSGiUtil {
 
 		List<BundleRange> listBundles = getRequiredBundles(bundle);
 		Bundle b;
-		BundleRange br;
-		Iterator<BundleRange> it = listBundles.iterator();
 		List<StartFailedException> secondChance = null;
-		while (it.hasNext()) {
-			br = it.next();
+		for (BundleRange br: listBundles) {
+
 			b = exists(loadedBundles, br);
 			if (b != null) {
 				_startIfNecessary(b, parents);
 				continue;
 			}
 			try {
+				if (StringUtil.isEmpty(br.getName(), true)) continue;
 				// if(parents==null) parents=new HashSet<Bundle>();
 
 				b = _loadBundle(bundle.getBundleContext(), br, ThreadLocalPageContext.getConfig().getIdentification(), addional, true, parents, false, true, null);
@@ -2280,8 +2268,7 @@ public final class OSGiUtil {
 					bootDelegation = ListUtil.trimItems(ListUtil.listToStringArray(StringUtil.unwrap(bd), ','));
 				}
 			}
-			catch (IOException ioe) {
-			}
+			catch (IOException ioe) {}
 			finally {
 				IOUtil.closeEL(is);
 			}
@@ -2626,8 +2613,7 @@ public final class OSGiUtil {
 							try {
 								existingBundle.uninstall();
 							}
-							catch (BundleException ignored) {
-							}
+							catch (BundleException ignored) {}
 						}
 					}
 

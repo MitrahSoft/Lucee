@@ -38,7 +38,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.Vector;
 
-import lucee.print;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
@@ -993,16 +992,13 @@ public final class Reflector {
 
 	public static MethodInstance getGetter(Class clazz, final String prop, boolean nameCaseSensitive, boolean inclueIs, boolean includeEmpty, MethodInstance defaultValue) {
 		MethodInstance mi = getMethodInstance(clazz, KeyImpl.init("get" + StringUtil.ucFirst(prop)), ArrayUtil.OBJECT_EMPTY, nameCaseSensitive, false);
-		print.e("- " + "get" + StringUtil.ucFirst(prop) + ":" + mi.hasMethod());
 		boolean isIs = false;
 		if (!mi.hasMethod()) {
 			if (!inclueIs) return defaultValue;
 			mi = getMethodInstance(clazz, KeyImpl.init("is" + StringUtil.ucFirst(prop)), ArrayUtil.OBJECT_EMPTY, nameCaseSensitive, false);
-			print.e("- " + "is" + StringUtil.ucFirst(prop) + ":" + mi.hasMethod());
 			if (!mi.hasMethod()) {
 				if (!includeEmpty) return defaultValue;
 				mi = getMethodInstance(clazz, KeyImpl.init(prop), ArrayUtil.OBJECT_EMPTY, nameCaseSensitive, false);
-				print.e("- " + prop + ":" + mi.hasMethod());
 				if (!mi.hasMethod()) {
 					return defaultValue;
 				}

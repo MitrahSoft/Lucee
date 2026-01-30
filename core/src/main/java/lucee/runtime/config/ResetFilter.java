@@ -6,6 +6,7 @@ import java.util.Set;
 
 import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
+import lucee.runtime.type.util.ListUtil;
 
 public class ResetFilter {
 
@@ -32,6 +33,11 @@ public class ResetFilter {
 		catch (IOException e) {
 			throw Caster.toPageException(e);
 		}
+	}
+
+	@Override
+	public String toString() {
+		return ListUtil.toList(names, ", ");
 	}
 
 }

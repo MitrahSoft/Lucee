@@ -53,6 +53,7 @@ import org.xml.sax.SAXException;
 
 import com.allaire.cfx.CustomTag;
 
+import lucee.print;
 import lucee.commons.digest.MD5;
 import lucee.commons.io.FileUtil;
 import lucee.commons.io.IOUtil;
@@ -4568,90 +4569,57 @@ public final class ConfigAdmin {
 		}
 	}
 
-	public static RHExtension _updateRHExtension(ConfigPro config, ExtensionDefintion ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
+	public static RHExtension _updateRHExtension(ConfigPro config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
 		try {
 			ConfigAdmin admin = new ConfigAdmin(config, null, true);
-			return admin.updateRHExtension(config, ext, filter, reload, force, action);
+			return admin.updateExtension(config, rhext, filter, reload, force, action);
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);
 		}
 	}
 
-	public static RHExtension _updateRHExtension(ConfigPro config, Resource ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
-		try {
-			ConfigAdmin admin = new ConfigAdmin(config, null, true);
-			return admin.updateRHExtension(config, ext, filter, reload, force, action);
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-	}
-
-	protected static void _updateRHExtension(ConfigPro config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force) throws PageException {
-		try {
-			ConfigAdmin admin = new ConfigAdmin(config, null, true);
-			admin.updateExtension(config, rhext, filter, reload, force);
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-	}
-
-	public RHExtension updateRHExtension(Config config, ExtensionDefintion ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
-		RHExtension rhext = RHExtension.getInstance(config, ext);
+	private RHExtension updateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
 		synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
+			// install
 			try {
-				rhext = RHExtension.getInstance(config, ext);
+				unSyncUpdateExtension(config, rhext, filter, reload, force);
+			}
+			catch (Exception ex) {
+				RHExtension.flush(rhext);
+				throw Caster.toPageException(ex);
+			}
+
+			try {
+				rhext.addToAvailable(config);
 				if (RHExtension.ACTION_COPY == action) rhext.copyToInstalled(config);
 				else if (RHExtension.ACTION_MOVE == action) rhext.moveToInstalled(config);
-				rhext.validate(config);
 			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				throw Caster.toPageException(t);
+			catch (Exception ex) {
+				throw Caster.toPageException(ex);
 			}
-			unSyncUpdateExtension(config, rhext, filter, reload, force);
-		}
-		return rhext;
-	}
-
-	public RHExtension updateRHExtension(Config config, Resource ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
-		RHExtension rhext = RHExtension.getInstance(config, ext);
-		synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
-			try {
-				if (RHExtension.ACTION_COPY == action) rhext.copyToInstalled(config);
-				else if (RHExtension.ACTION_MOVE == action) rhext.moveToInstalled(config);
-				rhext.validate(config);
-			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				if (ext != null) DeployHandler.moveToFailedFolder(ext.getParentResource(), ext);
-				throw Caster.toPageException(t);
-			}
-			unSyncUpdateExtension(config, rhext, filter, reload, force);
-		}
-		return rhext;
-	}
-
-	private void updateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force) throws PageException {
-		synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
-			unSyncUpdateExtension(config, rhext, filter, reload, force);
+			return rhext;
 		}
 	}
 
 	private void unSyncUpdateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force) throws PageException {
+		Log log = config.getLog("deploy");
+		if (LogUtil.doesDebug(log)) {
+			log.debug("extension", "install extension [" + rhext.toExtensionDefinition() + "] ");
+		}
 
+		rhext.validate(config);
 		// MUST 7 rest all values set
 		try {
-			if (!force && _hasRHExtensionInstalled((ConfigPro) config, rhext.toExtensionDefinition()) != null) {
-
+			if (!force && rhext.installed()) {
 				throw new AlreadyInstalledExtension(rhext);
 			}
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);
 		}
+
+		filter.add("resetExtensionDefinitions", "resetRHExtensions");
 
 		ConfigPro ci = (ConfigPro) config;
 		Log logger = ThreadLocalPageContext.getLog(ci, "deploy");
@@ -4665,8 +4633,6 @@ public final class ConfigAdmin {
 				synchronized (SystemUtil.createToken("updateExtension", existingRH.getId())) {
 					unSyncRemoveExtension(config, existingRH, rhext, filter, true);
 				}
-				filter.add("resetExtensionDefinitions", "resetRHExtensions");
-
 			}
 			catch (Exception e) {
 				logger.error("extension", e);
@@ -5157,16 +5123,10 @@ public final class ConfigAdmin {
 			}
 
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
+		catch (Exception ex) {
+			print.e(ex);
 			DeployHandler.moveToFailedFolder(rhext.getExtensionFile().getParentResource(), rhext.getExtensionFile());
-			try {
-				ConfigAdmin.removeRHExtensions((ConfigPro) config, ThreadLocalPageContext.getLog(config, "deploy"), new String[] { rhext.getId() }, false);
-			}
-			catch (Throwable t2) {
-				ExceptionUtil.rethrowIfNecessary(t2);
-			}
-			throw Caster.toPageException(t);
+			throw Caster.toPageException(ex);
 		}
 	}
 
@@ -5237,7 +5197,7 @@ public final class ConfigAdmin {
 	private void unSyncRemoveExtension(Config config, RHExtension rhe, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension) throws PageException {
 		ConfigPro ci = ((ConfigPro) config);
 		Log logger = ThreadLocalPageContext.getLog(ci, "deploy");
-
+		filter.add("resetExtensionDefinitions", "resetRHExtensions");
 		// MUST check replacementRH everywhere
 
 		try {
@@ -6448,10 +6408,15 @@ public final class ConfigAdmin {
 		}
 
 		// all extension
-		Iterator<RHExtension> itt = config.getAllRHExtensions().iterator();
 		RHExtension _rhe;
-		while (itt.hasNext()) {
-			_rhe = itt.next();
+		// because this method is called indirectly by getRHExtensions, we cannot use that method
+		for (ExtensionDefintion ed: ConfigUtil.getConfigServerImpl(config).getExtensionDefinitions()) {
+			try {
+				_rhe = ed.toRHExtension(config);
+			}
+			catch (PageException e) {
+				continue;
+			}
 			if (rhe != null && rhe.equals(_rhe)) continue;
 			BundleInfo[] bundles = _rhe.getMetadata().getBundles(null);
 			if (bundles != null) {
