@@ -85,6 +85,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 	public final String id;
 	private URLClassLoader fallback;
+	private URL[] urls;
 
 	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc)
 			throws IOException {
@@ -109,11 +110,11 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.directory = directory;
 		this.rpc = rpc;
 		id = key;
-		populateURLs(urls);
+		fallback = new URLClassLoader(urls);
+		this.urls = urls;
 	}
 
 	private void populateURLs(URL[] urls) {
-		fallback = new URLClassLoader(urls);
 
 		// Use the diagnostic/validating method we created
 
@@ -302,7 +303,16 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 			// Try resources (Maven libraries override core, but respect boot delegation)
 			try {
-				c = super.loadClass(name);
+				if (urls != null) {
+					synchronized (SystemUtil.createToken("PhysicalClassLoader", "urls")) {
+						if (urls != null) {
+							populateURLs(urls);
+							urls = null;
+						}
+					}
+				}
+
+				c = super.findClass(name);
 				if (resolve) resolveClass(c);
 				return c;
 			}
