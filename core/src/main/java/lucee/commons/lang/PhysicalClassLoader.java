@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lucee.print;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
@@ -100,7 +101,8 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	private PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
 			boolean rpc) {
 		super(new URL[0], parentClassLoader);
-
+		print.e("--- PhysicalClassLoader ----");
+		print.ds(resources);
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
@@ -110,6 +112,12 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.rpc = rpc;
 		id = key;
 		populateURLs(urls);
+		diagnose();
+	}
+
+	private void diagnose() {
+		print.e("--- diagnose ----");
+		print.e(super.getDefinedPackages());
 	}
 
 	private void populateURLs(URL[] urls) {
@@ -310,7 +318,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 				if (LogUtil.doesDebug(LogUtil.getLog(config, "application"))) {
 					LogUtil.log(Log.LEVEL_DEBUG, "classloader", "validate classloader");
 					LogUtil.log("classloader", e1);
-
+					diagnose();
 					String rPath = name.replace('.', '/') + ".class";
 					URL u = super.findResource(rPath);
 
