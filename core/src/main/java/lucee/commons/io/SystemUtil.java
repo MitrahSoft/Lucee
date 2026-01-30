@@ -1424,8 +1424,8 @@ public final class SystemUtil {
 		suspendEL(thread);
 		try {
 			if (isInLucee(thread)) {
-				if (!force) thread.interrupt();
-				else thread.stop();
+				// Thread.stop() was removed in Java 26, use interrupt() instead
+				thread.interrupt();
 			}
 			else {
 				if (log != null) {

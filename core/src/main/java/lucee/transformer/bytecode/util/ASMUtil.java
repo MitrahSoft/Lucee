@@ -1246,6 +1246,8 @@ public final class ASMUtil {
 						else if ("22".equals(vs) || "22.0".equals(vs)) javaBytecodeVersion = Opcodes.V22;
 						else if ("23".equals(vs) || "23.0".equals(vs)) javaBytecodeVersion = Opcodes.V23;
 						else if ("24".equals(vs) || "24.0".equals(vs)) javaBytecodeVersion = Opcodes.V24;
+						else if ("25".equals(vs) || "25.0".equals(vs)) javaBytecodeVersion = Opcodes.V25;
+						else if ("26".equals(vs) || "26.0".equals(vs)) javaBytecodeVersion = Opcodes.V26;
 					}
 
 					// we do not use the version of the JVM by default, because this would limit the use of lucee
