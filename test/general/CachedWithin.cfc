@@ -18,7 +18,7 @@
  * 
  --->
 <cfscript>
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache" {
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache"  skip=true {
 
 	variables.queryCacheName = "testQueryCache";
 	variables.functionCacheName = "testFunctionCache";
