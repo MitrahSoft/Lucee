@@ -974,8 +974,7 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 			else LogUtil.log(ThreadLocalPageContext.getConfig(config), Log.LEVEL_ERROR, ModernApplicationContext.class.getName(),
 					"method [init(Config,String[],Struct[]):void] for class [" + cd.toString() + "] is not static");
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		initCacheConnections.put(id, cc);
 		return cc;
 
@@ -1781,22 +1780,27 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 	@Override
 	public JavaSettings getJavaSettings() {
 		if (!initJavaSettings) {
-			// PATCH to avoid cycle
 			if (initJavaSettingsBefore) {
-				return null;
-			}
-			initJavaSettingsBefore = true;
-			Object o = javaSettings != null ? null : get(component, KeyConstants._javasettings, null);
-			if (javaSettings != null || (o != null && Decision.isStruct(o))) {
-				if (javaSettings == null) javaSettings = JavaSettingsImpl.getInstance(config, Caster.toStruct(o, null), null);
+				return null; // Cycle detected
 			}
 
-			initJavaSettings = true;
-			initJavaSettingsBefore = false;
+			initJavaSettingsBefore = true;
+			try {
+				if (javaSettings == null) {
+					Object o = get(component, KeyConstants._javasettings, null);
+					if (o != null && Decision.isStruct(o)) {
+						javaSettings = JavaSettingsImpl.getInstance(config, Caster.toStruct(o, null), null);
+						if (javaSettings != null) JavaSettingsImpl.merge(config, javaSettings, ((ConfigPro) config).getJavaSettings());
+					}
+				}
+				initJavaSettings = true;
+			}
+			finally {
+				initJavaSettingsBefore = false;
+			}
 		}
 
-		if (javaSettings == null) return ((ConfigPro) config).getJavaSettings();
-		return javaSettings;
+		return javaSettings != null ? javaSettings : ((ConfigPro) config).getJavaSettings();
 	}
 
 	public static ClassLoader getDefaultClassLoader(ConfigWeb config) throws IOException {
