@@ -110,63 +110,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.rpc = rpc;
 		id = key;
 		populateURLs(urls);
-		forensicTestURLClassPath(urls);
-	}
-
-	public static void forensicTestURLClassPath(URL[] urls) {
-		System.out.println("=== STARTING FORENSIC URLCLASSPATH TEST ===");
-		try {
-			// 1. Get the internal URLClassPath class
-			Class<?> ucpClass = Class.forName("jdk.internal.loader.URLClassPath");
-
-			// 2. Find the constructor: URLClassPath(URL[], AccessControlContext)
-			// Note: In some JDK versions it's (URL[], AccessControlContext) or just (URL[])
-			java.lang.reflect.Constructor<?> ctor = ucpClass.getDeclaredConstructor(URL[].class, java.security.AccessControlContext.class);
-			ctor.setAccessible(true);
-
-			// 3. Create a raw instance
-			Object ucpInstance = ctor.newInstance(urls, null);
-			System.out.println("-> Successfully created jdk.internal.loader.URLClassPath instance");
-
-			// 4. Test the failing resource
-			String resourceName = "org/everit/json/schema/loader/SchemaLoader.class";
-
-			// Method: getResource(String, boolean)
-			java.lang.reflect.Method getResource = ucpClass.getDeclaredMethod("getResource", String.class, boolean.class);
-			getResource.setAccessible(true);
-
-			Object resource = getResource.invoke(ucpInstance, resourceName, false);
-
-			if (resource == null) {
-				System.out.println("-> [PROOF] URLClassPath returned NULL for the class!");
-
-				// 5. Compare with ZipFile (The Control Group)
-				System.out.println("-> Verifying file on disk to verify sanity...");
-				for (URL u: urls) {
-					if (u.toString().contains("everit-json-schema")) {
-						java.io.File f = new java.io.File(u.toURI());
-						try (java.util.zip.ZipFile zf = new java.util.zip.ZipFile(f)) {
-							boolean exists = zf.getEntry(resourceName) != null;
-							System.out.println("-> ZipFile check: " + (exists ? "FOUND (File is valid)" : "NOT FOUND"));
-
-							if (exists) {
-								System.out.println("!!! CONCLUSION: URLClassPath is BROKEN. It fails where ZipFile succeeds. !!!");
-							}
-						}
-					}
-				}
-			}
-			else {
-				System.out.println("-> URLClassPath found the resource: " + resource);
-				System.out.println("-> This suggests the race condition didn't trigger inside THIS specific test instance.");
-			}
-
-		}
-		catch (Throwable t) {
-			System.out.println("-> Forensic Test Failed due to Reflection/Security: " + t.getMessage());
-			t.printStackTrace();
-		}
-		System.out.println("=== END TEST ===");
 	}
 
 	private void populateURLs(URL[] urls) {
@@ -365,11 +308,19 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			}
 			catch (ClassNotFoundException e1) {
 				if (LogUtil.doesDebug(LogUtil.getLog(config, "application"))) {
-					dumpInternalState();
-					forensicTestURLClassPath(getURLs());
 					LogUtil.log(Log.LEVEL_DEBUG, "classloader", "validate classloader");
 					LogUtil.log("classloader", e1);
-					// fallback 1
+
+					String rPath = name.replace('.', '/') + ".class";
+					URL u = super.findResource(rPath);
+
+					if (u == null) {
+						LogUtil.log(Log.LEVEL_DEBUG, "classloader", "DIAGNOSTIC: super.findResource('" + rPath + "') returned NULL. The loader is blind to this file.");
+					}
+					else {
+						LogUtil.log(Log.LEVEL_DEBUG, "classloader",
+								"DIAGNOSTIC: super.findResource('" + rPath + "') returned " + u.toString() + ". IT FOUND IT! But findClass failed?");
+					}
 
 					try {
 						fallback.loadClass(name);
@@ -418,42 +369,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 				throw new ClassNotFoundException(name);
 			}
-		}
-	}
-
-	private void dumpInternalState() {
-		try {
-			// 1. Get the 'ucp' field from URLClassLoader (the parent)
-			java.lang.reflect.Field ucpField = java.net.URLClassLoader.class.getDeclaredField("ucp");
-			ucpField.setAccessible(true);
-			Object ucp = ucpField.get(this); // 'this' is the broken PhysicalClassLoader
-
-			// 2. Get the 'loaders' list (The internal cache of open JARs)
-			Class<?> ucpClass = ucp.getClass();
-			java.lang.reflect.Field loadersField = ucpClass.getDeclaredField("loaders");
-			loadersField.setAccessible(true);
-			java.util.List<?> loaders = (java.util.List<?>) loadersField.get(ucp);
-
-			// 3. Get the 'lmap' (URL -> Loader map)
-			java.lang.reflect.Field lmapField = ucpClass.getDeclaredField("lmap");
-			lmapField.setAccessible(true);
-			java.util.Map<?, ?> lmap = (java.util.Map<?, ?>) lmapField.get(ucp);
-
-			System.out.println("=== INTERNAL STATE DUMP ===");
-			System.out.println("Total URLs provided: " + this.getURLs().length);
-			System.out.println("Total Active Loaders: " + loaders.size());
-
-			// Scan for our specific JAR
-			for (Object loader: loaders) {
-				System.out.println(" - Active Loader: " + loader.toString());
-			}
-
-			// Check if our JAR is in the map but NOT in the loaders list
-			// (This would mean it was "closed" or marked invalid)
-			System.out.println("===========================");
-		}
-		catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 
