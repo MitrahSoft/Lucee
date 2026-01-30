@@ -1787,10 +1787,15 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 			initJavaSettingsBefore = true;
 			try {
 				if (javaSettings == null) {
+
 					Object o = get(component, KeyConstants._javasettings, null);
 					if (o != null && Decision.isStruct(o)) {
+
 						javaSettings = JavaSettingsImpl.getInstance(config, Caster.toStruct(o, null), null);
-						if (javaSettings != null) JavaSettingsImpl.merge(config, javaSettings, ((ConfigPro) config).getJavaSettings());
+
+						if (javaSettings != null) {
+							javaSettings = JavaSettingsImpl.merge(config, javaSettings, ((ConfigPro) config).getJavaSettings());
+						}
 					}
 				}
 				initJavaSettings = true;
