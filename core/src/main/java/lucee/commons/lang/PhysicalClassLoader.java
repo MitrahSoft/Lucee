@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import lucee.print;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
@@ -85,7 +84,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	private String birthplace;
 
 	public final String id;
-	private URLClassLoader fallback;
 
 	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc)
 			throws IOException {
@@ -100,9 +98,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 	private PhysicalClassLoader(String key, Config c, URL[] urls, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader,
 			boolean rpc) {
-		super(new URL[0], parentClassLoader);
-		print.e("--- PhysicalClassLoader ----");
-		print.ds(resources);
+		super(urls, parentClassLoader);
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
@@ -111,30 +107,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.directory = directory;
 		this.rpc = rpc;
 		id = key;
-		populateURLs(urls);
-		diagnose();
-	}
-
-	private void diagnose() {
-		print.e("--- diagnose ----");
-		print.e(super.getDefinedPackages());
-	}
-
-	private void populateURLs(URL[] urls) {
-		fallback = new URLClassLoader(urls);
-
-		// Use the diagnostic/validating method we created
-
-		for (URL url: urls) {
-			try {
-				url.getContent();
-			}
-			catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			this.addURL(url);
-		}
 	}
 
 	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
@@ -317,44 +289,11 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 			// Try resources (Maven libraries override core, but respect boot delegation)
 			try {
-				diagnose();
 				c = super.findClass(name);
 				if (resolve) resolveClass(c);
 				return c;
 			}
 			catch (ClassNotFoundException e1) {
-				if (LogUtil.doesDebug(LogUtil.getLog(config, "application"))) {
-					LogUtil.log(Log.LEVEL_DEBUG, "classloader", "validate classloader");
-					LogUtil.log("classloader", e1);
-					String rPath = name.replace('.', '/') + ".class";
-					URL u = super.findResource(rPath);
-
-					if (u == null) {
-						LogUtil.log(Log.LEVEL_DEBUG, "classloader", "DIAGNOSTIC: super.findResource('" + rPath + "') returned NULL. The loader is blind to this file.");
-					}
-					else {
-						LogUtil.log(Log.LEVEL_DEBUG, "classloader",
-								"DIAGNOSTIC: super.findResource('" + rPath + "') returned " + u.toString() + ". IT FOUND IT! But findClass failed?");
-					}
-
-					try {
-						fallback.loadClass(name);
-						LogUtil.log(Log.LEVEL_DEBUG, "classloader", "Fallback with classloader loaded at the same time worked for [" + name + "]!");
-
-					}
-					catch (ClassNotFoundException e2) {
-						LogUtil.log("classloader", e2);
-						try {
-							new URLClassLoader(getURLs()).loadClass(name);
-							LogUtil.log(Log.LEVEL_DEBUG, "classloader", "Fallback with classloader just loaded worked for [" + name + "]!");
-
-						}
-						catch (ClassNotFoundException e3) {
-							LogUtil.log("classloader", e2);
-						}
-					}
-				}
-
 				// Resources didn't have it, try parent if not already tried
 				if (!isBootDelegated) {
 					ClassLoader parent = getParent();

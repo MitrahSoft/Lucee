@@ -72,6 +72,7 @@ import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.IPRange;
@@ -1288,6 +1289,7 @@ public final class ConfigAdmin {
 
 		// if there is an existing, has the file changed?
 		if (fileLib.length() != resJar.length()) {
+			PhysicalClassLoaderFactory.flush(config);
 			// IOUtil.closeEL(config.getClassLoader());
 			ResourceUtil.copy(resJar, fileLib);
 			// NEXT if (reloadWhenClassicJar) ConfigUtil.reloadLib(config);
