@@ -126,6 +126,13 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		// Use the diagnostic/validating method we created
 
 		for (URL url: urls) {
+			try {
+				url.getContent();
+			}
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			this.addURL(url);
 		}
 	}
@@ -310,6 +317,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 			// Try resources (Maven libraries override core, but respect boot delegation)
 			try {
+				diagnose();
 				c = super.findClass(name);
 				if (resolve) resolveClass(c);
 				return c;
@@ -318,7 +326,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 				if (LogUtil.doesDebug(LogUtil.getLog(config, "application"))) {
 					LogUtil.log(Log.LEVEL_DEBUG, "classloader", "validate classloader");
 					LogUtil.log("classloader", e1);
-					diagnose();
 					String rPath = name.replace('.', '/') + ".class";
 					URL u = super.findResource(rPath);
 
