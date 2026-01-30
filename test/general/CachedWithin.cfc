@@ -18,15 +18,17 @@
  * 
  --->
 <cfscript>
-component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache"  skip=true {
+component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache" {
 
 	variables.queryCacheName = "testQueryCache";
 	variables.functionCacheName = "testFunctionCache";
 	variables.httpCacheName = "testHttpCache";
 	variables.datasourceName = "testCacheDS";
+	variables.httpbin = server.getTestService("httpbin");
 
 	function beforeAll() {
 		variables.hasDS = defineDatasource();
+		variables.hasHttpbin = structCount(variables.httpbin) > 0;
 		defineCaches();
 	}
 
@@ -46,22 +48,26 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache"  skip=true 
 	// ========================================
 
 	public void function testHTTPCachedWithinId() localmode=true {
+		if (!variables.hasHttpbin) return;
+
 		cfhttp(
-			url="https://httpbin.org/uuid",
+			url="http://#variables.httpbin.server#:#variables.httpbin.port#/uuid",
 			result="local.httpResult",
 			cachedwithin="#createTimeSpan(0,0,10,0)#"
 		);
 
 		var cacheId = cachedWithinId(local.httpResult);
-		
+
 		expect(cacheId).toBeString();
 		expect(cacheId).notToBeEmpty();
 	}
 
 	public void function testHTTPCachedWithinFlush() localmode=true {
+		if (!variables.hasHttpbin) return;
+
 		// First request - creates cache
 		cfhttp(
-			url="https://httpbin.org/uuid",
+			url="http://#variables.httpbin.server#:#variables.httpbin.port#/uuid",
 			result="local.httpResult1",
 			cachedwithin="#createTimeSpan(0,1,0,0)#"
 		);
@@ -69,12 +75,12 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache"  skip=true 
 
 		// Second request - should return cached result (same UUID)
 		cfhttp(
-			url="https://httpbin.org/uuid",
+			url="http://#variables.httpbin.server#:#variables.httpbin.port#/uuid",
 			result="local.httpResult2",
 			cachedwithin="#createTimeSpan(0,1,0,0)#"
 		);
 		var secondResponse = local.httpResult2.filecontent;
-		
+
 		// Verify cache is working (same response)
 		expect(firstResponse).toBe(secondResponse);
 
@@ -84,7 +90,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache"  skip=true 
 
 		// Third request - should get new result (different UUID)
 		cfhttp(
-			url="https://httpbin.org/uuid",
+			url="http://#variables.httpbin.server#:#variables.httpbin.port#/uuid",
 			result="local.httpResult3",
 			cachedwithin="#createTimeSpan(0,1,0,0)#"
 		);
