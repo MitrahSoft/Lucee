@@ -302,7 +302,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 			// Try resources (Maven libraries override core, but respect boot delegation)
 			try {
-				c = super.findClass(name);
+				c = super.loadClass(name);
 				if (resolve) resolveClass(c);
 				return c;
 			}
