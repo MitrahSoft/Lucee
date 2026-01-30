@@ -179,8 +179,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	/**
 	 * Constructor of the Component, USED ONLY FOR DESERIALIZE
 	 */
-	public ComponentImpl() {
-	}
+	public ComponentImpl() {}
 
 	/**
 	 * constructor of the class
@@ -230,6 +229,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			synchronized (cp) {
 				is = cp.isJavaSettingsInitialized();
 				if (!is) {
+					boolean mergeConfig = false;
 					JavaSettings js = null;
 
 					// implements
@@ -237,18 +237,21 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						Iterator<InterfaceImpl> it = absFin.getInterfaceIt();
 						InterfaceImpl i;
 						Map tmp;
+						Struct sct;
 						while (it.hasNext()) {
 							i = it.next();
 							try {
 								tmp = i.meta;
 								if (tmp != null) {
+									sct = Caster.toStruct(tmp, false);
+									if (JavaSettingsImpl.doMerge(sct, false)) mergeConfig = true;
 									js = JavaSettingsImpl.merge(
 
 											pc.getConfig(),
 
 											js,
 
-											JavaSettingsImpl.readJavaSettings(pc, Caster.toStruct(tmp, false))
+											JavaSettingsImpl.readJavaSettings(pc, sct)
 
 									);
 								}
@@ -266,6 +269,9 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 					// current
 					js = JavaSettingsImpl.merge(pc.getConfig(), js, JavaSettingsImpl.readJavaSettings(pc, properties.meta));
+					if (mergeConfig) js = JavaSettingsImpl.merge(pc.getConfig(), ((ConfigPro) pc.getConfig()).getJavaSettings(), js);
+					;
+
 					return cp.setJavaSettings(js);
 				}
 			}
@@ -753,7 +759,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			return Reflector.componentToClass(pc, this).getClass();
 		}
 
-		// When calling via super, use public access for error message since super calls should access inherited methods
+		// When calling via super, use public access for error message since super calls should access
+		// inherited methods
 		int errorAccess = superAccess ? ACCESS_PUBLIC : access;
 		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, errorAccess);
 		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), errorAccess);
@@ -1187,8 +1194,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 					try {
 						return DumpUtil.toDumpData(_call(pageContext, KeyConstants.__toDumpData, udf, null, new Object[0]), pageContext, maxlevel, dp);
 					}
-					catch (PageException e) {
-					}
+					catch (PageException e) {}
 				}
 			}
 		}

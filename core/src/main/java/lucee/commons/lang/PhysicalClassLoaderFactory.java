@@ -20,6 +20,7 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.type.file.FileResource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.runtime.config.Config;
+import lucee.runtime.config.ConfigPro;
 import lucee.runtime.converter.ConverterException;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
@@ -99,6 +100,11 @@ public class PhysicalClassLoaderFactory {
 		return rpccl;
 	}
 
+	public static boolean flush(Config c) {
+		String key = key(c, ((ConfigPro) c).getJavaSettings(), null, SystemUtil.getCoreClassLoader());
+		return classLoaders.remove(key) != null;
+	}
+
 	public static PhysicalClassLoader getRPCClassLoader(Config c, BundleClassLoader bcl, boolean reload) throws IOException {
 		return getRPCClassLoader(c, null, bcl, SystemUtil.getCoreClassLoader(), reload);
 	}
@@ -107,7 +113,7 @@ public class PhysicalClassLoaderFactory {
 		return getRPCClassLoader(c, js, null, SystemUtil.getCoreClassLoader(), reload);
 	}
 
-	private static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, BundleClassLoader bcl, ClassLoader parent, boolean reload) throws IOException {
+	private static String key(Config c, JavaSettings js, BundleClassLoader bcl, ClassLoader parent) {
 		String key = js == null ? "orphan" : ((JavaSettingsImpl) js).id();
 
 		if (parent == null) parent = SystemUtil.getCoreClassLoader();
@@ -121,7 +127,12 @@ public class PhysicalClassLoaderFactory {
 		if (bcl != null) {
 			key += ":" + bcl;
 		}
-		key = HashUtil.create64BitHashAsString(key);
+		return HashUtil.create64BitHashAsString(key);
+	}
+
+	private static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, BundleClassLoader bcl, ClassLoader parent, boolean reload) throws IOException {
+
+		String key = key(c, js, bcl, parent);
 
 		PhysicalClassLoader rpccl = reload ? null : classLoaders.get(key);
 		if (rpccl == null) {

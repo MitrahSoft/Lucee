@@ -17,7 +17,7 @@
  */
 package lucee.transformer.util;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.SystemUtil;
@@ -64,27 +64,37 @@ public class SourceCode {
 		this.sourceOffset = sourceOffset;
 		lcText = new char[text.length];
 
-		ArrayList<Integer> arr = new ArrayList<Integer>();
+		int[] arr = new int[32];
+		int count = 0;
 
 		for (int i = 0; i < text.length; i++) {
 			pos = i;
 			if (text[i] == '\n') {
-				arr.add(Integer.valueOf(i));
+				if (count == arr.length) {
+					arr = Arrays.copyOf(arr, arr.length * 2);
+				}
+				arr[count++] = i;
 				lcText[i] = ' ';
 			}
 			else if (text[i] == '\r') {
 				if (isNextRaw('\n')) {
 					lcText[i++] = ' ';
 				}
-				arr.add(Integer.valueOf(i));
+				if (count == arr.length) {
+					arr = Arrays.copyOf(arr, arr.length * 2);
+				}
+				arr[count++] = i;
 				lcText[i] = ' ';
 			}
 			else if (text[i] == '\t') lcText[i] = ' ';
 			else lcText[i] = Character.toLowerCase(text[i]);
 		}
 		pos = 0;
-		arr.add(Integer.valueOf(text.length));
-		lines = arr.stream().mapToInt(Integer::intValue).toArray();
+		if (count == arr.length) {
+			arr = Arrays.copyOf(arr, arr.length + 1);
+		}
+		arr[count++] = text.length;
+		lines = Arrays.copyOf(arr, count);
 
 		this.writeLog = writeLog;
 	}
@@ -801,34 +811,34 @@ public class SourceCode {
 			return cachedPosition;
 		}
 
-		// Fast path: if asking for current position, use cached line
-		if (pos == this.pos) {
-			int posAtStart = (currentLine > 1) ? lines[currentLine - 2] : 0;
-			int column = pos - posAtStart;
-			Position position = new Position(currentLine, column, pos, getSourceOffset());
-			// Cache this position
-			cachedPos = pos;
-			cachedPosition = position;
-			return position;
-		}
-
-		// Linear search with currentLine hint for forward scanning
-		// For typical forward parsing, this is O(1) amortized
-		int line = 0;
-		int posAtStart = 0;
-
-		// If searching forward from current position, start from currentLine
-		int startLine = (pos >= this.pos && currentLine > 1) ? currentLine - 1 : 0;
-
-		for (int i = startLine; i < lines.length; i++) {
-			if (pos <= lines[i]) {
-				line = i + 1;
-				if (i > 0) posAtStart = lines[i - 1];
-				break;
+		int line;
+		// Use currentLine as hint when asking for current position
+		if (pos == this.pos && currentLine >= 1 && currentLine <= lines.length) {
+			int lineEnd = lines[currentLine - 1];
+			if (pos <= lineEnd && (currentLine == 1 || pos > lines[currentLine - 2])) {
+				// currentLine is still valid
+				line = currentLine;
+			}
+			else if (pos > lineEnd) {
+				// Moved forward past current line - scan forward (common case, usually 1-2 iterations)
+				line = currentLine;
+				while (line < lines.length && pos > lines[line - 1]) {
+					line++;
+				}
+				currentLine = line;  // Update cache
+			}
+			else {
+				// Moved backward (rare) - binary search
+				line = getLine(pos);
+				currentLine = line;  // Update cache
 			}
 		}
-		if (line == 0) throw new RuntimeException("syntax error");
+		else {
+			// No hint available - binary search
+			line = getLine(pos);
+		}
 
+		int posAtStart = (line > 1) ? lines[line - 2] : 0;
 		int column = pos - posAtStart;
 		Position position = new Position(line, column, pos, getSourceOffset());
 		// Cache this position
