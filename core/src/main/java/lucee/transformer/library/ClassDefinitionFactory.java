@@ -18,19 +18,19 @@ import lucee.runtime.type.util.KeyConstants;
 public class ClassDefinitionFactory implements PropFactory<ClassDefinition> {
 	private static Map<String, ClassDefinitionFactory> instances = new ConcurrentHashMap<>();
 
+	private String prefix;
+
 	public static ClassDefinitionFactory getInstance() {
 		return getInstance("");
 	}
 
 	public static ClassDefinitionFactory getInstance(String prefix) {
 		ClassDefinitionFactory instance = instances.get(prefix);
-		if (instances == null) {
+		if (instance == null) {
 			instances.put(prefix, instance = new ClassDefinitionFactory(prefix));
 		}
 		return instance;
 	}
-
-	private String prefix;
 
 	public ClassDefinitionFactory(String prefix) {
 		this.prefix = StringUtil.emptyIfNull(prefix).trim();
@@ -38,12 +38,10 @@ public class ClassDefinitionFactory implements PropFactory<ClassDefinition> {
 
 	@Override
 	public ClassDefinition evaluate(Config config, String name, Object val, ClassDefinition defaultValue) {
-
 		try {
 			Struct cache = Caster.toStruct(val);
 			if (cache == null) return defaultValue;
 			ClassDefinitionImpl cd = (ClassDefinitionImpl) ConfigFactoryImpl.getClassDefinition(config, cache, prefix, config.getIdentification());
-
 			if (cd.isBundle() || cd.isMaven()) {
 				return cd;
 			}

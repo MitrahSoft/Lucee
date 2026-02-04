@@ -140,7 +140,6 @@ import lucee.runtime.dump.DumpWriterEntry;
 import lucee.runtime.dump.HTMLDumpWriter;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ExecutionLogFactory;
-import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.engine.ThreadQueue;
 import lucee.runtime.engine.ThreadQueueImpl;
 import lucee.runtime.exp.ApplicationException;
@@ -157,7 +156,6 @@ import lucee.runtime.extension.ExtensionProvider;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.functions.other.CreateUniqueId;
-import lucee.runtime.functions.system.IsZipFile;
 import lucee.runtime.gateway.GatewayEntry;
 import lucee.runtime.gateway.GatewayEntryFactory;
 import lucee.runtime.listener.AppListenerUtil;
@@ -179,7 +177,6 @@ import lucee.runtime.net.mail.ServerFactory;
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
-import lucee.runtime.op.Decision;
 import lucee.runtime.orm.DummyORMEngine;
 import lucee.runtime.orm.ORMConfiguration;
 import lucee.runtime.orm.ORMConfigurationImpl;
@@ -314,7 +311,6 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private Resource rootDir;
 	private final UpdateInfo updateInfo;
 	private IdentificationServer id;
-	private List<ExtensionDefintion> localExtensions;
 	private SecurityManager defaultSecurityManager;
 	private Map<String, SecurityManager> managers = MapFactory.<String, SecurityManager>getConcurrentMap();
 	private Map<String, CFMLFactory> initContextes;
@@ -2526,6 +2522,11 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		return this;
 	}
 
+	@Override
+	public void setPassword(Password password) {
+		this.hspw = password;
+	}
+
 	/**
 	 * @return gets the password as hash
 	 */
@@ -2883,16 +2884,6 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	@Override
 	public Resource getConfigFile() {
 		return configFile;
-	}
-
-	/**
-	 * sets the password
-	 * 
-	 * @param password
-	 */
-	@Override
-	public void setPassword(Password password) {
-		this.hspw = password;
 	}
 
 	/**
@@ -5494,29 +5485,25 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "extensions")) {
 				if (extensionsX == null) {
 					boolean firstLoad = extensionsLoadCount == 0;
-
+					Log log = getLog("deploy");
 					extensionsLoadCount++;
 					List<ExtensionDefintion> definitions = getExtensionDefinitions();
+					// print.e(extensions);
 					Map<String, RHExtension> exts = new HashMap<>();
 					{
 						RHExtension ext;
 						for (ExtensionDefintion ed: definitions) {
-							// print.e("- " + ed);
 							try {
 								ext = ed.toRHExtension(this);
-								// print.e("- installed? " + ext.installed());
-								// print.e("- " + ext.getExtensionFile());
 								if (!ext.installed()) {
-									// print.ds("Extension [" + ed + "] not installed, installing");
-									// print.e(ext.getExtensionFile());
-									// print.e(ext.getExtensionFile().exists());
-									DeployHandler.deployExtension(this, ext, false, false);
+									DeployHandler.deployExtension(this, ext, false, false, log);
 								}
-								exts.put(ext.getExtensionInstalledName(), ext);
+								exts.put(ext.getStorageName(), ext);
 							}
 							catch (Exception ex) {
-								// print.e(ex);
-								LogUtil.log("deploy", "start-bundles", ex);
+								if (LogUtil.doesError(log)) {
+									log.error("start-bundles", ex);
+								}
 							}
 
 						}
@@ -5533,8 +5520,10 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 									// Call the startBundles method for each extension
 									startBundles(this, ext, firstLoad);
 								}
-								catch (Exception e) {
-									LogUtil.log("deploy", "start-bundles", e);
+								catch (Exception ex) {
+									if (LogUtil.doesError(log)) {
+										log.error("start-bundles", ex);
+									}
 								}
 								finally {
 									// Count down the latch regardless of success or failure
@@ -5556,8 +5545,10 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						try {
 							ThreadUtil.close(executor);
 						}
-						catch (Exception e) {
-							LogUtil.log("deploy", "start-bundles", e);
+						catch (Exception ex) {
+							if (LogUtil.doesError(log)) {
+								log.error("start-bundles", ex);
+							}
 						}
 					}
 
@@ -5565,33 +5556,59 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 					Boolean cleanupExtension = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.cleanup.extension", null), true);
 					if (cleanupExtension) {
 
-						List<RHExtension> installedExtensions = RHExtension.getInstalledExtensions(this);
+						List<lucee.runtime.extension.RHExtensionCollection.Entry> installedExtensions = RHExtension.getInstalledExtensions(this);
 						if (!installedExtensions.isEmpty()) {
-							ResetFilter filter = new ResetFilter();
+							ResetFilter filter = null;
 							try {
 
-								for (RHExtension installedExt: installedExtensions) {
-									if (!exts.containsKey(installedExt.getExtensionInstalledName())) {
+								for (lucee.runtime.extension.RHExtensionCollection.Entry entry: installedExtensions) {
+									if (!exts.containsKey(entry.getFilename())) {
+										// is it installed in a different version what should not happen
+										RHExtension other = RHExtension.getInstalledDifferentVersion(this, entry.getRHExtension().toExtensionDefinition(), log);
+										if (other != null) {
 
-										LogUtil.log(Log.LEVEL_INFO, "deploy", "start-bundles", "Found the extension [" + installedExt
-												+ "] in the installed folder that is not present in the configuration in any version, so we will uninstall it");
-
-										try {
-											ConfigAdmin._removeRHExtension(this, installedExt, null, filter, true);
-											LogUtil.log(Log.LEVEL_INFO, "deploy", "start-bundles", "removed extension [" + installedExt + "]");
+											if (LogUtil.doesError(log)) {
+												log.error("start-bundles",
+														"Found the extension [" + entry.getFilename() + "] in the installed folder what is installed in a different version");
+											}
+											try {
+												entry.getRHExtension().delete(this, log);
+											}
+											catch (Exception ex) {
+												if (LogUtil.doesError(log)) {
+													log.error("start-bundles", ex);
+												}
+											}
 										}
-										catch (PageException ex) {
-											LogUtil.log("deploy", "start-bundles", ex);
+										else {
+
+											if (LogUtil.doesInfo(log)) {
+												log.info("start-bundles", "Found the extension [" + entry.getRHExtension().toExtensionDefinition()
+														+ "] in the installed folder that is not present in the configuration in any version, so we will uninstall it");
+											}
+
+											try {
+												if (filter == null) filter = new ResetFilter();
+												ConfigAdmin._removeRHExtension(this, entry.getRHExtension(), null, filter, true, log);
+												if (LogUtil.doesInfo(log)) {
+													log.info("start-bundles", "removed extension [" + entry.getRHExtension().toExtensionDefinition() + "]");
+												}
+											}
+											catch (PageException ex) {
+												LogUtil.log("deploy", "start-bundles", ex);
+											}
 										}
 									}
 								}
 							}
 							finally {
 								try {
-									filter.reset(this);
+									if (filter != null) filter.reset(this);
 								}
-								catch (Exception e) {
-									LogUtil.log("deploy", "start-bundles", e);
+								catch (Exception ex) {
+									if (LogUtil.doesError(log)) {
+										log.error("start-bundles", ex);
+									}
 								}
 							}
 						}
@@ -5651,7 +5668,6 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						ExceptionUtil.rethrowIfNecessary(t);
 						ConfigFactoryImpl.log(this, t);
 					}
-
 					extensions = metaExtensions.list(this, root);
 				}
 			}
@@ -6825,12 +6841,10 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "getDebugEntries")) {
 				if (debugTemplates == null) {
 					List<DebugEntry> list = metaDebugTemplates.list(this, root);
-
 					// remove duplicates
 					Map<String, DebugEntry> map = new HashMap<String, DebugEntry>();
 					for (DebugEntry de: list) {
 						map.put(de.getId(), de);
-
 					}
 					debugTemplates = map.values().toArray(new DebugEntry[map.size()]);
 				}
@@ -8429,6 +8443,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	}
 
 	public void resetAll(ResetFilter filter) throws IOException {
+
 		List<Method> methods = Reflector.getMethods(this.getClass());
 		if (filter == null) {
 			LogUtil.log(Log.LEVEL_DEBUG, "config", "rest all");
@@ -8905,68 +8920,13 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 	@Override
 	public List<ExtensionDefintion> loadLocalExtensions(boolean validate) {
-		Resource[] locReses = getLocalExtensionProviderDirectory().listResources(new ExtensionResourceFilter(".lex"));
-		if (validate || localExtensions == null || localExtSize != locReses.length || extHash(locReses) != localExtHash) {
-			localExtensions = new ArrayList<ExtensionDefintion>();
-			Map<String, String> map = new HashMap<String, String>();
-			RHExtension ext;
-			String v, fileName, uuid, version;
-			ExtensionDefintion ed;
-			for (int i = 0; i < locReses.length; i++) {
-				ed = null;
-				// we stay happy with the file name when it has the right pattern (uuid-version.lex)
-				fileName = locReses[i].getName();
-				if (!validate && fileName.length() > 39) {
-					uuid = fileName.substring(0, 35);
-					version = fileName.substring(36, fileName.length() - 4);
-					if (Decision.isUUId(uuid)) {
-						ed = new ExtensionDefintion(uuid, version);
-						ed.setSource(this, locReses[i]);
-					}
-				}
-				if (ed == null) {
-					try {
-						ext = RHExtension.getInstance(this, locReses[i]);
-						ed = new ExtensionDefintion(ext.getId(), ext.getVersion());
-						ed.setSource(ext);
 
-					}
-					catch (Exception e) {
-						ed = null;
-						LogUtil.log(ThreadLocalPageContext.getConfig(this), ConfigServerImpl.class.getName(), e);
-						try {
-							if (!IsZipFile.invoke(locReses[i])) locReses[i].remove(true);
-						}
-						catch (Exception ee) {
-							LogUtil.log(ThreadLocalPageContext.getConfig(this), ConfigServerImpl.class.getName(), ee);
-						}
-					}
-				}
-
-				if (ed != null) {
-					// check if we already have an extension with the same id to avoid having more than once
-					v = map.get(ed.getId());
-					if (v != null && v.compareToIgnoreCase(ed.getId()) > 0) continue;
-
-					map.put(ed.getId(), ed.getVersion());
-					localExtensions.add(ed);
-				}
-
-			}
-			localExtHash = extHash(locReses);
-			localExtSize = locReses.length; // we store the size because localExtensions size could be smaller because of duplicates
+		List<lucee.runtime.extension.RHExtensionCollection.Entry> entries = RHExtension.getExtensions(this);
+		List<ExtensionDefintion> defintions = new ArrayList<>();
+		for (lucee.runtime.extension.RHExtensionCollection.Entry e: entries) {
+			defintions.add(e.getRHExtension().toExtensionDefinition());
 		}
-		return localExtensions;
-	}
-
-	private long extHash(Resource[] locReses) {
-		StringBuilder sb = new StringBuilder();
-		if (locReses != null) {
-			for (Resource locRes: locReses) {
-				sb.append(locRes.getAbsolutePath()).append(';');
-			}
-		}
-		return HashUtil.create64BitHash(sb);
+		return defintions;
 	}
 
 	@Override

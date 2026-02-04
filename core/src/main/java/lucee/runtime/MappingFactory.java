@@ -46,11 +46,13 @@ public class MappingFactory implements PropFactory<Mapping> {
 	public Mapping evaluate(Config config, String name, Object val, Mapping defaultValue) {
 		try {
 			Struct el = Caster.toStruct(val);
-
 			if (el == null) return null;
 
-			String virtual = name;
-			if (StringUtil.isEmpty(virtual)) virtual = ConfigFactoryImpl.getAttr(config, el, "virtual");
+			String virtual = null;
+			if (TYPE_REGULAR != type) {
+				virtual = ConfigFactoryImpl.getAttr(config, el, "virtual");
+			}
+			if (StringUtil.isEmpty(virtual)) virtual = name;
 
 			String physical = ConfigFactoryImpl.getAttr(config, el, "physical");
 			String archive = ConfigFactoryImpl.getAttr(config, el, "archive");

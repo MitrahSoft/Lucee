@@ -200,12 +200,12 @@ public final class PasswordImpl implements Password {
 		return null;
 	}
 
-	public static Password writeToStruct(Struct el, String passwordRaw, boolean isDefault) {
+	public static Password writeToStruct(Struct el, String passwordRaw) {
 		// salt
 		String salt = getSalt(el);
 
 		Password pw = new PasswordImpl(ORIGIN_UNKNOW, passwordRaw, salt);
-		writeToStruct(el, pw, isDefault);
+		writeToStruct(el, pw);
 		return pw;
 	}
 
@@ -216,34 +216,33 @@ public final class PasswordImpl implements Password {
 		return salt.trim();
 	}
 
-	public static void writeToStruct(Struct data, Password pw, boolean isDefault) {
-		String prefix = isDefault ? "default-" : "";
+	public static void writeToStruct(Struct data, Password pw) {
 		if (pw == null) {
-			if (data.containsKey(prefix + "hspw")) data.remove(prefix + "hspw");
-			if (data.containsKey(prefix + "pw")) data.remove(prefix + "pw");
-			if (data.containsKey(prefix + "password")) data.remove(prefix + "password");
+			if (data.containsKey("hspw")) data.remove("hspw");
+			if (data.containsKey("pw")) data.remove("pw");
+			if (data.containsKey("password")) data.remove("password");
 		}
 		else {
 			// remove backward compatibility
-			if (data.containsKey(prefix + "pw")) data.remove(prefix + "pw");
-			if (data.containsKey(prefix + "password")) data.remove(prefix + "password");
+			if (data.containsKey("pw")) data.remove("pw");
+			if (data.containsKey("password")) data.remove("password");
 
-			if (pw.getType() == HASHED_SALTED) data.setEL(prefix + "hspw", pw.getPassword());
+			if (pw.getType() == HASHED_SALTED) data.setEL("hspw", pw.getPassword());
 			// password is not hashed and salted
 			else {
 				PasswordImpl pwi;
 				if (pw instanceof PasswordImpl && (pwi = ((PasswordImpl) pw)).rawPassword != null) {
-					data.setEL(prefix + "hspw", hash(pwi.rawPassword, getSalt(data)));
+					data.setEL("hspw", hash(pwi.rawPassword, getSalt(data)));
 				}
 				else {
-					data.setEL(prefix + "pw", pw.getPassword());// this should never happen
+					data.setEL("pw", pw.getPassword());// this should never happen
 				}
 			}
 		}
 	}
 
-	public static void removeFromStruct(Struct root, boolean isDefault) {
-		writeToStruct(root, (Password) null, isDefault);
+	public static void removeFromStruct(Struct root) {
+		writeToStruct(root, (Password) null);
 	}
 
 	public static Password updatePasswordIfNecessary(ConfigPro config, Password passwordOld, String strPasswordNew) {
@@ -300,7 +299,6 @@ public final class PasswordImpl implements Password {
 		// new password
 		Password passwordNew = null;
 		if (!StringUtil.isEmpty(strPasswordNew, true)) passwordNew = new PasswordImpl(ORIGIN_UNKNOW, strPasswordNew, saltn);
-
 		updatePassword(config, passwordOld, passwordNew);
 
 	}
@@ -308,16 +306,25 @@ public final class PasswordImpl implements Password {
 	public static void updatePassword(ConfigPro config, Password passwordOld, Password passwordNew) throws IOException, PageException, BundleException, ConverterException {
 		if (!config.hasPassword()) {
 			config.setPassword(passwordNew);
+
 			ConfigAdmin admin = ConfigAdmin.newInstance(config, passwordNew);
 			admin.setPassword(passwordNew);
-			admin.storeAndReload();
+
+			admin.storeAndReload(true, true, false, false);
+			ConfigUtil.getConfigServerImpl(config).resetPassword().resetSalt();
+			admin.storeAndReload(false, false, true, false);
+			// validate
+			ConfigUtil.checkPassword(config, "write", passwordNew);
+
 		}
 		else {
 			ConfigUtil.checkPassword(config, "write", passwordOld);
 			ConfigUtil.checkGeneralWriteAccess(config, passwordOld);
 			ConfigAdmin admin = ConfigAdmin.newInstance(config, passwordOld);
 			admin.setPassword(passwordNew);
-			admin.storeAndReload();
+			admin.storeAndReload(true, true, false, false);
+			ConfigUtil.getConfigServerImpl(config).resetPassword().resetSalt();
+			admin.storeAndReload(false, false, true, false);
 		}
 	}
 

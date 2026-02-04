@@ -25,6 +25,7 @@ import lucee.runtime.PageContext;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
+import lucee.runtime.op.Decision;
 import lucee.runtime.op.OpUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -62,6 +63,7 @@ public class Prop<T> {
 	}
 
 	private Prop(PropFactory<T> factory, short type) {
+		if (factory == null) throw new NullPointerException();
 		this.factory = factory;
 		this.type = type;
 		instances.add(this);
@@ -276,7 +278,8 @@ public class Prop<T> {
 		if (access != -1) {
 			if (!ConfigUtil.hasAccess(config, access)) return defaultValue;
 		}
-		String val;
+		Object val;
+		String str;
 		Struct data;
 		if (parent == null) {
 			data = root;
@@ -288,44 +291,50 @@ public class Prop<T> {
 		try {
 			if (envVarSystemProps != null) {
 				for (String key: envVarSystemProps) {
-					val = SystemUtil.getSystemPropOrEnvVar(key, null);
-					if (!StringUtil.isEmpty(val, true)) {
-						val = val.trim();
+					str = SystemUtil.getSystemPropOrEnvVar(key, null);
+					if (!StringUtil.isEmpty(str, true)) {
+						str = str.trim();
 
 						if (choices != null) {
 							for (Choice<T> choice: choices) {
-								if (choice.matches(val)) {
+								if (choice.matches(str)) {
 									return choice.value;
 								}
 
 							}
 							return defaultValue;
 						}
-						return factory.evaluate(config, key, val, defaultValue);
+						return factory.evaluate(config, key, str, defaultValue);
 					}
 				}
 			}
 
 			for (String key: keys) {
-				val = ConfigFactoryImpl.getAttr(config, data, key);
+				val = data.get(KeyImpl.init(key), null);
+				if (val == null) continue;
 
-				if (!StringUtil.isEmpty(val, true)) {
-					val = val.trim();
-					if (choices != null) {
-						for (Choice<T> choice: choices) {
-							if (choice.matches(val)) {
-								return choice.value;
+				if (Decision.isSimpleValue(val)) {
+					str = Caster.toString(val);
+					if (!StringUtil.isEmpty(str, true)) {
+						str = ConfigUtil.replaceConfigPlaceHolder(config, str.trim());
+						if (choices != null) {
+							for (Choice<T> choice: choices) {
+								if (choice.matches(str)) {
+									return choice.value;
+								}
 							}
+							return defaultValue;
 						}
-						return defaultValue;
+						return factory.evaluate(config, key, str, defaultValue);
 					}
+				}
+				else {
 					return factory.evaluate(config, key, val, defaultValue);
 				}
 			}
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			ConfigFactoryImpl.log(config, ex);
 		}
 		return defaultValue;
 	}
@@ -402,7 +411,6 @@ public class Prop<T> {
 			if (envVarSystemProps != null) {
 				throw new RuntimeException("not supported yet");
 			}
-
 			Array arr = ConfigUtil.getAsArray(config, data, true, keys);
 			Iterator<Entry<Key, Object>> it = arr.entryIterator();
 			Entry<Key, Object> e;
@@ -416,10 +424,9 @@ public class Prop<T> {
 			}
 			return list;
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			if (logGlobal) LogUtil.logGlobal(config, "config-loading", t);
-			else ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			if (logGlobal) LogUtil.logGlobal(config, "config-loading", ex);
+			else ConfigFactoryImpl.log(config, ex);
 
 		}
 		return list;

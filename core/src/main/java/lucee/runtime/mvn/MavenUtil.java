@@ -301,7 +301,7 @@ public final class MavenUtil {
 			return sb.toString();
 		}
 
-		private String toGAV() {
+		public String toGAV() {
 			StringBuilder sb = new StringBuilder();
 
 			if (!StringUtil.isEmpty(g, true)) sb.append(g);
@@ -381,6 +381,10 @@ public final class MavenUtil {
 		public boolean equalIDAndVersion(GAVSO other) {
 			if (!v.equalsIgnoreCase(other.v)) return false;
 			return equalID(other);
+		}
+
+		public boolean isValid() {
+			return (!StringUtil.isEmpty(g, true) && !StringUtil.isEmpty(a, true) && !StringUtil.isEmpty(v, true));
 		}
 	}
 
@@ -517,8 +521,7 @@ public final class MavenUtil {
 			try {
 				download(pom, repositories, type, log);
 			}
-			catch (IOException e) {
-			}
+			catch (IOException e) {}
 		}, true).start();
 	}
 
@@ -1018,8 +1021,7 @@ public final class MavenUtil {
 								data.setEL(KeyConstants._location, res.getAbsolutePath());
 								return data;
 							}
-							catch (Exception e) {
-							}
+							catch (Exception e) {}
 						}
 					}
 				}

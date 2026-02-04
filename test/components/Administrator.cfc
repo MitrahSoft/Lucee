@@ -1493,12 +1493,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 			describe( title="test password function", body=function() {
 				it(title="checking updatePassword()", body=function( currentSpec ) {
 					admin.updatePassword(oldPassword="#request.ServerAdminPassword#", newPassword="server" );
-					try{
+					
+					var failed=false;
+					try {
 						// This fails, if prev statement updates the password for server admin.
 						admin.updatePassword(oldPassword="#request.ServerAdminPassword#", newPassword="server" );
-					}catch( any e ){
+					}catch( any e ) {
+						failed=true;
 						assertEquals( e.message, 'No access, password is invalid' );
 					}
+					assertEquals( failed, true );
+
 					admin.updatePassword(oldPassword="server", newPassword="#request.ServerAdminPassword#" );
 				});
 
@@ -1557,11 +1562,39 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 					//var path = "#expandpath('../')#test\components\Administrator\TestArchive";
 					var curr=getDirectoryFromPath(GetCurrentTemplatePath());
 					var path = curr&"/Administrator/TestArchive";
+					var adminLengthBefore=len(adminWeb.getCustomTagMappings());
+					var configLengthBefore=len(_customTagMappings());
 
 					adminWeb.updatecustomtag( virtual="/testcustomtag", physical=path, archive="", primary="Resource", inspect="");
+
 					var customTagMappings = adminWeb.getCustomTagMappings();
-					assertEquals(isQuery(customTagMappings) ,true);
+					var adminLengthAfter=len(adminWeb.getCustomTagMappings());
+					var configLengthAfter=len(_customTagMappings());
+					
+					assertEquals(isQuery(customTagMappings) ,true);	
+					assertEquals(adminLengthBefore+1 ,adminLengthAfter);
+					assertEquals(configLengthBefore+1 ,configLengthAfter);
 					assertEquals( listFindNoCase(valueList(customTagMappings.virtual), "/testcustomtag") NEQ 0, true );
+				});
+
+				it(title="checking updatecomponent()", body=function( currentSpec ) {
+					//var path = "#expandpath('../')#test\components\Administrator\TestArchive";
+					var curr=getDirectoryFromPath(GetCurrentTemplatePath());
+					var path = curr&"/Administrator/TestArchiveX";
+
+					var adminLengthBefore=len(adminWeb.getComponentMappings());
+					var configLengthBefore=len(_componentMappings());
+
+					adminWeb.updateComponentMapping( virtual="/testcomponent", physical=path, archive="", primary="Resource", inspect="");
+					var cfcMappings = adminWeb.getComponentMappings();
+					
+					var adminLengthAfter=len(adminWeb.getComponentMappings());
+					var configLengthAfter=len(_componentMappings());
+					
+					assertEquals(isQuery(cfcMappings) ,true);
+					assertEquals(adminLengthBefore+1 ,adminLengthAfter);
+					assertEquals(configLengthBefore+1 ,configLengthAfter);
+					assertEquals( listFindNoCase(valueList(cfcMappings.virtual), "/testcomponent") NEQ 0, true );
 				});
 
 				it(title="checking createCTArchive()", body=function( currentSpec ) {
@@ -1876,4 +1909,23 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 		// getting the credentials from the environment variables
 		return server.getDatasource(service=arguments.service, onlyConfig=true);
 	}
+
+	private function _customTagMappings() {
+		var mappings=getPageContext().getConfig().getCustomTagMappings();
+		var arr=[];
+		loop array=mappings item="local.m" {
+			arrayAppend(arr,m.getStrPhysical());
+		}
+		return arr;
+	}
+
+	private function _componentMappings() {
+		var mappings=getPageContext().getConfig().getComponentMappings();
+		var arr=[];
+		loop array=mappings item="local.m" {
+			arrayAppend(arr,m.getStrPhysical());
+		}
+		return arr;
+	}
+
 }

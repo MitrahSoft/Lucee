@@ -112,6 +112,7 @@ import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.DeployHandler;
 import lucee.runtime.config.Identification;
 import lucee.runtime.config.Password;
+import lucee.runtime.config.ResetFilter;
 import lucee.runtime.engine.listener.CFMLServletContextListener;
 import lucee.runtime.exp.Abort;
 import lucee.runtime.exp.ApplicationException;
@@ -274,16 +275,14 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				FunctionLibFactory.loadFromSystem(null);
 			}
-			catch (FunctionLibException e) {
-			}
+			catch (FunctionLibException e) {}
 		}, true).start();
 
 		ThreadUtil.getThread(() -> {
 			try {
 				TagLibFactory.loadFromSystem(null);
 			}
-			catch (TagLibException e) {
-			}
+			catch (TagLibException e) {}
 		}, true).start();
 
 		// Force localhost resolution early
@@ -291,8 +290,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				Log4j2Engine.prepare();
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}, true).start();
 
 		/*
@@ -397,7 +395,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 		// if we have a "fresh" install
 		Set<ExtensionDefintion> extensions;
-		Set<String> extensionsToRemove = null;
+		Set<RHExtension> extensionsToRemove = null;
 
 		if (installExtensions && (updateInfo.updateType == ConfigFactory.NEW_FRESH || updateInfo.updateType == ConfigFactory.NEW_FROM4)) {
 			List<ExtensionDefintion> ext = info.getRequiredExtension();
@@ -408,14 +406,14 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		// defined in the manifest
 		else if (installExtensions && (updateInfo.updateType == ConfigFactory.NEW_MINOR || !isRe)) {
 			extensions = new HashSet<ExtensionDefintion>();
-			extensionsToRemove = new HashSet<String>();
+			extensionsToRemove = new HashSet<RHExtension>();
 
 			checkInvalidExtensions(this, cs, extensions, extensionsToRemove);
 
 			Iterator<ExtensionDefintion> it = info.getRequiredExtension().iterator();
 			ExtensionDefintion ed;
-			RHExtension rhe;
-			Version edVersion, rheVersion;
+			RHExtension rhe, installed = null;
+			Version edVersion, installedVersion;
 			while (it.hasNext()) {
 				ed = it.next();
 				edVersion = OSGiUtil.toVersion(ed.getVersion(), null);
@@ -423,21 +421,37 @@ public final class CFMLEngineImpl implements CFMLEngine {
 					continue; // no version definition no update
 				}
 				try {
-					rhe = ConfigAdmin.hasRHExtensionInstalled(cs, new ExtensionDefintion(ed.getId()));
-					if (rhe == null) {
-						rheVersion = null;
+					rhe = RHExtension.getInstance(cs, ed, false, null);
+					boolean add = true;
+					if (rhe != null) {
+						// available but not installed
+						if (!rhe.installed()) {
+							installed = RHExtension.getInstalledDifferentVersion(cs, ed, null);
+							// we have another version installed
+							if (installed != null) {
+								installedVersion = OSGiUtil.toVersion(installed.getVersion(), null);
+								if (installedVersion != null && OSGiUtil.isNewerThan(edVersion, installedVersion)) {
+									LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME,
+											"Lucee requires a never version [" + edVersion + "] than the insatlled version [" + installedVersion + "] for Extension [" + ed + "]");
+									extensions.add(ed);
+									add = false;
+								}
+							}
+						}
+						// extension already is installed
+						else {
+							add = false;
+						}
+					}
+
+					if (add) {
 						Version since = ed.getSince();
 						if (since == null || updateInfo.oldVersion == null || !OSGiUtil.isNewerThan(since, updateInfo.oldVersion)) continue; // not installed we do not update
 
 						LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Detected newer [" + since + ":" + updateInfo.oldVersion + "] Extension version [" + ed + "]");
 						extensions.add(ed);
 					}
-					else rheVersion = OSGiUtil.toVersion(rhe.getVersion(), null);
-					// if the installed is older than the one defined in the manifest we update (if possible)
-					if (rheVersion != null && OSGiUtil.isNewerThan(edVersion, rheVersion)) { // TODO do none OSGi version number comparsion
-						LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Detected newer [" + edVersion + ":" + rheVersion + "] Extension version [" + ed + "]");
-						extensions.add(ed);
-					}
+
 				}
 				catch (Exception e) {
 					LogUtil.log(LOG_NAME, LOG_TYPE_NAME, e);
@@ -449,8 +463,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			}
 		}
 		else {
-			LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "No extension(s) found to add/install");
-
 			extensions = new HashSet<ExtensionDefintion>();
 		}
 
@@ -510,14 +522,32 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			}
 			if (!extensionsToRemove.isEmpty()) {
 				// remove extension that are not valid (to new for current version)
-				LogUtil.log(Log.LEVEL_ERROR, "deploy", ConfigFactoryImpl.class.getName(), "Uninstall extension(s) ["
-						+ lucee.runtime.type.util.ListUtil.toList(extensionsToRemove, ", ") + "] because they are not supported for the current Lucee version.");
+				for (RHExtension ext: extensionsToRemove) {
+
+					LogUtil.log(Log.LEVEL_ERROR, "deploy", ConfigFactoryImpl.class.getName(),
+							"Uninstall extension [" + ext + "] because it is not supported for the current Lucee version.");
+
+				}
+
+				ResetFilter filter = new ResetFilter();
 				try {
-					ConfigAdmin.removeRHExtensions(null, null, lucee.runtime.type.util.ListUtil.toStringArray(extensionsToRemove), false);
+
+					// removeRHExtensions(ConfigPro config, Log log, java.util.Collection<RHExtension> rhexs, boolean
+					// removePhysical, ResetFilter filter)
+
+					ConfigAdmin.removeRHExtensions(configServer, null, extensionsToRemove, false, filter);
 					if (configDir != null) ConfigFactory.updateRequiredExtension(this, configDir, null);
 				}
 				catch (Exception e) {
 					LogUtil.log("debug", ConfigFactoryImpl.class.getName(), e);
+				}
+				finally {
+					try {
+						if (filter != null) filter.reset(configServer);
+					}
+					catch (Exception ex) {
+						LogUtil.log("deploy", ConfigFactoryImpl.class.getName(), ex);
+					}
 				}
 			}
 		}
@@ -528,8 +558,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				log = cs.getLog("deploy", true);
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 
 		touchMonitor(cs);
@@ -557,7 +586,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		}
 	}
 
-	private static void checkInvalidExtensions(CFMLEngineImpl eng, ConfigPro config, Set<ExtensionDefintion> extensionsToInstall, Set<String> extensionsToRemove) {
+	private static void checkInvalidExtensions(CFMLEngineImpl eng, ConfigPro config, Set<ExtensionDefintion> extensionsToInstall, Set<RHExtension> extensionsToRemove) {
 		RHExtension[] extensions = config.getRHExtensions();
 		if (extensions != null) {
 			InfoImpl info = (InfoImpl) eng.getInfo();
@@ -582,7 +611,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 									"Installed extension [" + ext + "] is invalid and get removed and replaced by [" + ed + "]");
 						}
 						else {
-							extensionsToRemove.add(ext.toExtensionDefinition().getId());
+							extensionsToRemove.add(ext);
 							LogUtil.log(Log.LEVEL_INFO, "debug", "check-invalid-extension", "Installed extension [" + ext + "] is invalid and was removed.");
 
 						}
@@ -656,23 +685,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 	private int deployBundledExtension(ConfigServerImpl cs, boolean validate) {
 		int count = 0;
-		Resource dir = cs.getLocalExtensionProviderDirectory();
-		List<ExtensionDefintion> existing = DeployHandler.getLocalExtensions(cs, validate);
-		Map<String, ExtensionDefintion> existingMap = new HashMap<String, ExtensionDefintion>();
-
-		{
-			Iterator<ExtensionDefintion> it = existing.iterator();
-			ExtensionDefintion ed;
-			while (it.hasNext()) {
-				ed = it.next();
-				try {
-					existingMap.put(ed.getSource().getName(), ed);
-				}
-				catch (ApplicationException e) {
-				}
-			}
-		}
-
 		Log log = cs.getLog("deploy");
 
 		// get the index
@@ -693,22 +705,23 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			// + "]");
 
 			String[] names = lucee.runtime.type.util.ListUtil.listToStringArray(index, ';');
-			String name;
-			Resource temp = null;
+			Resource available = null, temp;
+			Resource availableDir = cs.getExtensionAvailableDir();
 			RHExtension rhe;
-			ExtensionDefintion exist;
-			Iterator<ExtensionDefintion> it;
-
-			for (int i = 0; i < names.length; i++) {
-				name = names[i];
+			RHExtension rhExisting;
+			for (String name: names) {
 				if (StringUtil.isEmpty(name, true)) continue;
 				name = name.trim();
 
-				// does it already exist?
-				if (existingMap.containsKey(name)) {
+				ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
+				rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
+
+				// does it already exist much by name?
+				if (rhExisting != null) {
 					continue;
 				}
-				log.info("extract-extension", "Extract the extension [" + name + "] from the lucee.jar to the local extension folder [" + dir + "]");
+
+				log.info("extract-extension", "Extract the extension [" + name + "] from the lucee.jar to the local extension folder [" + availableDir + "]");
 
 				is = cl.getResourceAsStream("extensions/" + name);
 				if (is == null) is = cl.getResourceAsStream("/extensions/" + name);
@@ -718,54 +731,31 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				}
 
 				try {
+					// copy to temp
 					temp = SystemUtil.getTempDirectory().getRealResource(name);
-					log.info("extract-extension", "Copy extension [" + name + "] to temp directory [" + temp + "]");
+					log.info("extract-extension", "Copy extension [" + name + "] to temp directory [" + temp.getParent() + "]");
 					ResourceUtil.touch(temp);
 					Util.copy(is, temp.getOutputStream(), false, true);
-					rhe = RHExtension.getInstance(cs, temp);
-					rhe.validate(cs);
-					ExtensionDefintion alreadyExists = null;
-					it = existing.iterator();
-					while (it.hasNext()) {
-						exist = it.next();
-						if (exist.equals(rhe)) {
-							alreadyExists = exist;
-							break;
-						}
+					// check by file
+					rhExisting = RHExtension.getInstance(cs, temp, log);
+					if (!rhExisting.installed() && !rhExisting.available(cs)) {
+						rhExisting.makevailable(cs);
 					}
-
-					String trgName = rhe.getId() + "-" + rhe.getVersion() + ".lex";
-					if (alreadyExists == null) {
-						temp.moveTo(dir.getRealResource(trgName));
-						count++;
-						log.debug("extract-extension", "Added [" + name + "] to [" + dir + "]");
-					}
-					else if (!alreadyExists.getSource().getName().equals(trgName)) {
-						log.debug("extract-extension", "Rename [" + alreadyExists.getSource() + "] to [" + trgName + "]");
-						alreadyExists.getSource().moveTo(alreadyExists.getSource().getParentResource().getRealResource(trgName));
-					}
-					else {
-						log.info("extract-extension", "Extension  [" + name + "] already exists in local extension directory");
-					}
-
 					// now we check all extension name (for extension no longer delivered by lucee)
-					it = existing.iterator();
-					while (it.hasNext()) {
-						exist = it.next();
-						trgName = exist.getId() + "-" + exist.getVersion() + ".lex";
-						if (!trgName.equals(exist.getSource().getName())) {
-							exist.getSource().moveTo(exist.getSource().getParentResource().getRealResource(trgName));
-							log.debug("extract-extension", "Rename [" + exist.getSource() + "] to [" + trgName + "]");
+					/*
+					 * it = existing.iterator(); while (it.hasNext()) { exist = it.next(); trgName = exist.getId() + "-"
+					 * + exist.getVersion() + ".lex"; if (!trgName.equals(exist.getSource(cs).getName())) {
+					 * exist.getSource(cs).moveTo(exist.getSource(cs).getParentResource().getRealResource(trgName));
+					 * log.debug("extract-extension", "Rename [" + exist.getSource(cs) + "] to [" + trgName + "]");
+					 * 
+					 * } }
+					 */
 
-						}
-					}
 				}
 				catch (Exception e) {
 					log.error("extract-extension", e);
 				}
-				finally {
-					if (temp != null && temp.exists()) temp.delete();
-				}
+
 			}
 		}
 		catch (Exception e) {
@@ -1776,8 +1766,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				Resource rootdir = config.getRootDirectory();
 				listenerTemplateCFMLWebRoot = rootdir.getRealResource(context + "." + lucee.runtime.config.Constants.getCFMLComponentExtension());
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 
 		// dialect

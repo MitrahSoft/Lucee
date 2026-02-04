@@ -234,11 +234,7 @@ public class ExtensionProvider {
 	}
 
 	public String toArtifact(String uuid) throws PageException {
-		return toArtifact(uuid, true);
-	}
-
-	public String toArtifactSimple(String uuid) {
-		return uuidMapping.get(uuid.toUpperCase().trim());
+		return toArtifact(uuid, false);
 	}
 
 	public String toArtifact(String uuid, boolean investigate) throws PageException {
@@ -603,7 +599,7 @@ public class ExtensionProvider {
 		if (true) return;
 
 		start = System.currentTimeMillis();
-		String art = ep.toArtifact("99A4EF8D-F2FD-40C8-8FB8C2E67A4EEEB6");
+		String art = ep.toArtifact("99A4EF8D-F2FD-40C8-8FB8C2E67A4EEEB6", true);
 		aprint.e("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 		aprint.e("art:" + (System.currentTimeMillis() - start));
 		aprint.e(art);

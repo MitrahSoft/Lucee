@@ -1,6 +1,5 @@
 package lucee.runtime.config;
 
-import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -15,7 +14,7 @@ public class DebugEntryFactory implements PropFactory<DebugEntry> {
 
 	public static DebugEntryFactory getInstance() {
 		if (instance == null) {
-			return instance;
+			instance = new DebugEntryFactory();
 		}
 		return instance;
 	}
@@ -24,7 +23,6 @@ public class DebugEntryFactory implements PropFactory<DebugEntry> {
 	public DebugEntry evaluate(Config config, String name, Object val, DebugEntry defaultValue) {
 
 		Struct data;
-
 		try {
 			data = Caster.toStruct(val, null);
 			if (data == null) return defaultValue;
@@ -32,9 +30,8 @@ public class DebugEntryFactory implements PropFactory<DebugEntry> {
 					ConfigFactoryImpl.getAttr(config, data, "iprange"), ConfigFactoryImpl.getAttr(config, data, "label"), ConfigFactoryImpl.getAttr(config, data, "path"),
 					ConfigFactoryImpl.getAttr(config, data, "fullname"), ConfigUtil.getAsStruct(config, data, true, "custom"));
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			ConfigFactoryImpl.log(config, ex);
 		}
 
 		return defaultValue;

@@ -24,6 +24,8 @@ public final class ExtensionMetadata implements Serializable {
 	private static final String[] EMPTY = new String[0];
 
 	private String id;
+	private String groupId;
+	private String artifactId;
 	private String version;
 	private int releaseType;
 	private String name;
@@ -325,6 +327,22 @@ public final class ExtensionMetadata implements Serializable {
 
 	public String _getVersion() {
 		return version;
+	}
+
+	String getGroupId() {
+		return groupId;
+	}
+
+	public void setGroupId(String groupId) {
+		this.groupId = groupId;
+	}
+
+	String getArtifactId() {
+		return artifactId;
+	}
+
+	public void setArtifactId(String artifactId) {
+		this.artifactId = artifactId;
 	}
 
 	public void setVersion(String version, String label) throws ApplicationException {

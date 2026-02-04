@@ -57,6 +57,7 @@ import lucee.commons.io.SystemUtil;
 import lucee.commons.io.cache.Cache;
 import lucee.commons.io.cache.CachePro;
 import lucee.commons.io.compress.CompressUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogEngine;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.log.LoggerAndSourceData;
@@ -1933,9 +1934,16 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveExtension() throws PageException {
-		admin.removeExtension(getString("admin", action, "provider"), getString("admin", action, "id"));
+
+		// TODO make it indentpend of the ID
+		String id = getString("admin", "removeRHExtensions", "id");
+		if (!Decision.isUUId(id)) throw new ApplicationException("Invalid id [" + id + "], id must be a UUID");
+		ExtensionDefintion ed = new ExtensionDefintion(id);
+
+		admin.removeRHExtension(ed, config.getLog("deploy"));
 		store();
-		// adminSync.broadcast(attributes, config);
+		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
+
 	}
 
 	/**
@@ -2548,7 +2556,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				ext = it.next();
 				if (id.equalsIgnoreCase(ext.getId())) {
 					try {
-						pageContext.setVariable(getString("admin", action, "returnVariable"), IOUtil.toBytes(ext.getSource()));
+						pageContext.setVariable(getString("admin", action, "returnVariable"), IOUtil.toBytes(ext.getSource(config)));
 						return;
 					}
 					catch (IOException e) {
@@ -3187,7 +3195,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetSuppressWSBeforeArg().resetDotNotationUpperCase().resetFullNullSupport().resetPreciseMath().resetExternalizeStringGTE()
-				.resetHandleUnQuotedAttrValueAsString();
+				.resetHandleUnQuotedAttrValueAsString().resetTemplateCharsetX();
+
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -4246,7 +4255,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetAllowImplicidQueryCall().resetMergeFormAndURL().resetClientStorage()
 				.resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType().resetSessionManagement().resetClientManagement()
-				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct();// MUST
+				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct().resetScopeCascadingType();// MUST
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -4406,13 +4415,13 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				}
 			}
 		}
-
+		Log log = config.getLog("deploy");
 		// path
 		if (obj instanceof String) {
 			Resource src = ResourceUtil.toResourceExisting(config, (String) obj);
 			ResetFilter filter = new ResetFilter();
 			try {
-				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, src), filter, true, true, RHExtension.ACTION_COPY);
+				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, src, log), filter, true, true, RHExtension.ACTION_COPY, log);
 			}
 			finally {
 				filter.resetThrowPageException(config);
@@ -4423,7 +4432,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			try {
 				Resource tmp = SystemUtil.getTempFile("lex", true);
 				IOUtil.copy(new ByteArrayInputStream(Caster.toBinary(obj)), tmp, true);
-				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, tmp), filter, true, true, RHExtension.ACTION_COPY);
+				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, tmp, log), filter, true, true, RHExtension.ACTION_COPY, log);
 			}
 			catch (IOException ioe) {
 				throw Caster.toPageException(ioe);
@@ -4436,14 +4445,12 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveRHExtension() throws PageException {
+		// TODO make it indentpend of the ID
 		String id = getString("admin", "removeRHExtensions", "id");
 		if (!Decision.isUUId(id)) throw new ApplicationException("Invalid id [" + id + "], id must be a UUID");
-		try {
-			admin.removeRHExtension(id);
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
+		ExtensionDefintion ed = new ExtensionDefintion(id);
+
+		admin.removeRHExtension(ed, config.getLog("deploy"));
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
 	}
@@ -4643,7 +4650,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		admin.updateComponentDefaultImport(getString("admin", action, "componentDefaultImport"));
 		admin.updateComponentLocalSearch(getBoolObject("admin", action, "componentLocalSearch"));
 		admin.updateComponentPathCache(getBoolObject("admin", action, "componentPathCache"));
-		admin.updateReturnFormat(getString("admin", action, "returnFormat"));
+
+		String returnFormat = getString("returnFormat", null);
+		if (!StringUtil.isEmpty(returnFormat, true)) {
+			admin.updateReturnFormat(returnFormat);
+		}
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetReturnFormat().resetComponentDefaultImport().resetComponentDeepSearch().resetComponentDumpTemplate()
 				.resetComponentDataMemberDefaultAccess().resetTriggerComponentDataMember().resetComponentLocalSearch().resetComponentPathCache().resetComponentShadow(); // MUST
@@ -5354,6 +5365,15 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	private void store() throws PageException {
 		try {
 			admin.storeAndReload();
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
+	}
+
+	private void storeAndReload(boolean store, boolean reload) throws PageException {
+		try {
+			admin.storeAndReload(true, store, reload, false);
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);

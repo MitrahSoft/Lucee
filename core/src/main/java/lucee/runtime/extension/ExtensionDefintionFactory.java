@@ -2,7 +2,6 @@ package lucee.runtime.extension;
 
 import java.util.Map;
 
-import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.Prop;
@@ -31,22 +30,18 @@ public class ExtensionDefintionFactory implements PropFactory<ExtensionDefintion
 
 		try {
 			Struct childSct = Caster.toStruct(val, null);
-			if (childSct == null) return defaultValue;
-
-			try {
-				Map<String, String> child = Caster.toStringMap(childSct, null);
-				if (child == null) return defaultValue;
-				String id = ConfigFactoryImpl.getAttr(config, childSct, KeyConstants._id);
-				return RHExtension.toExtensionDefinition(config, id, child);
-			}
-			catch (Exception e) {
-				ConfigFactoryImpl.log(config, e);
+			if (childSct == null) {
 				return defaultValue;
 			}
+			Map<String, String> child = Caster.toStringMap(childSct, null);
+			if (child == null) {
+				return defaultValue;
+			}
+			return RHExtension.toExtensionDefinition(config, child);
+
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			ConfigFactoryImpl.log(config, ex);
 		}
 		return defaultValue;
 	}

@@ -104,7 +104,7 @@ public final class DeployHandler {
 							// Lucee Extensions
 							else if ("lex".equalsIgnoreCase(ext)) {
 								ResetFilter filter = new ResetFilter();
-								ConfigAdmin._updateRHExtension((ConfigPro) config, RHExtension.getInstance(config, child), filter, true, force, RHExtension.ACTION_MOVE);
+								ConfigAdmin._updateRHExtension((ConfigPro) config, RHExtension.getInstance(config, child, log), filter, true, force, RHExtension.ACTION_MOVE, log);
 								filter.reset(config);
 							}
 
@@ -240,6 +240,7 @@ public final class DeployHandler {
 			}
 			finally {
 				try {
+					ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
 					filter.add("resetExtensionDefinitions", "resetRHExtensions");
 					filter.reset(config);
 				}
@@ -322,7 +323,7 @@ public final class DeployHandler {
 				return rhe;
 			}
 		}
-		return ConfigAdmin._updateRHExtension((ConfigPro) config, rhe, filter, reload, force, RHExtension.ACTION_COPY);
+		return ConfigAdmin._updateRHExtension((ConfigPro) config, rhe, filter, reload, force, RHExtension.ACTION_COPY, log);
 	}
 
 	private static Version getLatestVersionFor(Config config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
@@ -427,7 +428,7 @@ public final class DeployHandler {
 		return null;
 	}
 
-	private static Resource downloadExtensionFromMaven(Config config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
+	public static Resource downloadExtensionFromMaven(Config config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
 			// get extension from Maven
 			ExtensionProvider ep = new ExtensionProvider();
@@ -543,60 +544,24 @@ public final class DeployHandler {
 		qs.append(qs.length() == 0 ? "?" : "&").append(name).append("=").append(value);
 	}
 
-	public static Resource getExtension(Config config, ExtensionDefintion ed, Log log) {
-		// local
-		ExtensionDefintion ext = getLocalExtension(config, ed, null);
-		if (ext != null) {
-			try {
-				Resource src = ext.getSource();
-				if (src.exists()) {
-					Resource res = SystemUtil.getTempDirectory().getRealResource(ed.getId() + "-" + ed.getVersion() + ".lex");
-					ResourceUtil.touch(res);
-					IOUtil.copy(ext.getSource(), res);
-					return res;
-				}
-			}
-			catch (Exception e) {}
-		}
-		// remote
-		try {
-			return downloadExtension(config, ed, log, false);
-		}
-		catch (ApplicationException e) {
-			return null;
-		}
-	}
-
-	public static ExtensionDefintion getLocalExtension(Config config, ExtensionDefintion ed, ExtensionDefintion defaultValue) {
-		Iterator<ExtensionDefintion> it = getLocalExtensions(config, false).iterator();
-		ExtensionDefintion ext;
-		while (it.hasNext()) {
-			ext = it.next();
-			if (ed.equals(ext)) {
-				return ext;
-			}
-		}
-		return defaultValue;
-	}
-
 	public static List<ExtensionDefintion> getLocalExtensions(Config config, boolean validate) {
 		return ((ConfigPro) config).loadLocalExtensions(validate);
 	}
 
-	public static RHExtension deployExtension(ConfigPro config, Resource ext, boolean reload, boolean force, short action) throws PageException {
+	public static RHExtension deployExtension(ConfigPro config, Resource ext, boolean reload, boolean force, short action, Log log) throws PageException {
 		ResetFilter filter = new ResetFilter();
 		try {
-			return ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, ext), filter, reload, force, action);
+			return ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, ext, config.getLog("deploy")), filter, reload, force, action, log);
 		}
 		finally {
 			filter.resetThrowPageException(config);
 		}
 	}
 
-	public static void deployExtension(ConfigPro config, RHExtension rhext, boolean reload, boolean force) throws PageException {
+	public static void deployExtension(ConfigPro config, RHExtension rhext, boolean reload, boolean force, Log log) throws PageException {
 		ResetFilter filter = new ResetFilter();
 		try {
-			ConfigAdmin._updateRHExtension(config, rhext, filter, reload, force, RHExtension.ACTION_COPY);
+			ConfigAdmin._updateRHExtension(config, rhext, filter, reload, force, RHExtension.ACTION_COPY, log);
 		}
 		finally {
 			filter.resetThrowPageException(config);
