@@ -18,6 +18,10 @@
  **/
 package lucee.runtime.exp;
 
+import java.util.Map;
+
+import org.apache.commons.collections4.map.LRUMap;
+
 import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.Constants;
@@ -37,6 +41,8 @@ public class NativeException extends PageExceptionImpl {
 
 	private Throwable t;
 
+	private static final Map<Throwable, NativeException> instances = new LRUMap<Throwable, NativeException>(1000);
+
 	/**
 	 * Standart constructor for native Exception class
 	 * 
@@ -45,26 +51,21 @@ public class NativeException extends PageExceptionImpl {
 	protected NativeException(Throwable t) {
 		super(t, t.getClass().getName());
 		this.t = t;
-		// set stacktrace
-
-		/*
-		 * StackTraceElement[] st = getRootCause(t).getStackTrace();
-		 * if(hasLuceeRuntime(st))setStackTrace(st); else { StackTraceElement[] cst = new
-		 * Exception().getStackTrace(); if(hasLuceeRuntime(cst)){ StackTraceElement[] mst=new
-		 * StackTraceElement[st.length+cst.length-1]; System.arraycopy(st, 0, mst, 0, st.length);
-		 * System.arraycopy(cst, 1, mst, st.length, cst.length-1);
-		 * 
-		 * setStackTrace(mst); } else setStackTrace(st); }
-		 */
 	}
 
-	public static NativeException newInstance(Throwable t) {
-		return newInstance(t, true);
+	public static NativeException getInstance(Throwable t) {
+		return getInstance(t, true);
 	}
 
-	public static NativeException newInstance(Throwable t, boolean rethrowIfNecessary) {
+	public static NativeException getInstance(Throwable t, boolean rethrowIfNecessary) {
 		if (rethrowIfNecessary) ExceptionUtil.rethrowIfNecessary(t);
-		return new NativeException(t);
+
+		NativeException instance = instances.get(t);
+		if (instance == null) {
+			instances.put(t, instance = new NativeException(t));
+
+		}
+		return instance;
 	}
 
 	@Override

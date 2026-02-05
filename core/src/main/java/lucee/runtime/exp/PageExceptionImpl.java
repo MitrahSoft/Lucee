@@ -87,6 +87,8 @@ public abstract class PageExceptionImpl extends PageException {
 	private String varName;
 	private boolean exposeMessage;
 
+	protected CatchBlockImpl catchBlock;
+
 	/**
 	 * Class Constructor
 	 * 
@@ -217,7 +219,10 @@ public abstract class PageExceptionImpl extends PageException {
 
 	@Override
 	public CatchBlock getCatchBlock(Config config) {
-		return new CatchBlockImpl(this, 0);
+		if (catchBlock == null) {
+			catchBlock = new CatchBlockImpl(this, 0);
+		}
+		return catchBlock;
 	}
 
 	public Array getTagContext(Config config) {
@@ -309,8 +314,7 @@ public abstract class PageExceptionImpl extends PageException {
 					}
 				}
 			}
-			catch (Throwable th) {
-			}
+			catch (Throwable th) {}
 
 			// check last
 			if (tagContext.size() > 0) {
@@ -318,8 +322,7 @@ public abstract class PageExceptionImpl extends PageException {
 					Struct last = (Struct) tagContext.getE(tagContext.size());
 					if (last.get(KeyConstants._Raw_Trace).equals(trace.toString())) continue;
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 
 			item = new StructImpl();
@@ -401,8 +404,7 @@ public abstract class PageExceptionImpl extends PageException {
 		try {
 			ro.clearBuffer();
 		}
-		catch (IOException ioe) {
-		}
+		catch (IOException ioe) {}
 		if (gc == null) return "";
 		return gc;
 	}
@@ -529,8 +531,7 @@ public abstract class PageExceptionImpl extends PageException {
 				htmlBox.appendRow(1, new SimpleDumpData("Code"), code);
 
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 
 		// Java Stacktrace

@@ -47,9 +47,11 @@ public class FTPException extends ApplicationException {
 
 	@Override
 	public CatchBlock getCatchBlock(Config config) {
-		CatchBlock cb = super.getCatchBlock(config);
-		cb.setEL("Cause", msg);
-		cb.setEL("Code", Caster.toDouble(code));
-		return cb;
+		if (catchBlock == null) {
+			CatchBlock cb = super.getCatchBlock(config);
+			cb.setEL("Cause", msg);
+			cb.setEL("Code", Caster.toDouble(code));
+		}
+		return catchBlock;
 	}
 }
