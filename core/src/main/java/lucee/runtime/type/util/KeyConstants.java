@@ -3121,6 +3121,8 @@ public final class KeyConstants {
 	public static final Key __tick = init("_tick");
 	public static final Key __start = init("_start");
 	public static final Key _binary = init("binary");
+	public static final Key _Code = init("Code");
+	public static final Key _statusText = init("statusText");
 
 	public static Map<String, Key> getKeys() {
 		return keys;
