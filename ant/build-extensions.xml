@@ -245,7 +245,7 @@
 	</target>
 	<target name="check-esapi" depends="check-cache" unless="esapi.present">
 		<get 
-			src="${extURLCDN}${extEsapiExtensionGroupPath}/${extEsapiExtensionArtifact}/${extEsapiExtensionVersion}/${extEsapiExtensionArtifact}-${extEsapiExtensionVersion}.lex" 
+			src="${extURLMaven}${extEsapiExtensionGroupPath}/${extEsapiExtensionArtifact}/${extEsapiExtensionVersion}/${extEsapiExtensionArtifact}-${extEsapiExtensionVersion}.lex" 
 			dest="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex"/>
 	</target>
 	<target name="check-scheduler" depends="check-cache" unless="scheduler.present">
