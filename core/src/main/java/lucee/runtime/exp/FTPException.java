@@ -23,6 +23,7 @@ import org.apache.commons.net.ftp.FTPClient;
 import lucee.runtime.config.Config;
 import lucee.runtime.net.ftp.AFTPClient;
 import lucee.runtime.op.Caster;
+import lucee.runtime.type.util.KeyConstants;
 
 public final class FTPException extends ApplicationException {
 
@@ -47,9 +48,11 @@ public final class FTPException extends ApplicationException {
 
 	@Override
 	public CatchBlock getCatchBlock(Config config) {
-		CatchBlock cb = super.getCatchBlock(config);
-		cb.setEL("Cause", msg);
-		cb.setEL("Code", Caster.toDouble(code));
-		return cb;
+		if (catchBlock == null) {
+			CatchBlock cb = super.getCatchBlock(config);
+			cb.setEL(KeyConstants._Cause, msg);
+			cb.setEL(KeyConstants._Code, Caster.toDouble(code));
+		}
+		return catchBlock;
 	}
 }
