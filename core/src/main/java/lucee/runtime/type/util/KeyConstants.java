@@ -2660,6 +2660,7 @@ public final class KeyConstants {
 	public static final Key _GENERATED_KEYS = init("GENERATED_KEYS");
 	public static final Key _GENERATEDKEYS = init("GENERATEDKEYS");
 	public static final Key _statusCode = init("statusCode");
+	public static final Key _statusText = init("statusText");
 	public static final Key _contentType = init("contentType");
 	public static final Key _starttime = init("starttime");
 	public static final Key _securityKey = init("securityKey");

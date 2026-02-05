@@ -225,7 +225,7 @@
 	</target>
 	<target name="check-pdf" depends="check-cache" unless="pdf.present">
 		<get 
-			src="${extURLMaven}${extPdfExtensionGroupPath}/${extPdfExtensionArtifact}/${extPdfExtensionVersion}/${extPdfExtensionArtifact}-${extPdfExtensionVersion}.lex" 
+			src="${extURLCDN}${extPdfExtensionGroupPath}/${extPdfExtensionArtifact}/${extPdfExtensionVersion}/${extPdfExtensionArtifact}-${extPdfExtensionVersion}.lex" 
 			dest="${cache}/${extPdfExtension}-${extPdfExtensionVersion}.lex"/>
 	</target>
 	<target name="check-admin" depends="check-cache" unless="admin.present">
@@ -245,7 +245,7 @@
 	</target>
 	<target name="check-esapi" depends="check-cache" unless="esapi.present">
 		<get 
-			src="${extURLMaven}${extEsapiExtensionGroupPath}/${extEsapiExtensionArtifact}/${extEsapiExtensionVersion}/${extEsapiExtensionArtifact}-${extEsapiExtensionVersion}.lex" 
+			src="${extURLCDN}${extEsapiExtensionGroupPath}/${extEsapiExtensionArtifact}/${extEsapiExtensionVersion}/${extEsapiExtensionArtifact}-${extEsapiExtensionVersion}.lex" 
 			dest="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex"/>
 	</target>
 	<target name="check-scheduler" depends="check-cache" unless="scheduler.present">
