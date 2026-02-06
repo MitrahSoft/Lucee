@@ -32,6 +32,7 @@ import lucee.runtime.Component;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
 import lucee.runtime.PageSource;
+import lucee.runtime.cache.CacheObject;
 import lucee.runtime.cache.tag.CacheHandler;
 import lucee.runtime.cache.tag.CacheHandlerCollectionImpl;
 import lucee.runtime.cache.tag.CacheHandlerPro;
@@ -63,7 +64,7 @@ import lucee.runtime.writer.BodyContentUtil;
 /**
  * defines an abstract class for a User defined Functions
  */
-public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
+public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, CacheObject {
 
 	private static final long serialVersionUID = -7288148349256615519L; // do not change
 
@@ -623,6 +624,23 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
 	@Override
 	public PageSource getPageSource() {
 		return this.properties.getPageSource();
+	}
+
+	@Override
+	public String getCacheId(Collection arguments, String defaultValue) {
+		if (arguments instanceof Struct) {
+			return CacheHandlerCollectionImpl.createId(this, null, (Struct) arguments);
+		}
+		if (Decision.isCastableToArray(arguments)) {
+			Object[] arr = Caster.toNativeArray(arguments, null);
+			if (arr != null) return CacheHandlerCollectionImpl.createId(this, arr, null);
+		}
+		return defaultValue;
+	}
+
+	@Override
+	public int getCachetype() {
+		return Config.CACHE_TYPE_FUNCTION;
 	}
 
 }

@@ -67,6 +67,7 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.runtime.PageContext;
+import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.NullSupportHelper;
 import lucee.runtime.converter.ScriptConverter;
@@ -139,6 +140,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 	private int columncount;
 	private long exeTime = 0;
 	private String cacheType = null;
+	private String cacheId = null;
 	private String name;
 	private int updateCount;
 	private QueryImpl generatedKeys;
@@ -420,9 +422,9 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 					if (fillResult(qry, qr, keyName, dc, stat.getResultSet(), maxrow, true, createGeneratedKeys, tz)) {
 						/*
-						 * When using the MSSQL driver, we need to iterate through ALL results because:
-						 * 1. Deferred exceptions (like RAISERROR) only surface when calling getMoreResults()
-						 * 2. There may be additional result sets that need processing
+						 * When using the MSSQL driver, we need to iterate through ALL results because: 1. Deferred
+						 * exceptions (like RAISERROR) only surface when calling getMoreResults() 2. There may be additional
+						 * result sets that need processing
 						 *
 						 * We only capture the first result set but must consume all results to detect errors.
 						 */
@@ -1764,6 +1766,17 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 	}
 
 	@Override
+	public void setCacheId(String cacheId) {
+		this.cacheId = cacheId;
+	}
+
+	@Override
+	public String getCacheId(Collection arguments, String defaultValue) {
+		// for query we need no arguments for the cache
+		return cacheId;
+	}
+
+	@Override
 	public void setCached(boolean isCached) {
 		throw new RuntimeException("method no longer supported");
 	}
@@ -1907,7 +1920,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public String castToString() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to String", "Use Built-In-Function \"serialize(Query):String\" to create a String from Query");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to String", "Use Built-In-Function \"serialize(Query):String\" to create a String from Query");
 	}
 
 	@Override
@@ -1917,7 +1930,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public boolean castToBooleanValue() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to a boolean value");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to a boolean value");
 	}
 
 	@Override
@@ -1927,7 +1940,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public double castToDoubleValue() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to a number value");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to a number value");
 	}
 
 	@Override
@@ -1937,7 +1950,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public DateTime castToDateTime() throws ExpressionException {
-		throw new ExpressionException("Can't cast Complex Object Type Query to a Date");
+		throw new ExpressionException("Can't cast Complex Object Type [Query] to a Date");
 	}
 
 	@Override
@@ -3042,6 +3055,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 			this.exeTime = other.exeTime;
 			this.generatedKeys = other.generatedKeys;
 			this.cacheType = other.cacheType;
+			this.cacheId = other.cacheId;
 			this.name = other.name;
 			this.recordcount = other.recordcount;
 			this.sql = other.sql;
@@ -3364,6 +3378,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 			newResult.recordcount = new AtomicInteger(((QueryImpl) qry).recordcount.intValue());
 			newResult.columncount = newResult.columnNames.length;
 			newResult.cacheType = qry.getCacheType();
+			if (qry instanceof QueryResult) newResult.cacheId = ((QueryResult) qry).getCacheId(null, null);
 			newResult.name = qry.getName();
 			newResult.exeTime = qry.getExecutionTime();
 			newResult.updateCount = qry.getUpdateCount();
@@ -3392,5 +3407,10 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 			this.indexes = null;
 			this.indexName = null;
 		}
+	}
+
+	@Override
+	public int getCachetype() {
+		return Config.CACHE_TYPE_QUERY;
 	}
 }

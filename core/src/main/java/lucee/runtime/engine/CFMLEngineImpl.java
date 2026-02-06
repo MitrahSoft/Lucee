@@ -189,6 +189,14 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
 
+	public static final int MAVEN_DOWNLOAD_POLICY_STARTUP;
+	public static final int MAVEN_DOWNLOAD_POLICY_RUNTIME;
+	public static final int MAVEN_DOWNLOAD_POLICY_LOG_LEVEL;
+
+	public static final int MAVEN_DOWNLOAD_POLICY_ERROR = 2;
+	public static final int MAVEN_DOWNLOAD_POLICY_WARN = 1;
+	public static final int MAVEN_DOWNLOAD_POLICY_IGNORE = 0;
+
 	static {
 		System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
 		System.setProperty("javax.xml.bind.context.factory", "com.sun.xml.bind.v2.ContextFactory");
@@ -222,6 +230,30 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 		// Disable reverse DNS lookups
 		System.setProperty("sun.net.useExclusiveBind", "false");
+
+		String tmp = Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.startup", null), null);
+		if ("error".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_STARTUP = MAVEN_DOWNLOAD_POLICY_ERROR;
+		}
+		else if ("warn".equals(tmp) || "warning".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_STARTUP = MAVEN_DOWNLOAD_POLICY_WARN;
+		}
+		else {
+			MAVEN_DOWNLOAD_POLICY_STARTUP = MAVEN_DOWNLOAD_POLICY_IGNORE;
+		}
+
+		tmp = Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.runtime", null), null);
+		if ("error".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_RUNTIME = MAVEN_DOWNLOAD_POLICY_ERROR;
+		}
+		else if ("warn".equals(tmp) || "warning".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_RUNTIME = MAVEN_DOWNLOAD_POLICY_WARN;
+		}
+		else {
+			MAVEN_DOWNLOAD_POLICY_RUNTIME = MAVEN_DOWNLOAD_POLICY_IGNORE;
+		}
+
+		MAVEN_DOWNLOAD_POLICY_LOG_LEVEL = LogUtil.toLevel(Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.log.level", null), null), Log.LEVEL_ERROR);
 	}
 
 	public static final PrintStream CONSOLE_ERR = System.err;
@@ -274,16 +306,14 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				FunctionLibFactory.loadFromSystem(null);
 			}
-			catch (FunctionLibException e) {
-			}
+			catch (FunctionLibException e) {}
 		}, true).start();
 
 		ThreadUtil.getThread(() -> {
 			try {
 				TagLibFactory.loadFromSystem(null);
 			}
-			catch (TagLibException e) {
-			}
+			catch (TagLibException e) {}
 		}, true).start();
 
 		// Force localhost resolution early
@@ -291,8 +321,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				Log4j2Engine.prepare();
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}, true).start();
 
 		/*
@@ -528,8 +557,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				log = cs.getLog("deploy", true);
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 
 		touchMonitor(cs);
@@ -555,6 +583,18 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			LogUtil.log(cs, Log.LEVEL_INFO, "startup", "Start CFML Controller");
 			controler.start();
 		}
+
+	}
+
+	public static int getActiveDownloadPolicy() {
+		try {
+			CFMLEngine eng = CFMLEngineFactory.getInstance();
+			if (eng != null && eng.uptime() > 0) return MAVEN_DOWNLOAD_POLICY_RUNTIME;
+		}
+		catch (Exception e) {
+			// engine not registered yet = still starting up
+		}
+		return MAVEN_DOWNLOAD_POLICY_STARTUP;
 	}
 
 	private static void checkInvalidExtensions(CFMLEngineImpl eng, ConfigPro config, Set<ExtensionDefintion> extensionsToInstall, Set<String> extensionsToRemove) {
@@ -668,8 +708,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				try {
 					existingMap.put(ed.getSource().getName(), ed);
 				}
-				catch (ApplicationException e) {
-				}
+				catch (ApplicationException e) {}
 			}
 		}
 
@@ -1776,8 +1815,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				Resource rootdir = config.getRootDirectory();
 				listenerTemplateCFMLWebRoot = rootdir.getRealResource(context + "." + lucee.runtime.config.Constants.getCFMLComponentExtension());
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 
 		// dialect

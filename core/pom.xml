@@ -159,7 +159,6 @@
       <artifactId>commons-lang3</artifactId>
       <version>3.12.0</version>
     </dependency>
-    <!-- needed for esapi ext -->
     <dependency>
       <groupId>commons-lang</groupId>
       <artifactId>commons-lang</artifactId>
@@ -351,12 +350,6 @@
       <groupId>w3c</groupId>
       <artifactId>dom</artifactId>
       <version>1.1.0</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.java.dev.jna</groupId>
-      <artifactId>jna</artifactId>
-      <version>5.13.0</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

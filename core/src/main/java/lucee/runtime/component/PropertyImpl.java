@@ -72,6 +72,7 @@ public final class PropertyImpl extends MemberSupport implements Property, ASMPr
 
 	@Override
 	public String getDefault() {
+		if (_default == null) return null;
 		try {
 			return Caster.toString(_default);
 		}

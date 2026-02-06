@@ -1,6 +1,23 @@
 component extends="AI" {
 	variables.fields = [
-		group("Security", "Provide access credentials to connect to Gemini. This is required to authenticate your requests.")
+
+		group("Endpoint", "Define a predefined or custom endpoint for your OpenAI connection.")
+		/*,field(displayName = "URL",
+			name = "url",
+			defaultValue = "",
+			required = false,
+			description = "Custom URL/Endpoint for the Gemini REST API, including host, port, and script path, such as [https://generativelanguage.googleapis.com/v1/].",
+			type = "text"
+		)*/
+		,field(displayName = "Enable Beta Access",
+            name = "beta",
+            defaultValue = "true",
+            required = false,
+            description = "Unlock access to the latest pre-release models and emerging capabilities. 
+			Enable this option if you intend to use features that are currently in the preview phase. Ignored with custom URL.",
+            type = "checkbox"
+        )
+		,group("Security", "Provide access credentials to connect to Gemini. This is required to authenticate your requests.")
 		,field(displayName = "API Key",
 			name = "apikey",
 			defaultValue = "",

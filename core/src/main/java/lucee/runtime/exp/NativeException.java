@@ -18,6 +18,10 @@
  **/
 package lucee.runtime.exp;
 
+import java.util.Map;
+
+import org.apache.commons.collections4.map.LRUMap;
+
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContext;
@@ -37,6 +41,7 @@ public class NativeException extends PageExceptionImpl {
 	private static final long serialVersionUID = 6221156691846424801L;
 
 	private Throwable t;
+	private static final Map<Throwable, NativeException> instances = new LRUMap<Throwable, NativeException>(1000);
 
 	/**
 	 * Standart constructor for native Exception class
@@ -59,13 +64,19 @@ public class NativeException extends PageExceptionImpl {
 		 */
 	}
 
-	public static NativeException newInstance(Throwable t) {
-		return newInstance(t, true);
+	public static NativeException getInstance(Throwable t) {
+		return getInstance(t, true);
 	}
 
-	public static NativeException newInstance(Throwable t, boolean rethrowIfNecessary) {
+	public static NativeException getInstance(Throwable t, boolean rethrowIfNecessary) {
 		if (rethrowIfNecessary) ExceptionUtil.rethrowIfNecessary(t);
-		return new NativeException(wrapIfNeeded(t));
+
+		NativeException instance = instances.get(t);
+		if (instance == null) {
+			instances.put(t, instance = new NativeException(wrapIfNeeded(t)));
+
+		}
+		return instance;
 	}
 
 	private static Throwable wrapIfNeeded(Throwable t) {

@@ -206,8 +206,7 @@ public final class PageSourceImpl implements PageSource {
 				try {
 					page = loadPhysical(pc, page);
 				}
-				catch (TemplateException e) {
-				}
+				catch (TemplateException e) {}
 			}
 			if (page != null) return page;
 		}
@@ -298,8 +297,7 @@ public final class PageSourceImpl implements PageSource {
 							try {
 								same = page.getHash() == PageSourceCode.toString(this, config.getTemplateCharset()).hashCode();
 							}
-							catch (IOException e) {
-							}
+							catch (IOException e) {}
 
 						}
 						if (!same) {
@@ -323,7 +321,7 @@ public final class PageSourceImpl implements PageSource {
 			// synchronized (SystemUtil.createToken("PageSource", getRealpathWithVirtual())) {
 			// new class
 			if (flush || !classFile.exists()) {
-				LogUtil.log(config, Log.LEVEL_DEBUG, "compile", "compile [" + getDisplayPath() + "] no previous class file or flush");
+				LogUtil.log(config, Log.LEVEL_TRACE, "compile", "compile [" + getDisplayPath() + "] no previous class file or flush");
 
 				pcn.set(page = compile(config, classRootDir, null, false, pci != null && pci.ignoreScopes()));
 				flush = false;
@@ -391,7 +389,7 @@ public final class PageSourceImpl implements PageSource {
 			if (srcLastModified == 0 || srcLastModified != page.getSourceLastModified()) {
 				synchronized (this) {
 					if (srcLastModified == 0 || srcLastModified != page.getSourceLastModified()) {
-						if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "release [" + getDisplayPath() + "] from page source pool");
+						if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "release [" + getDisplayPath() + "] from page source pool");
 						resetLoaded();
 						flush();
 						return true;
@@ -403,7 +401,7 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public void flush() {
-		if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "flush [" + getDisplayPath() + "]");
+		if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "flush [" + getDisplayPath() + "]");
 		pcn.page = null;
 		flush = true;
 	}
@@ -895,25 +893,46 @@ public final class PageSourceImpl implements PageSource {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (obj instanceof PageSourceImpl) return _getClassName().equals(((PageSourceImpl) obj)._getClassName());
-		if (obj instanceof PageSource) return _getClassName().equals(ClassUtil.extractName(((PageSource) obj).getClassName()));
-		return false;
 
+		if (this == obj) return true;
+		if (!(obj instanceof PageSource)) return false;
+
+		/*
+		 * if (LogUtil.does(getMapping().getConfig().getLog("application"), Log.LEVEL_DEBUG)) { PageSource
+		 * ps = ((PageSource) obj); LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" +
+		 * getDisplayPath() + "]\n"
+		 * 
+		 * + "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" +
+		 * ps.getClassName() + "- mapping-virtual(" + (getMapping() == ps.getMapping()) + "): " +
+		 * getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
+		 * 
+		 * ); }
+		 */
+
+		return getDisplayPath().equals(((PageSource) obj).getDisplayPath());
 	}
 
 	/**
 	 * is given object equal to this
-	 * 
+	 *
 	 * @param ps
 	 * @return is same
 	 */
 	public boolean equals(PageSource ps) {
 		if (this == ps) return true;
+		if (ps == null) return false;
 
-		if (ps instanceof PageSourceImpl) return _getClassName().equals(((PageSourceImpl) ps)._getClassName());
-		return _getClassName().equals(ClassUtil.extractName(ps.getClassName()));
-
+		/*
+		 * if (LogUtil.does(getMapping().getConfig().getLog("application"), Log.LEVEL_DEBUG)) {
+		 * LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" + getDisplayPath() + "]\n"
+		 * 
+		 * + "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" +
+		 * ps.getClassName() + "- mapping-virtual(" + (getMapping() == ps.getMapping()) + "): " +
+		 * getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
+		 * 
+		 * ); }
+		 */
+		return getDisplayPath().equals(ps.getDisplayPath());
 	}
 
 	@Override
@@ -1037,11 +1056,13 @@ public final class PageSourceImpl implements PageSource {
 	 * 
 	 * @param cl
 	 */
-	public void clear(ClassLoader cl) {
+	public boolean clear(ClassLoader cl) {
 		Page page = pcn.page;
 		if (page != null && page.getClass().getClassLoader().equals(cl)) {
 			pcn.page = null;
+			return true;
 		}
+		return false;
 	}
 
 	public boolean isLoad() {
@@ -1126,13 +1147,13 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public void resetLoaded() {
-		if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "reset loaded [" + getDisplayPath() + "]");
+		if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "reset loaded [" + getDisplayPath() + "]");
 		Page p = pcn.page;
 		if (p != null) p.setLoadType((byte) 0);
 	}
 
 	@Override
 	public final int hashCode() {
-		return getDisplayPath().hashCode();
+		return getMapping().getVirtual().hashCode() + getClassName().hashCode();
 	}
 }

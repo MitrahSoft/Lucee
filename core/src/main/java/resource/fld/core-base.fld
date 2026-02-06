@@ -10240,7 +10240,7 @@ mavenLoad([
 	<!-- CreateAISession -->
 	<function>
 		<name>CreateAISession</name>
-		<alias>LuceeCreateAISession</alias>
+		<alias>LuceeCreateAISession,aiCreateSession</alias>
 		<class>lucee.runtime.functions.ai.CreateAISession</class>
 		<description>Creates a new AI session for interaction with Large Language Models (LLMs). 
 		The session maintains conversation history and context between interactions. 
@@ -10327,7 +10327,7 @@ For exception analysis and debugging, lower temperatures (0.2-0.3) are recommend
 	<!-- InquiryAISession -->
 	<function>
 		<name>InquiryAISession</name>
-		<alias>LuceeInquiryAISession</alias>
+		<alias>LuceeInquiryAISession,aiInquirySession</alias>
 		<class>lucee.runtime.functions.ai.InquiryAISession</class>
 		<description>Sends a question/message to an AI session and returns the response. The function maintains conversation context from previous interactions within the same session.
 	
@@ -15799,6 +15799,7 @@ For optimal results, ensure the input string contains valid URL encoding.
 	<function>
 		<name>val</name>
 		<class>lucee.runtime.functions.string.ValNumber</class>
+		<member-name>val</member-name>
 		<description>Converts numeric characters that occur at the beginning of a
         string to a number. If conversion fails, returns zero.</description>
 		<argument>
@@ -19322,6 +19323,62 @@ The following things are considered to be empty:
 		</argument>
 		<return>
 			<type>number</type>
+		</return>
+	</function>
+	<!-- CachedWithinFlush -->
+	<function>
+		<name>CachedWithinFlush</name>
+		<class>lucee.runtime.functions.cache.CachedWithinFlush</class>
+		<status>hidden</status>
+		<description>Flushes a specific cached entry from the cache. Works with cached queries, functions, and HTTP results. 
+		This allows selective cache invalidation instead of clearing entire caches, enabling fine-grained cache control when underlying data changes.</description>
+		<argument>
+			<name>cacheObject</name>
+			<type>any</type>
+			<required>yes</required>
+			<description>The cached object to flush from cache. Must be a valid cache object such as a query result, function reference, or HTTP result struct that was cached using the `cachedwithin` attribute.</description>
+		</argument>
+		<argument>
+			<name>arguments</name>
+			<type>any</type>
+			<required>no</required>
+			<description>The arguments used when the cache entry was created. 
+			Required for cached functions to identify the specific cache entry, as each unique set of arguments creates a separate cache entry. 
+			Can be provided as an array `[arg1, arg2]` for positional arguments or as a struct `{key: value}` for named arguments. 
+			Not required for queries or HTTP results.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+	
+		
+	<!-- CachedWithinId -->
+	<function>
+		<name>CachedWithinId</name>
+		<class>lucee.runtime.functions.cache.CachedWithinId</class>
+		<status>hidden</status>
+		<description>Returns the cache identifier (cache key) for a cached object. 
+		This ID can be used with `cacheRemove()` to manually flush the cache entry. 
+		Works with cached queries, functions, and HTTP results. 
+		For cached functions, the cache ID is unique per combination of function and arguments.</description>
+		<argument>
+			<name>cacheObject</name>
+			<type>any</type>
+			<required>yes</required>
+			<description>The cached object to retrieve the cache ID for. 
+			Must be a valid cache object such as a query result, function reference, or HTTP result struct that was cached using the `cachedwithin` attribute.</description>
+		</argument>
+		<argument>
+			<name>arguments</name>
+			<type>any</type>
+			<required>no</required>
+			<description>The arguments used when the cache entry was created. 
+			Required for cached functions to identify the specific cache entry, as each unique set of arguments creates a separate cache entry. 
+			Can be provided as an array `[arg1, arg2]` for positional arguments or as a struct `{key: value}` for named arguments. Not required for queries or HTTP results.</description>
+		</argument>
+		<return>
+			<type>String</type>
 		</return>
 	</function>
 	<!-- lSDateTimeFormat -->

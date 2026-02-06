@@ -124,6 +124,7 @@ import lucee.runtime.type.dt.DateTime;
 import lucee.runtime.type.dt.TimeSpan;
 import lucee.runtime.type.dt.TimeSpanImpl;
 import lucee.runtime.type.util.ArrayUtil;
+import lucee.runtime.type.util.HTTPStruct;
 import lucee.runtime.type.util.KeyConstants;
 import lucee.runtime.type.util.ListUtil;
 import lucee.runtime.util.PageContextUtil;
@@ -1136,7 +1137,7 @@ public final class Http extends BodyTagImpl {
 		try {
 			if (httpContext == null) httpContext = new HttpClientContext();
 
-			Struct cfhttp = new StructImpl();
+			HTTPStruct cfhttp = new HTTPStruct(cacheId);
 			cfhttp.setEL(ERROR_DETAIL, "");
 			if (safeToMemory) pageContext.setVariable(result, cfhttp);
 
@@ -1397,7 +1398,7 @@ public final class Http extends BodyTagImpl {
 			// TODO: check if we can use statCode instead of rsp.getStatusCode() everywhere and cleanup the code
 			if (cacheHandler != null && rsp.getStatusCode() == 200) {
 				// add to cache
-				cacheHandler.set(pageContext, cacheId, cachedWithin, new HTTPCacheItem(cfhttp, url, System.nanoTime() - start));
+				cacheHandler.set(pageContext, cacheId, cachedWithin, new HTTPCacheItem(cfhttp, url, System.nanoTime() - start, cacheId));
 			}
 
 			logHttpRequest(pageContext, cfhttp, url, req.getMethod(), System.nanoTime() - start, false, null);
