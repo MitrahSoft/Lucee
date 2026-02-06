@@ -944,27 +944,23 @@ public final class PageSourceImpl implements PageSource {
 	// FUTURE add to interface
 	public PageSource getRealPageSource(PageContext pc, String realPath) {
 		RefBoolean _isOutSide = new RefBooleanImpl(isOutSide);
-
 		String realResolved = resolveReal(realPath, _isOutSide);
 
 		// in case we step outside the mapping we need to open up to all mappings
 		if (realResolved.startsWith(".")) {
 			// First try to resolve using the physical path of the mapping
 			if (mapping.hasPhysical()) {
-				Resource physicalRoot = mapping.getPhysical();
-				Resource targetResource = physicalRoot.getRealResource(realResolved);
+				Resource targetResource = mapping.getPhysical().getRealResource(realResolved);
 				if (targetResource.exists()) {
-					PageContextImpl pci = (PageContextImpl) ThreadLocalPageContext.get(pc);
-					ConfigPro config = (ConfigPro) pci.getConfig();
-					Mapping[] mappings = pci.getApplicationContext() != null ? pci.getApplicationContext().getMappings() : null;
-					PageSource ps = ConfigUtil.toPageSource(config, mappings, targetResource, null);
-					if (ps != null) return ps;
+					PageSource ps = ThreadLocalPageContext.get(pc).toPageSource(targetResource, null);
+					if (ps != null) {
+						return ps;
+					}
 				}
 			}
 
 			// Fall back to virtual path resolution for archives or when physical resolution fails
 			realResolved = mergeRealPathes(mapping.getVirtualLowerCaseWithSlash(), realResolved, null);
-
 			PageContextImpl pci = (PageContextImpl) ThreadLocalPageContext.get(pc);
 			return pci.getPageSource(realResolved);
 		}
