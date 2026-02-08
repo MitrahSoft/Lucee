@@ -35,9 +35,12 @@ import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.Header;
 import lucee.loader.engine.CFMLEngineFactory;
+import lucee.runtime.config.ConfigPro;
+import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.converter.ConverterException;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
+import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.listener.SerializationSettings;
 import lucee.runtime.op.CastImpl;
@@ -120,6 +123,7 @@ public final class MavenUpdateProvider {
 					repos.add(new Repository(null, new URL(s).toExternalForm(), Repository.TIMEOUT_5MINUTES, Repository.TIMEOUT_NEVER));
 				}
 				catch (Exception e) {
+					LogUtil.log(Log.LEVEL_WARN, "MavenUpdateProvider", "Invalid repository URL [" + s + "] in environment variable [" + envVarName + "]: " + e.getMessage());
 				}
 			}
 			if (repos.size() > 0) {
@@ -212,7 +216,8 @@ public final class MavenUpdateProvider {
 				Exception e = exceptions.pop();
 				if (e instanceof GeneralSecurityException) throw (GeneralSecurityException) e;
 				else if (e instanceof SAXException) throw (SAXException) e;
-				throw ExceptionUtil.toIOException(e);
+
+				throw ExceptionUtil.toIOException(new IOException("Failed to list available versions from Maven repositories for [" + group + ":" + artifact + "]", e));
 			}
 
 			// Join all threads
@@ -229,14 +234,15 @@ public final class MavenUpdateProvider {
 			return new ArrayList<>();
 		}
 		catch (UnknownHostException uhe) {
-			throw new IOException("cannot reach maven server", uhe);
+			throw new IOException("Cannot reach Maven server [" + uhe.getMessage() + "] " + "while resolving [" + group + ":" + artifact + "]. "
+					+ "Check your network connectivity and DNS configuration.", uhe);
 		}
 	}
 
 	public InputStream getCore(Version version) throws IOException, GeneralSecurityException, SAXException, PageException {
-
 		Map<String, Object> data = detail(version, "jar", true);
 		String strURL = Caster.toString(data.get("lco"), null);
+		assertDownloadAllowed(strURL);
 		if (!StringUtil.isEmpty(strURL)) {
 			// Use HTTPDownloader with DEBUG logging for Maven operations
 			return HTTPDownloader.get(new URL(strURL), null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, Log.LEVEL_TRACE);
@@ -247,10 +253,14 @@ public final class MavenUpdateProvider {
 	public InputStream getLoader(Version version) throws IOException, GeneralSecurityException, SAXException, PageException {
 		Map<String, Object> data = detail(version, "jar", true);
 		String strURL = Caster.toString(data.get("jar"), null);
-		if (StringUtil.isEmpty(strURL)) throw new IOException("no jar for [" + version + "] found.");
+		if (StringUtil.isEmpty(strURL)) {
+			throw new IOException("No JAR artifact found for [" + group + ":" + artifact + ":" + version + "]. " + "Verify the version exists in the configured repositories.");
+		}
 
 		// Use HTTPDownloader with DEBUG logging for Maven operations
-		return HTTPDownloader.get(new URL(strURL), null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, Log.LEVEL_TRACE);
+		URL url = new URL(strURL);
+		assertDownloadAllowed(strURL);
+		return HTTPDownloader.get(url, null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, Log.LEVEL_TRACE);
 	}
 
 	/*
@@ -302,7 +312,8 @@ public final class MavenUpdateProvider {
 					}
 					// read main
 					{
-						URL urlMain = new URL(repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + "." + requiredArtifactExtension);
+						String strURL = repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + "." + requiredArtifactExtension;
+						URL urlMain = new URL(strURL);
 						HTTPResponse rsp = HTTPDownloader.head(urlMain, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, Log.LEVEL_TRACE);
 						if (validSatusCode(rsp)) {
 							Map<String, Object> result = new LinkedHashMap<>();
@@ -341,8 +352,8 @@ public final class MavenUpdateProvider {
 		catch (UnknownHostException uhe) {
 			throw new IOException("cannot reach maven server", uhe);
 		}
-		if (throwException) throw new IOException("could not find the artifact [" + requiredArtifactExtension + "] for [" + group + ":" + artifact + ":" + version
-				+ "] in the following repositories [" + toList(repos) + "]");
+		if (throwException) throw new IOException("Could not find the artifact [" + group + ":" + artifact + ":" + version + "] (type: " + requiredArtifactExtension
+				+ ") in any of the configured repositories: [" + toList(repos) + "]. " + "Verify the artifact coordinates and version are correct.");
 		return null;
 	}
 
@@ -492,6 +503,19 @@ public final class MavenUpdateProvider {
 		@Override
 		public String toString() {
 			return "label:" + label + ";url:" + url + ";timeoutList:" + timeoutList + ";timeoutDetail:" + timeoutDetail;
+		}
+	}
+
+	private static void assertDownloadAllowed(String url) throws IOException {
+		int policy = ConfigUtil.getMavenDownloadPolicy();
+		if (policy == ConfigPro.MAVEN_DOWNLOAD_POLICY_ERROR) {
+			throw new IOException("Maven download is blocked by policy. Attempted to download [" + url + "]. "
+					+ "To allow downloads, set the system property or environment variable " + "'lucee.maven.download.policy' to 'warn' or 'ignore'. "
+					+ "Alternatively, place the artifact manually in your local Maven repository (~/.m2/repository).");
+		}
+		else if (policy == ConfigPro.MAVEN_DOWNLOAD_POLICY_WARN) {
+			LogUtil.log(ConfigUtil.getConfigServerImpl(ThreadLocalPageContext.getConfig()).getMavenDownloadPolicyLogLevel(), "maven", "Downloading Maven artifact from [" + url
+					+ "]. Maven download policy is set to 'warn'. " + "Set 'lucee.maven.download.policy' to 'error' to block downloads " + "or 'ignore' to suppress this warning.");
 		}
 	}
 }

@@ -662,4 +662,8 @@ public class Prop<T> {
 			return key1.compareToIgnoreCase(key2);
 		}
 	}
+
+	public Choice<T>[] getChoices() {
+		return choices;
+	}
 }

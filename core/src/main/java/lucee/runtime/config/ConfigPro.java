@@ -102,6 +102,10 @@ public interface ConfigPro extends Config {
 	public static final boolean DEFAULT_BUFFER_TAG_BODY_OUTPUT = false;
 	public static final boolean DEFAULT_DEVELOP_MODE = false;
 
+	public static final int MAVEN_DOWNLOAD_POLICY_ERROR = 2;
+	public static final int MAVEN_DOWNLOAD_POLICY_WARN = 1;
+	public static final int MAVEN_DOWNLOAD_POLICY_IGNORE = 0;
+
 	public Iterator<Entry<String, Class<CacheHandler>>> getCacheHandlers();
 
 	public boolean getDotNotationUpperCase();

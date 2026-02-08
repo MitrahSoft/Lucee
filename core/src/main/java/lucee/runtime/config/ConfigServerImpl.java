@@ -892,6 +892,34 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 					"Specifies the white-space management strategy for the output stream. Using 'smart' optimization can significantly reduce page weight without breaking HTML layout.");
 	protected Integer cfmlWriter;
 
+	// lucee.maven.download.policy.startup
+
+	@SuppressWarnings("unchecked")
+	private static Prop<Integer> metaMavenDownloadPolicyStartup = Prop.integer().keys("downloadPolicyStartup").parent("maven")
+			.systemPropEnvVar("lucee.maven.download.policy.startup").defaultValue(ConfigPro.MAVEN_DOWNLOAD_POLICY_IGNORE)
+			.choices(new Choice<Integer>(ConfigPro.MAVEN_DOWNLOAD_POLICY_IGNORE, "ignore").description("Download Maven artifacts silently during startup."),
+					new Choice<Integer>(ConfigPro.MAVEN_DOWNLOAD_POLICY_WARN, "warn", "warning").description("Download Maven artifacts during startup but log each download."),
+					new Choice<Integer>(ConfigPro.MAVEN_DOWNLOAD_POLICY_ERROR, "error")
+							.description("Block all Maven artifact downloads during startup. May prevent Lucee from starting if required artifacts are missing."))
+			.description("Controls whether Lucee is allowed to download Maven artifacts during startup.");
+	protected Integer mavenDownloadPolicyStartup;
+
+	@SuppressWarnings("unchecked")
+	private static Prop<Integer> metaMavenDownloadPolicyRuntime = Prop.integer().keys("downloadPolicyRuntime").parent("maven")
+			.systemPropEnvVar("lucee.maven.download.policy.runtime").defaultValue(ConfigPro.MAVEN_DOWNLOAD_POLICY_IGNORE).choices(metaMavenDownloadPolicyStartup.getChoices())
+			.description("Controls whether Lucee is allowed to download Maven artifacts at runtime, after startup is complete.");
+	protected Integer mavenDownloadPolicyRuntime;
+
+	@SuppressWarnings("unchecked")
+	private static Prop<Integer> metaMavenDownloadPolicyLogLevel = Prop.integer().keys("downloadPolicyLogLevel").parent("maven")
+			.systemPropEnvVar("lucee.maven.download.policy.log.level").defaultValue(Log.LEVEL_WARN)
+			.choices(new Choice<Integer>(Log.LEVEL_TRACE, "trace").description("Log at trace level."),
+					new Choice<Integer>(Log.LEVEL_DEBUG, "debug").description("Log at debug level."), new Choice<Integer>(Log.LEVEL_INFO, "info").description("Log at info level."),
+					new Choice<Integer>(Log.LEVEL_WARN, "warn").description("Log at warn level."), new Choice<Integer>(Log.LEVEL_ERROR, "error").description("Log at error level."),
+					new Choice<Integer>(Log.LEVEL_FATAL, "fatal").description("Log at fatal level."))
+			.description("Log level used when the Maven download policy is set to 'warn'. Has no effect when the policy is 'ignore' or 'error'.");
+	protected Integer mavenDownloadPolicyLogLevel;
+
 	private static Prop<Boolean> metaHandleUnquotedAttributeValueAsString = Prop.bool().keys("handleUnquotedAttributeValueAsString").defaultValue(true)
 			.description("Controls if unquoted tag attributes are treated as literal strings (true) or as variable references (false) for evaluation.");
 	private Boolean handleUnquotedAttributeValueAsString;
@@ -8859,6 +8887,69 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "id")) {
 				if (id != null) {
 					id = null;
+				}
+			}
+		}
+	}
+
+	public int getMavenDownloadPolicyStartup() {
+		if (mavenDownloadPolicyStartup == null) {
+			synchronized (SystemUtil.createToken("config", "mavenDownloadPolicyStartup")) {
+				if (mavenDownloadPolicyStartup == null) {
+					mavenDownloadPolicyStartup = metaMavenDownloadPolicyStartup.get(this, root);
+				}
+			}
+		}
+		return mavenDownloadPolicyStartup;
+	}
+
+	public void resetMavenDownloadPolicyStartup() {
+		if (mavenDownloadPolicyStartup != null) {
+			synchronized (SystemUtil.createToken("config", "mavenDownloadPolicyStartup")) {
+				if (mavenDownloadPolicyStartup != null) {
+					mavenDownloadPolicyStartup = null;
+				}
+			}
+		}
+	}
+
+	public int getMavenDownloadPolicyRuntime() {
+		if (mavenDownloadPolicyRuntime == null) {
+			synchronized (SystemUtil.createToken("config", "mavenDownloadPolicyRuntime")) {
+				if (mavenDownloadPolicyRuntime == null) {
+					mavenDownloadPolicyRuntime = metaMavenDownloadPolicyRuntime.get(this, root);
+				}
+			}
+		}
+		return mavenDownloadPolicyRuntime;
+	}
+
+	public void resetMavenDownloadPolicyRuntime() {
+		if (mavenDownloadPolicyRuntime != null) {
+			synchronized (SystemUtil.createToken("config", "mavenDownloadPolicyRuntime")) {
+				if (mavenDownloadPolicyRuntime != null) {
+					mavenDownloadPolicyRuntime = null;
+				}
+			}
+		}
+	}
+
+	public int getMavenDownloadPolicyLogLevel() {
+		if (mavenDownloadPolicyLogLevel == null) {
+			synchronized (SystemUtil.createToken("config", "mavenDownloadPolicyLogLevel")) {
+				if (mavenDownloadPolicyLogLevel == null) {
+					mavenDownloadPolicyLogLevel = metaMavenDownloadPolicyLogLevel.get(this, root);
+				}
+			}
+		}
+		return mavenDownloadPolicyLogLevel;
+	}
+
+	public void resetMavenDownloadPolicyLogLevel() {
+		if (mavenDownloadPolicyLogLevel != null) {
+			synchronized (SystemUtil.createToken("config", "mavenDownloadPolicyLogLevel")) {
+				if (mavenDownloadPolicyLogLevel != null) {
+					mavenDownloadPolicyLogLevel = null;
 				}
 			}
 		}

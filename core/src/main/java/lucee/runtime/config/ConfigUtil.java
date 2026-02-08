@@ -1638,4 +1638,18 @@ public final class ConfigUtil {
 
 		return getConfigServerImpl(config);
 	}
+
+	public static int getMavenDownloadPolicy() {
+		// print.ds();
+		try {
+			CFMLEngine eng = CFMLEngineFactory.getInstance();
+			if (eng != null && eng.uptime() > 0) {
+				return ConfigUtil.getConfigServerImpl(ThreadLocalPageContext.getConfig()).getMavenDownloadPolicyRuntime();
+			}
+		}
+		catch (Exception e) {
+			// engine not registered yet = still starting up
+		}
+		return ConfigUtil.getConfigServerImpl(ThreadLocalPageContext.getConfig()).getMavenDownloadPolicyStartup();
+	}
 }
