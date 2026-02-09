@@ -603,7 +603,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				}
 				if (!valid) {
 					try {
-						ExtensionDefintion ed = getRequiredExtension(info, ext.getId());
+						ExtensionDefintion ed = getRequiredExtension(info, ext);
 
 						if (ed != null) {
 							extensionsToInstall.add(ed);
@@ -624,11 +624,11 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		}
 	}
 
-	private static ExtensionDefintion getRequiredExtension(InfoImpl info, String id) {
+	private static ExtensionDefintion getRequiredExtension(InfoImpl info, RHExtension rhe) {
 		List<ExtensionDefintion> reqExt = info.getRequiredExtension();
 		if (reqExt != null) {
 			for (ExtensionDefintion ed: reqExt) {
-				if (ed.getId().equals(id)) return ed;
+				if (rhe.same(ed)) return ed;
 			}
 		}
 		return null;

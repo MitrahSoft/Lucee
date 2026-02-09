@@ -1680,8 +1680,45 @@ public final class RHExtension implements Serializable {
 		return false;
 	}
 
-	/// ext.getId().equalsIgnoreCase(id) || (gav != null && ext.getGAVSO() != null &&
-	/// ext.getGAVSO().toGAV().equals(gav.trim()))
+	public boolean same(RHExtension other) {
+		if (other == null) return false;
+		// gav
+		if (other.hasGAV()) {
+			GAVSO gav = new GAVSO(other.getGroupId(), other.getArtifactId(), other.getVersion());
+			if (hasGAV()) {
+				return gav.same(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
+			}
+
+		}
+
+		// id
+		String id = other.getId();
+		if (!StringUtil.isEmpty(id, true) && !StringUtil.isEmpty(getId())) {
+			return id.trim().equals(getId());
+		}
+
+		return false;
+	}
+
+	public boolean same(ExtensionDefintion other) {
+		if (other == null) return false;
+		// gav
+		GAVSO gav = other.getGAVSO();
+		if (gav != null) {
+			if (hasGAV()) {
+				return gav.same(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
+			}
+
+		}
+
+		// id
+		String id = other.getId();
+		if (!StringUtil.isEmpty(id, true) && !StringUtil.isEmpty(getId())) {
+			return id.trim().equals(getId());
+		}
+
+		return false;
+	}
 
 	public static String toReleaseType(int releaseType, String defaultValue) {
 		if (releaseType == RELEASE_TYPE_WEB) return "web";

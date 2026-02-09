@@ -10,6 +10,8 @@ import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.BIF;
 import lucee.runtime.ext.function.Function;
 import lucee.runtime.extension.RHExtension;
+import lucee.runtime.mvn.MavenUtil;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.op.Caster;
 
 public final class ExtensionExists extends BIF implements Function {
@@ -26,11 +28,22 @@ public final class ExtensionExists extends BIF implements Function {
 	}
 
 	private static boolean find(String id, String version, RHExtension[] extensions) {
+		// is id a gav?
+		GAVSO gav = MavenUtil.toGAVSO(id, null);
+		if (gav != null) {
+			for (RHExtension ext: extensions) {
+				if (ext.hasGAV() && new GAVSO(ext.getGroupId(), ext.getArtifactId(), ext.getVersion()).equals(gav)) {
+					return true;
+				}
+			}
+		}
+
 		for (RHExtension ext: extensions) {
 			if (ext.getId().equalsIgnoreCase(id) || ext.getMetadata().getSymbolicName().equalsIgnoreCase(id)) {
 				if (StringUtil.isEmpty(version) || ext.getVersion().equalsIgnoreCase(version)) return true;
 			}
 		}
+
 		return false;
 	}
 

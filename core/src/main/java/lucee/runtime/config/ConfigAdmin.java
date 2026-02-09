@@ -6422,7 +6422,7 @@ public final class ConfigAdmin {
 					if (!StringUtil.isEmpty(res) && (r = ResourceUtil.toResourceExisting(config, res, null)) != null) {
 						try {
 							RHExtension _ext = RHExtension.getInstance(config, r, config.getLog("deploy"));// TODO not load it again!
-							if (_ext != null && _ext.getId().equalsIgnoreCase(ext.getId())) {
+							if (_ext != null && _ext.same(ext)) {
 								old = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
 								ext.populate(el, false);
 								old = minus(old, OSGiUtil.toBundleDefinitions(ext.getMetadata().getBundles()));
