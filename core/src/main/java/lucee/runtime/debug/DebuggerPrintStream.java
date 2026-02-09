@@ -4,7 +4,7 @@ import java.io.PrintStream;
 
 /**
  * PrintStream wrapper that tees output to the DebuggerListener.
- * Installed on System.out/err when DEBUGGER_ENABLED is true.
+ * Installed on System.out/err when DEBUGGER_SECRET is set.
  * Always passes through to the original stream; only notifies listener when active.
  */
 public class DebuggerPrintStream extends PrintStream {

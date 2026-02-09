@@ -75,7 +75,7 @@ public interface DebuggerListener {
 
 	/**
 	 * Called when output is written to System.out or System.err.
-	 * Only called when DEBUGGER_ENABLED and a DebuggerPrintStream is installed.
+	 * Only called when a DebuggerPrintStream is installed.
 	 *
 	 * @param text The text that was written
 	 * @param isStdErr true if written to stderr, false if stdout
