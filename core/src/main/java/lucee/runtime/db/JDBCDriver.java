@@ -46,7 +46,7 @@ public final class JDBCDriver {
 		print.e("--- JDBCDriver ---");
 		print.e(label);
 		print.e(id);
-		print.e(cd);
+		print.ds(cd);
 	}
 
 	private static String getById(String id) {
