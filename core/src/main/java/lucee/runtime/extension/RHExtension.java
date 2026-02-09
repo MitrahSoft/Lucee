@@ -335,7 +335,7 @@ public final class RHExtension implements Serializable {
 		}
 	}
 
-	public static RHExtension getInstance(Config config, ExtensionDefintion ed, boolean downloadIfNecessary, Log log) throws PageException {
+	public static RHExtension getInstance(Config config, final ExtensionDefintion ed, boolean downloadIfNecessary, Log log) throws PageException {
 		// has source
 		if (ed._getSource(null) != null) {
 			return _getInstance(config, ed._getSource(null), ed, log).getRHExtension();
@@ -1623,6 +1623,9 @@ public final class RHExtension implements Serializable {
 
 		if (ed.getGAVSO() != null && getGroupId() != null && getArtifactId() != null && getVersion() != null) {
 			return ed.getGroupId().equalsIgnoreCase(getGroupId()) && ed.getArtifactId().equalsIgnoreCase(getArtifactId()) && ed.getVersion().equalsIgnoreCase(getVersion());
+		}
+		if (ed.getId() == null) {
+			return false;
 		}
 
 		if (!ed.getId().equalsIgnoreCase(getId())) {
