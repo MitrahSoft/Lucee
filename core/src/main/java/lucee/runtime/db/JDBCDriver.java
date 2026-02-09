@@ -24,7 +24,6 @@ import java.net.URL;
 
 import org.osgi.framework.Bundle;
 
-import lucee.print;
 import lucee.commons.io.IOUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.HTTPDownloader;
@@ -42,11 +41,6 @@ public final class JDBCDriver {
 		this.id = StringUtil.isEmpty(id, true) ? null : id.trim();
 		this.connStr = StringUtil.isEmpty(connStr, true) ? getById(id) : connStr.trim();
 		this.cd = cd;
-
-		print.e("--- JDBCDriver ---");
-		print.e(label);
-		print.e(id);
-		print.ds(cd);
 	}
 
 	private static String getById(String id) {
