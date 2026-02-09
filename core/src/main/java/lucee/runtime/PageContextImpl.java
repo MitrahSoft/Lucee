@@ -91,6 +91,7 @@ import lucee.runtime.cache.tag.CacheItem;
 import lucee.runtime.cache.tag.include.IncludeCacheItem;
 import lucee.runtime.component.ComponentLoader;
 import lucee.runtime.config.Config;
+import lucee.runtime.config.ConfigImpl;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.ConfigWeb;
@@ -109,8 +110,11 @@ import lucee.runtime.debug.DebugCFMLWriter;
 import lucee.runtime.debug.DebugEntryTemplate;
 import lucee.runtime.debug.Debugger;
 import lucee.runtime.debug.DebuggerImpl;
+import lucee.runtime.debug.DebuggerListener;
+import lucee.runtime.debug.DebuggerRegistry;
 import lucee.runtime.dump.DumpUtil;
 import lucee.runtime.dump.DumpWriter;
+import lucee.runtime.engine.DebuggerExecutionLog;
 import lucee.runtime.engine.ExecutionLog;
 import lucee.runtime.err.ErrorPage;
 import lucee.runtime.err.ErrorPageImpl;
@@ -125,6 +129,7 @@ import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.MissingIncludeException;
 import lucee.runtime.exp.NoLongerSupported;
 import lucee.runtime.exp.PageException;
+import lucee.runtime.exp.PageExceptionImpl;
 import lucee.runtime.exp.PageExceptionBox;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.PageServletException;
@@ -2336,6 +2341,8 @@ public final class PageContextImpl extends PageContext {
 
 	public void handlePageException(final PageException pe, boolean setHeader) {
 		if (!Abort.isSilentAbort(pe)) {
+			// Note: Debugger exception notification now happens in _setCatch() where frames are still intact
+
 			// if(requestTimeoutException!=null)
 			// pe=Caster.toPageException(requestTimeoutException);
 
@@ -3421,8 +3428,34 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	public void _setCatch(PageException pe, String name, boolean caught, boolean store, boolean signal) {
-		if (signal && fdEnabled) {
-			FDSignal.signal(pe, caught);
+		if (signal && pe != null) {
+			// FusionDebug support
+			if (fdEnabled) {
+				FDSignal.signal(pe, caught);
+			}
+			// External debugger (luceedebug) - frames are still intact at this point
+			if (ConfigImpl.DEBUGGER) {
+				DebuggerListener listener = DebuggerRegistry.getListener();
+				if (listener != null && listener.isClientConnected() && listener.onException( this, pe, caught )) {
+					// Get file/line from exception for debugger display
+					String file = null;
+					int line = 0;
+					if (pe instanceof PageExceptionImpl) {
+						PageExceptionImpl pei = (PageExceptionImpl) pe;
+						file = pei.getFile( getConfig() );
+						try {
+							String lineStr = pei.getLine( getConfig() );
+							if (lineStr != null && !lineStr.isEmpty()) {
+								line = Integer.parseInt( lineStr );
+							}
+						}
+						catch (NumberFormatException ignored) {
+						}
+					}
+					String label = caught ? "Caught exception: " : "Uncaught exception: ";
+					debuggerSuspend( file, line, label + pe.getClass().getSimpleName() );
+				}
+			}
 		}
 		// boolean outer = exception != null && exception == pe;
 		exception = pe;
@@ -3490,6 +3523,227 @@ public final class PageContextImpl extends PageContext {
 	public void removeUDF() {
 		if (!udfs.isEmpty()) udfs.removeLast();
 	}
+
+	// ==================== Debugger Stack Frame Support ====================
+
+	/**
+	 * Represents a captured CFML stack frame for external debugger inspection.
+	 * Stores references to scopes at the time of function entry so debuggers can
+	 * inspect variables in any frame, not just the current one.
+	 */
+	public static final class DebuggerFrame {
+		public final Local local;
+		public final Argument arguments;
+		public final Variables variables;
+		public final PageSource pageSource;
+		public final String functionName;
+		private volatile int line;
+
+		DebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName) {
+			this.local = local;
+			this.arguments = arguments;
+			this.variables = variables;
+			this.pageSource = pageSource;
+			this.functionName = functionName;
+			this.line = 0;
+		}
+
+		public int getLine() { return line; }
+		public void setLine(int line) { this.line = line; }
+		public String getFile() { return pageSource != null ? pageSource.getDisplayPath() : null; }
+	}
+
+	private final LinkedList<DebuggerFrame> debuggerFrames = ConfigImpl.DEBUGGER ? new LinkedList<DebuggerFrame>() : null;
+
+	/**
+	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER is enabled.
+	 */
+	public void pushDebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName, int startLine) {
+		if (debuggerFrames != null) {
+			debuggerFrames.add(new DebuggerFrame(local, arguments, variables, pageSource, functionName));
+
+			// Notify debugger listener of function entry (for function breakpoints)
+			DebuggerListener listener = DebuggerRegistry.getListener();
+			if (listener != null && listener.isClientConnected()) {
+				String file = pageSource != null ? pageSource.getDisplayPath() : null;
+				String componentName = (variables instanceof ComponentScope)
+					? ((ComponentScope) variables).getComponent().getName()
+					: null;
+				if (listener.onFunctionEntry(this, functionName, componentName, file, startLine)) {
+					debuggerSuspend(file, startLine, "function breakpoint: " + functionName);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Pop the topmost debugger frame. Called on UDF exit when DEBUGGER is enabled.
+	 */
+	public void popDebuggerFrame() {
+		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
+			debuggerFrames.removeLast();
+		}
+	}
+
+	/**
+	 * Get all debugger frames for the current call stack.
+	 * Returns null if debugger is not enabled.
+	 */
+	public DebuggerFrame[] getDebuggerFrames() {
+		if (debuggerFrames == null) return null;
+		return debuggerFrames.toArray(new DebuggerFrame[0]);
+	}
+
+	/**
+	 * Update the line number of the topmost debugger frame.
+	 * Called on each CFML line when stepping/breakpoints are active.
+	 */
+	public void setDebuggerLine(int line) {
+		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
+			debuggerFrames.getLast().setLine(line);
+		}
+	}
+
+	/**
+	 * Get the topmost debugger frame, or null if none.
+	 */
+	public DebuggerFrame getTopmostDebuggerFrame() {
+		if (debuggerFrames == null || debuggerFrames.isEmpty()) return null;
+		return debuggerFrames.getLast();
+	}
+
+	// Debugger suspension support
+	private volatile boolean debuggerSuspended = false;
+	private volatile String debuggerSuspendLabel = null;
+	private final Object debuggerSuspendLock = new Object();
+	private long debuggerSuspendStartNano = 0;
+	private long debuggerTotalSuspendedNanos = 0;
+
+	/**
+	 * Suspend execution for debugger. Call from breakpoint() BIF or when hitting a breakpoint.
+	 * Thread will wait until debuggerResume() is called.
+	 * @param label Optional label to identify the breakpoint in debugger UI
+	 */
+	public void debuggerSuspend(String label) {
+		if (!ConfigImpl.DEBUGGER) return;
+
+		// Get current file/line for listener callback
+		DebuggerFrame frame = getTopmostDebuggerFrame();
+		String file = null;
+		int line = 0;
+		if (frame != null) {
+			file = frame.getFile();
+			line = frame.getLine();
+		}
+		else {
+			// Top-level code (outside functions) - try ExecutionLog's thread-local first
+			file = DebuggerExecutionLog.getCurrentFile();
+			line = DebuggerExecutionLog.getCurrentLine();
+
+			// Fall back to page source for file if thread-local not set
+			if (file == null) {
+				PageSource ps = getCurrentPageSource(null);
+				if (ps != null) {
+					Resource res = ps.getPhyscalFile();
+					if (res != null) {
+						file = res.getAbsolutePath();
+					}
+				}
+			}
+		}
+
+		debuggerSuspendImpl(file, line, label);
+	}
+
+	/**
+	 * Suspend execution for debugger with explicit file and line.
+	 * Used by DebuggerExecutionLog which already knows the current location.
+	 * @param file Source file path
+	 * @param line Line number
+	 * @param label Optional label to identify the breakpoint in debugger UI
+	 */
+	public void debuggerSuspend(String file, int line, String label) {
+		if (!ConfigImpl.DEBUGGER) return;
+		debuggerSuspendImpl(file, line, label);
+	}
+
+	private void debuggerSuspendImpl(String file, int line, String label) {
+		debuggerSuspendLabel = label;
+		debuggerSuspended = true;
+		debuggerSuspendStartNano = System.nanoTime();
+
+		// Notify listener before blocking
+		DebuggerListener listener = DebuggerRegistry.getListener();
+		if (listener != null) {
+			listener.onSuspend(this, file, line, label);
+		}
+
+		synchronized (debuggerSuspendLock) {
+			while (debuggerSuspended) {
+				try {
+					debuggerSuspendLock.wait();
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					LogUtil.log(this, "application", "debugger", e, Log.LEVEL_WARN);
+					break;
+				}
+			}
+		}
+		debuggerTotalSuspendedNanos += System.nanoTime() - debuggerSuspendStartNano;
+		debuggerSuspendLabel = null;
+
+		// Notify listener after resuming
+		if (listener != null) {
+			listener.onResume(this);
+		}
+	}
+
+	/**
+	 * Resume execution after debugger suspension.
+	 */
+	public void debuggerResume() {
+		debuggerSuspended = false;
+		synchronized (debuggerSuspendLock) {
+			debuggerSuspendLock.notify();
+		}
+	}
+
+	/**
+	 * Check if this PageContext is currently suspended.
+	 */
+	public boolean isDebuggerSuspended() {
+		return debuggerSuspended;
+	}
+
+	/**
+	 * Get the label of the current suspension point, or null.
+	 */
+	public String getDebuggerSuspendLabel() {
+		return debuggerSuspendLabel;
+	}
+
+	/**
+	 * Get total time spent suspended (for adjusting request timeouts).
+	 */
+	public long getDebuggerTotalSuspendedNanos() {
+		return debuggerTotalSuspendedNanos;
+	}
+
+	/**
+	 * Get total time spent suspended in milliseconds, including current suspend if active.
+	 * Used for adjusting request timeout calculations.
+	 */
+	public long getDebuggerTotalSuspendedMillis() {
+		long total = debuggerTotalSuspendedNanos;
+		// If currently suspended, add the time since suspend started
+		if (debuggerSuspended && debuggerSuspendStartNano > 0) {
+			total += System.nanoTime() - debuggerSuspendStartNano;
+		}
+		return total / 1_000_000; // Convert nanos to millis
+	}
+
+	// ==================== End Debugger Stack Frame Support ====================
 
 	/*
 	 * *

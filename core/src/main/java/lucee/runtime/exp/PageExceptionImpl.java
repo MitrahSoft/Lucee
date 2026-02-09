@@ -411,7 +411,7 @@ public abstract class PageExceptionImpl extends PageException {
 	/**
 	 * @return return the file where the failure occurred
 	 */
-	private String getFile(Config config) {
+	public String getFile(Config config) {
 		if (getTagContext(config).size() == 0) return "";
 
 		Struct sct = (Struct) getTagContext(config).get(1, null);

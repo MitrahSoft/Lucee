@@ -59,6 +59,7 @@ import lucee.runtime.component.ImportDefintionImpl;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.Constants;
 import lucee.runtime.op.Caster;
+import lucee.runtime.util.PageContextUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
@@ -186,6 +187,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 	private final static Method LENGTH = new Method("getSourceLength", Types.LONG_VALUE, new Type[] {});
 	private final static Method GET_SUBNAME = new Method("getSubname", Types.STRING, new Type[] {});
+	private final static Method GET_EXECUTABLE_LINES = new Method("getExecutableLines", Type.getType(Object[].class), new Type[] {});
 
 	private static final Type USER_DEFINED_FUNCTION = Type.getType(UDF.class);
 	private static final Method UDF_CALL = new Method("udfCall", Types.OBJECT, new Type[] { Types.PAGE_CONTEXT, USER_DEFINED_FUNCTION, Types.INT_VALUE });
@@ -767,6 +769,45 @@ public final class PageImpl extends BodyBase implements Page {
 				writeGetSubPages(cw, className, subs);
 			}
 		}
+
+		// getExecutableLines - only generated in debug mode for debugger support
+		if (writeLog()) {
+			GeneratorAdapter execLinesAdapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, GET_EXECUTABLE_LINES, null, null, cw);
+
+			// Create Object[2] array
+			execLinesAdapter.push(2);
+			execLinesAdapter.newArray(Types.OBJECT);
+
+			// [0] = compileTime (Long) - call this.getCompileTime() for cache invalidation
+			execLinesAdapter.dup();
+			execLinesAdapter.push(0);
+			execLinesAdapter.loadThis();
+			execLinesAdapter.invokeVirtual(Type.getObjectType(className), COMPILE_TIME);
+			execLinesAdapter.invokeStatic(Type.getType(Long.class), new Method("valueOf", Type.getType(Long.class), new Type[] { Type.LONG_TYPE }));
+			execLinesAdapter.arrayStore(Types.OBJECT);
+
+			// [1] = lines (int[] or null)
+			execLinesAdapter.dup();
+			execLinesAdapter.push(1);
+			int[] execLines = constr.getExecutableLines();
+			String encoded = PageContextUtil.encodeExecutableLines(execLines);
+			int maxLine = PageContextUtil.getMaxLine(execLines);
+			if (encoded == null) {
+				execLinesAdapter.visitInsn(Opcodes.ACONST_NULL);
+			}
+			else {
+				// Call PageContextUtil.decodeExecutableLines(encoded, maxLine)
+				execLinesAdapter.push(encoded);
+				execLinesAdapter.push(maxLine);
+				execLinesAdapter.invokeStatic(Types.PAGE_CONTEXT_UTIL,
+					new Method("decodeExecutableLines", Type.getType(int[].class), new Type[] { Types.STRING, Type.INT_TYPE }));
+			}
+			execLinesAdapter.arrayStore(Types.OBJECT);
+
+			execLinesAdapter.returnValue();
+			execLinesAdapter.endMethod();
+		}
+
 		return ASMUtil.verify(cw.toByteArray());
 	}
 
