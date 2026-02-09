@@ -373,7 +373,7 @@ public class Prop<T> {
 			T tmp;
 			while (it.hasNext()) {
 				e = it.next();
-				key = e.getKey().getLowerString();
+				key = e.getKey().getString();
 				tmp = factory.evaluate(config, key, e.getValue(), null);
 				if (tmp != null) map.put(key, tmp);
 			}
