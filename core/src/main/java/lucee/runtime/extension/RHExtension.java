@@ -346,7 +346,7 @@ public final class RHExtension implements Serializable {
 		}
 
 		// check in existing instances by filename matching gav
-		GAVSO gav = ed.getGAVSO();
+		GAVSO gav = ed.getGAVSO(config);
 		if (gav != null && gav.isValid()) {
 			for (lucee.runtime.extension.RHExtensionCollection.Entry e: collection.getExtensions()) {
 				if (e.getFilename().equals(ed.getStorageName())) {
@@ -374,7 +374,7 @@ public final class RHExtension implements Serializable {
 		if (!StringUtil.isEmpty(ed.getId()) && ed.getId() != null) {
 			// we have no version definition, we need to know the latest versions
 			if (downloadIfNecessary && StringUtil.isEmpty(ed.getVersion())) {
-				ed.setParam("version", DeployHandler.getLatestVersionFor(config, ed, null, true).toString());
+				ed.setParam("version", DeployHandler.getLatestVersionFor((ConfigPro) config, ed, null, true).toString());
 			}
 			// check in existing instances by id/version
 			if (ed.getId() != null) {
@@ -460,10 +460,10 @@ public final class RHExtension implements Serializable {
 		if (downloadIfNecessary) {
 			// check in existing instances by GAV
 			if (gav != null && gav.isValid()) {
-				return _getInstance(config, DeployHandler.downloadExtensionFromMaven(config, ed, false, true, log), ed, log).getRHExtension();
+				return _getInstance(config, DeployHandler.downloadExtensionFromMaven((ConfigPro) config, ed, false, true, log), ed, log).getRHExtension();
 			}
 
-			return _getInstance(config, DeployHandler.downloadExtension(config, ed, null, true), ed, log).getRHExtension();
+			return _getInstance(config, DeployHandler.downloadExtension((ConfigPro) config, ed, null, true), ed, log).getRHExtension();
 		}
 
 		throw new ApplicationException("the extension [" + ed + "] is not available locally");
@@ -473,7 +473,7 @@ public final class RHExtension implements Serializable {
 		initInstalled(config);
 
 		// by ga
-		GAVSO gav = ed.getGAVSO();
+		GAVSO gav = ed.getGAVSO(config);
 		boolean hasGAV = gav != null && gav.isValid();
 		String id = ed.getId();
 		boolean hasId = !StringUtil.isEmpty(id, true);
@@ -522,8 +522,8 @@ public final class RHExtension implements Serializable {
 		if (ed != null) {
 			if (!StringUtil.isEmpty(ed.getId(), true)) _id = ed.getId().trim();
 			if (!StringUtil.isEmpty(ed.getVersion(), true)) _version = ed.getVersion().trim();
-			if (ed.getGAVSO() != null) {
-				this.gavso = ed.getGAVSO();
+			if (ed.getGAVSO(config) != null) {
+				this.gavso = ed.getGAVSO(config);
 			}
 		}
 	}
@@ -1450,7 +1450,7 @@ public final class RHExtension implements Serializable {
 		}
 		String g = getMetadata().getGroupId();
 		if (StringUtil.isEmpty(g, true) && getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider();
+			ExtensionProvider ep = new ExtensionProvider(config);
 			try {
 				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
 				return gavso.g;
@@ -1466,7 +1466,7 @@ public final class RHExtension implements Serializable {
 		}
 		String a = getMetadata().getArtifactId();
 		if (StringUtil.isEmpty(a, true) && getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider();
+			ExtensionProvider ep = new ExtensionProvider(config);
 			try {
 				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
 				return gavso.a;
@@ -1621,7 +1621,7 @@ public final class RHExtension implements Serializable {
 
 	public boolean equalsTo(ExtensionDefintion ed) {
 
-		if (ed.getGAVSO() != null && getGroupId() != null && getArtifactId() != null && getVersion() != null) {
+		if (ed.getGAVSO(config) != null && getGroupId() != null && getArtifactId() != null && getVersion() != null) {
 			return ed.getGroupId().equalsIgnoreCase(getGroupId()) && ed.getArtifactId().equalsIgnoreCase(getArtifactId()) && ed.getVersion().equalsIgnoreCase(getVersion());
 		}
 		if (ed.getId() == null) {
@@ -1703,7 +1703,7 @@ public final class RHExtension implements Serializable {
 	public boolean same(ExtensionDefintion other) {
 		if (other == null) return false;
 		// gav
-		GAVSO gav = other.getGAVSO();
+		GAVSO gav = other.getGAVSO(config);
 		if (gav != null) {
 			if (hasGAV()) {
 				return gav.same(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
@@ -1777,7 +1777,7 @@ public final class RHExtension implements Serializable {
 			}
 			// gradle style maven
 			else if (ed.getId() == null && (gavso = MavenUtil.toGAVSO(ss, null)) != null) {
-				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, true, null);
+				ExtensionDefintion tmp = new ExtensionProvider(ThreadLocalPageContext.getConfig(), gavso.g).toExtensionDefintion(c, gavso, true, null);
 				if (tmp != null) ed = tmp;
 			}
 			else if (ed.getId() == null || Decision.isUUId(ed.getId())) {
@@ -1870,7 +1870,7 @@ public final class RHExtension implements Serializable {
 				}
 			}
 		}
-		if (ed.getId() == null && ed.getGAVSO() == null) return null;
+		if (ed.getId() == null && ed.getGAVSO(config) == null) return null;
 		return ed;
 
 	}
@@ -1917,7 +1917,7 @@ public final class RHExtension implements Serializable {
 				ed = edInit;
 				if (ed.getId() == null) ed.setId(getId());
 				if (ed.getVersion() == null) ed.setParam("version", getVersion());
-				if (ed.getGAVSO() == null) {
+				if (ed.getGAVSO(config) == null) {
 					ed.setGAVSO(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
 				}
 			}

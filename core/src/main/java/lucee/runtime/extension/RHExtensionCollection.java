@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import lucee.commons.lang.StringUtil;
+import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.mvn.MavenUtil.GAVSO;
 
 public class RHExtensionCollection {
@@ -51,7 +52,7 @@ public class RHExtensionCollection {
 
 		// get match by gav (unlikely that this happen in the future)
 		if (!name.startsWith("mvn_")) {
-			GAVSO gav = ed.getGAVSO();
+			GAVSO gav = ed.getGAVSO(ThreadLocalPageContext.getConfig());
 			if (gav != null) {
 				entry = getByName(ExtensionDefintion.getStorageName(gav));
 				if (entry != null) {

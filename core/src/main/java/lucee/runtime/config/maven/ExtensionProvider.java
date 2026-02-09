@@ -35,6 +35,7 @@ import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
+import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.extension.ExtensionDefintion;
@@ -117,31 +118,30 @@ public class ExtensionProvider {
 
 	private Repository[] repoSnapshots;
 	private Repository[] repoReleases;
-	private Repository[] repoMixed;
+	// private Repository[] repoMixedX;
 	private String group;
 	private List<Repository> repos;
 
-	public ExtensionProvider(Repository[] repoSnapshots, Repository[] repoReleases, Repository[] repoMixed, String group) {
+	public ExtensionProvider(Repository[] repoSnapshots, Repository[] repoReleases, String group) {
 		this.repoSnapshots = repoSnapshots;
 		this.repoReleases = repoReleases;
-		this.repoMixed = repoMixed;
-		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
+		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases);
 		this.group = group;
 	}
 
-	public ExtensionProvider(String group) {
-		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshotsExtension();
-		this.repoReleases = MavenUpdateProvider.getDefaultRepositoryReleases();
-		this.repoMixed = MavenUpdateProvider.getDefaultRepositoryMixed();
-		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
+	public ExtensionProvider(Config config, String group) {
+		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
+		this.repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
+		this.repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
+		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases/* , repoMixed */);
 		this.group = group;
 	}
 
-	public ExtensionProvider() {
-		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshotsExtension();
-		this.repoReleases = MavenUpdateProvider.getDefaultRepositoryReleases();
-		this.repoMixed = MavenUpdateProvider.getDefaultRepositoryMixed();
-		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
+	public ExtensionProvider(Config config) {
+		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
+		this.repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
+		this.repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
+		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases/* , repoMixed */);
 		this.group = MavenUpdateProvider.DEFAULT_GROUP;
 	}
 
@@ -156,11 +156,6 @@ public class ExtensionProvider {
 		for (Repository r: repoReleases) {
 			releases.add(new Repository(r.label, r.url, Repository.TIMEOUT_ZERO, Repository.TIMEOUT_ZERO, r.cacheDirectory));
 		}
-		// mixed
-		List<Repository> mixed = new ArrayList<>();
-		for (Repository r: repoMixed) {
-			mixed.add(new Repository(r.label, r.url, Repository.TIMEOUT_ZERO, Repository.TIMEOUT_ZERO, r.cacheDirectory));
-		}
 
 		// TODO Auto-generated method stub
 		return new ExtensionProvider(
@@ -168,8 +163,6 @@ public class ExtensionProvider {
 				snap.toArray(new Repository[snap.size()]),
 
 				releases.toArray(new Repository[releases.size()]),
-
-				mixed.toArray(new Repository[mixed.size()]),
 
 				group
 
@@ -368,7 +361,7 @@ public class ExtensionProvider {
 	}
 
 	public List<Version> list(String artifact) throws IOException, GeneralSecurityException, SAXException, InterruptedException {
-		MavenUpdateProvider mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.repoMixed, this.group, artifact);
+		MavenUpdateProvider mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
 		return mup.list();
 	}
 
@@ -394,7 +387,7 @@ public class ExtensionProvider {
 
 	public Map<String, Object> detail(String artifact, Version version) throws PageException, IOException, GeneralSecurityException, SAXException {
 		MavenUpdateProvider mup;
-		mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.repoMixed, this.group, artifact);
+		mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
 		Map<String, Object> detail = mup.detail(version, EXTENSION_EXTENSION, false);
 
 		if (detail != null) return detail;
@@ -427,7 +420,7 @@ public class ExtensionProvider {
 	public Map<String, Object> detail(String artifact, Version version, Map<String, Object> defaultValue) {
 		MavenUpdateProvider mup;
 		Map<String, Object> detail = null;
-		mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.repoMixed, this.group, artifact);
+		mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
 		try {
 			detail = mup.detail(version, EXTENSION_EXTENSION, false);
 			if (detail != null) return detail;
@@ -539,7 +532,7 @@ public class ExtensionProvider {
 		outer: for (String artifact: artifactsList) {
 
 			// if (artifact.indexOf("extension") == -1) continue;
-			mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.repoMixed, this.group, artifact);
+			mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
 			versions = mup.list();
 			if (!ArrayUtil.isEmpty(versions)) {
 				artifacts = null;
@@ -570,9 +563,9 @@ public class ExtensionProvider {
 
 	public static void main(String[] args) throws Exception {
 		// TODO remove
-		ExtensionProvider ep = new ExtensionProvider(new Repository[] {}, new Repository[] {},
+		ExtensionProvider ep = new ExtensionProvider(new Repository[] {},
 				new Repository[] { new Repository("Maven Release Repository", "https://cdn.lucee.org/", Repository.TIMEOUT_5SECONDS, Repository.TIMEOUT_5SECONDS) }, "org.lucee");
-		ep = new ExtensionProvider();
+		ep = new ExtensionProvider(null);
 
 		long start = System.currentTimeMillis();
 		// org.lucee:h2-jdbc-extension:2.1.214.0001L

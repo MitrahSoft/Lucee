@@ -59,6 +59,7 @@ import lucee.runtime.cfx.CFXTagPool;
 import lucee.runtime.compiler.CFMLCompilerImpl;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.config.gateway.GatewayMap;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.customtag.InitFile;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.db.DataSource;
@@ -2088,5 +2089,15 @@ public final class ConfigWebImpl implements ConfigWebPro {
 			_id = tmp;
 		}
 		return _id;
+	}
+
+	@Override
+	public Repository[] getMavenRepository() {
+		return cs.getMavenRepository();
+	}
+
+	@Override
+	public Repository[] getMavenSnapshotRepository() {
+		return cs.getMavenSnapshotRepository();
 	}
 }

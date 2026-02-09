@@ -35,8 +35,11 @@ import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.Header;
 import lucee.loader.engine.CFMLEngineFactory;
+import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.ConfigUtil;
+import lucee.runtime.config.Prop;
+import lucee.runtime.config.PropFactory;
 import lucee.runtime.converter.ConverterException;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
@@ -48,6 +51,12 @@ import lucee.runtime.op.Caster;
 import lucee.runtime.op.date.DateCaster;
 import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.thread.ThreadUtil;
+import lucee.runtime.type.Array;
+import lucee.runtime.type.ArrayImpl;
+import lucee.runtime.type.Struct;
+import lucee.runtime.type.StructImpl;
+import lucee.runtime.type.dt.TimeSpan;
+import lucee.runtime.type.util.KeyConstants;
 import lucee.runtime.type.util.ListUtil;
 
 public final class MavenUpdateProvider {
@@ -59,58 +68,49 @@ public final class MavenUpdateProvider {
 	private static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
 			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
 
-	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_CORE = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
-	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_EXTENSIONS = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
+	// versions provided by Lucee
+	private static final Repository DEFAULT_REPOSITORY_LUCEE = new Repository("Lucee Maven repository", "https://cdn.lucee.org/", Repository.TIMEOUT_1HOUR,
+			Repository.TIMEOUT_NEVER);
 
-	private static final Repository[] DEFAULT_REPOSITORY_RELEASES = new Repository[] {
-			new Repository("Maven Release Repository", "https://repo1.maven.org/maven2/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER) };
+	private static final Repository DEFAULT_REPOSITORY_SNAPSHOT = DEFAULT_REPOSITORY_SONATYPE_LAST90;
+	private static final Repository DEFAULT_REPOSITORY_RELEASE = new Repository("Maven Release Repository", "https://repo1.maven.org/maven2/", Repository.TIMEOUT_1HOUR,
+			Repository.TIMEOUT_NEVER);
 
-	private static final Repository[] DEFAULT_REPOSITORY_MIXED = new Repository[] {
-			// versions provided by Lucee
-			new Repository("Lucee Maven repository", "https://cdn.lucee.org/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER) };
+	public static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS = new Repository[] { DEFAULT_REPOSITORY_SNAPSHOT, DEFAULT_REPOSITORY_LUCEE };
+
+	public static final Repository[] DEFAULT_REPOSITORY_RELEASES = new Repository[] { DEFAULT_REPOSITORY_RELEASE, DEFAULT_REPOSITORY_LUCEE };
+
+	// private static final Repository[] DEFAULT_REPOSITORY_MIXED = new Repository[] {
+	// DEFAULT_REPOSITORY_LUCEE };
 
 	public static final String DEFAULT_GROUP = "org.lucee";
 	public static final String DEFAULT_ARTIFACT = "lucee";
 
 	private static Repository[] defaultRepositoryReleases;
-	private static Repository[] defaultRepositorySnapshotsCore;
-	private static Repository[] defaultRepositorySnapshotsExtensions;
-	private static Repository[] defaultRepositoryMixed;
+	private static Repository[] defaultRepositorySnapshots;
+	// private static Repository[] defaultRepositoryMixed;
 
 	private final String group;
 	private final String artifact;
 	private final Repository[] repoSnapshots;
 	private final Repository[] repoReleases;
-	private final Repository[] repoMixed;
+	// private final Repository[] repoMixed;
 	private final List<Repository> repos;
 
-	public static Repository[] getDefaultRepositoryReleases() {
-		if (defaultRepositoryReleases == null) {
-			defaultRepositoryReleases = readReposFromEnvVar("lucee.mvn.repo.releases", DEFAULT_REPOSITORY_RELEASES);
-		}
-		return defaultRepositoryReleases;
-	}
-
-	public static Repository[] getDefaultRepositorySnapshotsCore() {
-		if (defaultRepositorySnapshotsCore == null) {
-			defaultRepositorySnapshotsCore = readReposFromEnvVar("lucee.mvn.repo.snapshots", DEFAULT_REPOSITORY_SNAPSHOTS_CORE);
-		}
-		return defaultRepositorySnapshotsCore;
-	}
-
-	public static Repository[] getDefaultRepositorySnapshotsExtension() {
-		if (defaultRepositorySnapshotsExtensions == null) {
-			defaultRepositorySnapshotsExtensions = readReposFromEnvVar("lucee.mvn.repo.snapshots", DEFAULT_REPOSITORY_SNAPSHOTS_EXTENSIONS);
-		}
-		return defaultRepositorySnapshotsExtensions;
-	}
-
-	public static Repository[] getDefaultRepositoryMixed() {
-		if (defaultRepositoryMixed == null) {
-			defaultRepositoryMixed = readReposFromEnvVar("lucee.mvn.repo.snapshots", DEFAULT_REPOSITORY_MIXED);
-		}
-		return defaultRepositoryMixed;
-	}
+	/*
+	 * public static Repository[] getDefaultRepositoryReleasesX() { if (defaultRepositoryReleases ==
+	 * null) { print.ds(); defaultRepositoryReleases = readReposFromEnvVar("lucee.mvn.repo.releases",
+	 * DEFAULT_REPOSITORY_RELEASES); } return defaultRepositoryReleases; }
+	 * 
+	 * public static Repository[] getDefaultRepositorySnapshotsX() { if (defaultRepositorySnapshots ==
+	 * null) { defaultRepositorySnapshots = readReposFromEnvVar("lucee.mvn.repo.snapshots",
+	 * DEFAULT_REPOSITORY_SNAPSHOTS); } return defaultRepositorySnapshots; }
+	 * 
+	 * 
+	 * public static Repository[] getDefaultRepositoryMixed() { if (defaultRepositoryMixed == null) {
+	 * print.ds(); defaultRepositoryMixed = readReposFromEnvVar("lucee.mvn.repo.snapshots",
+	 * DEFAULT_REPOSITORY_MIXED); } return defaultRepositoryMixed; }
+	 */
 
 	private static Repository[] readReposFromEnvVar(String envVarName, Repository[] defaultValue) {
 		String str = SystemUtil.getSystemPropOrEnvVar(envVarName, null);
@@ -135,29 +135,30 @@ public final class MavenUpdateProvider {
 		return defaultValue;
 	}
 
-	public MavenUpdateProvider() {
-		this.repoSnapshots = getDefaultRepositorySnapshotsCore();
-		this.repoReleases = getDefaultRepositoryReleases();
-		this.repoMixed = getDefaultRepositoryMixed();
-		this.repos = merge(repoSnapshots, repoReleases, repoMixed);
+	public MavenUpdateProvider(Config config) {
+		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
+		this.repoSnapshots = cp == null ? DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
+		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenSnapshotRepository();
+		// this.repoMixed = getDefaultRepositoryMixed();
+		this.repos = merge(repoSnapshots, repoReleases/* , repoMixed */);
 		this.group = DEFAULT_GROUP;
 		this.artifact = DEFAULT_ARTIFACT;
 	}
 
-	public MavenUpdateProvider(String group, String artifact) {
-		this.repoSnapshots = getDefaultRepositorySnapshotsCore();
-		this.repoReleases = getDefaultRepositoryReleases();
-		this.repoMixed = getDefaultRepositoryMixed();
-		this.repos = merge(repoSnapshots, repoReleases, repoMixed);
+	public MavenUpdateProvider(Config config, String group, String artifact) {
+		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
+		this.repoSnapshots = cp == null ? DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
+		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenSnapshotRepository();
+		// this.repoMixed = getDefaultRepositoryMixed();
+		this.repos = merge(repoSnapshots, repoReleases/* , repoMixed */);
 		this.group = group;
 		this.artifact = artifact;
 	}
 
-	public MavenUpdateProvider(Repository[] repoSnapshots, Repository[] repoReleases, Repository[] repoMixed, String group, String artifact) {
+	public MavenUpdateProvider(Repository[] repoSnapshots, Repository[] repoReleases, String group, String artifact) {
 		this.repoSnapshots = repoSnapshots;
 		this.repoReleases = repoReleases;
-		this.repoMixed = repoMixed;
-		this.repos = merge(repoSnapshots, repoReleases, repoMixed);
+		this.repos = merge(repoSnapshots, repoReleases);
 		this.group = group;
 		this.artifact = artifact;
 	}
@@ -277,7 +278,9 @@ public final class MavenUpdateProvider {
 		// versions
 
 		boolean isSnap = version.getQualifier().endsWith("-SNAPSHOT");
-		List<Repository> repos = isSnap ? merge(repoSnapshots, repoMixed) : merge(repoReleases, repoMixed);
+		// List<Repository> repos = isSnap ? merge(repoSnapshots, repoMixed) : merge(repoReleases,
+		// repoMixed);
+		Repository[] repos = isSnap ? repoSnapshots : repoReleases;
 
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";
 		else requiredArtifactExtension = requiredArtifactExtension.toLowerCase();
@@ -443,6 +446,76 @@ public final class MavenUpdateProvider {
 		catch (ConverterException e) {
 			throw Caster.toPageException(e);
 		}
+	}
+
+	public final static class RepositoryFactory implements PropFactory<Repository> {
+
+		private static RepositoryFactory instance;
+
+		public static RepositoryFactory getInstance() {
+			if (instance == null) {
+				instance = new RepositoryFactory();
+			}
+			return instance;
+		}
+
+		@Override
+		public Repository evaluate(Config config, String name, Object val, Repository defaultValue) {
+			Struct data = Caster.toStruct(val, null);
+			if (data != null) {
+				String url = Caster.toString(data.get(KeyConstants._url, null), null);
+				if (StringUtil.isEmpty(url, true)) return defaultValue;
+
+				String label = Caster.toString(data.get(KeyConstants._label, null), null);
+				TimeSpan tList = Caster.toTimespan(data.get("timeoutList", null), null);
+				TimeSpan tDetail = Caster.toTimespan(data.get("timeoutDetail", null), null);
+
+				return new Repository(StringUtil.isEmpty(label, true) ? null : label, url, tList != null ? tList.getMillis() : Repository.TIMEOUT_5MINUTES,
+						tDetail != null ? tDetail.getMillis() : Repository.TIMEOUT_NEVER);
+			}
+			// coming from env var/sys op
+			String url = Caster.toString(val, null);
+			if (!StringUtil.isEmpty(url, true)) {
+				return new Repository(null, url, Repository.TIMEOUT_5MINUTES, Repository.TIMEOUT_NEVER);
+			}
+
+			return defaultValue;
+		}
+
+		@Override
+		public Struct schema(Prop<Repository> prop) {
+			Struct sct = new StructImpl(Struct.TYPE_LINKED);
+			sct.setEL(KeyConstants._type, "object");
+			sct.setEL(KeyConstants._description, "Configuration for an extension provider repository.");
+
+			Struct properties = new StructImpl(Struct.TYPE_LINKED);
+			sct.setEL(KeyConstants._properties, properties);
+
+			// URL is mandatory in the struct
+			addProp(properties, "url", "string", "The endpoint URL for the repository.");
+			addProp(properties, "label", "string", "A human-readable name for the repository.");
+			addProp(properties, "timeoutList", "string", "Caching duration for the extension list (e.g., '0,0,5,0').");
+			addProp(properties, "timeoutDetail", "string", "Caching duration for specific extension details.");
+
+			Array required = new ArrayImpl();
+			required.appendEL("url");
+			sct.setEL(KeyConstants._required, required);
+
+			return sct;
+		}
+
+		private void addProp(Struct props, String key, String type, String desc) {
+			Struct p = new StructImpl(Struct.TYPE_LINKED);
+			p.setEL(KeyConstants._type, type);
+			p.setEL(KeyConstants._description, desc);
+			props.setEL(key, p);
+		}
+
+		@Override
+		public Object resolvedValue(Repository value) {
+			return value;
+		}
+
 	}
 
 	public final static class Repository implements Cloneable {

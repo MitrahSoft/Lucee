@@ -35,6 +35,7 @@ import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.dt.TimeSpan;
 import lucee.runtime.type.util.KeyConstants;
+import lucee.runtime.type.util.ListUtil;
 
 public class Prop<T> {
 
@@ -413,10 +414,23 @@ public class Prop<T> {
 		}
 
 		try {
-			// TODO
 			if (envVarSystemProps != null) {
-				throw new RuntimeException("not supported yet");
+				String str;
+				for (String key: envVarSystemProps) {
+					str = SystemUtil.getSystemPropOrEnvVar(key, null);
+					if (!StringUtil.isEmpty(str, true)) {
+						str = str.trim();
+						T tmp;
+						int index = 0;
+						for (String s: ListUtil.listToStringArray(str.trim(), ',')) {
+							tmp = factory.evaluate(config, "" + (++index), s, null);
+							if (tmp != null) list.add(tmp);
+						}
+						return list;
+					}
+				}
 			}
+
 			Array arr = ConfigUtil.getAsArray(config, data, true, keys);
 			Iterator<Entry<Key, Object>> it = arr.entryIterator();
 			Entry<Key, Object> e;

@@ -3817,7 +3817,7 @@ public final class ConfigAdmin {
 
 		;
 		try {
-			IOUtil.copy(new MavenUpdateProvider().getCore(version), new FileOutputStream(newLucee), true, true);
+			IOUtil.copy(new MavenUpdateProvider(config).getCore(version), new FileOutputStream(newLucee), true, true);
 		}
 		catch (PageException e) {
 			throw e;

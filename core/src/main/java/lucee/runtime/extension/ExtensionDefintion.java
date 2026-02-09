@@ -55,9 +55,9 @@ public final class ExtensionDefintion {
 		return id;
 	}
 
-	public GAVSO getGAVSO() {
+	public GAVSO getGAVSO(Config config) {
 		if (gavso != null) return gavso;
-		ExtensionProvider ep = new ExtensionProvider();
+		ExtensionProvider ep = new ExtensionProvider(config);
 		try {
 			gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
 			return gavso;
@@ -83,7 +83,7 @@ public final class ExtensionDefintion {
 		if (gavso != null) return gavso.a;
 
 		if (!StringUtil.isEmpty(getId())) {
-			ExtensionProvider ep = new ExtensionProvider();
+			ExtensionProvider ep = new ExtensionProvider(config);
 			try {
 				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
 				return gavso.g;
@@ -98,7 +98,7 @@ public final class ExtensionDefintion {
 		if (gavso != null) return gavso.g;
 
 		if (getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider();
+			ExtensionProvider ep = new ExtensionProvider(config);
 			try {
 				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
 				return gavso.g;
@@ -157,7 +157,7 @@ public final class ExtensionDefintion {
 		if (other instanceof ExtensionDefintion) {
 			ExtensionDefintion ed = (ExtensionDefintion) other;
 
-			if (ed.getGAVSO() != null && getGroupId() != null && getArtifactId() != null) {
+			if (ed.getGAVSO(config) != null && getGroupId() != null && getArtifactId() != null) {
 				return ed.getGroupId().equalsIgnoreCase(getGroupId()) && ed.getArtifactId().equalsIgnoreCase(getArtifactId());
 			}
 
@@ -223,7 +223,7 @@ public final class ExtensionDefintion {
 	}
 
 	public String getStorageName() {
-		GAVSO gav = getGAVSO();
+		GAVSO gav = getGAVSO(config);
 
 		if (gav != null) {
 			return getStorageName(gav);

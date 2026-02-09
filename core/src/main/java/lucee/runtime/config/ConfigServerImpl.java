@@ -127,6 +127,9 @@ import lucee.runtime.config.ConfigUtil.CacheElement;
 import lucee.runtime.config.LabelFactory.Label;
 import lucee.runtime.config.Prop.Choice;
 import lucee.runtime.config.gateway.GatewayMap;
+import lucee.runtime.config.maven.MavenUpdateProvider;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
+import lucee.runtime.config.maven.MavenUpdateProvider.RepositoryFactory;
 import lucee.runtime.customtag.InitFile;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.db.DataSource;
@@ -892,7 +895,21 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 					"Specifies the white-space management strategy for the output stream. Using 'smart' optimization can significantly reduce page weight without breaking HTML layout.");
 	protected Integer cfmlWriter;
 
-	// lucee.maven.download.policy.startup
+	// "lucee.mvn.repo.snapshots"
+
+	@SuppressWarnings("unchecked")
+	private static Prop<Repository> metaMavenSnapshotRepository = Prop.custom(RepositoryFactory.getInstance(), Prop.TYPE_LIST).keys("snapshotRepository").parent("maven")
+			.systemPropEnvVar("lucee.mvn.repo.snapshots").description(
+					"Specifies the remote repositories used for 'Snapshot' versions of Lucee artifacts. " + "This allows the engine to pull pre-release core updates (.lco) or "
+							+ "experimental extension versions (.lex) for testing and development. Defaults to the Sonatype Snapshot repository.");
+	private Repository[] mavenSnapshotRepository;
+	@SuppressWarnings("unchecked")
+	private static Prop<Repository> metaMavenRepository = Prop.custom(RepositoryFactory.getInstance(), Prop.TYPE_LIST).keys("repository", "releaseRepository").parent("maven")
+			.systemPropEnvVar("lucee.mvn.repo.releases")
+			.description("Specifies the remote repositories used to resolve stable Lucee artifacts. " + "This includes the Lucee Core (.lco files), the Lucee Loader (.jar), "
+					+ "Lucee Extensions (.lex), and standard third-party Java libraries. By default, this points to Maven Central, ensuring the engine can "
+					+ "autonomously download necessary components to maintain its modular core.");
+	private Repository[] mavenRepository;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaMavenDownloadPolicyStartup = Prop.integer().keys("downloadPolicyStartup").parent("maven")
@@ -8888,6 +8905,62 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "id")) {
 				if (id != null) {
 					id = null;
+				}
+			}
+		}
+	}
+
+	@Override
+	public Repository[] getMavenRepository() {
+		if (mavenRepository == null) {
+			synchronized (SystemUtil.createToken("config", "mavenRepository")) {
+				if (mavenRepository == null) {
+					List<Repository> tmp = metaMavenRepository.list(this, root);
+					if (tmp != null && !tmp.isEmpty()) {
+						mavenRepository = tmp.toArray(new Repository[tmp.size()]);
+					}
+					else {
+						mavenRepository = MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASES;
+					}
+				}
+			}
+		}
+		return mavenRepository;
+	}
+
+	public void resetMavenRepository() {
+		if (mavenRepository != null) {
+			synchronized (SystemUtil.createToken("config", "mavenRepository")) {
+				if (mavenRepository != null) {
+					mavenRepository = null;
+				}
+			}
+		}
+	}
+
+	@Override
+	public Repository[] getMavenSnapshotRepository() {
+		if (mavenSnapshotRepository == null) {
+			synchronized (SystemUtil.createToken("config", "mavenSnapshotRepository")) {
+				if (mavenSnapshotRepository == null) {
+					List<Repository> tmp = metaMavenSnapshotRepository.list(this, root);
+					if (tmp != null && !tmp.isEmpty()) {
+						mavenSnapshotRepository = tmp.toArray(new Repository[tmp.size()]);
+					}
+					else {
+						mavenSnapshotRepository = MavenUpdateProvider.DEFAULT_REPOSITORY_SNAPSHOTS;
+					}
+				}
+			}
+		}
+		return mavenSnapshotRepository;
+	}
+
+	public void resetMavenSnapshotRepository() {
+		if (mavenSnapshotRepository != null) {
+			synchronized (SystemUtil.createToken("config", "mavenSnapshotRepository")) {
+				if (mavenSnapshotRepository != null) {
+					mavenSnapshotRepository = null;
 				}
 			}
 		}

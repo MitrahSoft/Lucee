@@ -326,10 +326,10 @@ public final class DeployHandler {
 		return ConfigAdmin._updateRHExtension((ConfigPro) config, rhe, filter, reload, force, RHExtension.ACTION_COPY, log);
 	}
 
-	private static Version getLatestVersionFor(Config config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
+	private static Version getLatestVersionFor(ConfigPro config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
 			// get extension from Maven
-			ExtensionProvider ep = new ExtensionProvider();
+			ExtensionProvider ep = new ExtensionProvider(config);
 
 			String artifact = ed.getArtifactId();
 
@@ -368,7 +368,7 @@ public final class DeployHandler {
 		}
 	}
 
-	public static Version getLatestVersionFor(Config config, ExtensionDefintion ed, Log log, boolean throwOnError) throws ApplicationException {
+	public static Version getLatestVersionFor(ConfigPro config, ExtensionDefintion ed, Log log, boolean throwOnError) throws ApplicationException {
 		if (USE_MAVEN_EXTENSION_PROVIDER) {
 			try {
 				Version version = getLatestVersionFor(config, ed, false, false, log);
@@ -381,7 +381,7 @@ public final class DeployHandler {
 			}
 		}
 
-		RHExtensionProvider[] providers = ((ConfigPro) config).getRHExtensionProviders();
+		RHExtensionProvider[] providers = config.getRHExtensionProviders();
 
 		String content;
 		Identification id = config.getIdentification();
@@ -428,10 +428,10 @@ public final class DeployHandler {
 		return null;
 	}
 
-	public static Resource downloadExtensionFromMaven(Config config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
+	public static Resource downloadExtensionFromMaven(ConfigPro config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
 			// get extension from Maven
-			ExtensionProvider ep = new ExtensionProvider();
+			ExtensionProvider ep = new ExtensionProvider(config);
 
 			String artifact = ed.getArtifactId();
 
@@ -462,7 +462,7 @@ public final class DeployHandler {
 			}
 			if (version == null) return null;
 
-			return ep.getResource((ConfigPro) config, artifact, version);
+			return ep.getResource(config, artifact, version);
 		}
 		catch (Exception e) {
 			if (throwOnError) throw Caster.toPageException(e);
@@ -473,7 +473,7 @@ public final class DeployHandler {
 		}
 	}
 
-	public static Resource downloadExtension(Config config, ExtensionDefintion ed, Log log, boolean throwOnError) throws ApplicationException {
+	public static Resource downloadExtension(ConfigPro config, ExtensionDefintion ed, Log log, boolean throwOnError) throws ApplicationException {
 		// get extension from Maven
 		// TODO set investigate to true and log as warning if it fallback to old behaviour
 		if (USE_MAVEN_EXTENSION_PROVIDER) {
@@ -492,7 +492,7 @@ public final class DeployHandler {
 		Identification id = config.getIdentification();
 		String apiKey = id == null ? null : id.getApiKey();
 		URL url;
-		RHExtensionProvider[] providers = ((ConfigPro) config).getRHExtensionProviders();
+		RHExtensionProvider[] providers = config.getRHExtensionProviders();
 		ApplicationException exp = null;
 		for (int i = 0; i < providers.length; i++) {
 			HTTPResponse rsp = null;

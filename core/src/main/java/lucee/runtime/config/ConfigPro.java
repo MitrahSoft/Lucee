@@ -26,6 +26,7 @@ import lucee.runtime.ai.AIEngine;
 import lucee.runtime.ai.AIEnginePool;
 import lucee.runtime.cache.tag.CacheHandler;
 import lucee.runtime.component.ImportDefintion;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.customtag.InitFile;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.db.DataSource;
@@ -420,4 +421,8 @@ public interface ConfigPro extends Config {
 	public boolean isLoggingLoaded();
 
 	public String getId();
+
+	public Repository[] getMavenRepository();
+
+	public Repository[] getMavenSnapshotRepository();
 }
