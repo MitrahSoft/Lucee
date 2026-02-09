@@ -1661,6 +1661,25 @@ public final class RHExtension implements Serializable {
 		return false;
 	}
 
+	public boolean same(Struct data) {
+		// gav
+		String strGav = Caster.toString(data.get(KeyConstants._maven, null), null);
+		if (!StringUtil.isEmpty(strGav, true)) {
+			GAVSO gav = MavenUtil.toGAVSO(strGav, null);
+			if (gav != null && hasGAV()) {
+				return gav.same(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
+			}
+		}
+
+		// id
+		String id = Caster.toString(data.get(KeyConstants._id, null), null);
+		if (!StringUtil.isEmpty(id, true) && !StringUtil.isEmpty(getId())) {
+			return id.trim().equals(getId());
+		}
+
+		return false;
+	}
+
 	/// ext.getId().equalsIgnoreCase(id) || (gav != null && ext.getGAVSO() != null &&
 	/// ext.getGAVSO().toGAV().equals(gav.trim()))
 

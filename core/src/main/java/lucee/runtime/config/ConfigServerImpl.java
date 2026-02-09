@@ -324,7 +324,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private static Prop<Boolean> metaOnlyFirstMatch = Prop.bool().keys("onlyFirstMatch").systemPropEnvVar("lucee.mapping.first").defaultValue(true);
 	private static Boolean onlyFirstMatch;
 
-	private static Prop<CacheConnection> metaCacheConnection = Prop.custom(CacheConnectionFactory.getInstance(), Prop.TYPE_MAP).keys("caches")
+	private static Prop<CacheConnection> metaCacheConnection = Prop.custom(CacheConnectionFactory.getInstance(), Prop.TYPE_MAP).keys("caches").lowerCaseKeys().lowerCaseKeys()
 			.access(SecurityManager.TYPE_DATASOURCE).description("Defines cache connections for data storage, sessions, and distributed locks."
 					+ " Supports OSGi/Maven driver loading and specific role assignments like 'storage' or 'default' query caching.");
 	private Map<String, CacheConnection> caches;
@@ -373,7 +373,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private Map<Integer, String> cacheDefaultConnectionNames = null;
 
 	private static Prop<DataSource> metaDatasourcesAll = Prop.custom(DataSourceFactory.getInstance(), Prop.TYPE_MAP).keys("dataSources").access(SecurityManager.TYPE_DATASOURCE)
-			.description("Defines database connections. Supports loading drivers via OSGi bundles or Maven coordinates,"
+			.lowerCaseKeys().description("Defines database connections. Supports loading drivers via OSGi bundles or Maven coordinates,"
 					+ " cloud-native credential resolution, and advanced pooling controls like connection limits and live timeouts.");
 	private Map<String, DataSource> dataSources;
 	private Map<String, DataSource> datasourcesNoQoQ;
@@ -402,7 +402,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 					"If enable you cannot use expression within \"[ ]\" like this susi[getVariableName()] . This affects the following functions [IsDefined, structGet, empty] and the following tags [savecontent attribute \"variable\"].");
 	private Boolean securityLimitEvaluation;
 
-	private static Prop<LoggerAndSourceData> metaLoggers = Prop.custom(LogFactory.getInstance(), Prop.TYPE_MAP).keys("loggers").logGlobal()
+	private static Prop<LoggerAndSourceData> metaLoggers = Prop.custom(LogFactory.getInstance(), Prop.TYPE_MAP).keys("loggers").logGlobal().lowerCaseKeys()
 			.description("definition of all logs for Lucee");
 	private Map<String, LoggerAndSourceData> loggers;
 	private static LogEngine logEngine;
@@ -588,7 +588,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private static Prop<String> metaSalt = Prop.str().keys("salt", "adminSalt").systemPropEnvVar("lucee.admin.salt");
 	private String salt;
 
-	private static Prop<Mapping> metaMappings = Prop.custom(MappingFactory.getInstance(MappingFactory.TYPE_REGULAR), Prop.TYPE_MAP).keys("mappings", "CFMappings")
+	private static Prop<Mapping> metaMappings = Prop.custom(MappingFactory.getInstance(MappingFactory.TYPE_REGULAR), Prop.TYPE_MAP).keys("mappings", "CFMappings").lowerCaseKeys()
 			.description("Maps logical paths to storage locations, supporting local filesystems and virtual providers like S3. "
 					+ "Includes controls for 'physical' vs 'archive' priority, 'toplevel' browser visibility, 'inspectTemplate' change-detection rules, "
 					+ "and 'listener' configurations for Application.cfc discovery.");
@@ -610,7 +610,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private Mapping[] componentMappings;
 
 	private static Prop<CFXTagClass> metaCfxTagPool = Prop.custom(JavaCFXTagClassFactory.getInstance(), Prop.TYPE_MAP).keys("cfx").access(SecurityManager.TYPE_CFX_SETTING)
-			.deprecated();
+			.deprecated().lowerCaseKeys();
 	private CFXTagPool cfx;
 
 	private static Prop<Boolean> metaRestList = Prop.bool().keys("list").parent("rest").defaultValue(false).description("List Services when \"/rest/\" is called");
@@ -1016,14 +1016,15 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private static Prop<Boolean> metafullNullSupport = Prop.bool().keys("nullSupport", "fullNullSupport").systemPropEnvVar("lucee.full.null.support").defaultValue(false);
 	private Boolean nullSupport;
 
-	private static Prop<SecretProvider> metaSecretProviders = Prop.custom(SecretProviderFactory.getInstance(), Prop.TYPE_MAP).keys("secretProvider", "secretProviders");
+	private static Prop<SecretProvider> metaSecretProviders = Prop.custom(SecretProviderFactory.getInstance(), Prop.TYPE_MAP).keys("secretProvider", "secretProviders")
+			.lowerCaseKeys();
 	protected Map<String, SecretProvider> secretProvider;
 
 	private static Prop<ClassDefinition> metacCacheDefinitions = Prop.custom(ClassDefinitionFactory.getInstance(), Prop.TYPE_LIST).keys("cacheClasses").deprecated();
 	private Map<String, ClassDefinition> cacheClasses;
 
 	private static Prop<GatewayEntry> metaGatewayEntries = Prop.custom(GatewayEntryFactory.getInstance(), Prop.TYPE_MAP).keys("gateways").access(SecurityManagerImpl.TYPE_GATEWAY)
-			.description(
+			.lowerCaseKeys().description(
 					"Defines Event Gateways for asynchronous communication (SMS, XMPP, File Watcher, etc.). Configures the driver class, listener CFC, and custom protocol parameters.");
 	private GatewayMap gateways;
 
@@ -1051,7 +1052,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 					+ "Increasing this value allows for faster parallel processing of background queues, but consumes more system resources.");
 	private Integer remoteClientsMaxThreads;
 
-	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai", "aiEngines")
+	private static Prop<AIEngine> metaAiEngines = Prop.custom(AIEngineFactory.getInstance(), Prop.TYPE_MAP).keys("ai", "aiEngines").lowerCaseKeys()
 			.description("A map of named AI Engine configurations. This allows you to define and manage multiple "
 					+ "connections to AI providers such as OpenAI (ChatGPT), Google (Gemini), Anthropic (Claude), "
 					+ "or local instances like Ollama. Each engine can be configured with specific models, "
@@ -1206,7 +1207,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private List<ResourceProviderDef> resourceProviders;
 	private final ResourcesImpl resources = new ResourcesImpl();
 
-	private static Prop<ClassDefinition> metaCacheHandlers = Prop.custom(ClassDefinitionFactory.getInstance(), Prop.TYPE_MAP).keys("cacheHandlers")
+	private static Prop<ClassDefinition> metaCacheHandlers = Prop.custom(ClassDefinitionFactory.getInstance(), Prop.TYPE_MAP).keys("cacheHandlers").lowerCaseKeys()
 			.description("Registers custom Cache Handlers used to process the 'cachedWithin' attribute in tags like <cfquery>, <cfhttp>, and <cffunction>. "
 					+ "Lucee provides built-in handlers for 'request' (storing data for the duration of the current request) and 'timespan' "
 					+ "(standard duration-based caching). This property allows developers to extend this behavior with custom logic, "

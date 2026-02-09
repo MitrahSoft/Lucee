@@ -6377,7 +6377,6 @@ public final class ConfigAdmin {
 	 * @throws PageException
 	 */
 	public BundleDefinition[] _updateExtension(ConfigPro config, RHExtension ext) throws IOException, BundleException, PageException {
-		if (!Decision.isUUId(ext.getId())) throw new IOException("id [" + ext.getId() + "] is invalid, it has to be a UUID");
 		Array children = ConfigUtil.getAsArray("extensions", root);
 		int[] keys = children.intKeys();
 		int key;
@@ -6396,7 +6395,7 @@ public final class ConfigAdmin {
 				id = Caster.toString(el.get(KeyConstants._id, null), null);
 				gav = Caster.toString(el.get(KeyConstants._maven, null), null);
 				if (StringUtil.isEmpty(id)) hasNoneId = true;
-				if (ext.equalsTo(el)) {
+				if (ext.same(el)) {
 					old = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
 					ext.populate(el, false);
 					old = minus(old, OSGiUtil.toBundleDefinitions(ext.getMetadata().getBundles()));

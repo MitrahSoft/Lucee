@@ -57,6 +57,7 @@ public class Prop<T> {
 	private boolean deprecated;
 	private boolean hidden;
 	private final short type;
+	private boolean lowerCaseKeys;
 
 	private Prop(PropFactory<T> factory) {
 		this(factory, TYPE_SIMPLE);
@@ -209,6 +210,11 @@ public class Prop<T> {
 
 	public Prop<T> deprecated() {
 		this.deprecated = true;
+		return this;
+	}
+
+	public Prop<T> lowerCaseKeys() {
+		this.lowerCaseKeys = true;
 		return this;
 	}
 
@@ -373,7 +379,7 @@ public class Prop<T> {
 			T tmp;
 			while (it.hasNext()) {
 				e = it.next();
-				key = e.getKey().getString();
+				key = lowerCaseKeys ? e.getKey().getLowerString() : e.getKey().getString();
 				tmp = factory.evaluate(config, key, e.getValue(), null);
 				if (tmp != null) map.put(key, tmp);
 			}
@@ -418,7 +424,7 @@ public class Prop<T> {
 			T tmp;
 			while (it.hasNext()) {
 				e = it.next();
-				key = e.getKey().getString();
+				key = lowerCaseKeys ? e.getKey().getLowerString() : e.getKey().getString();
 				tmp = factory.evaluate(config, key, e.getValue(), null);
 				if (tmp != null) list.add(tmp);
 			}
