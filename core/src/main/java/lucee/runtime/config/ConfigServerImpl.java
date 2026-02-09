@@ -245,6 +245,29 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	public static final ClassDefinition<DummyORMEngine> DEFAULT_ORM_ENGINE = new ClassDefinitionImpl<DummyORMEngine>(DummyORMEngine.class);
 	private static final long FIVE_SECONDS = 5000;
 
+	// DAP secret - required to register a debugger listener. If not set, DAP debugger is disabled.
+	public static final String DEBUGGER_SECRET;
+	// DAP enabled if secret is set (non-empty) - enables listener registration and console capture
+	public static final boolean DEBUGGER_ENABLED;
+	// DAP debugger active - controls bytecode instrumentation for stepping/breakpoints (default true
+	// when secret set)
+	public static final boolean DEBUGGER;
+	static {
+		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.dap.secret", null);
+		if (secret != null && !secret.trim().isEmpty()) {
+			DEBUGGER_SECRET = secret.trim();
+			DEBUGGER_ENABLED = true;
+			// Breakpoint support defaults to true, can be disabled for console-only mode
+			DEBUGGER = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.dap.breakpoint", null), true);
+
+		}
+		else {
+			DEBUGGER_SECRET = null;
+			DEBUGGER_ENABLED = false;
+			DEBUGGER = false;
+		}
+	}
+
 	public static Config instance;
 
 	//////////////////////////
@@ -6416,6 +6439,9 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 	@Override
 	public boolean getExecutionLogEnabled() {
+
+		if (DEBUGGER) return true;
+
 		if (executionLogEnabled == null) {
 			synchronized (SystemUtil.createToken("config", "getExecutionLogEnabled")) {
 				if (executionLogEnabled == null) {

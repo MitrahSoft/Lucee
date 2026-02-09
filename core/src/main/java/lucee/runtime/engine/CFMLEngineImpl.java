@@ -110,6 +110,7 @@ import lucee.runtime.config.ConfigWeb;
 import lucee.runtime.config.ConfigWebImpl;
 import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.DeployHandler;
+import lucee.runtime.debug.DebuggerPrintStream;
 import lucee.runtime.config.Identification;
 import lucee.runtime.config.Password;
 import lucee.runtime.config.ResetFilter;
@@ -225,8 +226,24 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		System.setProperty("sun.net.useExclusiveBind", "false");
 	}
 
-	public static final PrintStream CONSOLE_ERR = System.err;
-	public static final PrintStream CONSOLE_OUT = System.out;
+	public static final PrintStream CONSOLE_ERR;
+	public static final PrintStream CONSOLE_OUT;
+
+	static {
+		// Install debugger print streams if debugger is enabled
+		boolean debuggerEnabled = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
+
+		if (debuggerEnabled) {
+			CONSOLE_OUT = new DebuggerPrintStream(System.out, false);
+			CONSOLE_ERR = new DebuggerPrintStream(System.err, true);
+			System.setOut(CONSOLE_OUT);
+			System.setErr(CONSOLE_ERR);
+		}
+		else {
+			CONSOLE_OUT = System.out;
+			CONSOLE_ERR = System.err;
+		}
+	}
 	private static final String LOG_NAME = "deploy";
 	private static final String LOG_TYPE_NAME = "request";
 
@@ -1142,8 +1159,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 						// print.e("mas-done:"+System.currentTimeMillis());
 						break;
 					}
-					// reach request timeout
-					else if (ended == -1 && (pc.getStartTime() + pc.getRequestTimeout()) < System.currentTimeMillis()) {
+					// reach request timeout (adjusted for debugger suspend time)
+					else if (ended == -1 && (pc.getStartTime() + pc.getRequestTimeout() + pc.getDebuggerTotalSuspendedMillis()) < System.currentTimeMillis()) {
 						// print.e("req-time:"+System.currentTimeMillis());
 						CFMLFactoryImpl.terminate(pc, false);
 						ended = System.currentTimeMillis();

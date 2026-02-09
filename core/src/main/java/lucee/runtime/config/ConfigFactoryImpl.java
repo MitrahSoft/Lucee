@@ -87,6 +87,7 @@ import lucee.runtime.dump.TextDumpWriter;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ConsoleExecutionLog;
 import lucee.runtime.engine.DebugExecutionLog;
+import lucee.runtime.engine.DebuggerExecutionLog;
 import lucee.runtime.engine.ExecutionLog;
 import lucee.runtime.engine.ExecutionLogFactory;
 import lucee.runtime.engine.InfoImpl;
@@ -829,8 +830,62 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 	public static ExecutionLogFactory loadExeLog(ConfigServerImpl config, Struct root) {
 		try {
 			Struct el = ConfigUtil.getAsStruct("executionLog", root);
+
+			// Determine the execution log class first
+			String strClass = getAttr(config, el, "class");
+			Class<? extends ExecutionLog> clazz = null;
+			Map<String, String> args = null;
+
+			// If debugger breakpoint support enabled and no explicit class configured, use DebuggerExecutionLog
+			if (StringUtil.isEmpty(strClass) && ConfigServerImpl.DEBUGGER) {
+				LogUtil.log(config, Log.LEVEL_INFO, "application", "Debugger breakpoint support enabled");
+				clazz = DebuggerExecutionLog.class;
+				args = new HashMap<String, String>();
+			}
+			else if (!StringUtil.isEmpty(strClass)) {
+				try {
+					if ("console".equalsIgnoreCase(strClass)) clazz = ConsoleExecutionLog.class;
+					else if ("debug".equalsIgnoreCase(strClass)) clazz = DebugExecutionLog.class;
+					else {
+						ClassDefinition cd = el != null ? getClassDefinition(config, el, "", config.getIdentification()) : null;
+
+						Class<?> c = cd != null ? cd.getClazz() : null;
+						if (c != null && ExecutionLog.class.isAssignableFrom(c)) {
+							clazz = c.asSubclass(ExecutionLog.class);
+						}
+						else {
+							clazz = ConsoleExecutionLog.class;
+							LogUtil.logGlobal(config, Log.LEVEL_ERROR, ConfigFactoryImpl.class.getName(),
+									"class [" + strClass + "] must implement the interface " + ExecutionLog.class.getName());
+						}
+					}
+				}
+				catch (Throwable t) {
+					ExceptionUtil.rethrowIfNecessary(t);
+					LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), ConfigFactoryImpl.class.getName(), t);
+					clazz = ConsoleExecutionLog.class;
+				}
+				if (clazz != null)
+					LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(), "loaded ExecutionLog class " + clazz.getName());
+
+				// arguments
+				args = toArguments(el, "arguments", true, false);
+				if (args == null) args = toArguments(el, "classArguments", true, false);
+			}
+
+			if (clazz == null) {
+				clazz = ConsoleExecutionLog.class;
+				args = new HashMap<String, String>();
+			}
+
+			ExecutionLogFactory factory = new ExecutionLogFactory(clazz, args);
+
+			// Track ExecutionLog mode in marker file to detect config changes.
+			// Format: "enabled:lineBased" (e.g. "true:true" for debugger, "true:false" for console)
+			// If mode changes, purge cfclasses to force recompile with correct bytecode.
+			String val = config.getExecutionLogEnabled() + ":" + factory.isLineBased();
 			boolean hasChanged = false;
-			String val = Caster.toString(config.getExecutionLogEnabled());
+
 			try {
 				Resource contextDir = config.getConfigDir();
 				Resource exeLog = contextDir.getRealResource("exeLog");
@@ -858,41 +913,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				}
 			}
 
-			// class
-			String strClass = getAttr(config, el, "class");
-			Class clazz;
-			if (!StringUtil.isEmpty(strClass)) {
-				try {
-					if ("console".equalsIgnoreCase(strClass)) clazz = ConsoleExecutionLog.class;
-					else if ("debug".equalsIgnoreCase(strClass)) clazz = DebugExecutionLog.class;
-					else {
-						ClassDefinition cd = el != null ? getClassDefinition(config, el, "", config.getIdentification()) : null;
-
-						Class c = cd != null ? cd.getClazz() : null;
-						if (c != null && (ClassUtil.newInstance(c) instanceof ExecutionLog)) {
-							clazz = c;
-						}
-						else {
-							clazz = ConsoleExecutionLog.class;
-							LogUtil.logGlobal(config, Log.LEVEL_ERROR, ConfigFactoryImpl.class.getName(),
-									"class [" + strClass + "] must implement the interface " + ExecutionLog.class.getName());
-						}
-					}
-				}
-				catch (Throwable t) {
-					ExceptionUtil.rethrowIfNecessary(t);
-					LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), ConfigFactoryImpl.class.getName(), t);
-					clazz = ConsoleExecutionLog.class;
-				}
-				if (clazz != null)
-					LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), Log.LEVEL_INFO, ConfigFactoryImpl.class.getName(), "loaded ExecutionLog class " + clazz.getName());
-
-				// arguments
-				Map<String, String> args = toArguments(el, "arguments", true, false);
-				if (args == null) args = toArguments(el, "classArguments", true, false);
-
-				return new ExecutionLogFactory(clazz, args);
-			}
+			return factory;
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);

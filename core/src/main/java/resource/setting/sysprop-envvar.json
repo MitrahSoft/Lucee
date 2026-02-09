@@ -232,6 +232,22 @@
 		"default": null
 	},
 	{
+		"sysprop": "lucee.dap.secret",
+		"envvar": "LUCEE_DAP_SECRET",
+		"desc": "Secret token required to enable and authenticate the DAP debugger. When set, enables debugger listener registration and console capture for external debuggers (e.g., VS Code DAP). The secret must be provided when registering a debugger listener and when connecting via DAP. If not set, debugger is disabled. Requires JVM restart to take effect.",
+		"category": "debugging",
+		"type": "string",
+		"default": null
+	},
+	{
+		"sysprop": "lucee.dap.breakpoint",
+		"envvar": "LUCEE_DAP_BREAKPOINT",
+		"desc": "Controls whether DAP breakpoint support (stepping, stack frames) is enabled. Requires lucee.dap.secret to be set. When true (default), enables bytecode instrumentation for line-by-line stepping and breakpoints. Set to false for console-only mode without stepping overhead. Requires JVM restart to take effect.",
+		"category": "debugging",
+		"type": "boolean",
+		"default": true
+	},
+	{
 		"sysprop": "lucee.deserializejson.allowempty",
 		"envvar": "LUCEE_DESERIALIZEJSON_ALLOWEMPTY",
 		"desc": "In Lucee 5, an empty string passed into the function deserializeJson will return an empty string back. In Lucee 6, this is no longer accepted and throws an exception. You can simulate the old behavior by setting this environment variable or SysProp to `true`. By setting the log level of the application log to `warn`, you will receive information in the log when the old behavior is used. This allows you to modify your code for the new behavior without encountering runtime issues with the existing code",

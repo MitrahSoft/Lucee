@@ -341,8 +341,9 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 				if (pc == null) continue;
 				long timeout = pc.getRequestTimeout();
 				Thread th;
-				// reached timeout
-				if (pc.getStartTime() + timeout < System.currentTimeMillis() && Long.MAX_VALUE != timeout) {
+				// reached timeout (adjusted for debugger suspend time)
+				long suspendedMillis = pc.getDebuggerTotalSuspendedMillis();
+				if (pc.getStartTime() + timeout + suspendedMillis < System.currentTimeMillis() && Long.MAX_VALUE != timeout) {
 					Log log = ThreadLocalPageContext.getLog(pc, "requesttimeout");
 					if (reachedConcurrentReqThreshold() && reachedMemoryThreshold() && reachedCPUThreshold()) {
 						if (log != null) {
