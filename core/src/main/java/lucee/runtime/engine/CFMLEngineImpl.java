@@ -110,10 +110,10 @@ import lucee.runtime.config.ConfigWeb;
 import lucee.runtime.config.ConfigWebImpl;
 import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.DeployHandler;
-import lucee.runtime.debug.DebuggerPrintStream;
 import lucee.runtime.config.Identification;
 import lucee.runtime.config.Password;
 import lucee.runtime.config.ResetFilter;
+import lucee.runtime.debug.DebuggerPrintStream;
 import lucee.runtime.engine.listener.CFMLServletContextListener;
 import lucee.runtime.exp.Abort;
 import lucee.runtime.exp.ApplicationException;
@@ -1749,24 +1749,27 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		return controler;
 	}
 
-	public void onStart(ConfigPro config, boolean reload) {
-		boolean isWeb = config instanceof ConfigWeb;
+	public void onStart(ConfigServerImpl config, boolean reload) throws IOException {
 		Boolean build = Caster.toBoolean(SystemUtil.getSystemPropOrEnvVar("lucee.enable.warmup", ""), null);
 		if (build == null) build = Caster.toBoolean(SystemUtil.getSystemPropOrEnvVar("lucee.build", ""), null);
 		boolean warmup = Boolean.TRUE.equals(build);
 		if (warmup) {
-			if (!isWeb) {
-				onStartCall(config, reload, true);
+			onStartCall(config, reload, true);
 
-				String msg = "Lucee warmup completed. Shutting down.";
-				// CONSOLE_OUT.println(msg);
-				LogUtil.logGlobal(config, Log.LEVEL_INFO, "config", msg);
-				LogUtil.log(config, Log.LEVEL_INFO, "application", msg);
-				shutdownFelix();
-				System.exit(0);
-			}
+			// make sure all .CFConfig.json settings are loaded
+			ConfigUtil.getConfigServerImpl(config).touchAll(null);
+
+			String msg = "Lucee warmup completed. Shutting down.";
+			// CONSOLE_OUT.println(msg);
+			LogUtil.logGlobal(config, Log.LEVEL_INFO, "config", msg);
+			LogUtil.log(config, Log.LEVEL_INFO, "application", msg);
+			shutdownFelix();
+			System.exit(0);
 		}
-		else onStartCall(config, reload, false);
+	}
+
+	public void onStart(ConfigWebPro config, boolean reload) {
+		onStartCall(config, reload, false);
 	}
 
 	private void onStartCall(ConfigPro config, boolean reload, boolean warmup) {
