@@ -9,6 +9,7 @@ import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -43,11 +44,16 @@ public class ResourceProviderDefFactory implements PropFactory<ResourceProviderD
 	}
 
 	@Override
-	public ResourceProviderDef evaluate(Config config, String name, Object val, ResourceProviderDef defaultValue) {
+	public ResourceProviderDef evaluate(Config config, String name, Object val) throws PageException {
 		try {
+			// can be an array with a single entry
+			Array arr = Caster.toArray(val, null);
+			if (arr != null) {
+				if (arr.size() != 1) throw new ApplicationException("only an array with a single item is allowed");
+				val = arr.getE(1);
+			}
 
-			Struct defaultProvider = Caster.toStruct(val, null);
-			if (defaultProvider == null) return defaultValue;
+			Struct defaultProvider = Caster.toStruct(val);
 
 			ClassDefinition cd = ConfigFactoryImpl.getClassDefinition(config, defaultProvider, "", config.getIdentification());
 
@@ -55,7 +61,13 @@ public class ResourceProviderDefFactory implements PropFactory<ResourceProviderD
 			if (schemeRequired && StringUtil.isEmpty(scheme)) {
 				throw new ApplicationException("scheme is required");
 			}
-			if (!cd.hasClass() || "lucee.commons.io.res.type.ftp.FTPResourceProvider".equals(cd.getClassName())) return defaultValue;
+			if (!cd.hasClass()) {
+				throw new ApplicationException("no class defined");
+
+			}
+			if ("lucee.commons.io.res.type.ftp.FTPResourceProvider".equals(cd.getClassName())) {
+				throw new ApplicationException("[" + cd.getClassName() + "] no longer supported");
+			}
 
 			Map<String, String> args = ConfigFactoryImpl.toArguments(defaultProvider, "arguments", true, false);
 
@@ -63,9 +75,8 @@ public class ResourceProviderDefFactory implements PropFactory<ResourceProviderD
 
 		}
 		catch (Exception ex) {
-			ConfigFactoryImpl.log(config, ex);
+			throw Caster.toPageException(ex);
 		}
-		return defaultValue;
 	}
 
 	@Override

@@ -1,14 +1,13 @@
 package lucee.runtime.gateway;
 
-import lucee.commons.io.log.Log;
-import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
-import lucee.runtime.engine.ThreadLocalPageContext;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -29,30 +28,18 @@ public class GatewayEntryFactory implements PropFactory<GatewayEntry> {
 	}
 
 	@Override
-	public GatewayEntry evaluate(Config config, String name, Object val, GatewayEntry defaultValue) {
+	public GatewayEntry evaluate(Config config, String name, Object val) throws PageException {
 		// validate input
 		if (StringUtil.isEmpty(name)) {
-			LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), Log.LEVEL_ERROR, ConfigFactoryImpl.class.getName(), "missing id");
-			return defaultValue;
+			throw new ApplicationException("missing id");
 		}
-		Struct eConnection = Caster.toStruct(val, null);
-		if (eConnection == null) {
-			return defaultValue;
-		}
+		Struct eConnection = Caster.toStruct(val);
 
-		try {
+		return new GatewayEntryImpl(name, ConfigFactoryImpl.getClassDefinition(config, eConnection, "", config.getIdentification()),
+				ConfigFactoryImpl.getAttr(config, eConnection, "cfcPath"), ConfigFactoryImpl.getAttr(config, eConnection, "listenerCFCPath"),
+				ConfigFactoryImpl.getAttr(config, eConnection, "startupMode"), ConfigUtil.getAsStruct(config, eConnection, true, "custom"),
+				Caster.toBooleanValue(ConfigFactoryImpl.getAttr(config, eConnection, "readOnly"), false));
 
-			return new GatewayEntryImpl(name, ConfigFactoryImpl.getClassDefinition(config, eConnection, "", config.getIdentification()),
-					ConfigFactoryImpl.getAttr(config, eConnection, "cfcPath"), ConfigFactoryImpl.getAttr(config, eConnection, "listenerCFCPath"),
-					ConfigFactoryImpl.getAttr(config, eConnection, "startupMode"), ConfigUtil.getAsStruct(config, eConnection, true, "custom"),
-					Caster.toBooleanValue(ConfigFactoryImpl.getAttr(config, eConnection, "readOnly"), false));
-
-		}
-		catch (Exception ex) {
-			ConfigFactoryImpl.log(config, ex);
-		}
-
-		return defaultValue;
 	}
 
 	@Override

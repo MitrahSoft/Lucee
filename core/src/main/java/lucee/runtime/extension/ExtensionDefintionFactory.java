@@ -3,9 +3,10 @@ package lucee.runtime.extension;
 import java.util.Map;
 
 import lucee.runtime.config.Config;
-import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -26,24 +27,21 @@ public class ExtensionDefintionFactory implements PropFactory<ExtensionDefintion
 	}
 
 	@Override
-	public ExtensionDefintion evaluate(Config config, String name, Object val, ExtensionDefintion defaultValue) {
+	public ExtensionDefintion evaluate(Config config, String name, Object val) throws PageException {
 
 		try {
-			Struct childSct = Caster.toStruct(val, null);
-			if (childSct == null) {
-				return defaultValue;
-			}
-			Map<String, String> child = Caster.toStringMap(childSct, null);
-			if (child == null) {
-				return defaultValue;
-			}
-			return RHExtension.toExtensionDefinition(config, child);
+			Struct childSct = Caster.toStruct(val);
+
+			Map<String, String> child = Caster.toStringMap(childSct);
+			// MUST toExtensionDefinition nned to throw a proper exception
+			ExtensionDefintion ed = RHExtension.toExtensionDefinition(config, child);
+			if (ed != null) return ed;
+			throw new ApplicationException("unable to load extension defintion");
 
 		}
 		catch (Exception ex) {
-			ConfigFactoryImpl.log(config, ex);
+			throw Caster.toPageException(ex);
 		}
-		return defaultValue;
 	}
 
 	@Override

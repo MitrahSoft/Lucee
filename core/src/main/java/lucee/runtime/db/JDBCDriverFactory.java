@@ -9,6 +9,8 @@ import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.type.Array;
@@ -31,14 +33,13 @@ public class JDBCDriverFactory implements PropFactory<JDBCDriver> {
 	}
 
 	@Override
-	public JDBCDriver evaluate(Config config, String name, Object val, JDBCDriver defaultValue) {
+	public JDBCDriver evaluate(Config config, String name, Object val) throws PageException {
 		try {
 			ClassDefinition cd;
 			String label, id, connStr;
 			{
 				try {
-					Struct driver = Caster.toStruct(val, null);
-					if (driver == null) return defaultValue;
+					Struct driver = Caster.toStruct(val);
 
 					// class definition
 					driver.setEL(KeyConstants._class, name);
@@ -60,27 +61,28 @@ public class JDBCDriverFactory implements PropFactory<JDBCDriver> {
 					// check if label exists
 					if (StringUtil.isEmpty(label)) {
 						ConfigFactoryImpl.log(config, Log.LEVEL_INFO, "missing label for jdbc driver [" + cd.getClassName() + "]");
-						return defaultValue;
+						throw new ApplicationException("missing label for jdbc driver [" + cd.getClassName() + "]");
+
 					}
 
 					// check if it is a bundle
 					if (!cd.isBundle() && !((ClassDefinitionImpl) cd).isMaven()) {
 						ConfigFactoryImpl.log(config, Log.LEVEL_INFO, "jdbc driver [" + label + "] does not describe a bundle or a maven endpoint");
-						return defaultValue;
+						throw new ApplicationException("jdbc driver [" + label + "] does not describe a bundle or a maven endpoint");
 					}
 					return new JDBCDriver(label, id, connStr, cd);
 				}
 				catch (Throwable t) {
 					ExceptionUtil.rethrowIfNecessary(t);
 					ConfigFactoryImpl.log(config, t);
+					throw Caster.toPageException(t);
 				}
 			}
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+			throw Caster.toPageException(t);
 		}
-		return defaultValue;
 	}
 
 	@Override

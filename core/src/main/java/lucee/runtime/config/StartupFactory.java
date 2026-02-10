@@ -3,6 +3,7 @@ package lucee.runtime.config;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.db.ClassDefinition;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.reflection.Reflector;
 import lucee.runtime.type.Array;
@@ -25,11 +26,10 @@ public class StartupFactory implements PropFactory<Startup> {
 	}
 
 	@Override
-	public Startup evaluate(Config config, String name, Object val, Startup defaultValue) {
+	public Startup evaluate(Config config, String name, Object val) throws PageException {
 
 		try {
-			Struct child = Caster.toStruct(val, null);
-			if (child == null) return defaultValue;
+			Struct child = Caster.toStruct(val);
 			// class
 			ClassDefinition cd = ConfigFactoryImpl.getClassDefinition(config, child, "", config.getIdentification());
 
@@ -42,10 +42,8 @@ public class StartupFactory implements PropFactory<Startup> {
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+			throw Caster.toPageException(t);
 		}
-
-		return defaultValue;
 	}
 
 	@Override

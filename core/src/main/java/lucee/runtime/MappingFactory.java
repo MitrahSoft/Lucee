@@ -1,7 +1,6 @@
 package lucee.runtime;
 
 import lucee.commons.io.SystemUtil;
-import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
@@ -9,6 +8,8 @@ import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.listener.ModernAppListener;
 import lucee.runtime.op.Caster;
@@ -43,105 +44,97 @@ public class MappingFactory implements PropFactory<Mapping> {
 	}
 
 	@Override
-	public Mapping evaluate(Config config, String name, Object val, Mapping defaultValue) {
-		try {
-			Struct el = Caster.toStruct(val);
-			if (el == null) return null;
+	public Mapping evaluate(Config config, String name, Object val) throws PageException {
 
-			String virtual = null;
-			if (TYPE_REGULAR != type) {
-				virtual = ConfigFactoryImpl.getAttr(config, el, "virtual");
-			}
-			if (StringUtil.isEmpty(virtual)) virtual = name;
+		Struct el = Caster.toStruct(val);
 
-			String physical = ConfigFactoryImpl.getAttr(config, el, "physical");
-			String archive = ConfigFactoryImpl.getAttr(config, el, "archive");
-			String strListType = ConfigFactoryImpl.getAttr(config, el, "listenerType");
-			if (StringUtil.isEmpty(strListType)) strListType = ConfigFactoryImpl.getAttr(config, el, "listener-type");
-			if (StringUtil.isEmpty(strListType)) strListType = ConfigFactoryImpl.getAttr(config, el, "listenertype");
-
-			String strListMode = ConfigFactoryImpl.getAttr(config, el, "listenerMode");
-			if (StringUtil.isEmpty(strListMode)) strListMode = ConfigFactoryImpl.getAttr(config, el, "listener-mode");
-			if (StringUtil.isEmpty(strListMode)) strListMode = ConfigFactoryImpl.getAttr(config, el, "listenermode");
-
-			boolean readonly = ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "readonly"), false);
-			boolean hidden = ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "hidden"), false);
-			boolean toplevel = ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "toplevel"), true);
-
-			boolean appMapping = false;
-			boolean ignoreVirtual = false;
-
-			// regular type check
-			if (TYPE_REGULAR == type) {
-				// lucee
-				if ("/lucee/".equalsIgnoreCase(virtual)) {
-					if (StringUtil.isEmpty(strListType, true)) strListType = "modern";
-					if (StringUtil.isEmpty(strListMode, true)) strListMode = "curr2root";
-					toplevel = true;
-				}
-			}
-			else if (TYPE_COMPONENT == type) {
-				if ("{lucee-web}/components/".equals(physical) || "{lucee-server}/components/".equals(physical)) return null;
-				toplevel = true;
-				ignoreVirtual = true;
-			}
-			else if (TYPE_CUSTOM_TAG == type) {
-				if ("{lucee-web}/customtags/".equals(physical) || "{lucee-server}/customtags/".equals(physical)) return null;
-				toplevel = true;
-				ignoreVirtual = true;
-			}
-
-			int listenerMode = ConfigUtil.toListenerMode(strListMode, -1);
-			int listenerType = ConfigUtil.toListenerType(strListType, -1);
-
-			ApplicationListener listener = null;
-			if (TYPE_REGULAR == type) {
-				listener = ConfigUtil.loadListener(listenerType, null);
-				if (listener != null || listenerMode != -1) {
-					// type
-					if (listener == null) listener = ConfigUtil.loadListener(ConfigUtil.toListenerType(config.getApplicationListener().getType(), -1), null);
-					if (listener == null) listener = new ModernAppListener();
-
-					// mode
-					if (listenerMode == -1) {
-						listenerMode = config.getApplicationListener().getMode();
-					}
-					listener.setMode(listenerMode);
-
-				}
-			}
-			else if (TYPE_CUSTOM_TAG == type) {
-				listenerMode = -1;
-				listenerType = -1;
-				// TODO i guess this applies for component as well?
-			}
-
-			// physical!=null &&
-			if ((physical != null || archive != null)) {
-
-				short insTemp = inspectTemplate(config, el);
-
-				int insTempSlow = Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "inspectTemplateIntervalSlow"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
-				int insTempFast = Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "inspectTemplateIntervalFast"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
-				if (TYPE_REGULAR == type) {
-					if ("/lucee/".equalsIgnoreCase(virtual) || "/lucee".equalsIgnoreCase(virtual) || "/lucee-server/".equalsIgnoreCase(virtual)
-							|| "/lucee-server-context".equalsIgnoreCase(virtual))
-						insTemp = ConfigPro.INSPECT_AUTO;
-				}
-				String primary = ConfigFactoryImpl.getAttr(config, el, "primary");
-				boolean physicalFirst = primary == null || !"archive".equalsIgnoreCase(primary);
-
-				return new MappingImpl(config, virtual, physical, archive, insTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, toplevel, appMapping, ignoreVirtual,
-						listener, listenerMode, listenerType);
-			}
-
+		String virtual = null;
+		if (TYPE_REGULAR != type) {
+			virtual = ConfigFactoryImpl.getAttr(config, el, "virtual");
 		}
-		catch (Exception ex) {
-			LogUtil.log("mapping-factory", ex);
-			return defaultValue;
+		if (StringUtil.isEmpty(virtual)) virtual = name;
+
+		String physical = ConfigFactoryImpl.getAttr(config, el, "physical");
+		String archive = ConfigFactoryImpl.getAttr(config, el, "archive");
+		String strListType = ConfigFactoryImpl.getAttr(config, el, "listenerType");
+		if (StringUtil.isEmpty(strListType)) strListType = ConfigFactoryImpl.getAttr(config, el, "listener-type");
+		if (StringUtil.isEmpty(strListType)) strListType = ConfigFactoryImpl.getAttr(config, el, "listenertype");
+
+		String strListMode = ConfigFactoryImpl.getAttr(config, el, "listenerMode");
+		if (StringUtil.isEmpty(strListMode)) strListMode = ConfigFactoryImpl.getAttr(config, el, "listener-mode");
+		if (StringUtil.isEmpty(strListMode)) strListMode = ConfigFactoryImpl.getAttr(config, el, "listenermode");
+
+		boolean readonly = ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "readonly"), false);
+		boolean hidden = ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "hidden"), false);
+		boolean toplevel = ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "toplevel"), true);
+
+		boolean appMapping = false;
+		boolean ignoreVirtual = false;
+
+		// regular type check
+		if (TYPE_REGULAR == type) {
+			// lucee
+			if ("/lucee/".equalsIgnoreCase(virtual)) {
+				if (StringUtil.isEmpty(strListType, true)) strListType = "modern";
+				if (StringUtil.isEmpty(strListMode, true)) strListMode = "curr2root";
+				toplevel = true;
+			}
+		}
+		else if (TYPE_COMPONENT == type) {
+			if ("{lucee-web}/components/".equals(physical) || "{lucee-server}/components/".equals(physical)) return null;
+			toplevel = true;
+			ignoreVirtual = true;
+		}
+		else if (TYPE_CUSTOM_TAG == type) {
+			if ("{lucee-web}/customtags/".equals(physical) || "{lucee-server}/customtags/".equals(physical)) return null;
+			toplevel = true;
+			ignoreVirtual = true;
 		}
 
-		return null;
+		int listenerMode = ConfigUtil.toListenerMode(strListMode, -1);
+		int listenerType = ConfigUtil.toListenerType(strListType, -1);
+
+		ApplicationListener listener = null;
+		if (TYPE_REGULAR == type) {
+			listener = ConfigUtil.loadListener(listenerType, null);
+			if (listener != null || listenerMode != -1) {
+				// type
+				if (listener == null) listener = ConfigUtil.loadListener(ConfigUtil.toListenerType(config.getApplicationListener().getType(), -1), null);
+				if (listener == null) listener = new ModernAppListener();
+
+				// mode
+				if (listenerMode == -1) {
+					listenerMode = config.getApplicationListener().getMode();
+				}
+				listener.setMode(listenerMode);
+
+			}
+		}
+		else if (TYPE_CUSTOM_TAG == type) {
+			listenerMode = -1;
+			listenerType = -1;
+			// TODO i guess this applies for component as well?
+		}
+
+		// physical!=null &&
+		if ((physical != null || archive != null)) {
+
+			short insTemp = inspectTemplate(config, el);
+
+			int insTempSlow = Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "inspectTemplateIntervalSlow"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
+			int insTempFast = Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "inspectTemplateIntervalFast"), ConfigPro.INSPECT_INTERVAL_UNDEFINED);
+			if (TYPE_REGULAR == type) {
+				if ("/lucee/".equalsIgnoreCase(virtual) || "/lucee".equalsIgnoreCase(virtual) || "/lucee-server/".equalsIgnoreCase(virtual)
+						|| "/lucee-server-context".equalsIgnoreCase(virtual))
+					insTemp = ConfigPro.INSPECT_AUTO;
+			}
+			String primary = ConfigFactoryImpl.getAttr(config, el, "primary");
+			boolean physicalFirst = primary == null || !"archive".equalsIgnoreCase(primary);
+
+			return new MappingImpl(config, virtual, physical, archive, insTemp, insTempSlow, insTempFast, physicalFirst, hidden, readonly, toplevel, appMapping, ignoreVirtual,
+					listener, listenerMode, listenerType);
+		}
+		throw new ApplicationException("you need to define [physical] or [archive]");
 	}
 
 	private static short inspectTemplate(Config config, Struct data) {

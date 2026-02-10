@@ -7,6 +7,7 @@ import java.util.TimeZone;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.StringUtil;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -32,7 +33,16 @@ public interface PropFactory<T> {
 	public static CharsetPropFactory CHARSET_FACTORY = new CharsetPropFactory();
 	public static CharsetXPropFactory CHARSETX_FACTORY = new CharsetXPropFactory();
 
-	public T evaluate(Config config, String name, Object val, T defaultValue);
+	/**
+	 * evaluates
+	 * 
+	 * @param config
+	 * @param name
+	 * @param val
+	 * @param defaultValue
+	 * @return
+	 */
+	public T evaluate(Config config, String name, Object val) throws PageException;
 
 	public Struct schema(Prop<T> prop);
 
@@ -49,10 +59,8 @@ public interface PropFactory<T> {
 		}
 
 		@Override
-		public Array evaluate(Config config, String name, Object val, Array defaultValue) {
-			Array arr = Caster.toArray(val, null);
-			if (arr == null) return defaultValue;
-			return arr;
+		public Array evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toArray(val);
 		}
 
 		@Override
@@ -88,10 +96,8 @@ public interface PropFactory<T> {
 		private StructPropFactory() {}
 
 		@Override
-		public Struct evaluate(Config config, String name, Object val, Struct defaultValue) {
-			Struct sct = Caster.toStruct(val, null);
-			if (sct == null) return defaultValue;
-			return sct;
+		public Struct evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toStruct(val);
 		}
 
 		@Override
@@ -128,10 +134,8 @@ public interface PropFactory<T> {
 		private StringPropFactory() {}
 
 		@Override
-		public String evaluate(Config config, String name, Object val, String defaultValue) {
-			String str = Caster.toString(val, null);
-			if (StringUtil.isEmpty(str)) return defaultValue;
-			return str;
+		public String evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toString(val);
 		}
 
 		@Override
@@ -151,10 +155,8 @@ public interface PropFactory<T> {
 		private BooleanPropFactory() {}
 
 		@Override
-		public Boolean evaluate(Config config, String name, Object val, Boolean defaultValue) {
-			Boolean b = Caster.toBoolean(val, null);
-			if (b == null) return defaultValue;
-			return b;
+		public Boolean evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toBoolean(val);
 		}
 
 		@Override
@@ -174,10 +176,8 @@ public interface PropFactory<T> {
 		private TimeSpanPropFactory() {}
 
 		@Override
-		public TimeSpan evaluate(Config config, String name, Object val, TimeSpan defaultValue) {
-			TimeSpan ts = Caster.toTimespan(val, null);
-			if (ts == null || ts.getMillis() == 0) return defaultValue;
-			return ts;
+		public TimeSpan evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toTimespan(val);
 		}
 
 		@Override
@@ -217,10 +217,8 @@ public interface PropFactory<T> {
 		private LocalePropFactory() {}
 
 		@Override
-		public Locale evaluate(Config config, String name, Object val, Locale defaultValue) {
-			Locale ts = Caster.toLocale(val, null);
-			if (ts == null) return defaultValue;
-			return ts;
+		public Locale evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toLocale(val);
 		}
 
 		@Override
@@ -246,10 +244,8 @@ public interface PropFactory<T> {
 		private TimeZonePropFactory() {}
 
 		@Override
-		public TimeZone evaluate(Config config, String name, Object val, TimeZone defaultValue) {
-			TimeZone tz = Caster.toTimeZone(val, null);
-			if (tz == null) return defaultValue;
-			return tz;
+		public TimeZone evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toTimeZone(val);
 		}
 
 		@Override
@@ -294,10 +290,8 @@ public interface PropFactory<T> {
 		private ShortPropFactory() {}
 
 		@Override
-		public Short evaluate(Config config, String name, Object val, Short defaultValue) {
-			Short s = Caster.toShort(val, null);
-			if (s == null) return defaultValue;
-			return s;
+		public Short evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toShort(val);
 		}
 
 		@Override
@@ -317,10 +311,8 @@ public interface PropFactory<T> {
 		private DoublePropFactory() {}
 
 		@Override
-		public Double evaluate(Config config, String name, Object val, Double defaultValue) {
-			Double d = Caster.toDouble(val, null);
-			if (d == null) return defaultValue;
-			return d;
+		public Double evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toDouble(val);
 		}
 
 		@Override
@@ -340,10 +332,8 @@ public interface PropFactory<T> {
 		private IntegerPropFactory() {}
 
 		@Override
-		public Integer evaluate(Config config, String name, Object val, Integer defaultValue) {
-			Integer i = Caster.toInteger(val, null);
-			if (i == null) return defaultValue;
-			return i;
+		public Integer evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toInteger(val);
 		}
 
 		@Override
@@ -363,10 +353,8 @@ public interface PropFactory<T> {
 		private LongPropFactory() {}
 
 		@Override
-		public Long evaluate(Config config, String name, Object val, Long defaultValue) {
-			Long l = Caster.toLong(val, null);
-			if (l == null) return defaultValue;
-			return l;
+		public Long evaluate(Config config, String name, Object val) throws PageException {
+			return Caster.toLong(val);
 		}
 
 		@Override
@@ -386,10 +374,8 @@ public interface PropFactory<T> {
 		private CharsetPropFactory() {}
 
 		@Override
-		public Charset evaluate(Config config, String name, Object val, Charset defaultValue) {
-			Charset cs = CharsetUtil.toCharset(Caster.toString(val, null), defaultValue);
-			if (cs == null) return defaultValue;
-			return cs;
+		public Charset evaluate(Config config, String name, Object val) throws PageException {
+			return CharsetUtil.toCharset(Caster.toString(val));
 		}
 
 		@Override
@@ -456,10 +442,8 @@ public interface PropFactory<T> {
 		private CharsetXPropFactory() {}
 
 		@Override
-		public CharsetX evaluate(Config config, String name, Object val, CharsetX defaultValue) {
-			CharsetX cs = CharsetUtil.toCharsetX(Caster.toString(val, null), defaultValue);
-			if (cs == null) return defaultValue;
-			return cs;
+		public CharsetX evaluate(Config config, String name, Object val) throws PageException {
+			return CharsetUtil.toCharsetX(Caster.toString(val));
 		}
 
 		@Override

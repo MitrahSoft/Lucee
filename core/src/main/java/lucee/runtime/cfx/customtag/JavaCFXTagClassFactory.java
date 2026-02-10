@@ -1,12 +1,13 @@
 package lucee.runtime.cfx.customtag;
 
-import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.db.ClassDefinition;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -27,9 +28,8 @@ public class JavaCFXTagClassFactory implements PropFactory<CFXTagClass> {
 	}
 
 	@Override
-	public CFXTagClass evaluate(Config config, String name, Object val, CFXTagClass defaultValue) {
-		Struct cfxTag = Caster.toStruct(val, null);
-		if (cfxTag == null) return defaultValue;
+	public CFXTagClass evaluate(Config config, String name, Object val) throws PageException {
+		Struct cfxTag = Caster.toStruct(val);
 
 		try {
 
@@ -42,14 +42,13 @@ public class JavaCFXTagClassFactory implements PropFactory<CFXTagClass> {
 				if (!StringUtil.isEmpty(name) && cd.hasClass()) {
 					return new JavaCFXTagClass(name, cd);
 				}
+				throw new ApplicationException("name is required");
 			}
-
+			throw new ApplicationException("type [" + type + "] is not supported, only type [java] is supported");
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			throw Caster.toPageException(ex);
 		}
-		return defaultValue;
 	}
 
 	@Override

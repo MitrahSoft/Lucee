@@ -5429,17 +5429,22 @@ public final class Caster {
 		return Double.valueOf(-n.doubleValue());
 	}
 
+	public static Map<String, String> toStringMap(Struct sct) throws PageException {
+		Map<String, String> rtn = new LinkedHashMap<>();
+		Iterator<Entry<Key, Object>> it = sct.entryIterator();
+		Entry<Key, Object> entry;
+		while (it.hasNext()) {
+			entry = it.next();
+			rtn.put(entry.getKey().getString(), Caster.toString(entry.getValue()));
+		}
+		return rtn;
+
+	}
+
 	public static Map<String, String> toStringMap(Struct sct, Map<String, String> defaultValue) {
 		if (sct == null) return defaultValue;
 		try {
-			Map<String, String> rtn = new LinkedHashMap<>();
-			Iterator<Entry<Key, Object>> it = sct.entryIterator();
-			Entry<Key, Object> entry;
-			while (it.hasNext()) {
-				entry = it.next();
-				rtn.put(entry.getKey().getString(), Caster.toString(entry.getValue()));
-			}
-			return rtn;
+			return toStringMap(sct);
 		}
 		catch (Exception e) {
 			return defaultValue;

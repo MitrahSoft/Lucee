@@ -1,11 +1,11 @@
 package lucee.runtime.net.mail;
 
-import lucee.commons.io.log.LogUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
@@ -26,24 +26,16 @@ public class ServerFactory implements PropFactory<Server> {
 	private ServerFactory() {}
 
 	@Override
-	public Server evaluate(Config config, String name, Object val, Server defaultValue) {
-		try {
-			int index = Caster.toIntValue(name, 0); // in case of an array, the name is the index
-			Struct el = Caster.toStruct(val);
-			return new ServerImpl(Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "id"), index), ConfigFactoryImpl.getAttr(config, el, "smtp"),
-					Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "port"), 25), ConfigFactoryImpl.getAttr(config, el, "username"),
-					ConfigUtil.decrypt(ConfigFactoryImpl.getAttr(config, el, "password")), ConfigFactoryImpl.toLong(ConfigFactoryImpl.getAttr(config, el, "life"), 1000 * 60 * 5),
-					ConfigFactoryImpl.toLong(ConfigFactoryImpl.getAttr(config, el, "idle"), 1000 * 60 * 1),
-					ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "tls"), false),
-					ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "ssl"), false),
-					ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL);
+	public Server evaluate(Config config, String name, Object val) throws PageException {
 
-		}
-		catch (Exception e) {
-			LogUtil.log("mail-factory", e);
-			return defaultValue;
-		}
-
+		int index = Caster.toIntValue(name, 0); // in case of an array, the name is the index
+		Struct el = Caster.toStruct(val);
+		return new ServerImpl(Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "id"), index), ConfigFactoryImpl.getAttr(config, el, "smtp"),
+				Caster.toIntValue(ConfigFactoryImpl.getAttr(config, el, "port"), 25), ConfigFactoryImpl.getAttr(config, el, "username"),
+				ConfigUtil.decrypt(ConfigFactoryImpl.getAttr(config, el, "password")), ConfigFactoryImpl.toLong(ConfigFactoryImpl.getAttr(config, el, "life"), 1000 * 60 * 5),
+				ConfigFactoryImpl.toLong(ConfigFactoryImpl.getAttr(config, el, "idle"), 1000 * 60 * 1),
+				ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "tls"), false), ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "ssl"), false),
+				ConfigFactoryImpl.toBoolean(ConfigFactoryImpl.getAttr(config, el, "reuseConnection"), true), ServerImpl.TYPE_GLOBAL);
 	}
 
 	@Override

@@ -73,14 +73,14 @@ public class SecretProviderFactory implements PropFactory<SecretProvider> {
 	}
 
 	@Override
-	public SecretProvider evaluate(Config config, String name, Object val, SecretProvider defaultValue) {
+	public SecretProvider evaluate(Config config, String name, Object val) throws PageException {
 		try {
 			return getInstance(config, name, Caster.toStruct(val));
 		}
 		catch (Exception e) {
-			LogUtil.log("secret-provider-factory", e);
-			return defaultValue;
+			throw Caster.toPageException(e);
 		}
+
 	}
 
 	@Override

@@ -105,15 +105,12 @@ public final class AIEngineFactory implements PropFactory<AIEngine> {
 	}
 
 	@Override
-	public AIEngine evaluate(Config config, String name, Object val, AIEngine defaultValue) {
-		Struct data = Caster.toStruct(val, null);
-		if (data == null) return defaultValue;
+	public AIEngine evaluate(Config config, String name, Object val) throws PageException {
 		try {
-			return getInstance(config, name, data);
+			return getInstance(config, name, Caster.toStruct(val));
 		}
 		catch (Exception e) {
-			ConfigFactoryImpl.log(config, e);
-			return defaultValue;
+			throw Caster.toPageException(e);
 		}
 	}
 

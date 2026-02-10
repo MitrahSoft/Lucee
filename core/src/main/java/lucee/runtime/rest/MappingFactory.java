@@ -1,10 +1,11 @@
 package lucee.runtime.rest;
 
-import lucee.commons.lang.ExceptionUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -25,10 +26,9 @@ public class MappingFactory implements PropFactory<Mapping> {
 	}
 
 	@Override
-	public Mapping evaluate(Config config, String name, Object val, Mapping defaultValue) {
+	public Mapping evaluate(Config config, String name, Object val) throws PageException {
 		try {
 			Struct el = Caster.toStruct(val);
-			if (el == null) return defaultValue;
 
 			String physical = ConfigFactoryImpl.getAttr(config, el, "physical");
 			String virtual = ConfigFactoryImpl.getAttr(config, el, "virtual");
@@ -38,13 +38,12 @@ public class MappingFactory implements PropFactory<Mapping> {
 			if (physical != null) {
 				return new lucee.runtime.rest.Mapping(config, virtual, physical, hidden, readonly, _default);
 			}
+			throw new ApplicationException("attribute [physical] is required");
 
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			throw Caster.toPageException(ex);
 		}
-		return defaultValue;
 	}
 
 	@Override

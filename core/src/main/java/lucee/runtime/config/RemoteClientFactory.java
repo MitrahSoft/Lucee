@@ -1,6 +1,7 @@
 package lucee.runtime.config;
 
 import lucee.commons.lang.StringUtil;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
@@ -23,11 +24,10 @@ public class RemoteClientFactory implements PropFactory<RemoteClient> {
 	}
 
 	@Override
-	public RemoteClient evaluate(Config config, String name, Object val, RemoteClient defaultValue) {
+	public RemoteClient evaluate(Config config, String name, Object val) throws PageException {
 
 		try {
-			Struct client = Caster.toStruct(val, null);
-			if (client == null) return defaultValue;
+			Struct client = Caster.toStruct(val);
 
 			// type
 			String type = ConfigFactoryImpl.getAttr(config, client, "type");
@@ -62,10 +62,9 @@ public class RemoteClientFactory implements PropFactory<RemoteClient> {
 
 		}
 		catch (Exception ex) {
-			ConfigFactoryImpl.log(config, ex);
+			throw Caster.toPageException(ex);
 		}
 
-		return defaultValue;
 	}
 
 	@Override

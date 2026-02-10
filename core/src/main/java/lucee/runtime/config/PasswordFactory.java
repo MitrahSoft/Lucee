@@ -1,5 +1,6 @@
 package lucee.runtime.config;
 
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
@@ -19,13 +20,10 @@ public class PasswordFactory implements PropFactory<Password> {
 	}
 
 	@Override
-	public Password evaluate(Config config, String name, Object val, Password defaultValue) {
+	public Password evaluate(Config config, String name, Object val) throws PageException {
 		((ConfigPro) config).getSalt();
 
-		String strPW = Caster.toString(val, null);
-		if (strPW == null) return defaultValue;
-
-		return PasswordImpl.read(config, name, strPW, ((ConfigPro) config).getSalt());
+		return PasswordImpl.read(config, name, Caster.toString(val), ((ConfigPro) config).getSalt());
 	}
 
 	@Override

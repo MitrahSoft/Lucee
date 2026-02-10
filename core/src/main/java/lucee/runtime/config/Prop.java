@@ -21,9 +21,11 @@ import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
+import lucee.loader.engine.CFMLEngineFactory;
 import lucee.runtime.PageContext;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.PageException;
+import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
 import lucee.runtime.op.OpUtil;
@@ -59,6 +61,7 @@ public class Prop<T> {
 	private boolean hidden;
 	private final short type;
 	private boolean lowerCaseKeys;
+	private boolean handleEmptyAsNull = true;
 
 	private Prop(PropFactory<T> factory) {
 		this(factory, TYPE_SIMPLE);
@@ -219,6 +222,11 @@ public class Prop<T> {
 		return this;
 	}
 
+	public Prop<T> handleEmptyAsNull(boolean handleEmptyAsNull) {
+		this.handleEmptyAsNull = handleEmptyAsNull;
+		return this;
+	}
+
 	public Prop<T> hidden() {
 		this.hidden = true;
 		return this;
@@ -311,7 +319,10 @@ public class Prop<T> {
 							}
 							return defaultValue;
 						}
-						return factory.evaluate(config, key, str, defaultValue);
+						if (str == null || (handleEmptyAsNull && StringUtil.isEmpty(str, true))) {
+							return defaultValue;
+						}
+						return factory.evaluate(config, key, str);
 					}
 				}
 			}
@@ -332,16 +343,32 @@ public class Prop<T> {
 							}
 							return defaultValue;
 						}
-						return factory.evaluate(config, key, str, defaultValue);
+						if (str == null || (handleEmptyAsNull && StringUtil.isEmpty(str, true))) {
+							return defaultValue;
+						}
+						return factory.evaluate(config, key, str);
 					}
 				}
 				else {
-					return factory.evaluate(config, key, val, defaultValue);
+					if (val == null || (handleEmptyAsNull && StringUtil.isEmpty(val, true))) {
+						return defaultValue;
+					}
+					return factory.evaluate(config, key, val);
 				}
 			}
 		}
 		catch (Exception ex) {
 			ConfigFactoryImpl.log(config, ex);
+
+			try {
+				String s = CFMLEngineFactory.getInstance().getCastUtil().fromStructToJsonString(data);
+				PageRuntimeException pre = new PageRuntimeException("could not load [" + s + "]");
+				ExceptionUtil.initCauseEL(pre, ex);
+				throw pre;
+			}
+			catch (Exception e) {
+				throw new PageRuntimeException(ex);
+			}
 		}
 		return defaultValue;
 	}
@@ -377,22 +404,32 @@ public class Prop<T> {
 			Iterator<Entry<Key, Object>> it = data.entryIterator();
 			Entry<Key, Object> e;
 			String key;
-			T tmp;
+			Object val;
 			while (it.hasNext()) {
 				e = it.next();
 				key = lowerCaseKeys ? e.getKey().getLowerString() : e.getKey().getString();
-				tmp = factory.evaluate(config, key, e.getValue(), null);
-				if (tmp != null) map.put(key, tmp);
+				val = e.getValue();
+				if (val == null || (handleEmptyAsNull && StringUtil.isEmpty(val, true))) {
+					continue;
+				}
+				map.put(key, factory.evaluate(config, key, e.getValue()));
 			}
 			return map;
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			if (logGlobal) LogUtil.logGlobal(config, "config-loading", t);
-			else ConfigFactoryImpl.log(config, t);
+		catch (Exception ex) {
+			if (logGlobal) LogUtil.logGlobal(config, "config-loading", ex);
+			else ConfigFactoryImpl.log(config, ex);
 
+			try {
+				String str = CFMLEngineFactory.getInstance().getCastUtil().fromStructToJsonString(data);
+				PageRuntimeException pre = new PageRuntimeException("could not load [" + str + "]");
+				ExceptionUtil.initCauseEL(pre, ex);
+				throw pre;
+			}
+			catch (Exception e) {
+				throw new PageRuntimeException(ex);
+			}
 		}
-		return map;
 	}
 
 	public List<T> list(ConfigServerImpl config, Struct root) {
@@ -422,8 +459,11 @@ public class Prop<T> {
 						str = str.trim();
 						T tmp;
 						int index = 0;
-						for (String s: ListUtil.listToStringArray(str.trim(), ',')) {
-							tmp = factory.evaluate(config, "" + (++index), s, null);
+						for (String val: ListUtil.listToStringArray(str.trim(), ',')) {
+							if (val == null || (handleEmptyAsNull && StringUtil.isEmpty(val, true))) {
+								continue;
+							}
+							tmp = factory.evaluate(config, "" + (++index), val);
 							if (tmp != null) list.add(tmp);
 						}
 						return list;
@@ -435,21 +475,32 @@ public class Prop<T> {
 			Iterator<Entry<Key, Object>> it = arr.entryIterator();
 			Entry<Key, Object> e;
 			String key;
-			T tmp;
+			Object val;
 			while (it.hasNext()) {
 				e = it.next();
 				key = lowerCaseKeys ? e.getKey().getLowerString() : e.getKey().getString();
-				tmp = factory.evaluate(config, key, e.getValue(), null);
-				if (tmp != null) list.add(tmp);
+				val = e.getValue();
+				if (val == null || (handleEmptyAsNull && StringUtil.isEmpty(val, true))) {
+					continue;
+				}
+				list.add(factory.evaluate(config, key, val));
 			}
 			return list;
 		}
 		catch (Exception ex) {
 			if (logGlobal) LogUtil.logGlobal(config, "config-loading", ex);
 			else ConfigFactoryImpl.log(config, ex);
+			try {
+				String str = CFMLEngineFactory.getInstance().getCastUtil().fromStructToJsonString(data);
+				PageRuntimeException pre = new PageRuntimeException("could not load [" + str + "]");
+				ExceptionUtil.initCauseEL(pre, ex);
+				throw pre;
+			}
+			catch (Exception e) {
+				throw new PageRuntimeException(ex);
+			}
 
 		}
-		return list;
 	}
 
 	public static Struct createConfig(Config config, boolean full) throws IOException, IllegalArgumentException, IllegalAccessException, PageException {

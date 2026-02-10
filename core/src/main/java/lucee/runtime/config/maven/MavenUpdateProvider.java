@@ -44,6 +44,7 @@ import lucee.runtime.converter.ConverterException;
 import lucee.runtime.converter.JSONConverter;
 import lucee.runtime.converter.JSONDateFormat;
 import lucee.runtime.engine.ThreadLocalPageContext;
+import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.listener.SerializationSettings;
 import lucee.runtime.op.CastImpl;
@@ -460,11 +461,11 @@ public final class MavenUpdateProvider {
 		}
 
 		@Override
-		public Repository evaluate(Config config, String name, Object val, Repository defaultValue) {
+		public Repository evaluate(Config config, String name, Object val) throws PageException {
 			Struct data = Caster.toStruct(val, null);
 			if (data != null) {
-				String url = Caster.toString(data.get(KeyConstants._url, null), null);
-				if (StringUtil.isEmpty(url, true)) return defaultValue;
+				String url = Caster.toString(data.get(KeyConstants._url));
+				if (StringUtil.isEmpty(url, true)) throw new ApplicationException("url cannot be an empty string");
 
 				String label = Caster.toString(data.get(KeyConstants._label, null), null);
 				TimeSpan tList = Caster.toTimespan(data.get("timeoutList", null), null);
@@ -479,7 +480,7 @@ public final class MavenUpdateProvider {
 				return new Repository(null, url, Repository.TIMEOUT_5MINUTES, Repository.TIMEOUT_NEVER);
 			}
 
-			return defaultValue;
+			throw new ApplicationException("a repository need to be a URL string or a struct containing at least the key url");
 		}
 
 		@Override

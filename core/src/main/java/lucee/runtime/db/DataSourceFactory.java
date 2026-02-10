@@ -15,6 +15,8 @@ import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.engine.ThreadLocalPageContext;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.tag.listener.TagListener;
 import lucee.runtime.type.Struct;
@@ -34,7 +36,7 @@ public class DataSourceFactory implements PropFactory<DataSource> {
 	}
 
 	@Override
-	public DataSource evaluate(Config c, String name, Object val, DataSource defaultValue) {
+	public DataSource evaluate(Config c, String name, Object val) throws PageException {
 		ConfigPro config = (ConfigPro) c;
 		try {
 
@@ -48,10 +50,9 @@ public class DataSourceFactory implements PropFactory<DataSource> {
 			JDBCDriver jdbc;
 			ClassDefinition cd;
 			String id;
-			Struct dataSource = Caster.toStruct(val, null);
+			Struct dataSource = Caster.toStruct(val);
 
 			{
-				if (dataSource == null) return defaultValue;
 
 				if (dataSource.containsKey(KeyConstants._database)) {
 					try {
@@ -125,17 +126,19 @@ public class DataSourceFactory implements PropFactory<DataSource> {
 					}
 					catch (Throwable th) {
 						ExceptionUtil.rethrowIfNecessary(th);
-						ConfigFactoryImpl.log(config, th);
+						throw Caster.toPageException(th);
 					}
 				}
+				throw new ApplicationException("missing key [database]");
+
 			}
 
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
 			ConfigFactoryImpl.log(config, t);
+			throw Caster.toPageException(t);
 		}
-		return defaultValue;
 	}
 
 	private static DataSourceImpl createDatasource(ConfigPro config, String datasourceName, ClassDefinition cd, String server, String databasename, int port, String dsn,

@@ -207,6 +207,7 @@ import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
 import lucee.runtime.type.Collection.Key;
+import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.UDF;
@@ -1542,7 +1543,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		return this;
 	}
 
-	public String[] getAuthenticationKeys() {
+	public String[] getAuthenticationKeys() throws PageException {
 		if (authKeys == null) {
 			synchronized (SystemUtil.createToken("config", "getAuthenticationKeys")) {
 				if (authKeys == null) {
@@ -1554,7 +1555,9 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 							try {
 								keys[i] = URLDecoder.decode(keys[i], "UTF-8", true);
 							}
-							catch (Exception e) {}
+							catch (Exception e) {
+								throw Caster.toPageException(e);
+							}
 						}
 						authKeys = keys;
 					}
@@ -1610,7 +1613,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						updateLocationURL = HTTPUtil.toURL(updateLocation, HTTPUtil.ENCODED_AUTO);
 					}
 					catch (MalformedURLException e) {
-						updateLocationURL = Constants.DEFAULT_UPDATE_URL;
+						throw new PageRuntimeException(e);
 					}
 				}
 			}
@@ -2550,7 +2553,9 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						try {
 							scheduler = new SchedulerImpl(ConfigUtil.getEngine(this), this, new ArrayImpl());
 						}
-						catch (PageException e1) {}
+						catch (PageException e1) {
+							throw Caster.toPageRuntimeException(e1);
+						}
 					}
 				}
 			}
@@ -3287,9 +3292,9 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						this.tempDirectory = cst;
 
 					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						ConfigFactoryImpl.log(this, t);
+					catch (Exception ex) {
+						ConfigFactoryImpl.log(this, ex);
+						throw Caster.toPageRuntimeException(ex);
 					}
 				}
 			}
@@ -3990,6 +3995,10 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		if (dataSources == null) {
 			synchronized (SystemUtil.createToken("config", "getDataSources")) {
 				if (dataSources == null) {
+					// patch
+					Struct raw = ConfigUtil.getAsStruct("dataSources", root);
+					raw.removeEL(KeyImpl.init("preserveSingleQuote"));
+
 					dataSources = metaDatasourcesAll.map(this, root);
 				}
 			}
@@ -8556,6 +8565,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		ignores.add("getDebugTemplate");
 		ignores.add("getExtensionProviders");
 		ignores.add("getExtensions");
+		ignores.add("getConfigListener");
 
 		if (filter == null) {
 			for (Method method: methods) {

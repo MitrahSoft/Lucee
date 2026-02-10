@@ -8,6 +8,7 @@ import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.db.ClassDefinition;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
@@ -25,10 +26,9 @@ public class CacheConnectionFactory implements PropFactory<CacheConnection> {
 	}
 
 	@Override
-	public CacheConnection evaluate(Config c, String name, Object val, CacheConnection defaultValue) {
+	public CacheConnection evaluate(Config c, String name, Object val) throws PageException {
 		ConfigPro config = (ConfigPro) c;
-		Struct data = Caster.toStruct(val, null);
-		if (data == null) return defaultValue;
+		Struct data = Caster.toStruct(val);
 		ClassDefinition cd;
 		CacheConnection cc;
 
@@ -59,9 +59,8 @@ public class CacheConnectionFactory implements PropFactory<CacheConnection> {
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
 			ConfigFactoryImpl.log(config, t);
+			throw Caster.toPageException(t);
 		}
-
-		return defaultValue;
 	}
 
 	@Override

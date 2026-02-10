@@ -13,6 +13,8 @@ import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.engine.ThreadLocalPageContext;
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.reflection.Reflector;
 import lucee.runtime.reflection.pairs.ConstructorInstance;
@@ -35,14 +37,13 @@ public class MonitorFactory implements PropFactory<Monitor> {
 	}
 
 	@Override
-	public Monitor evaluate(Config config, String nameX, Object val, Monitor defaultValue) {
+	public Monitor evaluate(Config config, String nameX, Object val) throws PageException {
 
 		ConfigServer configServer = ConfigUtil.getConfigServerImpl(config);
 
 		short type;
 		try {
-			Struct el = Caster.toStruct(val, null);
-			if (el == null) return defaultValue;
+			Struct el = Caster.toStruct(val);
 
 			ClassDefinition cd = ConfigFactoryImpl.getClassDefinition(config, el, "", config.getIdentification());
 			String strType = ConfigFactoryImpl.getAttr(config, el, "type");
@@ -80,13 +81,12 @@ public class MonitorFactory implements PropFactory<Monitor> {
 							"initialize " + (strType) + " monitor [" + clazz.getName() + "]");
 					return m;
 				}
-			}
+			} // TODO better message
+			throw new ApplicationException("invalid class defintion or missing name");
 		}
 		catch (Exception ex) {
-			ConfigFactoryImpl.log(config, ex);
+			throw Caster.toPageException(ex);
 		}
-
-		return defaultValue;
 	}
 
 	@Override

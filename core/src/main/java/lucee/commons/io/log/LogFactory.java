@@ -11,6 +11,7 @@ import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.db.ClassDefinition;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -34,13 +35,12 @@ public class LogFactory implements PropFactory<LoggerAndSourceData> {
 	}
 
 	@Override
-	public LoggerAndSourceData evaluate(Config config, String name, Object val, LoggerAndSourceData defaultValue) {
+	public LoggerAndSourceData evaluate(Config config, String name, Object val) throws PageException {
 		try {
 			return loadLogger((ConfigPro) config, name, Caster.toStruct(val));
 		}
 		catch (Exception e) {
-			LogUtil.log("log-factory", e);
-			return defaultValue;
+			throw Caster.toPageException(e);
 		}
 	}
 

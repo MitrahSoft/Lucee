@@ -5,6 +5,7 @@ import lucee.runtime.config.Config;
 import lucee.runtime.config.Prop;
 import lucee.runtime.config.PropFactory;
 import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -59,14 +60,15 @@ public final class RegexFactory implements PropFactory<Regex> {
 	}
 
 	@Override
-	public Regex evaluate(Config config, String name, Object val, Regex defaultValue) {
-		String strRegex = Caster.toString(val, null);
-		if (StringUtil.isEmpty(strRegex, true)) return defaultValue;
+	public Regex evaluate(Config config, String name, Object val) throws PageException {
+		String strRegex = Caster.toString(val);
+		if (StringUtil.isEmpty(strRegex, true)) {
+			throw new ApplicationException("regex cannot be an empty string");
+		}
 
-		int type = toType(strRegex, -1);
-		if (type == -1) return defaultValue;
+		int type = toType(strRegex);
 
-		return toRegex(type, defaultValue);
+		return toRegex(type, null);
 	}
 
 	@Override

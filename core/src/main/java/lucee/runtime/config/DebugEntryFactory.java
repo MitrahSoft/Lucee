@@ -1,5 +1,6 @@
 package lucee.runtime.config;
 
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -20,21 +21,17 @@ public class DebugEntryFactory implements PropFactory<DebugEntry> {
 	}
 
 	@Override
-	public DebugEntry evaluate(Config config, String name, Object val, DebugEntry defaultValue) {
-
-		Struct data;
+	public DebugEntry evaluate(Config config, String name, Object val) throws PageException {
 		try {
-			data = Caster.toStruct(val, null);
-			if (data == null) return defaultValue;
+			Struct data = Caster.toStruct(val);
 			return new DebugEntry(ConfigFactoryImpl.getAttr(config, data, "id"), ConfigFactoryImpl.getAttr(config, data, "type"),
 					ConfigFactoryImpl.getAttr(config, data, "iprange"), ConfigFactoryImpl.getAttr(config, data, "label"), ConfigFactoryImpl.getAttr(config, data, "path"),
 					ConfigFactoryImpl.getAttr(config, data, "fullname"), ConfigUtil.getAsStruct(config, data, true, "custom"));
 		}
 		catch (Exception ex) {
-			ConfigFactoryImpl.log(config, ex);
+			throw Caster.toPageException(ex);
 		}
 
-		return defaultValue;
 	}
 
 	@Override

@@ -1,5 +1,7 @@
 package lucee.runtime.config;
 
+import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -32,18 +34,16 @@ public class LabelFactory implements PropFactory<LabelFactory.Label> {
 	}
 
 	@Override
-	public Label evaluate(Config config, String name, Object val, Label defaultValue) {
+	public Label evaluate(Config config, String name, Object val) throws PageException {
 
-		Struct data = Caster.toStruct(val, null);
-		if (data == null) return defaultValue;
+		Struct data = Caster.toStruct(val);
 
 		String id = ConfigUtil.getAsString("id", data, null);
 		String _name = ConfigUtil.getAsString("name", data, null);
 		if (id != null && _name != null) {
 			return new Label(id, name);
 		}
-
-		return defaultValue;
+		throw new ApplicationException("attribute [id] and [name] are required");
 	}
 
 	@Override
