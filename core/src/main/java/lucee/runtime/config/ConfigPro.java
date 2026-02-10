@@ -425,4 +425,8 @@ public interface ConfigPro extends Config {
 	public Repository[] getMavenRepository();
 
 	public Repository[] getMavenSnapshotRepository();
+
+	public String getDapSecret();
+
+	public boolean getDapBreakpoint();
 }

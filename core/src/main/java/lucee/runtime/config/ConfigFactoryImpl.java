@@ -837,7 +837,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Map<String, String> args = null;
 
 			// If debugger breakpoint support enabled and no explicit class configured, use DebuggerExecutionLog
-			if (StringUtil.isEmpty(strClass) && ConfigServerImpl.DEBUGGER) {
+			if (StringUtil.isEmpty(strClass) && config.getExecutionLogEnabled()) {
 				LogUtil.log(config, Log.LEVEL_INFO, "application", "Debugger breakpoint support enabled");
 				clazz = DebuggerExecutionLog.class;
 				args = new HashMap<String, String>();

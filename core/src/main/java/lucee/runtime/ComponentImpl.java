@@ -179,8 +179,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	/**
 	 * Constructor of the Component, USED ONLY FOR DESERIALIZE
 	 */
-	public ComponentImpl() {
-	}
+	public ComponentImpl() {}
 
 	/**
 	 * constructor of the class
@@ -748,7 +747,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			return Reflector.componentToClass(pc, this).getClass();
 		}
 
-		// When calling via super, use public access for error message since super calls should access inherited methods
+		// When calling via super, use public access for error message since super calls should access
+		// inherited methods
 		int errorAccess = superAccess ? ACCESS_PUBLIC : access;
 		if (member == null) throw ComponentUtil.notFunction(this, KeyImpl.init(name), null, errorAccess);
 		throw ComponentUtil.notFunction(this, KeyImpl.init(name), member.getValue(), errorAccess);
@@ -978,21 +978,21 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		if (_udfs.isEmpty() && _data.isEmpty()) {
 			return new Collection.Key[0];
 		}
-		
+
 		List<Key> orderedKeys = new ArrayList<Key>(_udfs.size() + _data.size());
-		
-		for (Entry<Key, UDF> entry : _udfs.entrySet()) {
+
+		for (Entry<Key, UDF> entry: _udfs.entrySet()) {
 			if (entry.getValue().getAccess() <= access) {
 				orderedKeys.add(entry.getKey());
 			}
 		}
-		for (Entry<Key, Member> entry : _data.entrySet()) {
+		for (Entry<Key, Member> entry: _data.entrySet()) {
 			Member member = entry.getValue();
 			if (member.getAccess() <= access && !(member instanceof UDF)) {
 				orderedKeys.add(entry.getKey());
 			}
 		}
-		
+
 		return orderedKeys.toArray(new Collection.Key[orderedKeys.size()]);
 	}
 
@@ -1182,8 +1182,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 					try {
 						return DumpUtil.toDumpData(_call(pageContext, KeyConstants.__toDumpData, udf, null, new Object[0]), pageContext, maxlevel, dp);
 					}
-					catch (PageException e) {
-					}
+					catch (PageException e) {}
 				}
 			}
 		}
@@ -1758,7 +1757,7 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		boolean supressWSBeforeArg = pc.getConfig().getSuppressWSBeforeArg();
 
-		Class<?> skeleton = comp.getJavaAccessClass(pc, new RefBooleanImpl(false), ((ConfigPro) pc.getConfig()).getExecutionLogEnabled(), false, false, supressWSBeforeArg);
+		Class<?> skeleton = comp.getJavaAccessClass(pc, new RefBooleanImpl(false), ((PageContextImpl) pc).getExecutionLogEnabled(), false, false, supressWSBeforeArg);
 		if (skeleton != null) sct.set(KeyConstants._skeleton, skeleton);
 
 		if (comp.properties.subName == null) {

@@ -2100,4 +2100,14 @@ public final class ConfigWebImpl implements ConfigWebPro {
 	public Repository[] getMavenSnapshotRepository() {
 		return cs.getMavenSnapshotRepository();
 	}
+
+	@Override
+	public String getDapSecret() {
+		return cs.getDapSecret();
+	}
+
+	@Override
+	public boolean getDapBreakpoint() {
+		return cs.getDapBreakpoint();
+	}
 }

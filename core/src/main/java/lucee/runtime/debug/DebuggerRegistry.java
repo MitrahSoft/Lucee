@@ -2,7 +2,8 @@ package lucee.runtime.debug;
 
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
-import lucee.runtime.config.ConfigServerImpl;
+import lucee.runtime.config.ConfigPro;
+import lucee.runtime.engine.ThreadLocalPageContext;
 
 /**
  * Static registry for the debugger listener. Only one debugger listener is supported at a time.
@@ -37,7 +38,7 @@ public final class DebuggerRegistry {
 			return true;
 		}
 		// Registration requires valid secret
-		String expectedSecret = ConfigServerImpl.DEBUGGER_SECRET;
+		String expectedSecret = ((ConfigPro) ThreadLocalPageContext.getConfig()).getDapSecret();
 		if (expectedSecret == null || !expectedSecret.equals(secret)) {
 			return false;
 		}

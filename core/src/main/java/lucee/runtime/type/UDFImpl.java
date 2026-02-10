@@ -40,7 +40,6 @@ import lucee.runtime.cache.tag.CacheItem;
 import lucee.runtime.cache.tag.udf.UDFCacheItem;
 import lucee.runtime.component.MemberSupport;
 import lucee.runtime.config.Config;
-import lucee.runtime.config.ConfigServerImpl;
 import lucee.runtime.config.NullSupportHelper;
 import lucee.runtime.dump.DumpData;
 import lucee.runtime.dump.DumpProperties;
@@ -363,7 +362,7 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 
 				// Debugger frame support - capture scopes for external debuggers
 				// Must be AFTER defineArguments so function arguments are accessible for conditional breakpoints
-				if (ConfigServerImpl.DEBUGGER) {
+				if (((PageContextImpl) pc).getExecutionLogEnabled()) {
 					pci.pushDebuggerFrame(newLocal, newArgs, pc.variablesScope(), ps, getFunctionName(), properties.getStartLine());
 				}
 
@@ -398,7 +397,7 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, C
 		finally {
 			if (ps != null) pc.removeLastPageSource(psInc != null);
 			// Debugger frame support - pop before removeUDF to maintain consistency
-			if (ConfigServerImpl.DEBUGGER) {
+			if (pci.getExecutionLogEnabled()) {
 				pci.popDebuggerFrame();
 			}
 			pci.removeUDF();

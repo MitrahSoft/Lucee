@@ -92,7 +92,6 @@ import lucee.runtime.cache.tag.include.IncludeCacheItem;
 import lucee.runtime.component.ComponentLoader;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
-import lucee.runtime.config.ConfigServerImpl;
 import lucee.runtime.config.ConfigUtil;
 import lucee.runtime.config.ConfigWeb;
 import lucee.runtime.config.ConfigWebPro;
@@ -359,6 +358,7 @@ public final class PageContextImpl extends PageContext {
 	private boolean gatewayContext;
 	private boolean listenerContext;
 	private Password serverPassword;
+	private LinkedList<DebuggerFrame> debuggerFrames;
 
 	private PageException pe;
 	// private Throwable requestTimeoutException;
@@ -438,6 +438,12 @@ public final class PageContextImpl extends PageContext {
 		this.timeoutStacktrace = thread.getStackTrace();
 	}
 
+	public boolean getExecutionLogEnabled() {
+		// we use this because we do not wanna change our mind in mid request when the underlaying config
+		// setting may change.
+		return debuggerFrames != null;
+	}
+
 	@Override
 	public void initialize(Servlet servlet, ServletRequest req, ServletResponse rsp, String errorPageURL, boolean needsSession, int bufferSize, boolean autoFlush)
 			throws IOException, IllegalStateException, IllegalArgumentException {
@@ -463,6 +469,7 @@ public final class PageContextImpl extends PageContext {
 		caller = null;
 		callerTemplate = null;
 		root = null;
+		debuggerFrames = config.getExecutionLogEnabled() ? new LinkedList<DebuggerFrame>() : null;
 
 		boolean clone = tmplPC != null;
 		requestId = counter++;
@@ -572,7 +579,7 @@ public final class PageContextImpl extends PageContext {
 			_psq = null;
 		}
 		fdEnabled = !config.allowRequestTimeout();
-		if (config.getExecutionLogEnabled()) this.execLog = config.getExecutionLogFactory().getInstance(this);
+		if (debuggerFrames != null) this.execLog = config.getExecutionLogFactory().getInstance(this);
 		if (debugger != null) debugger.init(config);
 		if (clone) {
 			((UndefinedImpl) undefined).initialize(this, tmplPC.getScopeCascadingType(), tmplPC.hasDebugOptions(ConfigPro.DEBUG_IMPLICIT_ACCESS));
@@ -631,10 +638,12 @@ public final class PageContextImpl extends PageContext {
 	@Override
 	public void release() {
 		config.releaseCacheHandlers(this);
-
-		if (config.getExecutionLogEnabled() && execLog != null) {
-			execLog.release();
-			execLog = null;
+		if (debuggerFrames != null) {
+			debuggerFrames = null;
+			if (execLog != null) {
+				execLog.release();
+				execLog = null;
+			}
 		}
 
 		if (PageContextUtil.debug(this)) {
@@ -3427,7 +3436,7 @@ public final class PageContextImpl extends PageContext {
 				FDSignal.signal(pe, caught);
 			}
 			// External debugger (luceedebug) - frames are still intact at this point
-			if (ConfigServerImpl.DEBUGGER) {
+			if (debuggerFrames != null) {
 				DebuggerListener listener = DebuggerRegistry.getListener();
 				if (listener != null && listener.isClientConnected() && listener.onException(this, pe, caught)) {
 					// Get file/line from exception for debugger display
@@ -3553,8 +3562,6 @@ public final class PageContextImpl extends PageContext {
 		}
 	}
 
-	private final LinkedList<DebuggerFrame> debuggerFrames = ConfigServerImpl.DEBUGGER ? new LinkedList<DebuggerFrame>() : null;
-
 	/**
 	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER is enabled.
 	 */
@@ -3623,7 +3630,7 @@ public final class PageContextImpl extends PageContext {
 	 * @param label Optional label to identify the breakpoint in debugger UI
 	 */
 	public void debuggerSuspend(String label) {
-		if (!ConfigServerImpl.DEBUGGER) return;
+		if (debuggerFrames == null) return;
 
 		// Get current file/line for listener callback
 		DebuggerFrame frame = getTopmostDebuggerFrame();
@@ -3662,7 +3669,7 @@ public final class PageContextImpl extends PageContext {
 	 * @param label Optional label to identify the breakpoint in debugger UI
 	 */
 	public void debuggerSuspend(String file, int line, String label) {
-		if (!ConfigServerImpl.DEBUGGER) return;
+		if (debuggerFrames == null) return;
 		debuggerSuspendImpl(file, line, label);
 	}
 

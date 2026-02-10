@@ -245,29 +245,6 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	public static final ClassDefinition<DummyORMEngine> DEFAULT_ORM_ENGINE = new ClassDefinitionImpl<DummyORMEngine>(DummyORMEngine.class);
 	private static final long FIVE_SECONDS = 5000;
 
-	// DAP secret - required to register a debugger listener. If not set, DAP debugger is disabled.
-	public static final String DEBUGGER_SECRET;
-	// DAP enabled if secret is set (non-empty) - enables listener registration and console capture
-	public static final boolean DEBUGGER_ENABLED;
-	// DAP debugger active - controls bytecode instrumentation for stepping/breakpoints (default true
-	// when secret set)
-	public static final boolean DEBUGGER;
-	static {
-		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.dap.secret", null);
-		if (secret != null && !secret.trim().isEmpty()) {
-			DEBUGGER_SECRET = secret.trim();
-			DEBUGGER_ENABLED = true;
-			// Breakpoint support defaults to true, can be disabled for console-only mode
-			DEBUGGER = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.dap.breakpoint", null), true);
-
-		}
-		else {
-			DEBUGGER_SECRET = null;
-			DEBUGGER_ENABLED = false;
-			DEBUGGER = false;
-		}
-	}
-
 	public static Config instance;
 
 	//////////////////////////
@@ -882,8 +859,17 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			.defaultValue(true).description("check the types defined with function arguments and return type");
 	private Boolean typeChecking;
 
-	private static Prop<Boolean> metaExecutionLogEnabled = Prop.bool().keys("enabled").parent("executionLog").defaultValue(false);
-	private Boolean executionLogEnabled;
+	private static Prop<String> metaDapSecret = Prop.str().keys("secret").parent("dap").systemPropEnvVar("lucee.dap.secret")
+			.description("Security token used to authenticate the connection between the IDE and Lucee's Debug Adapter Protocol (DAP) server. "
+					+ "This ensures that only authorized clients can attach to the process for step debugging,access variable scopes, or trigger programmatic breakpoints.");
+	private String dapSecret;
+	private boolean initDapSecret = true;
+
+	private static Prop<Boolean> metaDapBreakpoint = Prop.bool().keys("breakpoint").parent("dap").systemPropEnvVar("lucee.dap.breakpoint").defaultValue(false)
+			.description("Enables zero-overhead instrumentation for step debugging and breakpoints. When enabled, Lucee leverages its internal execution hooks to monitor for "
+					+ "registered breakpoints and the programmatic breakpoint() BIF. " + "Unlike traditional JDWP debugging, this event-driven approach incurs "
+					+ "virtually no performance penalty when no breakpoints are hit, " + "eliminating the need for slow bytecode rewriting.");
+	private Boolean dapBreakpoint;
 
 	private static ImportDefintion DEFAULT_IMPORT_DEFINITION = new ImportDefintionImpl(Constants.DEFAULT_PACKAGE, "*");
 	private static Prop<String> metaComponentDefaultImport = Prop.str().keys("componentAutoImport", "componentDefaultImport").defaultValue(DEFAULT_IMPORT_DEFINITION.toString())
@@ -6438,29 +6424,55 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	}
 
 	@Override
-	public boolean getExecutionLogEnabled() {
-
-		if (DEBUGGER) return true;
-
-		if (executionLogEnabled == null) {
-			synchronized (SystemUtil.createToken("config", "getExecutionLogEnabled")) {
-				if (executionLogEnabled == null) {
-					executionLogEnabled = metaExecutionLogEnabled.get(this, root);
+	public String getDapSecret() {
+		if (initDapSecret) {
+			synchronized (SystemUtil.createToken("config", "dapSecret")) {
+				if (initDapSecret) {
+					dapSecret = metaDapSecret.get(this, root);
 				}
 			}
 		}
-		return executionLogEnabled;
+		return dapSecret;
 	}
 
-	public ConfigServerImpl resetExecutionLogEnabled() {
-		if (executionLogEnabled != null) {
-			synchronized (SystemUtil.createToken("config", "getExecutionLogEnabled")) {
-				if (executionLogEnabled != null) {
-					executionLogEnabled = null;
+	public ConfigServerImpl resetDapSecret() {
+		if (!initDapSecret) {
+			synchronized (SystemUtil.createToken("config", "dapSecret")) {
+				if (!initDapSecret) {
+					dapSecret = null;
 				}
 			}
 		}
 		return this;
+	}
+
+	@Override
+	public boolean getDapBreakpoint() {
+		if (dapBreakpoint == null) {
+			synchronized (SystemUtil.createToken("config", "dapBreakpoint")) {
+				if (dapBreakpoint == null) {
+					dapBreakpoint = metaDapBreakpoint.get(this, root);
+				}
+			}
+		}
+		return dapBreakpoint;
+	}
+
+	public ConfigServerImpl resetDapBreakpoint() {
+		if (dapBreakpoint != null) {
+			synchronized (SystemUtil.createToken("config", "dapBreakpoint")) {
+				if (dapBreakpoint != null) {
+					dapBreakpoint = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	@Deprecated
+	public boolean getExecutionLogEnabled() {
+		return getDapBreakpoint();
 	}
 
 	@Override
@@ -8518,7 +8530,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 		List<Method> methods = Reflector.getMethods(this.getClass());
 		if (filter == null) {
-			LogUtil.log(Log.LEVEL_DEBUG, "config", "rest all");
+			LogUtil.log(Log.LEVEL_DEBUG, "config", "reset all");
 
 			for (Method method: methods) {
 				if (!method.getName().startsWith("reset") || method.getName().equals("reset") || method.getName().equals("resetAll") || method.getArgumentCount() != 0) continue;
@@ -8527,7 +8539,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		}
 		else {
 			ExceptionUtil.initCauseEL(null, null);
-			LogUtil.log(Log.LEVEL_DEBUG, "config", "rest the following: " + filter);
+			LogUtil.log(Log.LEVEL_DEBUG, "config", "reset the following: " + filter);
 
 			for (Method method: methods) {
 				if (method.getArgumentCount() == 0 && filter.allow(method.getName())) {
