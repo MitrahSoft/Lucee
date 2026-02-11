@@ -328,6 +328,10 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 		return gavsos;
 	}
 
+	public String getMavenRaw() {
+		return maven;
+	}
+
 	@Override
 	public boolean hasVersion() {
 		return version != null;
