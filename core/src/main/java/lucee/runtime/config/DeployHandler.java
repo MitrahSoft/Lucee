@@ -314,6 +314,9 @@ public final class DeployHandler {
 	 */
 	public static RHExtension deployExtension(Config config, ExtensionDefintion ed, ResetFilter filter, Log log, boolean reload, boolean force, boolean throwOnError,
 			RefBoolean installDone) throws PageException {
+
+		if (log != null) log.info("extension", "Installing extension [" + ed + "]");
+
 		ConfigPro ci = (ConfigPro) config;
 		String coreVersion = ConfigUtil.getCFMLEngine(config).getInfo().getVersion().toString();
 		// is the extension already installed
@@ -337,6 +340,7 @@ public final class DeployHandler {
 
 			RHExtension _ext = ConfigAdmin._updateRHExtension((ConfigPro) config, local, filter, reload, force, RHExtension.ACTION_COPY);
 			installDone.setValue(true);
+			if (log != null) log.info("extension", "Installed extension [" + ed + "] from provided file");
 			return _ext;
 		}
 
@@ -366,6 +370,7 @@ public final class DeployHandler {
 					IOUtil.copy(ext.getSource(), res);
 					RHExtension _ext = ConfigAdmin._updateRHExtension((ConfigPro) config, res, filter, reload, force, RHExtension.ACTION_MOVE);
 					installDone.setValue(true);
+					if (log != null) log.info("extension", "Installed extension [" + ed + "] from local provider");
 					return _ext;
 				}
 				catch (Exception e) {
@@ -449,6 +454,7 @@ public final class DeployHandler {
 				IOUtil.copy(ext.getSource(), res);
 				RHExtension _ext = ConfigAdmin._updateRHExtension((ConfigPro) config, res, filter, reload, force, RHExtension.ACTION_MOVE);
 				installDone.setValue(true);
+				if (log != null) log.info("extension", "Installed extension [" + ed + "] from local provider");
 				return _ext;
 			}
 			catch (Exception e) {
@@ -463,6 +469,7 @@ public final class DeployHandler {
 			try {
 				RHExtension _ext = ConfigAdmin._updateRHExtension((ConfigPro) config, res, filter, reload, force, RHExtension.ACTION_MOVE);
 				installDone.setValue(true);
+				if (log != null) log.info("extension", "Installed extension [" + ed + "] from remote extension provider");
 				return _ext;
 			}
 			catch (Exception e) {
@@ -607,8 +614,7 @@ public final class DeployHandler {
 					return res;
 				}
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 		// remote
 		try {
