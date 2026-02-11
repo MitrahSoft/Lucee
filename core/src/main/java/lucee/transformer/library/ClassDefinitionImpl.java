@@ -231,8 +231,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 	/**
 	 * only used by deserializer!
 	 */
-	public ClassDefinitionImpl() {
-	}
+	public ClassDefinitionImpl() {}
 
 	public ClassDefinitionImpl<T> setVersionOnlyMattersWhenDownloading(boolean versionOnlyMattersWhenDownloading) {
 		this.versionOnlyMattersWhenDownloading = versionOnlyMattersWhenDownloading;
@@ -363,8 +362,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 			try {
 				maven = MavenUtil.toString(getMaven());
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 			sb.append("class:").append(className).append(";maven:").append(maven).append(";");
 		}
 		else {
@@ -381,17 +379,25 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 	public static ClassDefinition toClassDefinition(String className, Identification id, Map<String, String> attributes) {
 		if (StringUtil.isEmpty(className, true)) return null;
 
-		String bn = null, bv = null;
 		if (attributes != null) {
-			// name
-			bn = attributes.get("name");
+			// bundle
+			String bn = attributes.get("name");
 			if (StringUtil.isEmpty(bn)) bn = attributes.get("bundle-name");
 
-			// version
-			bv = attributes.get("version");
-			if (StringUtil.isEmpty(bv)) bv = attributes.get("bundle-version");
+			if (!StringUtil.isEmpty(bn)) {
+				String bv = attributes.get("version");
+				if (StringUtil.isEmpty(bv)) bv = attributes.get("bundle-version");
+				return new ClassDefinitionImpl(className, bn, bv, id);
+			}
+
+			// maven
+			String mvn = attributes.get("maven");
+			if (StringUtil.isEmpty(mvn)) mvn = attributes.get("mvn");
+			if (!StringUtil.isEmpty(mvn)) {
+				return new ClassDefinitionImpl(className, mvn);
+			}
 		}
-		return new ClassDefinitionImpl(className, bn, bv, id);
+		return new ClassDefinitionImpl(className);
 	}
 
 	@Override
