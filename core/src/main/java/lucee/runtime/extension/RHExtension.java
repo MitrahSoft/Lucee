@@ -1843,7 +1843,7 @@ public final class RHExtension implements Serializable {
 
 			// source
 			else if ("path".equalsIgnoreCase(name) || "url".equalsIgnoreCase(name) || "resource".equalsIgnoreCase(name)) {
-				res = ResourceUtil.toResourceExisting(config, entry.getValue().trim(), null);
+				res = ResourceUtil.toResourceExisting(config, ConfigUtil.replaceConfigPlaceHolder(config, entry.getValue().trim()), null);
 				if (res != null && res.isFile()) {
 					ed.setSource(config, res);
 					if (ed.getId() == null) {
