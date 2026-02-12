@@ -2830,6 +2830,11 @@ public final class PageContextImpl extends PageContext {
 				if (fdEnabled) {
 					FDSignal.signal(pe, false);
 				}
+				// External debugger extension - uncaught exception
+				if (ConfigImpl.DEBUGGER) {
+					DebuggerListener debugListener = DebuggerRegistry.getListener();
+					debuggerNotifyException(debugListener, pe, false);
+				}
 				listener.onError(this, pe); // call Application.onError()
 			}
 			else log(false);
@@ -3433,28 +3438,10 @@ public final class PageContextImpl extends PageContext {
 			if (fdEnabled) {
 				FDSignal.signal(pe, caught);
 			}
-			// External debugger (luceedebug) - frames are still intact at this point
+			// External debugger extension - frames are still intact at this point
 			if (ConfigImpl.DEBUGGER) {
 				DebuggerListener listener = DebuggerRegistry.getListener();
-				if (listener != null && listener.isClientConnected() && listener.onException( this, pe, caught )) {
-					// Get file/line from exception for debugger display
-					String file = null;
-					int line = 0;
-					if (pe instanceof PageExceptionImpl) {
-						PageExceptionImpl pei = (PageExceptionImpl) pe;
-						file = pei.getFile( getConfig() );
-						try {
-							String lineStr = pei.getLine( getConfig() );
-							if (lineStr != null && !lineStr.isEmpty()) {
-								line = Integer.parseInt( lineStr );
-							}
-						}
-						catch (NumberFormatException ignored) {
-						}
-					}
-					String label = caught ? "Caught exception: " : "Uncaught exception: ";
-					debuggerSuspend( file, line, label + pe.getClass().getSimpleName() );
-				}
+				debuggerNotifyException( listener, pe, caught );
 			}
 		}
 		// boolean outer = exception != null && exception == pe;
@@ -3588,20 +3575,11 @@ public final class PageContextImpl extends PageContext {
 	/**
 	 * Get all debugger frames for the current call stack.
 	 * Returns null if debugger is not enabled.
+	 * Called via reflection by the debugger extension.
 	 */
 	public DebuggerFrame[] getDebuggerFrames() {
 		if (debuggerFrames == null) return null;
 		return debuggerFrames.toArray(new DebuggerFrame[0]);
-	}
-
-	/**
-	 * Update the line number of the topmost debugger frame.
-	 * Called on each CFML line when stepping/breakpoints are active.
-	 */
-	public void setDebuggerLine(int line) {
-		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
-			debuggerFrames.getLast().setLine(line);
-		}
 	}
 
 	/**
@@ -3610,6 +3588,29 @@ public final class PageContextImpl extends PageContext {
 	public DebuggerFrame getTopmostDebuggerFrame() {
 		if (debuggerFrames == null || debuggerFrames.isEmpty()) return null;
 		return debuggerFrames.getLast();
+	}
+
+	/**
+	 * Notify the debugger listener of an exception and suspend if requested.
+	 */
+	private void debuggerNotifyException(DebuggerListener listener, PageException pe, boolean caught) {
+		if (listener == null || !listener.isClientConnected() || !listener.onException(this, pe, caught)) return;
+		String file = null;
+		int line = 0;
+		if (pe instanceof PageExceptionImpl) {
+			PageExceptionImpl pei = (PageExceptionImpl) pe;
+			file = pei.getFile(getConfig());
+			try {
+				String lineStr = pei.getLine(getConfig());
+				if (lineStr != null && !lineStr.isEmpty()) {
+					line = Integer.parseInt(lineStr);
+				}
+			}
+			catch (NumberFormatException ignored) {
+			}
+		}
+		String label = caught ? "Caught exception: " : "Uncaught exception: ";
+		debuggerSuspend(file, line, label + pe.getClass().getSimpleName());
 	}
 
 	// Debugger suspension support
@@ -3681,12 +3682,17 @@ public final class PageContextImpl extends PageContext {
 		synchronized (debuggerSuspendLock) {
 			while (debuggerSuspended) {
 				try {
-					debuggerSuspendLock.wait();
+					debuggerSuspendLock.wait(5000);
 				}
 				catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					LogUtil.log(this, "application", "debugger", e, Log.LEVEL_WARN);
 					break;
+				}
+				// Auto-resume if debugger disconnected while suspended
+				if (debuggerSuspended && !DebuggerRegistry.isClientConnected()) {
+					LogUtil.log(Log.LEVEL_WARN, "application", "Debugger disconnected while thread suspended - auto-resuming");
+					debuggerSuspended = false;
 				}
 			}
 		}
@@ -3701,6 +3707,7 @@ public final class PageContextImpl extends PageContext {
 
 	/**
 	 * Resume execution after debugger suspension.
+	 * Called via reflection by the debugger extension.
 	 */
 	public void debuggerResume() {
 		debuggerSuspended = false;
@@ -3711,6 +3718,7 @@ public final class PageContextImpl extends PageContext {
 
 	/**
 	 * Check if this PageContext is currently suspended.
+	 * Available for debugger extensions via reflection.
 	 */
 	public boolean isDebuggerSuspended() {
 		return debuggerSuspended;
@@ -3718,16 +3726,10 @@ public final class PageContextImpl extends PageContext {
 
 	/**
 	 * Get the label of the current suspension point, or null.
+	 * Available for debugger extensions via reflection.
 	 */
 	public String getDebuggerSuspendLabel() {
 		return debuggerSuspendLabel;
-	}
-
-	/**
-	 * Get total time spent suspended (for adjusting request timeouts).
-	 */
-	public long getDebuggerTotalSuspendedNanos() {
-		return debuggerTotalSuspendedNanos;
 	}
 
 	/**

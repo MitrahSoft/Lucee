@@ -3,7 +3,7 @@ package lucee.runtime.debug;
 import lucee.runtime.PageContext;
 
 /**
- * Listener interface for external debuggers (e.g., luceedebug/VS Code DAP).
+ * Listener interface for external debugger extensions (e.g., VS Code DAP).
  * Allows debuggers to be notified of suspend/resume events and to register breakpoints.
  *
  * Only one debugger listener is supported at a time.
@@ -13,7 +13,7 @@ public interface DebuggerListener {
 	/**
 	 * Get the name of this debugger for logging purposes.
 	 *
-	 * @return A human-readable name (e.g., "luceedebug")
+	 * @return A human-readable name (e.g., "debugger")
 	 */
 	String getName();
 

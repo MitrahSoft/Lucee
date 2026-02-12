@@ -8,7 +8,7 @@ import lucee.runtime.config.ConfigImpl;
  * Static registry for the debugger listener.
  * Only one debugger listener is supported at a time.
  *
- * External debuggers (e.g., luceedebug) can access this via reflection:
+ * External debugger extensions can access this via reflection:
  *
  *   Class<?> registryClass = Class.forName("lucee.runtime.debug.DebuggerRegistry");
  *   Method setListener = registryClass.getMethod("setListener", Class.forName("lucee.runtime.debug.DebuggerListener"), String.class);
@@ -31,18 +31,23 @@ public final class DebuggerRegistry {
 	 * @return true if registration succeeded, false if secret is invalid
 	 */
 	public static boolean setListener(DebuggerListener l, String secret) {
-		// Unregister always allowed
-		if (l == null) {
-			listener = null;
-			return true;
-		}
-		// Registration requires valid secret
 		String expectedSecret = ConfigImpl.DEBUGGER_SECRET;
-		if (expectedSecret == null || !expectedSecret.equals(secret)) {
+		if (expectedSecret == null) {
+			LogUtil.log(Log.LEVEL_WARN, "application", "Debugger registration rejected - LUCEE_DAP_SECRET not configured");
 			return false;
 		}
-		listener = l;
-		LogUtil.log(Log.LEVEL_INFO, "application", "External debugger registered [" + l.getName() + "]");
+		if (!expectedSecret.equals(secret)) {
+			LogUtil.log(Log.LEVEL_WARN, "application", "Debugger registration rejected - invalid secret");
+			return false;
+		}
+		if (l == null) {
+			listener = null;
+			LogUtil.log(Log.LEVEL_INFO, "application", "External debugger unregistered");
+		}
+		else {
+			listener = l;
+			LogUtil.log(Log.LEVEL_INFO, "application", "External debugger registered [" + l.getName() + "]");
+		}
 		return true;
 	}
 
@@ -53,15 +58,6 @@ public final class DebuggerRegistry {
 	 */
 	public static DebuggerListener getListener() {
 		return listener;
-	}
-
-	/**
-	 * Check if a debugger listener is registered.
-	 *
-	 * @return true if a listener is registered
-	 */
-	public static boolean hasListener() {
-		return listener != null;
 	}
 
 	/**
