@@ -230,10 +230,9 @@ public final class CFMLEngineImpl implements CFMLEngine {
 	public static final PrintStream CONSOLE_OUT;
 
 	static {
-		// Install debugger print streams if debugger is enabled
-		boolean debuggerEnabled = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.debugger.enabled", null), false);
-
-		if (debuggerEnabled) {
+		// Install debugger print streams when DAP secret is set (debugger extension expected)
+		String dapSecret = SystemUtil.getSystemPropOrEnvVar("lucee.dap.secret", null);
+		if (dapSecret != null && !dapSecret.trim().isEmpty()) {
 			CONSOLE_OUT = new DebuggerPrintStream(System.out, false);
 			CONSOLE_ERR = new DebuggerPrintStream(System.err, true);
 			System.setOut(CONSOLE_OUT);
