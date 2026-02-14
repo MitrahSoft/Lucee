@@ -429,4 +429,8 @@ public interface ConfigPro extends Config {
 	public String getDapSecret();
 
 	public boolean getDapBreakpoint();
+
+	public String replacePlaceHolder(String str);
+
+	public String replacePlaceHolder(String str, Map<Key, String> customPlaceHolderData);
 }

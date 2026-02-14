@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -772,24 +773,24 @@ public final class ConfigUtil {
 		return rst;
 	}
 
-	public static Object replaceConfigPlaceHolders(Config config, Object obj) {
+	private static Object _replacePlaceHolders(Config config, Object obj) {
 		if (obj == null) return obj;
 
 		// handle simple value
 		if (Decision.isSimpleValue(obj)) {
-			if (obj instanceof CharSequence) return replaceConfigPlaceHolder(config, obj.toString());
+			if (obj instanceof CharSequence) return ((ConfigPro) config).replacePlaceHolder(obj.toString());
 			return obj;
 		}
 
 		// handle collection
 		if (obj instanceof lucee.runtime.type.Collection) {
-			return replaceConfigPlaceHolders(config, (lucee.runtime.type.Collection) obj);
+			return replacePlaceHolders(config, (lucee.runtime.type.Collection) obj);
 		}
 
 		return obj;
 	}
 
-	public static lucee.runtime.type.Collection replaceConfigPlaceHolders(Config config, lucee.runtime.type.Collection data) {
+	public static lucee.runtime.type.Collection replacePlaceHolders(Config config, lucee.runtime.type.Collection data) {
 		if (data == null) return data;
 
 		lucee.runtime.type.Collection repl;
@@ -800,16 +801,20 @@ public final class ConfigUtil {
 		Entry<Key, Object> e;
 		while (it.hasNext()) {
 			e = it.next();
-			repl.setEL(e.getKey(), replaceConfigPlaceHolders(config, e.getValue()));
+			repl.setEL(e.getKey(), _replacePlaceHolders(config, e.getValue()));
 		}
 		return repl;
 	}
 
-	public static String replaceConfigPlaceHolderX(String v) {
-		return replaceConfigPlaceHolder(null, v);
+	public static Map<Key, String> merge(Map<Key, String> left, Map<Key, String> right) {
+		if (left == null) return right;
+		if (right == null) return left;
+		Map<Key, String> merged = new HashMap<>(left);
+		merged.putAll(right);
+		return merged;
 	}
 
-	public final static String replaceConfigPlaceHolder(Config config, String v) {
+	public final static String replacePlaceHolder(Config config, String v, Map<Key, String> placeHolderData) {
 		if (StringUtil.isEmpty(v) || v.indexOf('{') == -1) return v;
 
 		int s = -1, e = -1, d = -1, sec = -1;
@@ -848,9 +853,8 @@ public final class ConfigUtil {
 			end = v.indexOf('}', start);
 			if (end > prefixLen) {
 				_name = v.substring(start + prefixLen, end);
-				// print.edate(_name);
-				if (isSecret) {
 
+				if (isSecret) {
 					String[] _parts = _name.split(":");
 					try {
 						if (config == null) throw new ApplicationException("cannot use secret in this context");
@@ -867,7 +871,17 @@ public final class ConfigUtil {
 				}
 				else if (isDollar) {
 					String[] _parts = _name.split(":");
-					_prop = SystemUtil.getSystemPropOrEnvVar(_parts[0], (_parts.length > 1) ? _parts[1] : null);
+					String envVarName = _parts[0];
+					String defaultValue = (_parts.length > 1) ? _parts[1] : null;
+
+					// try placeHolderData first
+					_prop = null;
+					if (placeHolderData != null) {
+						Object val = placeHolderData.get(KeyImpl.init(envVarName));
+						if (val != null) _prop = Caster.toString(val, "");
+					}
+					// fall back to system prop or env var
+					if (_prop == null) _prop = SystemUtil.getSystemPropOrEnvVar(envVarName, defaultValue);
 				}
 				else {
 					_prop = isSystem ? System.getProperty(_name) : System.getenv(_name);
@@ -879,10 +893,10 @@ public final class ConfigUtil {
 				}
 				else start = end;
 			}
-			else start = end; // set start to end for the next round
+			else start = end;
 			s = -1;
-			e = -1; // reset index
-			d = -1; // I don't think we need this?
+			e = -1;
+			d = -1;
 		}
 		return v;
 	}
@@ -908,7 +922,7 @@ public final class ConfigUtil {
 			input.put(names[0], arr);
 			return arr;
 		}
-		return replacePlaceholders ? (Array) replaceConfigPlaceHolders(config, arr) : arr;
+		return replacePlaceholders ? (Array) replacePlaceHolders(config, arr) : arr;
 	}
 
 	public static Struct getAsStruct(Config config, Struct input, boolean allowCSSString, String... names) {
@@ -939,7 +953,7 @@ public final class ConfigUtil {
 			input.put(names[0], sct);
 			return sct;
 		}
-		return (Struct) replaceConfigPlaceHolders(config, sct);
+		return (Struct) replacePlaceHolders(config, sct);
 	}
 
 	public static Struct toStruct(Config config, String str) {
@@ -950,7 +964,7 @@ public final class ConfigUtil {
 			String[] item;
 			for (int i = 0; i < arr.length; i++) {
 				item = ListUtil.toStringArray(ListUtil.listToArrayRemoveEmpty(arr[i], '='));
-				if (item.length == 2) sct.setEL(KeyImpl.init(URLDecoder.decode(item[0], true).trim()), replaceConfigPlaceHolder(config, URLDecoder.decode(item[1], true)));
+				if (item.length == 2) sct.setEL(KeyImpl.init(URLDecoder.decode(item[0], true).trim()), ((ConfigPro) config).replacePlaceHolder(URLDecoder.decode(item[1], true)));
 				else if (item.length == 1) sct.setEL(KeyImpl.init(URLDecoder.decode(item[0], true).trim()), "");
 			}
 		}
@@ -1066,7 +1080,7 @@ public final class ConfigUtil {
 			return arr;
 		}
 
-		if (replacePlaceHolder) return (Array) replaceConfigPlaceHolders(config, arr);
+		if (replacePlaceHolder) return (Array) replacePlaceHolders(config, arr);
 
 		return arr;
 	}

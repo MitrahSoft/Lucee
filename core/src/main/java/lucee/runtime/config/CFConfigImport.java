@@ -1,7 +1,9 @@
 package lucee.runtime.config;
 
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import lucee.commons.io.SystemUtil;
@@ -15,7 +17,6 @@ import lucee.runtime.exp.PageException;
 import lucee.runtime.op.Caster;
 import lucee.runtime.type.Collection;
 import lucee.runtime.type.Collection.Key;
-import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.util.Cast;
 
@@ -121,7 +122,7 @@ public final class CFConfigImport {
 				json = ConfigFile.read(file, charset);
 			}
 
-			replacePlaceHolder(json, placeHolderData);
+			replacePlaceHolder(json, toMap(placeHolderData));
 
 			// dynAttr = (DynamicAttributes) tag;
 			boolean isServer = "server".equalsIgnoreCase(type);
@@ -153,7 +154,18 @@ public final class CFConfigImport {
 
 	}
 
-	private static void replacePlaceHolder(Collection coll, Struct placeHolderData) {
+	private Map<Key, String> toMap(Struct placeHolderData) {
+		if (placeHolderData == null) return null;
+		Map<Key, String> map = new HashMap<>();
+		Iterator<Entry<Key, Object>> it = placeHolderData.entryIterator();
+		while (it.hasNext()) {
+			Entry<Key, Object> e = it.next();
+			map.put(e.getKey(), Caster.toString(e.getValue(), ""));
+		}
+		return map;
+	}
+
+	private void replacePlaceHolder(Collection coll, Map<Key, String> placeHolderData) {
 		// ${MAILSERVER_HOST:smtp.sendgrid.net}
 		Iterator<Entry<Key, Object>> it = coll.entryIterator();
 		Entry<Key, Object> e;
@@ -161,43 +173,14 @@ public final class CFConfigImport {
 		while (it.hasNext()) {
 			e = it.next();
 			obj = e.getValue();
-			if (obj instanceof String) replacePlaceHolder(e, placeHolderData);
+			if (obj instanceof String) {
+
+				String str = (String) e.getValue();
+				String resolved = config.replacePlaceHolder(str, placeHolderData);
+				if (!str.equals(resolved)) e.setValue(resolved);
+			}
 			if (obj instanceof Collection) replacePlaceHolder((Collection) obj, placeHolderData);
 		}
-	}
-
-	private static void replacePlaceHolder(Entry<Key, Object> e, Struct placeHolderData) {
-		String str = (String) e.getValue();
-		String res;
-		boolean modified = false;
-		int startIndex = -1;
-		while (true) {
-			startIndex = str.indexOf("${", startIndex + 1);
-			if (startIndex == -1) break;
-			int endIndex = str.indexOf("}", startIndex + 1);
-			if (endIndex == -1) break;
-			modified = true;
-			String content = str.substring(startIndex + 2, endIndex);
-			String envVarName, defaultValue = "";
-			int index = content.indexOf(':');
-			if (index == -1) {
-				envVarName = content;
-			}
-			else {
-				envVarName = content.substring(0, index);
-				defaultValue = content.substring(index + 1);
-			}
-
-			Object val = null;
-			if (placeHolderData != null) val = placeHolderData.get(KeyImpl.init(envVarName), null);
-			if (val == null) val = SystemUtil.getSystemPropOrEnvVar(envVarName, null);
-
-			if (val != null) res = Caster.toString(val, "");
-			else res = defaultValue;
-
-			str = str.substring(0, startIndex) + res + str.substring(endIndex + 1);
-		}
-		if (modified) e.setValue(str);
 	}
 
 	private boolean setPasswordIfNecessary(ConfigPro config) throws PageException {

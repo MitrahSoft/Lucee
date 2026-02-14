@@ -334,7 +334,7 @@ public class Prop<T> {
 				if (Decision.isSimpleValue(val)) {
 					str = Caster.toString(val);
 					if (!StringUtil.isEmpty(str, true)) {
-						str = ConfigUtil.replaceConfigPlaceHolder(config, str.trim());
+						str = config.replacePlaceHolder(str.trim());
 						if (choices != null) {
 							for (Choice<T> choice: choices) {
 								if (choice.matches(str)) {

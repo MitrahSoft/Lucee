@@ -6,7 +6,9 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -108,6 +110,7 @@ import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.spooler.SpoolerEngine;
 import lucee.runtime.tag.TagHandlerPool;
 import lucee.runtime.type.Collection.Key;
+import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.UDF;
 import lucee.runtime.type.dt.TimeSpan;
@@ -126,6 +129,8 @@ public final class ConfigWebImpl implements ConfigWebPro {
 	private String _id;
 	private Resource rootDir;
 
+	private Map<Key, String> placeHolderdata;
+	private boolean insidePlaceHolder;
 	private Mapping[] mappings;
 	private ComponentPathCache componentPathCache = new ComponentPathCache();
 	private Map<String, Log> logs = new ConcurrentHashMap<>();
@@ -157,6 +162,43 @@ public final class ConfigWebImpl implements ConfigWebPro {
 
 	public ConfigServerImpl getConfigServerImpl() {
 		return cs;
+	}
+
+	public Map<Key, String> getPlaceHolderData() {
+		if (placeHolderdata == null) {
+			synchronized (SystemUtil.createToken("configweb", "placeHolderdata")) {
+				if (placeHolderdata == null) {
+					if (insidePlaceHolder) return new HashMap<>();
+					insidePlaceHolder = true;
+					try {
+						Map<Key, String> data = new HashMap<>(cs.getPlaceHolderData());
+
+						data.put(KeyImpl.init("web-root"), getRootDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("web-root-dir"), getRootDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("web-root-directory"), getRootDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-server"), this.getConfigServerDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-server-dir"), this.getConfigServerDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-server-directory"), this.getConfigServerDir().getAbsolutePath());
+
+						placeHolderdata = Collections.unmodifiableMap(data);
+					}
+					finally {
+						insidePlaceHolder = false;
+					}
+				}
+			}
+		}
+		return placeHolderdata;
+	}
+
+	@Override
+	public String replacePlaceHolder(String str) {
+		return ConfigUtil.replacePlaceHolder(this, str, getPlaceHolderData());
+	}
+
+	@Override
+	public String replacePlaceHolder(String str, Map<Key, String> customPlaceHolderData) {
+		return ConfigUtil.replacePlaceHolder(this, str, customPlaceHolderData != null ? ConfigUtil.merge(getPlaceHolderData(), customPlaceHolderData) : getPlaceHolderData());
 	}
 
 	@Override

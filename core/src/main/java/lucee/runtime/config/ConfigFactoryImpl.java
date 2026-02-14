@@ -492,7 +492,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				if (data == null) continue;
 				strId = entry.getKey().getString();
 				if (!StringUtil.isEmpty(strId)) {
-					data = (Struct) ConfigUtil.replaceConfigPlaceHolders(config, data);
+					data = (Struct) ConfigUtil.replacePlaceHolders(config, data);
 					strId = strId.trim().toLowerCase();
 					engines.put(strId, AIEngineFactory.getInstance(config, strId, data));
 				}
@@ -1358,7 +1358,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			return null;
 		}
 		if (StringUtil.isEmpty(v)) return "";
-		return ConfigUtil.replaceConfigPlaceHolder(config, v);
+		return ((ConfigPro) config).replacePlaceHolder(v);
 	}
 
 	public static String getAttr(Config config, Struct data, String name, String alias) {
@@ -1366,14 +1366,14 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		if (v == null) v = ConfigUtil.getAsString(alias, data, null);
 		if (v == null) return null;
 		if (StringUtil.isEmpty(v)) return "";
-		return ConfigUtil.replaceConfigPlaceHolder(config, v);
+		return ((ConfigPro) config).replacePlaceHolder(v);
 	}
 
 	public static String getAttr(Config config, Struct data, String[] names) {
 		String v;
 		for (String name: names) {
 			v = ConfigUtil.getAsString(name, data, null);
-			if (!StringUtil.isEmpty(v)) return ConfigUtil.replaceConfigPlaceHolder(config, v);
+			if (!StringUtil.isEmpty(v)) return ((ConfigPro) config).replacePlaceHolder(v);
 		}
 		return null;
 	}
@@ -1382,7 +1382,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		String v;
 		for (lucee.runtime.type.Collection.Key name: names) {
 			v = ConfigUtil.getAsString(name, data, null);
-			if (!StringUtil.isEmpty(v)) return ConfigUtil.replaceConfigPlaceHolder(config, v);
+			if (!StringUtil.isEmpty(v)) return ((ConfigPro) config).replacePlaceHolder(v);
 		}
 		return null;
 	}

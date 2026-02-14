@@ -33,6 +33,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -321,7 +322,8 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private TagLib coreTLDs;
 	private FunctionLib coreFLDs;
 	private LinkedHashMapMaxSize<Long, String> previousNonces = new LinkedHashMapMaxSize<Long, String>(100);
-
+	private Map<Key, String> placeHolderdata;
+	private boolean insidePlaceHolder;
 	//////////////////////////
 	//////////////////////////
 
@@ -1318,6 +1320,55 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		// instance=this;
 		this.updateInfo = updateInfo;
 		instance = this;
+	}
+
+	Map<Key, String> getPlaceHolderData() {
+		if (this.placeHolderdata == null) {
+			synchronized (SystemUtil.createToken("configweb", "placeHolderdata")) {
+				if (this.placeHolderdata == null) {
+					if (insidePlaceHolder) return new HashMap<>();
+					insidePlaceHolder = true;
+					try {
+						Map<Key, String> data = new HashMap<>();
+						data.put(KeyImpl.init("lucee-config"), getConfigDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-config-dir"), getConfigDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-config-directory"), getConfigDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-web"), getConfigDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-web-dir"), getConfigDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-web-directory"), getConfigDir().getAbsolutePath());
+
+						data.put(KeyConstants._temp, getTempDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("temp-dir"), getTempDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("temp-directory"), getTempDirectory().getAbsolutePath());
+
+						// add constants
+						Struct constants = getConstants();
+						if (constants != null) {
+							Iterator<Entry<Key, Object>> it = constants.entryIterator();
+							while (it.hasNext()) {
+								Entry<Key, Object> e = it.next();
+								data.put(e.getKey(), Caster.toString(e.getValue(), ""));
+							}
+						}
+						this.placeHolderdata = Collections.unmodifiableMap(data);
+					}
+					finally {
+						insidePlaceHolder = false;
+					}
+				}
+			}
+		}
+		return this.placeHolderdata;
+	}
+
+	@Override
+	public String replacePlaceHolder(String str) {
+		return ConfigUtil.replacePlaceHolder(this, str, getPlaceHolderData());
+	}
+
+	@Override
+	public String replacePlaceHolder(String str, Map<Key, String> customPlaceHolderData) {
+		return ConfigUtil.replacePlaceHolder(this, str, customPlaceHolderData != null ? ConfigUtil.merge(getPlaceHolderData(), customPlaceHolderData) : getPlaceHolderData());
 	}
 
 	public List<Monitor> getMonitors() {
@@ -5334,6 +5385,8 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "getConstants")) {
 				if (constants != null) {
 					constants = null;
+					placeHolderdata = null;
+
 				}
 			}
 		}

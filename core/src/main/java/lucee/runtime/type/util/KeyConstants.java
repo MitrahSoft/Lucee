@@ -3126,6 +3126,7 @@ public final class KeyConstants {
 	public static final Key _enum = init("enum");
 	public static final Key _deprecated = init("deprecated");
 	public static final Key _const = init("const");
+	public static final Key _temp = init("temp");
 
 	public static Map<String, Key> getKeys() {
 		return keys;
