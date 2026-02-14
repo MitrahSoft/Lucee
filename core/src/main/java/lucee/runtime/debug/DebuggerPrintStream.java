@@ -1,57 +1,56 @@
 package lucee.runtime.debug;
 
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 
 /**
  * PrintStream wrapper that tees output to the DebuggerListener.
- * Installed on System.out/err when DEBUGGER_SECRET is set.
+ * Installed on System.out/err when DEBUGGER_DAP_SECRET is set.
  * Always passes through to the original stream; only notifies listener when active.
+ *
+ * Uses an OutputStream wrapper because PrintStream.print/println use a private
+ * internal write path (BufferedWriter → OutputStreamWriter → OutputStream) that
+ * bypasses the public write(byte[]) methods. Wrapping the OutputStream ensures
+ * ALL output paths are intercepted.
  */
 public class DebuggerPrintStream extends PrintStream {
-	private final PrintStream original;
-	private final boolean isStdErr;
 
 	public DebuggerPrintStream(PrintStream original, boolean isStdErr) {
-		super(original, true); // autoFlush=true
-		this.original = original;
-		this.isStdErr = isStdErr;
-	}
-
-	@Override
-	public void write(byte[] buf, int off, int len) {
-		super.write(buf, off, len);
-		notifyListener(new String(buf, off, len));
-	}
-
-	@Override
-	public void write(byte[] buf) {
-		super.write(buf, 0, buf.length);
-		notifyListener(new String(buf));
-	}
-
-	@Override
-	public void write(int b) {
-		super.write(b);
-		// Single byte - notify immediately (some libs write char-by-char)
-		notifyListener(String.valueOf((char) b));
-	}
-
-	// Note: We only override write() methods to notify the listener.
-	// Do NOT override print/println - they internally call write() and
-	// would cause double notifications.
-
-	private void notifyListener(String text) {
-		if (text == null || text.isEmpty()) return;
-		DebuggerListener listener = DebuggerRegistry.getListener();
-		if (listener != null && listener.isClientConnected()) {
-			listener.onOutput(text, isStdErr);
-		}
+		super(new NotifyingOutputStream(original, isStdErr), true);
 	}
 
 	/**
-	 * Get the original stream (for unwrapping if needed).
+	 * OutputStream that forwards all writes to the original stream
+	 * and notifies the DebuggerListener of new output.
 	 */
-	public PrintStream getOriginal() {
-		return original;
+	private static class NotifyingOutputStream extends FilterOutputStream {
+		private final boolean isStdErr;
+
+		NotifyingOutputStream(OutputStream original, boolean isStdErr) {
+			super(original);
+			this.isStdErr = isStdErr;
+		}
+
+		@Override
+		public void write(byte[] buf, int off, int len) throws IOException {
+			out.write(buf, off, len);
+			notifyListener(new String(buf, off, len));
+		}
+
+		@Override
+		public void write(int b) throws IOException {
+			out.write(b);
+			notifyListener(String.valueOf((char) b));
+		}
+
+		private void notifyListener(String text) {
+			if (text == null || text.isEmpty()) return;
+			DebuggerListener listener = DebuggerRegistry.getListener();
+			if (listener != null && listener.isClientConnected()) {
+				listener.onOutput(text, isStdErr);
+			}
+		}
 	}
 }
