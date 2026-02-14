@@ -153,7 +153,9 @@ jobs:
         docker run -d --name mongodb -p 27017:27017 mongo:4.4
         sleep 5
     - name: Setup Memcached (docker)
-      uses: niden/actions-memcached@v7
+      run: |
+        docker run -d --name memcached -p 11211:11211 memcached:latest
+        sleep 5
     - name: Extract version number
       id: extract-version
       run: |
