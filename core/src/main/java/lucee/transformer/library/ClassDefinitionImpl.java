@@ -140,39 +140,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 		return new ClassDefinitionImpl(cl, null, null, id);
 	}
 
-	public static ClassDefinition toClassDefinition(String className, Identification id, Map<String, String> attributes) {
-		if (StringUtil.isEmpty(className, true)) return null;
-
-		if (attributes != null) {
-
-			// OSGi?
-			String bn = attributes.get("name");
-			if (StringUtil.isEmpty(bn)) bn = attributes.get("bundle-name");
-			String bv = attributes.get("version");
-			if (StringUtil.isEmpty(bv)) bv = attributes.get("bundle-version");
-			if (!StringUtil.isEmpty(bn)) {
-				return new ClassDefinitionImpl(className, bn, bv, id);
-			}
-
-			// Maven?
-			String mvn = attributes.get("maven");
-			if (!StringUtil.isEmpty(mvn, true)) {
-				return new ClassDefinitionImpl(className, mvn);
-			}
-
-			// Component?
-			String cfcName = attributes.get("component");
-			if (!StringUtil.isEmpty(cfcName, true)) {
-				Class<? extends Object> proxyClass = cfmlToClass(cfcName, null);
-				if (proxyClass != null) {
-					return new ClassDefinitionImpl(proxyClass);
-				}
-			}
-		}
-		return new ClassDefinitionImpl(className, null, null, id);
-	}
-
-	public static ClassDefinitionImpl toClassDefinition(Map<String, ?> map, boolean strict, Identification id) {
+	public static ClassDefinition toClassDefinition(Map<String, ?> map, boolean strict, Identification id) {
 		return toClassDefinitionImpl(MapAsStruct.toStruct(map, false), null, strict, id);
 	}
 
@@ -263,8 +231,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 	/**
 	 * only used by deserializer!
 	 */
-	public ClassDefinitionImpl() {
-	}
+	public ClassDefinitionImpl() {}
 
 	public ClassDefinitionImpl<T> setVersionOnlyMattersWhenDownloading(boolean versionOnlyMattersWhenDownloading) {
 		this.versionOnlyMattersWhenDownloading = versionOnlyMattersWhenDownloading;
@@ -399,8 +366,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 			try {
 				maven = MavenUtil.toString(getMaven());
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 			sb.append("class:").append(className).append(";maven:").append(maven).append(";");
 		}
 		else {
@@ -412,6 +378,30 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 	@Override
 	public int hashCode() {
 		return toString().hashCode();
+	}
+
+	public static ClassDefinition toClassDefinition(String className, Identification id, Map<String, String> attributes) {
+		if (StringUtil.isEmpty(className, true)) return null;
+
+		if (attributes != null) {
+			// bundle
+			String bn = attributes.get("name");
+			if (StringUtil.isEmpty(bn)) bn = attributes.get("bundle-name");
+
+			if (!StringUtil.isEmpty(bn)) {
+				String bv = attributes.get("version");
+				if (StringUtil.isEmpty(bv)) bv = attributes.get("bundle-version");
+				return new ClassDefinitionImpl(className, bn, bv, id);
+			}
+
+			// maven
+			String mvn = attributes.get("maven");
+			if (StringUtil.isEmpty(mvn)) mvn = attributes.get("mvn");
+			if (!StringUtil.isEmpty(mvn)) {
+				return new ClassDefinitionImpl(className, mvn);
+			}
+		}
+		return new ClassDefinitionImpl(className);
 	}
 
 	@Override

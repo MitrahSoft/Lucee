@@ -387,8 +387,7 @@ td#logintd {
 #login {
     max-width: 100%;
     margin: 0px auto;
-    width: 220px;
-    height: 300px;
+    width: fit-content;
 }
 
 /* Content Area */
