@@ -24,8 +24,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -59,7 +59,6 @@ import lucee.runtime.component.ImportDefintionImpl;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.Constants;
 import lucee.runtime.op.Caster;
-import lucee.runtime.util.PageContextUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
@@ -68,12 +67,16 @@ import lucee.runtime.type.scope.Undefined;
 import lucee.runtime.type.util.ArrayUtil;
 import lucee.runtime.type.util.ComponentUtil;
 import lucee.runtime.type.util.KeyConstants;
+import lucee.runtime.util.PageContextUtil;
 import lucee.transformer.Body;
 import lucee.transformer.Factory;
 import lucee.transformer.Page;
 import lucee.transformer.Range;
 import lucee.transformer.TransformerException;
 import lucee.transformer.bytecode.ConstrBytecodeContext.Data;
+import lucee.transformer.bytecode.literal.LitBooleanImpl;
+import lucee.transformer.bytecode.literal.LitNumberImpl;
+import lucee.transformer.bytecode.literal.LitStringImpl;
 import lucee.transformer.bytecode.statement.NativeSwitch;
 import lucee.transformer.bytecode.statement.tag.TagCIObject;
 import lucee.transformer.bytecode.statement.tag.TagComponent;
@@ -90,9 +93,6 @@ import lucee.transformer.bytecode.visitor.ConditionVisitor;
 import lucee.transformer.bytecode.visitor.DecisionIntVisitor;
 import lucee.transformer.bytecode.visitor.OnFinally;
 import lucee.transformer.bytecode.visitor.TryCatchFinallyVisitor;
-import lucee.transformer.bytecode.literal.LitBooleanImpl;
-import lucee.transformer.bytecode.literal.LitNumberImpl;
-import lucee.transformer.bytecode.literal.LitStringImpl;
 import lucee.transformer.expression.ExprString;
 import lucee.transformer.expression.Expression;
 import lucee.transformer.expression.literal.LitString;
@@ -259,9 +259,8 @@ public final class PageImpl extends BodyBase implements Page {
 	private static final Method CLEAR_AND_POP = new Method("clearAndPop", Types.VOID, new Type[] { Types.PAGE_CONTEXT, Types.BODY_CONTENT });
 
 	// Standard property attributes that are handled explicitly (not dynamic)
-	private static final Set<String> STANDARD_PROPERTY_ATTRS = new HashSet<>(Arrays.asList(
-		"name", "type", "default", "access", "hint", "displayname", "required", "setter", "getter"
-	));
+	private static final Set<String> STANDARD_PROPERTY_ATTRS = new HashSet<>(
+			Arrays.asList("name", "type", "default", "access", "hint", "displayname", "required", "setter", "getter"));
 
 	public static final byte CF = (byte) 207;
 	public static final byte _33 = (byte) 51;
@@ -572,15 +571,13 @@ public final class PageImpl extends BodyBase implements Page {
 		DecisionIntVisitor div;
 		// Function[] functions = extractFunctions(constr.getUDFProperties());
 		// less/equal than 10 functions
-		if (isInterface()) {
-		}
+		if (isInterface()) {}
 		else if (functions.length <= 10) {
 			adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, UDF_CALL, null, new Type[] { Types.THROWABLE }, cw);
 			BytecodeContext bc = new BytecodeContext(config, optionalPS, constr, this, keys, cw, className, adapter, UDF_CALL, writeLog(), suppressWSbeforeArg, output, returnValue,
 					sourceCode.getSourceOffset());
 
-			if (functions.length == 0) {
-			}
+			if (functions.length == 0) {}
 			else if (functions.length == 1) {
 				bc.visitLine(functions[0].getStart());
 				functions[0].getBody().writeOut(bc);
@@ -651,8 +648,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 		// udfDefaultValue
 		// less/equal than 10 functions
-		if (isInterface()) {
-		}
+		if (isInterface()) {}
 		else if (functions.length <= 10) {
 			adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, UDF_DEFAULT_VALUE, null, new Type[] { Types.PAGE_EXCEPTION }, cw);
 			if (functions.length > 0) writeUdfDefaultValueInner(new BytecodeContext(config, optionalPS, constr, this, keys, cw, className, adapter, UDF_DEFAULT_VALUE, writeLog(),
@@ -799,8 +795,7 @@ public final class PageImpl extends BodyBase implements Page {
 				// Call PageContextUtil.decodeExecutableLines(encoded, maxLine)
 				execLinesAdapter.push(encoded);
 				execLinesAdapter.push(maxLine);
-				execLinesAdapter.invokeStatic(Types.PAGE_CONTEXT_UTIL,
-					new Method("decodeExecutableLines", Type.getType(int[].class), new Type[] { Types.STRING, Type.INT_TYPE }));
+				execLinesAdapter.invokeStatic(Types.PAGE_CONTEXT_UTIL, new Method("decodeExecutableLines", Type.getType(int[].class), new Type[] { Types.STRING, Type.INT_TYPE }));
 			}
 			execLinesAdapter.arrayStore(Types.OBJECT);
 
@@ -1068,10 +1063,10 @@ public final class PageImpl extends BodyBase implements Page {
 			cw.visitField(Opcodes.ACC_PRIVATE + Opcodes.ACC_STATIC + Opcodes.ACC_FINAL, "staticStruct", "Llucee/runtime/component/StaticStruct;", null, null).visitEnd();
 			// Generate per-class static property registry field
 			cw.visitField(Opcodes.ACC_PRIVATE + Opcodes.ACC_STATIC + Opcodes.ACC_FINAL, "__staticProperties", "Ljava/util/Map;",
-				"Ljava/util/Map<Ljava/lang/String;Llucee/runtime/component/PropertyImpl;>;", null).visitEnd();
+					"Ljava/util/Map<Ljava/lang/String;Llucee/runtime/component/PropertyImpl;>;", null).visitEnd();
 			// LDEV-3335: Generate flyweight accessor UDF registry field
 			cw.visitField(Opcodes.ACC_PRIVATE + Opcodes.ACC_STATIC + Opcodes.ACC_FINAL, "__staticAccessorUDFs", "Ljava/util/Map;",
-				"Ljava/util/Map<Llucee/runtime/type/Collection$Key;Llucee/runtime/type/UDF;>;", null).visitEnd();
+					"Ljava/util/Map<Llucee/runtime/type/Collection$Key;Llucee/runtime/type/UDF;>;", null).visitEnd();
 		}
 
 		cw.visitField(Opcodes.ACC_PRIVATE + Opcodes.ACC_STATIC + Opcodes.ACC_FINAL, "keys", Types.COLLECTION_KEY_ARRAY.toString(), null, null).visitEnd();
@@ -1104,11 +1099,11 @@ public final class PageImpl extends BodyBase implements Page {
 			if (addStatic && component != null && component.getBody() != null) {
 				List<Statement> statements = component.getBody().getStatements();
 				if (statements != null) {
-					for (Statement stmt : statements) {
+					for (Statement stmt: statements) {
 						if (stmt instanceof TagProperty) {
 							TagProperty tagProp = (TagProperty) stmt;
-							Tag tag = (Tag) tagProp;
-							
+							Tag tag = tagProp;
+
 							// Extract property attributes
 							String propName = getTagAttributeValue(tag, "name");
 							String propType = getTagAttributeValue(tag, "type");
@@ -1119,7 +1114,7 @@ public final class PageImpl extends BodyBase implements Page {
 							String propSetter = getTagAttributeValue(tag, "setter");
 							String propGetter = getTagAttributeValue(tag, "getter");
 							Attribute propDefaultAttr = tag.getAttribute("default");
-							
+
 							if (propName != null) {
 								// Generate: PropertyImpl prop = new PropertyImpl();
 								ga.newInstance(Types.PROPERTY_IMPL);
@@ -1127,7 +1122,7 @@ public final class PageImpl extends BodyBase implements Page {
 								ga.invokeConstructor(Types.PROPERTY_IMPL, new Method("<init>", Type.VOID_TYPE, new Type[] {}));
 								int propLocal = ga.newLocal(Types.PROPERTY_IMPL);
 								ga.storeLocal(propLocal);
-								
+
 								// prop.setName("propName");
 								ga.loadLocal(propLocal);
 								ga.push(propName);
@@ -1157,41 +1152,41 @@ public final class PageImpl extends BodyBase implements Page {
 									ga.push(propType);
 									ga.invokeVirtual(Types.PROPERTY_IMPL, new Method("setType", Type.VOID_TYPE, new Type[] { Types.STRING }));
 								}
-								
+
 								// prop.setAccess("access") if provided
 								if (propAccess != null) {
 									ga.loadLocal(propLocal);
 									ga.push(propAccess);
 									ga.invokeVirtual(Types.PROPERTY_IMPL, new Method("setAccess", Type.VOID_TYPE, new Type[] { Types.STRING }));
 								}
-								
+
 								// prop.setHint("hint") if provided
 								if (propHint != null) {
 									ga.loadLocal(propLocal);
 									ga.push(propHint);
 									ga.invokeVirtual(Types.PROPERTY_IMPL, new Method("setHint", Type.VOID_TYPE, new Type[] { Types.STRING }));
 								}
-								
+
 								// prop.setDisplayname("displayname") if provided
 								if (propDisplayname != null) {
 									ga.loadLocal(propLocal);
 									ga.push(propDisplayname);
 									ga.invokeVirtual(Types.PROPERTY_IMPL, new Method("setDisplayname", Type.VOID_TYPE, new Type[] { Types.STRING }));
 								}
-								
+
 								// prop.setRequired(boolean) only if explicitly provided
 								if (propRequired != null) {
 									ga.loadLocal(propLocal);
 									ga.push("true".equalsIgnoreCase(propRequired) || "yes".equalsIgnoreCase(propRequired));
 									ga.invokeVirtual(Types.PROPERTY_IMPL, new Method("setRequired", Type.VOID_TYPE, new Type[] { Type.BOOLEAN_TYPE }));
 								}
-								
+
 								// prop.setSetter(boolean)
 								boolean setter = propSetter == null || "true".equalsIgnoreCase(propSetter) || "yes".equalsIgnoreCase(propSetter);
 								ga.loadLocal(propLocal);
 								ga.push(setter);
 								ga.invokeVirtual(Types.PROPERTY_IMPL, new Method("setSetter", Type.VOID_TYPE, new Type[] { Type.BOOLEAN_TYPE }));
-								
+
 								// prop.setGetter(boolean)
 								boolean getter = propGetter == null || "true".equalsIgnoreCase(propGetter) || "yes".equalsIgnoreCase(propGetter);
 								ga.loadLocal(propLocal);
@@ -1231,7 +1226,7 @@ public final class PageImpl extends BodyBase implements Page {
 								// Collect dynamic attributes (non-standard attributes)
 								Map<String, Attribute> allAttrs = tag.getAttributes();
 								List<Attribute> dynamicAttrs = new ArrayList<>();
-								for (Attribute attr : allAttrs.values()) {
+								for (Attribute attr: allAttrs.values()) {
 									String attrName = attr.getName().toLowerCase();
 									// Skip standard attributes
 									if (!STANDARD_PROPERTY_ATTRS.contains(attrName)) {
@@ -1254,7 +1249,7 @@ public final class PageImpl extends BodyBase implements Page {
 									ga.storeLocal(dynAttrsLocal);
 
 									// For each dynamic attribute: dynAttrs.setEL(key, value)
-									for (Attribute dynAttr : dynamicAttrs) {
+									for (Attribute dynAttr: dynamicAttrs) {
 										String dynAttrValue = getTagAttributeValue(tag, dynAttr.getName());
 										if (dynAttrValue != null) {
 											ga.loadLocal(dynAttrsLocal);
@@ -1292,7 +1287,8 @@ public final class PageImpl extends BodyBase implements Page {
 								ga.getStatic(Type.getObjectType(name), "__staticProperties", Type.getType(Map.class));
 								ga.push(propName.toLowerCase());
 								ga.loadLocal(propLocal);
-								ga.invokeInterface(Type.getType(Map.class), new Method("put", Type.getType(Object.class), new Type[] { Type.getType(Object.class), Type.getType(Object.class) }));
+								ga.invokeInterface(Type.getType(Map.class),
+										new Method("put", Type.getType(Object.class), new Type[] { Type.getType(Object.class), Type.getType(Object.class) }));
 								ga.pop(); // Pop return value from map.put()
 							}
 						}
@@ -1300,74 +1296,73 @@ public final class PageImpl extends BodyBase implements Page {
 				}
 			}
 
+			// LDEV-3335: Generate flyweight accessor UDFs from static properties
+			// Iterate over __staticProperties.values() and create getter/setter UDFs
+			if (addStatic && component != null) {
+				// for (Property prop : __staticProperties.values())
+				ga.getStatic(Type.getObjectType(name), "__staticProperties", TYPE_MAP);
+				ga.invokeInterface(TYPE_MAP, METHOD_MAP_VALUES);
+				ga.invokeInterface(TYPE_COLLECTION, METHOD_COLLECTION_ITERATOR);
+				int iteratorLocal = ga.newLocal(TYPE_ITERATOR);
+				ga.storeLocal(iteratorLocal);
 
-		// LDEV-3335: Generate flyweight accessor UDFs from static properties
-		// Iterate over __staticProperties.values() and create getter/setter UDFs
-		if (addStatic && component != null) {
-			// for (Property prop : __staticProperties.values())
-			ga.getStatic(Type.getObjectType(name), "__staticProperties", TYPE_MAP);
-			ga.invokeInterface(TYPE_MAP, METHOD_MAP_VALUES);
-			ga.invokeInterface(TYPE_COLLECTION, METHOD_COLLECTION_ITERATOR);
-			int iteratorLocal = ga.newLocal(TYPE_ITERATOR);
-			ga.storeLocal(iteratorLocal);
+				Label loopStart = ga.newLabel();
+				Label loopEnd = ga.newLabel();
 
-			Label loopStart = ga.newLabel();
-			Label loopEnd = ga.newLabel();
+				ga.mark(loopStart);
+				ga.loadLocal(iteratorLocal);
+				ga.invokeInterface(TYPE_ITERATOR, METHOD_ITERATOR_HAS_NEXT);
+				ga.visitJumpInsn(Opcodes.IFEQ, loopEnd);
 
-			ga.mark(loopStart);
-			ga.loadLocal(iteratorLocal);
-			ga.invokeInterface(TYPE_ITERATOR, METHOD_ITERATOR_HAS_NEXT);
-			ga.visitJumpInsn(Opcodes.IFEQ, loopEnd);
+				ga.loadLocal(iteratorLocal);
+				ga.invokeInterface(TYPE_ITERATOR, METHOD_ITERATOR_NEXT);
+				ga.checkCast(Types.PROPERTY_IMPL);
+				int propLocal = ga.newLocal(Types.PROPERTY_IMPL);
+				ga.storeLocal(propLocal);
 
-			ga.loadLocal(iteratorLocal);
-			ga.invokeInterface(TYPE_ITERATOR, METHOD_ITERATOR_NEXT);
-			ga.checkCast(Types.PROPERTY_IMPL);
-			int propLocal = ga.newLocal(Types.PROPERTY_IMPL);
-			ga.storeLocal(propLocal);
+				// if (prop.getGetter())
+				Label skipGetter = ga.newLabel();
+				ga.loadLocal(propLocal);
+				ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_GETTER);
+				ga.visitJumpInsn(Opcodes.IFEQ, skipGetter);
 
-			// if (prop.getGetter())
-			Label skipGetter = ga.newLabel();
-			ga.loadLocal(propLocal);
-			ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_GETTER);
-			ga.visitJumpInsn(Opcodes.IFEQ, skipGetter);
+				// __staticAccessorUDFs.put(prop.getGetterKey(), new UDFGetterProperty(null, prop))
+				ga.getStatic(Type.getObjectType(name), "__staticAccessorUDFs", TYPE_MAP);
+				ga.loadLocal(propLocal);
+				ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_GETTER_KEY);
+				ga.newInstance(TYPE_UDF_GETTER_PROPERTY);
+				ga.dup();
+				ga.visitInsn(Opcodes.ACONST_NULL); // null component for flyweight
+				ga.loadLocal(propLocal);
+				ga.invokeConstructor(TYPE_UDF_GETTER_PROPERTY, METHOD_UDF_CONSTRUCTOR);
+				ga.invokeInterface(TYPE_MAP, METHOD_MAP_PUT);
+				ga.pop();
 
-			// __staticAccessorUDFs.put(prop.getGetterKey(), new UDFGetterProperty(null, prop))
-			ga.getStatic(Type.getObjectType(name), "__staticAccessorUDFs", TYPE_MAP);
-			ga.loadLocal(propLocal);
-			ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_GETTER_KEY);
-			ga.newInstance(TYPE_UDF_GETTER_PROPERTY);
-			ga.dup();
-			ga.visitInsn(Opcodes.ACONST_NULL); // null component for flyweight
-			ga.loadLocal(propLocal);
-			ga.invokeConstructor(TYPE_UDF_GETTER_PROPERTY, METHOD_UDF_CONSTRUCTOR);
-			ga.invokeInterface(TYPE_MAP, METHOD_MAP_PUT);
-			ga.pop();
+				ga.mark(skipGetter);
 
-			ga.mark(skipGetter);
+				// if (prop.getSetter())
+				Label skipSetter = ga.newLabel();
+				ga.loadLocal(propLocal);
+				ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_SETTER);
+				ga.visitJumpInsn(Opcodes.IFEQ, skipSetter);
 
-			// if (prop.getSetter())
-			Label skipSetter = ga.newLabel();
-			ga.loadLocal(propLocal);
-			ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_SETTER);
-			ga.visitJumpInsn(Opcodes.IFEQ, skipSetter);
+				// __staticAccessorUDFs.put(prop.getSetterKey(), new UDFSetterProperty(null, prop))
+				ga.getStatic(Type.getObjectType(name), "__staticAccessorUDFs", TYPE_MAP);
+				ga.loadLocal(propLocal);
+				ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_SETTER_KEY);
+				ga.newInstance(TYPE_UDF_SETTER_PROPERTY);
+				ga.dup();
+				ga.visitInsn(Opcodes.ACONST_NULL); // null component
+				ga.loadLocal(propLocal);
+				ga.invokeConstructor(TYPE_UDF_SETTER_PROPERTY, METHOD_UDF_CONSTRUCTOR);
+				ga.invokeInterface(TYPE_MAP, METHOD_MAP_PUT);
+				ga.pop();
 
-			// __staticAccessorUDFs.put(prop.getSetterKey(), new UDFSetterProperty(null, prop))
-			ga.getStatic(Type.getObjectType(name), "__staticAccessorUDFs", TYPE_MAP);
-			ga.loadLocal(propLocal);
-			ga.invokeVirtual(Types.PROPERTY_IMPL, METHOD_PROPERTY_GET_SETTER_KEY);
-			ga.newInstance(TYPE_UDF_SETTER_PROPERTY);
-			ga.dup();
-			ga.visitInsn(Opcodes.ACONST_NULL); // null component
-			ga.loadLocal(propLocal);
-			ga.invokeConstructor(TYPE_UDF_SETTER_PROPERTY, METHOD_UDF_CONSTRUCTOR);
-			ga.invokeInterface(TYPE_MAP, METHOD_MAP_PUT);
-			ga.pop();
+				ga.mark(skipSetter);
 
-			ga.mark(skipSetter);
-
-			ga.goTo(loopStart);
-			ga.mark(loopEnd);
-		}
+				ga.goTo(loopStart);
+				ga.mark(loopEnd);
+			}
 			// Array initialization - MUST be done AFTER property processing so all keys are registered
 			ga.push(keys.size()); // Array size
 			ga.newArray(Types.COLLECTION_KEY);
@@ -1421,8 +1416,7 @@ public final class PageImpl extends BodyBase implements Page {
 		// Optimized property initialization that directly accesses static __staticProperties field
 		if (addStatic && component != null) {
 			Method initPropsStubMethod = new Method("initPropertiesStub", Type.VOID_TYPE, new Type[] { Types.COMPONENT_IMPL });
-			final GeneratorAdapter ga = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, initPropsStubMethod, null,
-					new Type[] { Types.PAGE_EXCEPTION }, cw);
+			final GeneratorAdapter ga = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, initPropsStubMethod, null, new Type[] { Types.PAGE_EXCEPTION }, cw);
 
 			// if (__staticProperties != null && !__staticProperties.isEmpty()) {
 			Label afterNullCheck = ga.newLabel();
@@ -1500,7 +1494,8 @@ public final class PageImpl extends BodyBase implements Page {
 		return null;
 	}
 
-	private void writeOutStaticConstructor(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, TagCIObject component, String name) throws TransformerException {
+	private void writeOutStaticConstructor(ConstrBytecodeContext constr, Map<LitString, Integer> keys, ClassWriter cw, TagCIObject component, String name)
+			throws TransformerException {
 
 		List<StaticBody> staticBodies = component.getStaticBodies();
 		if (ArrayUtil.isEmpty(staticBodies)) return;

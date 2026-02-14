@@ -1710,8 +1710,7 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -1742,8 +1741,7 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -1778,8 +1776,7 @@ public final class ConfigAdmin {
 			}
 			config.getStartups().remove(cd.getClassName());
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 	}
 
 	public void updateJDBCDriver(String label, String id, ClassDefinition cd, String connectionString) throws PageException {
@@ -1830,8 +1827,7 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -5030,7 +5026,7 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinitionImpl cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = (ClassDefinitionImpl) ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
 					// class
@@ -5046,11 +5042,12 @@ public final class ConfigAdmin {
 						filter.add("resetStartups");
 						reloadNecessary = true;
 						logger.info("extension", "Update Startup Hook [" + cfc + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
-					} 
+					}
 					// neither valid class nor component - log error
 					else {
-						logger.error("extension", "Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion()
-								+ "] could not be registered: class definition [" + cd + "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
+						logger.error("extension",
+								"Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "] could not be registered: class definition [" + cd
+										+ "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
 					}
 				}
 			}
@@ -5456,7 +5453,7 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinitionImpl cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = (ClassDefinitionImpl) ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
 					if (cd != null && (cd.isBundle() || cd.isMaven())) {
@@ -6218,7 +6215,7 @@ public final class ConfigAdmin {
 		Resource context = config.getConfigDir().getRealResource("context");
 		Resource trg = context.getRealResource(realpath);
 		if (trg.exists()) {
-			LogUtil.log( config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath() );
+			LogUtil.log(config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath());
 			trg.remove(true);
 			if (_store) ConfigAdmin._storeAndReload((ConfigPro) config);
 			ResourceUtil.removeEmptyFolders(context, null);
@@ -6602,8 +6599,7 @@ public final class ConfigAdmin {
 								return old;
 							}
 						}
-						catch (Exception ee) {
-						}
+						catch (Exception ee) {}
 					}
 				}
 				catch (Exception e) {
