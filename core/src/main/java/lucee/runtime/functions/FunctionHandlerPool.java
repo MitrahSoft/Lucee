@@ -49,6 +49,10 @@ public final class FunctionHandlerPool {
 		return use(pc, className).invoke(pc, args);
 	}
 
+	public static Object invoke(PageContext pc, Object[] args, String className, String maven) throws PageException {
+		return use(pc, className, maven).invoke(pc, args);
+	}
+
 	/**
 	 * return a tag to use from a class
 	 * 
