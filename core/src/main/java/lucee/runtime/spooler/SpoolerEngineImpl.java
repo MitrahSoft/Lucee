@@ -198,16 +198,16 @@ public final class SpoolerEngineImpl implements SpoolerEngine {
 			is = res.getInputStream();
 			ois = new JavaConverter.ObjectInputStreamImpl(CFMLEngineFactory.getInstance().getClass().getClassLoader(), is);
 
-			IOUtil.closeEL(is);
-			IOUtil.closeEL(ois);
 			return (SpoolerTask) ois.readObject();
 		}
 		catch (Exception e) {
 			LogUtil.log(ThreadLocalPageContext.get(), SpoolerEngineImpl.class.getName(), e);
-			IOUtil.closeEL(is);
-			IOUtil.closeEL(ois);
 			res.delete();
 			return defaultValue;
+		}
+		finally {
+			IOUtil.closeEL(is);
+			IOUtil.closeEL(ois);
 		}
 	}
 
