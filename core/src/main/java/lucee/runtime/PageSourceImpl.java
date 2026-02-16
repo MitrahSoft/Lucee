@@ -91,19 +91,26 @@ public final class PageSourceImpl implements PageSource {
 	private boolean flush = false;
 
 	private static class PageAndClassName {
-		private Page page;
-		private String className;
+		private Page _page;
+		private String _className;
 
 		public void reset() {
-			this.page = null;
-			this.className = null;
+			this._page = null;
+			this._className = null;
 		}
 
 		public void set(Page page) {
-			this.page = page;
-			if (page != null) className = page.getClass().getName();
+			this._page = page;
+			if (page != null) _className = page.getClass().getName();
 		}
 
+		public Page getPage() {
+			return _page;
+		}
+
+		public String getClassName() {
+			return _className;
+		}
 	}
 
 	PageSourceImpl(MappingImpl mapping, String relPath, boolean isOutSide) {
@@ -119,7 +126,7 @@ public final class PageSourceImpl implements PageSource {
 	 * @return
 	 */
 	public Page getPage() {
-		return pcn.page;
+		return pcn.getPage();
 	}
 
 	public PageSource getParent() {
@@ -152,7 +159,7 @@ public final class PageSourceImpl implements PageSource {
 	public Page loadPage(PageContext pc, boolean forceReload) throws PageException {
 		if (forceReload) pcn.reset();
 
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (mapping.isPhysicalFirst()) {
 			page = loadPhysical(pc, page);
 			if (page == null) page = loadArchive(page);
@@ -171,7 +178,7 @@ public final class PageSourceImpl implements PageSource {
 	public Page loadPageThrowTemplateException(PageContext pc, boolean forceReload, Page defaultValue) throws PageException {
 		if (forceReload) pcn.reset();
 
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (mapping.isPhysicalFirst()) {
 			page = loadPhysical(pc, page);
 			if (page == null) page = loadArchive(page);
@@ -189,7 +196,7 @@ public final class PageSourceImpl implements PageSource {
 	public Page loadPage(PageContext pc, boolean forceReload, Page defaultValue) {
 		if (forceReload) pcn.reset();
 
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (mapping.isPhysicalFirst()) {
 			try {
 				page = loadPhysical(pc, page);
@@ -330,7 +337,7 @@ public final class PageSourceImpl implements PageSource {
 			// load page
 			else {
 				try {
-					String cn = pcn.className;
+					String cn = pcn.getClassName();
 					boolean done = false;
 					if (cn != null) {
 						try {
@@ -381,7 +388,7 @@ public final class PageSourceImpl implements PageSource {
 
 	public boolean releaseWhenOutdatted() {
 		if (!mapping.hasPhysical() || !isLoad(LOAD_PHYSICAL)) return false;
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		Resource srcFile = getPhyscalFile();
 		long srcLastModified = srcFile.lastModified();
 		// Page exists
@@ -402,12 +409,12 @@ public final class PageSourceImpl implements PageSource {
 
 	public void flush() {
 		if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "flush [" + getDisplayPath() + "]");
-		pcn.page = null;
+		pcn.reset();
 		flush = true;
 	}
 
 	private boolean isLoad(byte load) {
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		return page != null && load == page.getLoadType();
 	}
 
@@ -1043,7 +1050,7 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public void clear() {
-		mapping.clear(pcn.className);
+		mapping.clear(pcn.getClassName());
 		pcn.reset();
 	}
 
@@ -1053,7 +1060,7 @@ public final class PageSourceImpl implements PageSource {
 	 * @param cl
 	 */
 	public boolean clear(ClassLoader cl) {
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (page != null && page.getClass().getClassLoader().equals(cl)) {
 			pcn.reset();
 			return true;
@@ -1062,7 +1069,7 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public boolean isLoad() {
-		return pcn.page != null;//// load!=LOAD_NONE;
+		return pcn.getPage() != null;//// load!=LOAD_NONE;
 	}
 
 	@Override
@@ -1144,7 +1151,7 @@ public final class PageSourceImpl implements PageSource {
 
 	public void resetLoaded() {
 		if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "reset loaded [" + getDisplayPath() + "]");
-		Page p = pcn.page;
+		Page p = pcn.getPage();
 		if (p != null) p.setLoadType((byte) 0);
 	}
 
