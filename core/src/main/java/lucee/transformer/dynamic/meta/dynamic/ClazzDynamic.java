@@ -74,7 +74,9 @@ public final class ClazzDynamic extends Clazz {
 				if (cd == null) {
 					if (LogUtil.doesTrace(log)) log.trace("dynamic", "extract metadata from [" + clazz.getName() + "]");
 					try {
-						cd = new ClazzDynamic(clazz, log);
+						Map<String, FunctionMember> members = getFunctionMembers(clazz, log);
+						if (members == null) cd = new ClazzReflection(clazz, log);
+						else cd = new ClazzDynamic(members, clazz, log);
 					}
 					catch (IOException ioe) {
 						if (log != null) log.error("dynamic", ioe);
@@ -85,6 +87,30 @@ public final class ClazzDynamic extends Clazz {
 			}
 		}
 		return cd;
+	}
+
+	private ClazzDynamic(Map<String, FunctionMember> members, Class clazz, Log log) {
+		super(clazz, log);
+
+		LinkedList<Method> tmpMethods = new LinkedList<>();
+		LinkedList<Method> tmpDeclaredMethods = new LinkedList<>();
+		LinkedList<Constructor> tmpConstructors = new LinkedList<>();
+		LinkedList<Constructor> tmpDeclaredConstructors = new LinkedList<>();
+		for (FunctionMember fm: members.values()) {
+			if (fm instanceof Method) {
+				if (clazz.getName().equals(fm.getDeclaringClassName())) tmpDeclaredMethods.add((Method) fm);
+				if (fm.isPublic()) tmpMethods.add((Method) fm);
+			}
+			else if (fm instanceof Constructor) {
+				if (clazz.getName().equals(fm.getDeclaringClassName())) tmpDeclaredConstructors.add((Constructor) fm);
+				if (fm.isPublic()) tmpConstructors.add((Constructor) fm);
+			}
+		}
+		methods = tmpMethods.toArray(new Method[tmpMethods.size()]);
+		declaredMethods = tmpDeclaredMethods.toArray(new Method[tmpDeclaredMethods.size()]);
+		constructors = tmpConstructors.toArray(new Constructor[tmpConstructors.size()]);
+		declaredConstructors = tmpDeclaredConstructors.toArray(new Constructor[tmpDeclaredConstructors.size()]);
+
 	}
 
 	public static int remove(PhysicalClassLoader pcl) {
@@ -146,30 +172,6 @@ public final class ClazzDynamic extends Clazz {
 			return id;
 		}
 		return null;
-	}
-
-	private ClazzDynamic(Class clazz, Log log) throws IOException {
-		super(clazz, log);
-		Map<String, FunctionMember> members = getFunctionMembers(clazz, log);
-		LinkedList<Method> tmpMethods = new LinkedList<>();
-		LinkedList<Method> tmpDeclaredMethods = new LinkedList<>();
-		LinkedList<Constructor> tmpConstructors = new LinkedList<>();
-		LinkedList<Constructor> tmpDeclaredConstructors = new LinkedList<>();
-		for (FunctionMember fm: members.values()) {
-			if (fm instanceof Method) {
-				if (clazz.getName().equals(fm.getDeclaringClassName())) tmpDeclaredMethods.add((Method) fm);
-				if (fm.isPublic()) tmpMethods.add((Method) fm);
-			}
-			else if (fm instanceof Constructor) {
-				if (clazz.getName().equals(fm.getDeclaringClassName())) tmpDeclaredConstructors.add((Constructor) fm);
-				if (fm.isPublic()) tmpConstructors.add((Constructor) fm);
-			}
-		}
-		methods = tmpMethods.toArray(new Method[tmpMethods.size()]);
-		declaredMethods = tmpDeclaredMethods.toArray(new Method[tmpDeclaredMethods.size()]);
-		constructors = tmpConstructors.toArray(new Constructor[tmpConstructors.size()]);
-		declaredConstructors = tmpDeclaredConstructors.toArray(new Constructor[tmpDeclaredConstructors.size()]);
-
 	}
 
 	@Override
@@ -348,11 +350,11 @@ public final class ClazzDynamic extends Clazz {
 	private static Map<String, FunctionMember> getFunctionMembers(final Class clazz, Log log) throws IOException {
 		final Map<String, String> classes = new ConcurrentHashMap<>();
 		final Set<String> ignores = new HashSet<>();
-		return _getFunctionMembers(classes, ignores, clazz, log);
-
+		return _getFunctionMembers(classes, ignores, clazz, true, log);
 	}
 
-	private static Map<String, FunctionMember> _getFunctionMembers(Map<String, String> classes, Set<String> ignores, Class clazz_, Log log) throws IOException {
+	private static Map<String, FunctionMember> _getFunctionMembers(Map<String, String> classes, Set<String> ignores, Class clazz_, boolean returnNullWhenNoResource, Log log)
+			throws IOException {
 		final Class clazz = clazz_.isArray() ? Object.class : clazz_;
 		final Map<String, FunctionMember> members = new LinkedHashMap<>();
 		Map<String, FunctionMember> existing = membersCollection.get(clazz);
@@ -370,17 +372,12 @@ public final class ClazzDynamic extends Clazz {
 		final RefInteger classAccess = new RefIntegerImpl();
 		ClassReader classReader;
 
-		try {
-			classReader = new ClassReader(cl.getResourceAsStream(classPath));
+		InputStream is = cl.getResourceAsStream(classPath);
+		if (is == null) {
+			if (returnNullWhenNoResource) return null;
+			throw new IOException("unable to load class path [" + classPath + "] for class [" + clazz.getName() + "]");
 		}
-		catch (IOException ioe) {
-			if ("Class not found".equals(ioe.getMessage())) {
-				IOException tmp = new IOException("unable to load class path [" + classPath + "]");
-				ExceptionUtil.initCauseEL(tmp, ioe);
-				ioe = tmp;
-			}
-			throw ioe;
-		}
+		classReader = new ClassReader(is);
 
 		// Create a ClassVisitor to visit the methods
 		ClassVisitor visitor = new ClassVisitor(Opcodes.ASM9) {
@@ -396,7 +393,7 @@ public final class ClazzDynamic extends Clazz {
 							// print.e("->" + superName);
 							classes.put(superName, "");
 
-							add(members, _getFunctionMembers(classes, ignores, cl.loadClass(ASMUtil.getClassName(Type.getObjectType(superName))), log));
+							add(members, _getFunctionMembers(classes, ignores, cl.loadClass(ASMUtil.getClassName(Type.getObjectType(superName))), false, log));
 						}
 					}
 					catch (IllegalArgumentException iae) {
@@ -425,7 +422,7 @@ public final class ClazzDynamic extends Clazz {
 								// add(members, _getFunctionMembers(clid,
 								// cl.loadClass(ASMUtil.getClassName(Type.getObjectType(interf))), log));
 
-								add(members, _getFunctionMembers(classes, ignores, cl.loadClass(ASMUtil.getClassName(Type.getObjectType(interf))), log));
+								add(members, _getFunctionMembers(classes, ignores, cl.loadClass(ASMUtil.getClassName(Type.getObjectType(interf))), false, log));
 							}
 						}
 						catch (Exception e) {
