@@ -129,7 +129,7 @@ public final class FileResource extends File implements Resource {
 				return;
 			}
 			catch (Exception e) {
-				LogUtil.warn("file-resource-provider", e);
+				LogUtil.info("file-resource-provider", e);
 			}
 		}
 
@@ -445,8 +445,7 @@ public final class FileResource extends File implements Resource {
 			moveTo(dest);
 			return true;
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 		return false;
 	}
 
@@ -644,8 +643,7 @@ public final class FileResource extends File implements Resource {
 		try {
 			provider.read(this);
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 
 		return super.exists();
 	}
