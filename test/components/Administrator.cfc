@@ -1630,12 +1630,16 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 						errorTemplate = {};
 						errorTemplate.template404 = errorGet.templates.404;
 						errorTemplate.template500 = errorGet.templates.500;
+						//errorTemplate.template404 = errorGet.templatesUnresolved.404;
+						//errorTemplate.template500 = errorGet.templatesUnresolved.500;
+
+						
 					}
 				});
 
 				afterEach(function( currentSpec ){
 					if(currentSpec == 'checking updateError()' || currentSpec == 'checking resetError()'){
-						adminWeb.updateError(argumentCollection=errorTemplate);
+						adminWeb.updateError(argumentCollection={"template404": "/lucee/templates/error/error.cfm", "template500": "/lucee/templates/error/error.cfm"});
 					}
 				});
 

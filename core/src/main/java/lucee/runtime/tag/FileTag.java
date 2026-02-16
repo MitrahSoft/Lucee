@@ -596,11 +596,14 @@ public final class FileTag extends BodyTagImpl {
 			else throw new ApplicationException("Destination file [" + destination.toString() + "] already exists");
 		}
 
+		if (source.equals(destination)) {
+			throw new ApplicationException("source [" + source.toString() + "] and destination [" + destination.toString() + "] are indentical");
+		}
+
 		try {
 			IOUtil.copy(source, destination);
 		}
 		catch (IOException e) {
-
 			ApplicationException ae = new ApplicationException("Can't copy file [" + source + "] to [" + destination + "]", e.getMessage());
 			ae.setStackTrace(e.getStackTrace());
 			throw ae;
@@ -857,8 +860,7 @@ public final class FileTag extends BodyTagImpl {
 			attr = Files.readAttributes(files.toPath(), BasicFileAttributes.class);
 			sct.setEL(KeyConstants._fileCreated, new DateTimeImpl(attr.creationTime().toMillis()));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		sct.setEL(KeyConstants._dateLastModified, new DateTimeImpl(file.lastModified()));
 		sct.setEL(KeyConstants._attributes, Directory.getFileAttribute(file));
 		if (IS_UNIX) sct.setEL(KeyConstants._mode, new ModeObjectWrap(file));
