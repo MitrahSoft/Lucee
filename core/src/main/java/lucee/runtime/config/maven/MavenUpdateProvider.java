@@ -139,7 +139,7 @@ public final class MavenUpdateProvider {
 	public MavenUpdateProvider(Config config) {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 		this.repoSnapshots = cp == null ? DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
-		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenSnapshotRepository();
+		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
 		// this.repoMixed = getDefaultRepositoryMixed();
 		this.repos = merge(repoSnapshots, repoReleases/* , repoMixed */);
 		this.group = DEFAULT_GROUP;
@@ -149,7 +149,7 @@ public final class MavenUpdateProvider {
 	public MavenUpdateProvider(Config config, String group, String artifact) {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 		this.repoSnapshots = cp == null ? DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
-		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenSnapshotRepository();
+		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
 		// this.repoMixed = getDefaultRepositoryMixed();
 		this.repos = merge(repoSnapshots, repoReleases/* , repoMixed */);
 		this.group = group;
