@@ -214,18 +214,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	private static final short ACCESS_READ = 10;
 	private static final short ACCESS_WRITE = 11;
 
-	private static final Collection.Key DEBUG = KeyConstants._debug;
-	private static final Collection.Key TEMPLATES = KeyConstants._templates;
-	private static final Collection.Key STR = KeyConstants._str;
-	private static final Collection.Key DO_STATUS_CODE = KeyConstants._doStatusCode;
-	private static final Collection.Key LABEL = KeyConstants._label;
-	private static final Collection.Key FILE_ACCESS = KeyConstants._file_access;
-	private static final Collection.Key IP_RANGE = KeyConstants._ipRange;
-	private static final Collection.Key CUSTOM = KeyConstants._custom;
-	private static final Collection.Key READONLY = KeyConstants._readOnly;
-	private static final Collection.Key LOG_ENABLED = KeyConstants._logEnabled;
-	private static final Collection.Key CLASS = KeyConstants._class;
-
 	private static final Key HAS_OWN_SEC_CONTEXT = KeyConstants._hasOwnSecContext;
 	private static final Key CONFIG_FILE = KeyConstants._config_file;
 	private static final Key CLIENT_SIZE = KeyConstants._clientSize;
@@ -1476,7 +1464,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		Struct sct = new StructImpl();
 		pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 
-		sct.set(DEBUG, Caster.toBoolean(config.debug()));
+		sct.set(KeyConstants._debug, Caster.toBoolean(config.debug()));
 		sct.set(KeyConstants._database, Caster.toBoolean(config.hasDebugOptions(ConfigPro.DEBUG_DATABASE)));
 		sct.set(KeyConstants._exception, Caster.toBoolean(config.hasDebugOptions(ConfigPro.DEBUG_EXCEPTION)));
 		sct.set(KeyConstants._template, Caster.toBoolean(config.hasDebugOptions(ConfigPro.DEBUG_TEMPLATE)));
@@ -1504,13 +1492,16 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		// sct.set("errorTemplate",config.getErrorTemplate());
 
 		Struct templates = new StructImpl();
+		Struct templatesUnresolved = new StructImpl();
 		Struct str = new StructImpl();
-		sct.set(TEMPLATES, templates);
-		sct.set(STR, str);
-		sct.set(DO_STATUS_CODE, Caster.toBoolean(config.getErrorStatusCode()));
+		sct.set(KeyConstants._templates, templates);
+		sct.set("templatesUnresolved", templatesUnresolved);
+		sct.set(KeyConstants._str, str);
+		sct.set(KeyConstants._doStatusCode, Caster.toBoolean(config.getErrorStatusCode()));
 
 		// 500
 		String template = config.getErrorTemplate(500);
+		templatesUnresolved.setEL("500", template);
 		try {
 			PageSource ps = ((PageContextImpl) pageContext).getPageSourceExisting(template);
 			if (ps != null) templates.set("500", ps.getDisplayPath());
@@ -1523,6 +1514,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		// 404
 		template = config.getErrorTemplate(404);
+		templatesUnresolved.setEL("404", template);
 		try {
 			PageSource ps = ((PageContextImpl) pageContext).getPageSourceExisting(template);
 			if (ps != null) templates.set("404", ps.getDisplayPath());
@@ -1675,7 +1667,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private Resource[] getFileAcces() throws PageException {
-		Object value = attributes.get(FILE_ACCESS, null);
+		Object value = attributes.get(KeyConstants._file_access, null);
 		if (value == null) return null;
 		Array arr = Caster.toArray(value);
 		List<Resource> rtn = new ArrayList<Resource>();
@@ -1862,18 +1854,20 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		DebugEntry[] entries = config.getDebugEntries();
 
 		String rtn = getString("admin", action, "returnVariable");
-		lucee.runtime.type.Query qry = new QueryImpl(new Collection.Key[] { KeyConstants._id, LABEL, IP_RANGE, READONLY, KeyConstants._type, CUSTOM }, entries.length, rtn);
+		lucee.runtime.type.Query qry = new QueryImpl(
+				new Collection.Key[] { KeyConstants._id, KeyConstants._label, KeyConstants._ipRange, KeyConstants._readOnly, KeyConstants._type, KeyConstants._custom },
+				entries.length, rtn);
 		pageContext.setVariable(rtn, qry);
 		DebugEntry de;
 		for (int i = 0; i < entries.length; i++) {
 			int row = i + 1;
 			de = entries[i];
 			qry.setAtEL(KeyConstants._id, row, de.getId());
-			qry.setAtEL(LABEL, row, de.getLabel());
-			qry.setAtEL(IP_RANGE, row, de.getIpRangeAsString());
+			qry.setAtEL(KeyConstants._label, row, de.getLabel());
+			qry.setAtEL(KeyConstants._ipRange, row, de.getIpRangeAsString());
 			qry.setAtEL(KeyConstants._type, row, de.getType());
-			qry.setAtEL(READONLY, row, Caster.toBoolean(de.isReadOnly()));
-			qry.setAtEL(CUSTOM, row, de.getCustom());
+			qry.setAtEL(KeyConstants._readOnly, row, Caster.toBoolean(de.isReadOnly()));
+			qry.setAtEL(KeyConstants._custom, row, de.getCustom());
 		}
 	}
 
@@ -3651,7 +3645,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		IntervallMonitor[] intervalls = cs.getIntervallMonitors();
 		RequestMonitor[] requests = cs.getRequestMonitors();
 
-		lucee.runtime.type.Query qry = new QueryImpl(new Collection.Key[] { KeyConstants._name, KeyConstants._type, LOG_ENABLED, CLASS }, 0, "monitors");
+		lucee.runtime.type.Query qry = new QueryImpl(new Collection.Key[] { KeyConstants._name, KeyConstants._type, KeyConstants._logEnabled, KeyConstants._class }, 0, "monitors");
 		doGetMonitors(qry, intervalls);
 		doGetMonitors(qry, requests);
 
@@ -3672,8 +3666,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		Struct sct = new StructImpl();
 		sct.setEL(KeyConstants._name, m.getName());
 		sct.setEL(KeyConstants._type, m.getType() == Monitor.TYPE_INTERVAL ? "intervall" : "request");
-		sct.setEL(LOG_ENABLED, m.isLogEnabled());
-		sct.setEL(CLASS, m.getClazz().getName());
+		sct.setEL(KeyConstants._logEnabled, m.isLogEnabled());
+		sct.setEL(KeyConstants._class, m.getClazz().getName());
 
 		pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 	}
@@ -3698,8 +3692,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			row = qry.addRow();
 			qry.setAtEL(KeyConstants._name, row, m.getName());
 			qry.setAtEL(KeyConstants._type, row, m.getType() == Monitor.TYPE_INTERVAL ? "intervall" : "request");
-			qry.setAtEL(LOG_ENABLED, row, m.isLogEnabled());
-			qry.setAtEL(CLASS, row, m.getClazz().getName());
+			qry.setAtEL(KeyConstants._logEnabled, row, m.isLogEnabled());
+			qry.setAtEL(KeyConstants._class, row, m.getClazz().getName());
 		}
 
 	}
