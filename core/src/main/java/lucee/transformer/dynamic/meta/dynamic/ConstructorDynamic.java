@@ -5,8 +5,10 @@ import java.util.function.BiFunction;
 
 import org.objectweb.asm.Type;
 
+import lucee.commons.io.SystemUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
+import lucee.runtime.op.Caster;
 import lucee.transformer.bytecode.util.ASMUtil;
 import lucee.transformer.dynamic.DynamicInvoker;
 import lucee.transformer.dynamic.meta.Clazz;
@@ -16,7 +18,7 @@ class ConstructorDynamic extends FunctionMemberDynamic implements Constructor {
 
 	private static final long serialVersionUID = 1788921105081153549L;
 	private java.lang.reflect.Constructor constructor;
-	public static boolean USE_DYN_CLASS_CREATION = false;
+	public static boolean USE_DYN_CLASS_CREATION = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.dynamic.invocation", null), false);
 
 	public ConstructorDynamic() {
 		super("<init>");
