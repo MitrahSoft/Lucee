@@ -250,6 +250,15 @@
 		"default": false
 	},
 	{
+		"sysprop": "lucee.dynamic.invocation",
+		"envvar": "LUCEE_DYNAMIC_INVOCATION",
+		"desc": "Controls whether Lucee uses runtime class creation or reflection for dynamic Java method/constructor invocation. When `true`, Lucee generates wrapper classes at runtime for dynamic invocation. When `false` (default), Lucee uses standard Java reflection, which since Java 18 internally uses MethodHandles and performs comparably. Set to `true` only if you need the legacy class-generation behavior",
+		"category": "performance",
+		"type": "boolean",
+		"introduced": "7.0.2.93",
+		"default": false
+	},
+	{
 		"sysprop": "lucee.dump.threads",
 		"envvar": "LUCEE_DUMP_THREADS",
 		"desc": "Used for debugging, when enabled, it will dump out running threads to the console via the background controller thread",
