@@ -6614,7 +6614,7 @@ The returned number of unallocated bytes is a hint, but not a guarantee, that it
 	<!-- SecretProviderGet -->
 	<function>
 		<name>SecretProviderGet</name>
-		<class>lucee.runtime.functions.security.GetSecret</class>
+		<class>lucee.runtime.functions.security.SecretProviderGet</class>
 		<introduced>7.0.0.197</introduced>
 		<description>
 Returns a reference to a secret value stored in a configured Secret Provider. The function doesn't immediately return the actual value, but rather a value object that can be handled by Lucee like a simple value.
@@ -6646,6 +6646,117 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<return>
 			<type>any</type>
+		</return>
+	</function>
+	
+	<!-- SecretProviderList -->
+	<function>
+		<name>SecretProviderList</name>
+		<class>lucee.runtime.functions.security.SecretProviderList</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Returns a struct containing all secrets from a configured Secret Provider. Each key in the struct corresponds to a secret name, and each value is a reference object (similar to SecretProviderGet) that resolves to the actual secret value when used.
+	
+	When no provider name is specified, the function aggregates secrets from all configured providers. If the same secret key exists in multiple providers, the first provider (in configuration order) takes precedence.
+		</description>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Name of the Secret Provider to list secrets from, as configured in .CFConfig.json. If not defined, the function lists secrets from all configured providers.</description>
+		</argument>
+		<argument>
+			<name>resolve</name>
+			<type>boolean</type>
+			<required>No</required>
+			<description>If set to true, all secrets are resolved immediately. If set to false (default), secrets are resolved when used.</description>
+		</argument>
+		<return>
+			<type>struct</type>
+		</return>
+	</function>
+
+
+	<!-- SecretProviderListNames -->
+	<function>
+		<name>SecretProviderListNames</name>
+		<class>lucee.runtime.functions.security.SecretProviderListNames</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Returns an array containing the names (keys) of all secrets available in a configured Secret Provider. This function only returns the secret names, not the actual secret values.
+	
+	When no provider name is specified, the function aggregates secret names from all configured providers, returning a deduplicated and sorted list.
+		</description>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Name of the Secret Provider to list secret names from, as configured in .CFConfig.json. If not defined, the function lists secret names from all configured providers.</description>
+		</argument>
+		<return>
+			<type>array</type>
+		</return>
+	</function>
+
+	<!-- SecretProviderSet -->
+	<function>
+		<name>SecretProviderSet</name>
+		<class>lucee.runtime.functions.security.SecretProviderSet</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Sets a secret value in a configured Secret Provider. The value type is automatically detected and stored appropriately as a string, boolean, or integer.
+
+	Note: Not all Secret Providers support writing. Providers that are read-only (such as environment variables) will throw an exception when attempting to set a value.
+		</description>
+		<argument>
+			<name>key</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>Key to store the secret under (e.g., "database.password", "api.key")</description>
+		</argument>
+		<argument>
+			<name>value</name>
+			<type>any</type>
+			<required>Yes</required>
+			<description>The secret value to store. Can be a string, boolean, or integer.</description>
+		</argument>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>Name of the Secret Provider to write to, as configured in .CFConfig.json.</description>
+		</argument>
+		<return>
+			<type>void</type>
+		</return>
+	</function>
+	
+	<!-- SecretProviderRemove -->
+	<function>
+		<name>SecretProviderRemove</name>
+		<class>lucee.runtime.functions.security.SecretProviderRemove</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Removes a secret from a configured Secret Provider.
+
+	When no provider name is specified, the function searches all configured providers and removes the secret from the first provider that contains it.
+
+	Note: Not all Secret Providers support removal. Providers that are read-only (such as environment variables) will throw an exception when attempting to remove a value.
+		</description>
+		<argument>
+			<name>key</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>Key of the secret to remove (e.g., "database.password", "api.key")</description>
+		</argument>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Name of the Secret Provider to remove from, as configured in .CFConfig.json. If not defined, the function searches all configured providers and removes from the first one that contains the key.</description>
+		</argument>
+		<return>
+			<type>void</type>
 		</return>
 	</function>
 	
