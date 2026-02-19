@@ -285,7 +285,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Resource configFileOld = configDir.getRealResource("lucee-server.xml");
 
 			// config file
-			Resource configFileNew = getConfigFile(configDir, true);
+			Resource configFileNew = getConfigFile(configDir, true, false);
 
 			boolean hasConfigOld = false;
 			boolean hasConfigNew = configFileNew.exists() && configFileNew.length() > 0;
@@ -3878,7 +3878,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return null;
 	}
 
-	public static Resource getConfigFile(Resource configDir, boolean server) throws IOException {
+	public static Resource getConfigFile(Resource configDir, boolean server, boolean returnOnlyWhenExist) throws IOException {
 		if (server) {
 			// lucee.base.config
 			String customCFConfig = SystemUtil.getSystemPropOrEnvVar("lucee.base.config", null);
@@ -3901,6 +3901,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			if (res.isFile()) return res;
 		}
 
+		if (returnOnlyWhenExist) {
+			return null;
+		}
 		// default location
 		return configDir.getRealResource(ConfigFactoryImpl.CONFIG_FILE_NAMES[0]);
 	}
