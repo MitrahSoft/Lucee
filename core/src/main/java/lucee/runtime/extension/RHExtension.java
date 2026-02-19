@@ -297,7 +297,12 @@ public final class RHExtension implements Serializable {
 					}
 				}
 				finally {
-					filter.reset(config);
+					try {
+						filter.reset(config);
+					}
+					catch (Exception e) {
+						throw Caster.toPageException(e);
+					}
 					resetExtensionInstalledFile(config, id, version);
 				}
 			}

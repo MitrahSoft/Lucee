@@ -1,9 +1,10 @@
 package lucee.transformer.dynamic.meta.dynamic;
 
-import java.io.IOException;
+import java.lang.reflect.Modifier;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.BiFunction;
 
-import lucee.commons.lang.ExceptionUtil;
 import lucee.transformer.dynamic.DynamicInvoker;
 import lucee.transformer.dynamic.meta.Clazz;
 import lucee.transformer.dynamic.meta.Method;
@@ -18,27 +19,85 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 	}
 
 	@Override
-	public Object invoke(Object obj, Object... args) throws IOException {
+	public Object invoke(Object obj, Object... args) throws Exception {
 		if (ConstructorDynamic.USE_DYN_CLASS_CREATION) {
 			DynamicInvoker di = DynamicInvoker.getExistingInstance();
 			Clazz clazzz = di.toClazz(getDeclaringClass());
-			try {
-				return ((BiFunction<Object, Object[], Object>) di.getInstance(clazzz, this, args)).apply(obj, args);
-			}
-			catch (Exception e) {
-				throw ExceptionUtil.toIOException(e);
+			return ((BiFunction<Object, Object[], Object>) di.getInstance(clazzz, this, args)).apply(obj, args);
+
+		}
+
+		if (method == null) {
+			method = getAccessibleMethod();
+		}
+		return method.invoke(obj, args);
+
+	}
+
+	private java.lang.reflect.Method getAccessibleMethod() throws IllegalAccessException, NoSuchMethodException, SecurityException {
+		Class<?> clazz = getDeclaringClass();
+		String methodName = getName();
+		Class<?>[] argTypes = getArgumentClasses();
+
+		// If the declaring class itself is public, try it first
+		if (Modifier.isPublic(clazz.getModifiers())) {
+			java.lang.reflect.Method m = clazz.getMethod(methodName, argTypes);
+			Modifier.isPublic(m.getModifiers());
+			if (Modifier.isPublic(m.getModifiers())) {
+				return m;
 			}
 		}
 
-		try {
-			if (method == null) {
-				method = getDeclaringClass().getMethod(getName(), getArgumentClasses());
+		// Walk up to find a public interface that declares this method as public
+		for (Class<?> iface: getAllInterfaces(clazz)) {
+			if (Modifier.isPublic(iface.getModifiers())) {
+				try {
+					java.lang.reflect.Method m = iface.getMethod(methodName, argTypes);
+					if (Modifier.isPublic(m.getModifiers())) {
+						return m;
+					}
+				}
+				catch (NoSuchMethodException e) {
+					// continue
+				}
 			}
-			return method.invoke(obj, args);
-		}
-		catch (Exception e) {
-			throw ExceptionUtil.toIOException(e);
 		}
 
+		// Walk up the superclass hierarchy
+		Class<?> current = clazz.getSuperclass();
+		while (current != null) {
+			if (Modifier.isPublic(current.getModifiers())) {
+				try {
+					java.lang.reflect.Method m = current.getMethod(methodName, argTypes);
+					if (Modifier.isPublic(m.getModifiers())) {
+						return m;
+					}
+				}
+				catch (NoSuchMethodException e) {
+					// continue
+				}
+			}
+			current = current.getSuperclass();
+		}
+
+		throw new IllegalAccessException("Unable to find an accessible method for [" + toString() + "]");
+	}
+
+	// Helper to get all interfaces including inherited ones
+	private static Set<Class<?>> getAllInterfaces(Class<?> clazz) {
+		Set<Class<?>> interfaces = new LinkedHashSet<>();
+		collectInterfaces(clazz, interfaces);
+		return interfaces;
+	}
+
+	private static void collectInterfaces(Class<?> clazz, Set<Class<?>> interfaces) {
+		if (clazz == null) return;
+
+		for (Class<?> iface: clazz.getInterfaces()) {
+			if (interfaces.add(iface)) {
+				collectInterfaces(iface, interfaces); // interfaces can extend other interfaces
+			}
+		}
+		collectInterfaces(clazz.getSuperclass(), interfaces); // superclass may implement more interfaces
 	}
 }

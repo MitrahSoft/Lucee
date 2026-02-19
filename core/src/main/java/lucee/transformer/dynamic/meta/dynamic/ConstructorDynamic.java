@@ -1,12 +1,10 @@
 package lucee.transformer.dynamic.meta.dynamic;
 
-import java.io.IOException;
 import java.util.function.BiFunction;
 
 import org.objectweb.asm.Type;
 
 import lucee.commons.io.SystemUtil;
-import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.op.Caster;
 import lucee.transformer.bytecode.util.ASMUtil;
@@ -72,27 +70,19 @@ class ConstructorDynamic extends FunctionMemberDynamic implements Constructor {
 	}
 
 	@Override
-	public Object newInstance(Object... args) throws IOException {
+	public Object newInstance(Object... args) throws Exception {
 		if (USE_DYN_CLASS_CREATION) {
 			DynamicInvoker di = DynamicInvoker.getExistingInstance();
 			Clazz clazzz = di.toClazz(getDeclaringClass());
-			try {
-				return ((BiFunction<Object, Object[], Object>) di.getInstance(clazzz, this, args)).apply(null, args);
-			}
-			catch (Exception e) {
-				throw ExceptionUtil.toIOException(e);
-			}
+			return ((BiFunction<Object, Object[], Object>) di.getInstance(clazzz, this, args)).apply(null, args);
+
 		}
 
-		try {
-			if (constructor == null) {
-				constructor = getDeclaringClass().getConstructor(getArgumentClasses());
-			}
-			return constructor.newInstance(args);
+		if (constructor == null) {
+			constructor = getDeclaringClass().getConstructor(getArgumentClasses());
 		}
-		catch (Exception e) {
-			throw ExceptionUtil.toIOException(e);
-		}
+		return constructor.newInstance(args);
 
 	}
+
 }

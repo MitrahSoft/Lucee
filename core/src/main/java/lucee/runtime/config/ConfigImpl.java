@@ -1124,8 +1124,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		try {
 			cl = getRPCClassLoader(false);
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 		if (cl != null) return cl;
 		return SystemUtil.getCoreClassLoader();
 
@@ -1403,8 +1402,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 						try {
 							scheduler = new SchedulerImpl(ConfigUtil.getEngine(this), this, new ArrayImpl());
 						}
-						catch (PageException e1) {
-						}
+						catch (PageException e1) {}
 					}
 				}
 			}
@@ -2288,8 +2286,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 									try {
 										physical = p.getCanonicalPath() + " (" + m.getStrPhysical() + ")";
 									}
-									catch (IOException e) {
-									}
+									catch (IOException e) {}
 								}
 
 								Resource a = m.getArchive();
@@ -2298,8 +2295,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 									try {
 										archive = a.getCanonicalPath() + " (" + m.getStrArchive() + ")";
 									}
-									catch (IOException e) {
-									}
+									catch (IOException e) {}
 								}
 
 								detail.append(physical).append(':').append(archive);
@@ -3570,7 +3566,8 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 					// maxWaitMillis: how long to wait for a connection when pool is exhausted (30 seconds)
 					long maxWaitMillis = 30000L;
-					// minEvictableIdleTimeMillis: use idleTimeout (in minutes) for how long connection can be idle before eviction
+					// minEvictableIdleTimeMillis: use idleTimeout (in minutes) for how long connection can be idle
+					// before eviction
 					// -1 = not set (use default 10 minutes), 0 = infinite (no eviction), >0 = use that value
 					int idleTimeout = dsp.getIdleTimeout();
 					long minEvictableIdleTimeMillis;
@@ -3584,8 +3581,8 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 						minEvictableIdleTimeMillis = 10 * 60000L; // default: 10 minutes
 					}
 
-					pool = new DatasourceConnPool(this, ds, user, pass, "datasource",
-							DatasourceConnPool.createPoolConfig(null, null, null, dsp.getMinIdle(), dsp.getMaxIdle(), mt, maxWaitMillis, minEvictableIdleTimeMillis, 0, 0, 0, null));
+					pool = new DatasourceConnPool(this, ds, user, pass, "datasource", DatasourceConnPool.createPoolConfig(null, null, null, dsp.getMinIdle(), dsp.getMaxIdle(), mt,
+							maxWaitMillis, minEvictableIdleTimeMillis, 0, 0, 0, null));
 					pools.put(id, pool);
 					cleanConnectionPools(id);
 				}
@@ -5492,8 +5489,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 				}
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 
 			if (list == null) loggers.clear();
 			else {
@@ -6366,11 +6362,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		baseComponentPageSource = null;
 	}
 
-	public void resetAll() throws IOException {
+	public void resetAll() throws Exception {
 		resetAll(null);
 	}
 
-	public void resetAll(ResetFilter filter) throws IOException {
+	public void resetAll(ResetFilter filter) throws Exception {
 		List<Method> methods = Reflector.getMethods(this.getClass());
 		if (filter == null) {
 			for (Method method: methods) {
