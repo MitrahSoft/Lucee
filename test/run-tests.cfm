@@ -625,5 +625,5 @@ try {
 
 } // if (execute)
 
-printClassLoaderUsage();
+try{printClassLoaderUsage();}catch(ex) {}
 </cfscript>
