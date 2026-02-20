@@ -303,8 +303,16 @@ public final class TagLibFactory extends DefaultHandler {
 					tag.setName(value);
 				}
 				// TAG - Class
-				else if (inside.equals("tag-class")) tag.setTagClassDefinition(value, id, attributes);
-				else if (inside.equals("tagclass")) tag.setTagClassDefinition(value, id, attributes);
+				else if (inside.equals("jakarta-tag-class")) {
+					tag.setTagClassDefinition(value, id, attributes);
+				}
+				else if (inside.equals("tag-class")) {
+					if (tag.getTagClassDefinition() == null) tag.setTagClassDefinition(value, id, attributes);
+				}
+				else if (inside.equals("tagclass")) {
+					if (tag.getTagClassDefinition() == null) tag.setTagClassDefinition(value, id, attributes);
+				}
+
 				// status
 				else if (inside.equals("status")) tag.setStatus(toStatus(value));
 				// TAG - description
@@ -390,8 +398,7 @@ public final class TagLibFactory extends DefaultHandler {
 				try {
 					lib.setUri(value);
 				}
-				catch (URISyntaxException e) {
-				}
+				catch (URISyntaxException e) {}
 			}
 			else if (inside.equals("description")) lib.setDescription(value);
 
