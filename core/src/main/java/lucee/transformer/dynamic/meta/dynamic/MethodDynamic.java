@@ -30,6 +30,12 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 		if (method == null) {
 			method = getAccessibleMethod();
 		}
+
+		// Verify the cached method works for this object
+		if (obj != null && !method.getDeclaringClass().isAssignableFrom(obj.getClass())) {
+			throw new RuntimeException("no match!!!");
+		}
+
 		return method.invoke(obj, args);
 
 	}
