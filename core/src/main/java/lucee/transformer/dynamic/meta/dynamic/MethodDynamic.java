@@ -5,6 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.BiFunction;
 
+import lucee.print;
 import lucee.transformer.dynamic.DynamicInvoker;
 import lucee.transformer.dynamic.meta.Clazz;
 import lucee.transformer.dynamic.meta.Method;
@@ -28,34 +29,39 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 		}
 
 		if (method == null) {
-			method = getAccessibleMethod();
+			method = getAccessibleMethod(getDeclaringClass());
 		}
 
 		// Verify the cached method works for this object
 		if (obj != null && !method.getDeclaringClass().isAssignableFrom(obj.getClass())) {
-			throw new RuntimeException("no match!!!");
+			print.e("----> " + method.getDeclaringClass().getName() + ":" + obj.getClass().getName());
+			print.e("----> " + method.getDeclaringClass().getClassLoader() + ":" + obj.getClass().getClassLoader());
+			method = getAccessibleMethod(obj.getClass());
 		}
 
 		return method.invoke(obj, args);
 
 	}
 
-	private java.lang.reflect.Method getAccessibleMethod() throws IllegalAccessException, NoSuchMethodException, SecurityException {
-		Class<?> clazz = getDeclaringClass();
+	private java.lang.reflect.Method getAccessibleMethod(Class<?> startClass) throws IllegalAccessException, SecurityException {
 		String methodName = getName();
 		Class<?>[] argTypes = getArgumentClasses();
 
-		// If the declaring class itself is public, try it first
-		if (Modifier.isPublic(clazz.getModifiers())) {
-			java.lang.reflect.Method m = clazz.getMethod(methodName, argTypes);
-			Modifier.isPublic(m.getModifiers());
-			if (Modifier.isPublic(m.getModifiers())) {
-				return m;
+		// If the starting class itself is public, try it first
+		if (Modifier.isPublic(startClass.getModifiers())) {
+			try {
+				java.lang.reflect.Method m = startClass.getMethod(methodName, argTypes);
+				if (Modifier.isPublic(m.getModifiers())) {
+					return m;
+				}
+			}
+			catch (NoSuchMethodException e) {
+				// continue
 			}
 		}
 
 		// Walk up to find a public interface that declares this method as public
-		for (Class<?> iface: getAllInterfaces(clazz)) {
+		for (Class<?> iface: getAllInterfaces(startClass)) {
 			if (Modifier.isPublic(iface.getModifiers())) {
 				try {
 					java.lang.reflect.Method m = iface.getMethod(methodName, argTypes);
@@ -70,7 +76,7 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 		}
 
 		// Walk up the superclass hierarchy
-		Class<?> current = clazz.getSuperclass();
+		Class<?> current = startClass.getSuperclass();
 		while (current != null) {
 			if (Modifier.isPublic(current.getModifiers())) {
 				try {
