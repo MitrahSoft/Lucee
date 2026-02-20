@@ -18,6 +18,8 @@ import lucee.runtime.PageContext;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigFactoryImpl;
 import lucee.runtime.config.ConfigPro;
+import lucee.runtime.config.Prop;
+import lucee.runtime.config.PropFactory;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.dump.DumpData;
 import lucee.runtime.dump.DumpProperties;
@@ -32,12 +34,23 @@ import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.op.Castable;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.OpUtil;
+import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.SimpleValue;
 import lucee.runtime.type.Struct;
+import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.dt.DateTime;
 import lucee.runtime.type.util.KeyConstants;
 
-public class SecretProviderFactory {
+public class SecretProviderFactory implements PropFactory<SecretProvider> {
+
+	private static SecretProviderFactory instance;
+
+	public static SecretProviderFactory getInstance() {
+		if (instance == null) {
+			instance = new SecretProviderFactory();
+		}
+		return instance;
+	}
 
 	public static SecretProvider getInstance(Config config, String name, Struct data) throws PageException, ClassException, BundleException {
 		ClassDefinition<SecretProvider> cd;
@@ -62,6 +75,46 @@ public class SecretProviderFactory {
 		LogUtil.logx(config, Log.LEVEL_TRACE, "secret-provider-factory", "create Secret Provider instance [" + cd.toString() + "]", "application");
 		sp.init(config, properties, name);
 		return sp;
+	}
+
+	@Override
+	public SecretProvider evaluate(Config config, String name, Object val) throws PageException {
+		try {
+			return getInstance(config, name, Caster.toStruct(val));
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
+
+	}
+
+	@Override
+	public Struct schema(Prop<SecretProvider> prop) {
+		Struct sct = new StructImpl(Struct.TYPE_LINKED);
+		sct.setEL(KeyConstants._type, "object");
+
+		Struct properties = new StructImpl(Struct.TYPE_LINKED);
+		sct.setEL(KeyConstants._properties, properties);
+
+		// 1. Identification via ClassDefinition
+		// This handles the 'class', 'bundleName', 'maven', etc.
+		PropFactory.appendClassDefinitionProps(properties);
+
+		// 2. Secret Provider Attributes
+		properties.setEL(KeyConstants._default, PropFactory.createSimple("string", "The default key or behavior for this secret provider."));
+
+		// 3. Configuration block (handles the three aliases found in your getInstance)
+		Struct configBlock = new StructImpl();
+		configBlock.setEL(KeyConstants._type, "object");
+		configBlock.setEL(KeyImpl.init("additionalProperties"), true);
+		configBlock.setEL(KeyConstants._description, "Driver-specific configuration for the secret provider.");
+
+		// Registering the three aliases used in your code
+		properties.setEL(KeyConstants._custom, configBlock);
+		properties.setEL(KeyConstants._properties, configBlock);
+		properties.setEL(KeyConstants._arguments, configBlock);
+
+		return sct;
 	}
 
 	public static class Ref implements SimpleValue, Dumpable, Castable, CharSequence {
@@ -236,6 +289,11 @@ public class SecretProviderFactory {
 		return new SecretProviderFactory.Ref(sp, key).touch(resolve);
 	}
 
+	@Override
+	public Object resolvedValue(SecretProvider value) {
+		return value;
+	}
+
 	public static Collection<String> listSecretNames(Config config, String secretProvider) throws PageException {
 		if (StringUtil.isEmpty(secretProvider, true)) {
 			Set<String> allNames = new TreeSet<>(); // TreeSet for sorted output
@@ -296,5 +354,4 @@ public class SecretProviderFactory {
 
 		SecretProviderUtil.toSecretProviderExtended(((ConfigPro) config).getSecretProvider(secretProvider)).removeSecret(key);
 	}
-
 }
