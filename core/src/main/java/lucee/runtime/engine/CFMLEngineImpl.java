@@ -205,12 +205,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		System.setProperty("log4j2.disable.jmx", "true"); // Skip JMX
 		System.setProperty("log4j2.asyncLoggerConfigRingBufferSize", "262144"); // Larger buffer
 
-		// JVM Performance Optimizations
-		System.setProperty("sun.awt.noerasebackground", "true");
-		System.setProperty("sun.java2d.noddraw", "true");
-		System.setProperty("sun.java2d.d3d", "false");
-		System.setProperty("java.awt.headless", "true"); // Disable GUI components
-
 		// Network/DNS Optimizations
 		System.setProperty("sun.net.inetaddr.ttl", "300"); // Cache DNS for 5 mins
 		System.setProperty("sun.net.inetaddr.negative.ttl", "10"); // Cache failures for 10s
@@ -1748,7 +1742,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		return controler;
 	}
 
-	public void onStart(ConfigServerImpl config, boolean reload) throws IOException {
+	public void onStart(ConfigServerImpl config, boolean reload) throws Exception {
 		Boolean build = Caster.toBoolean(SystemUtil.getSystemPropOrEnvVar("lucee.enable.warmup", ""), null);
 		if (build == null) build = Caster.toBoolean(SystemUtil.getSystemPropOrEnvVar("lucee.build", ""), null);
 		boolean warmup = Boolean.TRUE.equals(build);

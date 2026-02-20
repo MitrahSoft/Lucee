@@ -356,7 +356,12 @@ public final class ConfigAdmin {
 		// if(storeInMemoryData)XMLCaster.writeTo(doc,config.getConfigFile());
 		CFMLEngine engine = ConfigUtil.getCFMLEngine(config);
 		ConfigServerImpl cs = config;
-		ConfigFactoryImpl.reloadInstance(engine, cs);
+		try {
+			ConfigFactoryImpl.reloadInstance(engine, cs);
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
 		ConfigWeb[] webs = cs.getConfigWebs();
 		for (ConfigWeb web: webs) {
 			ConfigFactoryImpl.reloadInstance(engine, config, (ConfigWebImpl) web, true);

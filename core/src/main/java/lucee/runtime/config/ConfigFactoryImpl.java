@@ -203,7 +203,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Resource configFileOld = configDir.getRealResource("lucee-server.xml");
 
 			// config file
-			Resource configFileNew = getConfigFile(configDir, true);
+			Resource configFileNew = getConfigFile(configDir, true, false);
 
 			boolean hasConfigOld = false;
 			boolean hasConfigNew = configFileNew.exists() && configFileNew.length() > 0;
@@ -253,7 +253,12 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 
 			if (!essentialOnly) {
 				createContextFiles(configDir, config, doNew);
-				((CFMLEngineImpl) ConfigUtil.getEngine(config)).onStart(config, false);
+				try {
+					((CFMLEngineImpl) ConfigUtil.getEngine(config)).onStart(config, false);
+				}
+				catch (Exception e) {
+					throw Caster.toPageException(e);
+				}
 			}
 			log(config, Log.LEVEL_INFO,
 					"\n===================================================================\n" + "SERVER CONTEXT\n"
@@ -296,7 +301,12 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		Struct root = loadDocumentCreateIfFails(null, configFile, "server");
 		configServer.setRoot(root);
 		load(configServer, root, true, doNew, quick);
-		((CFMLEngineImpl) ConfigUtil.getEngine(configServer)).onStart(configServer, true);
+		try {
+			((CFMLEngineImpl) ConfigUtil.getEngine(configServer)).onStart(configServer, true);
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
 	}
 
 	private static long second(long ms) {
@@ -1387,7 +1397,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		return null;
 	}
 
-	public static Resource getConfigFile(Resource configDir, boolean server) throws IOException {
+	public static Resource getConfigFile(Resource configDir, boolean server, boolean returnOnlyWhenExist) throws IOException {
 		if (server) {
 			// lucee.base.config
 			String customCFConfig = SystemUtil.getSystemPropOrEnvVar("lucee.base.config", null);
@@ -1410,6 +1420,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			if (res.isFile()) return res;
 		}
 
+		if (returnOnlyWhenExist) {
+			return null;
+		}
 		// default location
 		return configDir.getRealResource(ConfigFactoryImpl.CONFIG_FILE_NAMES[0]);
 	}

@@ -8584,11 +8584,11 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		getThreadQueue().clear();
 	}
 
-	public void resetAll() throws IOException {
+	public void resetAll() throws Exception {
 		resetAll(null);
 	}
 
-	public void resetAll(ResetFilter filter) throws IOException {
+	public void resetAll(ResetFilter filter) throws Exception {
 
 		List<Method> methods = Reflector.getMethods(this.getClass());
 		if (filter == null) {
@@ -8611,7 +8611,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		}
 	}
 
-	public void touchAll(ResetFilter filter) throws IOException {
+	public void touchAll(ResetFilter filter) throws Exception {
 		List<Method> methods = Reflector.getMethods(this.getClass());
 
 		Set<String> ignores = new HashSet<>();

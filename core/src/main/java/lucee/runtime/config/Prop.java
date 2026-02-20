@@ -1,6 +1,5 @@
 package lucee.runtime.config;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
@@ -503,7 +502,7 @@ public class Prop<T> {
 		}
 	}
 
-	public static Struct createConfig(Config config, boolean full) throws IOException, IllegalArgumentException, IllegalAccessException, PageException {
+	public static Struct createConfig(Config config, boolean full) throws IllegalArgumentException, IllegalAccessException, PageException {
 
 		ConfigServerImpl cs = ConfigUtil.getConfigServerImpl(config);
 
@@ -517,8 +516,12 @@ public class Prop<T> {
 			// print.e(f.getName());
 			fields.put(KeyImpl.init(f.getName()), f);
 		}
-
-		cs.touchAll(null);
+		try {
+			cs.touchAll(null);
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
 
 		Key name, fullName, parentName;
 		Field field;
