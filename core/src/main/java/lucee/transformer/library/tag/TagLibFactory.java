@@ -290,7 +290,7 @@ public final class TagLibFactory extends DefaultHandler {
 					tag.setName(value);
 				}
 				// TAG - Class
-				else if (inside.equals("javax-class")) {
+				else if (inside.equals("javax-tag-class")) {
 					tag.setTagClassDefinition(value, id, attributes);
 				}
 				else if (inside.equals("tag-class")) {
