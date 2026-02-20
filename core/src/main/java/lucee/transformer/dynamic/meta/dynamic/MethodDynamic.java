@@ -47,8 +47,8 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 		String methodName = getName();
 		Class<?>[] argTypes = getArgumentClasses();
 
-		// If the starting class itself is public, try it first
-		if (Modifier.isPublic(startClass.getModifiers())) {
+		// If the starting class itself is accessible, try it first
+		if (isAccessibleClass(startClass)) {
 			try {
 				java.lang.reflect.Method m = startClass.getMethod(methodName, argTypes);
 				if (Modifier.isPublic(m.getModifiers())) {
@@ -60,9 +60,9 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 			}
 		}
 
-		// Walk up to find a public interface that declares this method as public
+		// Walk up to find an accessible interface that declares this method as public
 		for (Class<?> iface: getAllInterfaces(startClass)) {
-			if (Modifier.isPublic(iface.getModifiers())) {
+			if (isAccessibleClass(iface)) {
 				try {
 					java.lang.reflect.Method m = iface.getMethod(methodName, argTypes);
 					if (Modifier.isPublic(m.getModifiers())) {
@@ -78,7 +78,7 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 		// Walk up the superclass hierarchy
 		Class<?> current = startClass.getSuperclass();
 		while (current != null) {
-			if (Modifier.isPublic(current.getModifiers())) {
+			if (isAccessibleClass(current)) {
 				try {
 					java.lang.reflect.Method m = current.getMethod(methodName, argTypes);
 					if (Modifier.isPublic(m.getModifiers())) {
@@ -92,7 +92,28 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 			current = current.getSuperclass();
 		}
 
-		throw new IllegalAccessException("Unable to find an accessible method for [" + toString() + "]");
+		throw new IllegalAccessException("Unable to find an accessible method [" + toString() + "] ");
+	}
+
+	/**
+	 * Checks if a class is accessible - must be public AND exported from its module
+	 */
+	private boolean isAccessibleClass(Class<?> clazz) {
+		if (!Modifier.isPublic(clazz.getModifiers())) {
+			return false;
+		}
+
+		Module module = clazz.getModule();
+		if (module == null || !module.isNamed()) {
+			// Unnamed module (classpath) - accessible if public
+			return true;
+		}
+
+		String packageName = clazz.getPackageName();
+
+		// Check if the package is exported to everyone or to our module
+		Module ourModule = MethodDynamic.class.getModule();
+		return module.isExported(packageName) || module.isExported(packageName, ourModule);
 	}
 
 	// Helper to get all interfaces including inherited ones
