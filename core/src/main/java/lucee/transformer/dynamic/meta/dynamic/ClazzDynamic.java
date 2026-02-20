@@ -29,6 +29,7 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.osgi.framework.Bundle;
 
+import lucee.print;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.log.Log;
@@ -83,6 +84,9 @@ public final class ClazzDynamic extends Clazz {
 					classes.put(clazz, cd);
 				}
 			}
+		}
+		else {
+			print.e(">>>>>>> " + clazz.getName() + ":" + cd.getDeclaringClass().getName());
 		}
 		return cd;
 	}
