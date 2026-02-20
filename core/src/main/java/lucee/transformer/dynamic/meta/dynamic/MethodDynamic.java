@@ -5,7 +5,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.BiFunction;
 
-import lucee.print;
 import lucee.transformer.dynamic.DynamicInvoker;
 import lucee.transformer.dynamic.meta.Clazz;
 import lucee.transformer.dynamic.meta.Method;
@@ -34,8 +33,6 @@ class MethodDynamic extends FunctionMemberDynamic implements Method {
 
 		// Verify the cached method works for this object
 		if (obj != null && !method.getDeclaringClass().isAssignableFrom(obj.getClass())) {
-			print.e("----> " + method.getDeclaringClass().getName() + ":" + obj.getClass().getName());
-			print.e("----> " + method.getDeclaringClass().getClassLoader() + ":" + obj.getClass().getClassLoader());
 			method = getAccessibleMethod(obj.getClass());
 		}
 
