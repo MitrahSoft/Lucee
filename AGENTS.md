@@ -19,12 +19,10 @@ Maven builds automatically before testing, so do NOT run `ant fast` before `mvn 
 - Run the whole test suite: `mvn test`
 - Build only (no tests, for script-runner): `ant fast`
 
-As build always purges the temp directory, don't blame stale artifacts, trust the build.
-
 ### Development Environment
 
 - Build requires Java, Maven and Ant
-- Java 25 is the target version, Java 11 is the oldest supported version
+- Build usually is run with Java 21
 - All artifacts are compiled to bytecode targeting Java 11
 
 ### Issue Tracking

@@ -212,12 +212,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		System.setProperty("log4j2.disable.jmx", "true"); // Skip JMX
 		System.setProperty("log4j2.asyncLoggerConfigRingBufferSize", "262144"); // Larger buffer
 
-		// JVM Performance Optimizations
-		System.setProperty("sun.awt.noerasebackground", "true");
-		System.setProperty("sun.java2d.noddraw", "true");
-		System.setProperty("sun.java2d.d3d", "false");
-		System.setProperty("java.awt.headless", "true"); // Disable GUI components
-
 		// Network/DNS Optimizations
 		System.setProperty("sun.net.inetaddr.ttl", "300"); // Cache DNS for 5 mins
 		System.setProperty("sun.net.inetaddr.negative.ttl", "10"); // Cache failures for 10s

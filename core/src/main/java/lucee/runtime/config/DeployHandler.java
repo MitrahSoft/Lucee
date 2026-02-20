@@ -246,7 +246,7 @@ public final class DeployHandler {
 				try {
 					filter.reset(config);
 				}
-				catch (IOException e) {
+				catch (Exception e) {
 					if (throwOnError) throw Caster.toPageException(e);
 
 					if (log != null) log.error("deploy-extension", e);
@@ -288,7 +288,7 @@ public final class DeployHandler {
 				try {
 					filter.reset(config);
 				}
-				catch (IOException e) {
+				catch (Exception e) {
 					if (throwOnError) throw Caster.toPageException(e);
 
 					if (log != null) log.error("deploy-extension", e);
