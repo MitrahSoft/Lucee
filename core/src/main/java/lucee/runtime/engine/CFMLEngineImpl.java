@@ -1765,6 +1765,12 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			shutdownFelix();
 			System.exit(0);
 		}
+		else {
+			boolean eagerLoad = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.config.validate", ""), false);
+			if (Boolean.TRUE.equals(eagerLoad)) {
+				ConfigUtil.getConfigServerImpl(config).touchAll(null);
+			}
+		}
 	}
 
 	public void onStart(ConfigWebPro config, boolean reload) {
