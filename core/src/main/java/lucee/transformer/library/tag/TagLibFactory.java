@@ -74,6 +74,7 @@ public final class TagLibFactory extends DefaultHandler {
 
 	private TagLibTag tag;
 	private boolean insideTag = false;
+	private boolean insideGroup = false;
 	private boolean insideScript = false;
 	// private boolean insideBundle=false;
 
@@ -200,7 +201,9 @@ public final class TagLibFactory extends DefaultHandler {
 		if (qName.equals("tag")) startTag();
 		else if (qName.equals("attribute")) startAtt();
 		else if (qName.equals("script")) startScript();
-
+		else if (qName.equals("group")) {
+			insideGroup = true;
+		}
 	}
 
 	/**
@@ -223,6 +226,9 @@ public final class TagLibFactory extends DefaultHandler {
 		if (qName.equals("tag")) endTag();
 		else if (qName.equals("attribute")) endAtt();
 		else if (qName.equals("script")) endScript();
+		else if (qName.equals("group")) {
+			insideGroup = false;
+		}
 
 	}
 
@@ -238,7 +244,7 @@ public final class TagLibFactory extends DefaultHandler {
 	}
 
 	private void setContent(String value) {
-		if (insideTag) {
+		if (insideTag && !insideGroup) {
 			// Att Args
 			if (insideAtt) {
 				// description?
