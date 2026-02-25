@@ -8513,6 +8513,17 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 		return javaSettings;
 	}
 
+	public ConfigServerImpl resetJavaSettings() {
+		if (javaSettings != null) {
+			synchronized (SystemUtil.createToken("extensions", "javaSettings")) {
+				if (javaSettings != null) {
+					javaSettings = null;
+				}
+			}
+		}
+		return this;
+	}
+
 	@Override
 	public Resource getExtensionDirectory() {
 		return getExtensionInstalledDir();

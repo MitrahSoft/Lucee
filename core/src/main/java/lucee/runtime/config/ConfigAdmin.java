@@ -4859,6 +4859,7 @@ public final class ConfigAdmin {
 					gavso = itl.next();
 					if (gavso != null) {
 						_updateMaven(gavso);
+						filter.add("resetJavaSettings");
 						reloadNecessary = true;
 					}
 					logger.info("extension", "Update maven endpoint [" + gavso + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
