@@ -255,7 +255,7 @@
 	</target>
 	<target name="check-compress" depends="check-cache" unless="compress.present">
 		<get 
-			src="${extURLMaven}${extCompressExtensionGroupPath}/${extCompressExtensionArtifact}/${extCompressExtensionVersion}/${extCompressExtensionArtifact}-${extCompressExtensionVersion}.lex" 
+			src="${extURLCDN}${extCompressExtensionGroupPath}/${extCompressExtensionArtifact}/${extCompressExtensionVersion}/${extCompressExtensionArtifact}-${extCompressExtensionVersion}.lex" 
 			dest="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex"/>
 	</target>
 	<target name="check-mail" depends="check-cache" unless="mail.present">

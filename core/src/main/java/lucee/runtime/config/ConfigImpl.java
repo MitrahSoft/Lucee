@@ -6305,6 +6305,17 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return javaSettings;
 	}
 
+	public ConfigImpl resetJavaSettings() {
+		if (javaSettings != null) {
+			synchronized (javaSettingsInstances) {
+				if (javaSettings != null) {
+					javaSettings = null;
+				}
+			}
+		}
+		return this;
+	}
+
 	@Override
 	public Resource getExtensionDirectory() {
 		return getExtensionInstalledDir();

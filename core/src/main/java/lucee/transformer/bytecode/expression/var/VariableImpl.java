@@ -1125,11 +1125,11 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 		}
 		else {
 			// Build complex expression iteratively
-			buildMemberExpressionIterative(sct, members);
+			buildMemberExpressionIterative(sct, members, scope);
 		}
 	}
 
-	private static void buildMemberExpressionIterative(Struct sct, List<Member> members) {
+	private static void buildMemberExpressionIterative(Struct sct, List<Member> members, int scope) {
 		Struct current = null;
 
 		// Build from left to right
@@ -1179,6 +1179,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				else {
 					// Member expression
 					newNode.setEL(KeyConstants._type, "MemberExpression");
+					if (scope == Scope.SCOPE_VAR) newNode.setEL(KeyConstants._origin, "var");
 					newNode.setEL(KeyConstants._computed, false);
 					newNode.setEL(KeyConstants._object, current);
 
