@@ -1575,6 +1575,9 @@ public final class ConfigWebFactory extends ConfigFactory {
 		f = contextDir.getRealResource("graph." + TEMPLATE_EXTENSION);
 		if (!f.exists() || doNew) createFileFromResourceEL("/resource/context/graph." + TEMPLATE_EXTENSION, f);
 
+		f = contextDir.getRealResource("graph." + TEMPLATE_EXTENSION);
+		if (!f.exists() || doNew) createFileFromResourceEL("/resource/context/formtag-form." + TEMPLATE_EXTENSION, f);
+
 		f = contextDir.getRealResource("wddx." + TEMPLATE_EXTENSION);
 		if (!f.exists()) createFileFromResourceEL("/resource/context/wddx." + TEMPLATE_EXTENSION, f);
 
@@ -1768,8 +1771,7 @@ public final class ConfigWebFactory extends ConfigFactory {
 					hasChanged = true;
 				}
 			}
-			catch (IOException e) {
-			}
+			catch (IOException e) {}
 			// change Compile type
 			if (hasChanged) {
 
@@ -3014,8 +3016,7 @@ public final class ConfigWebFactory extends ConfigFactory {
 						String[] arr = ListUtil.toStringArray(ListUtil.listToArrayRemoveEmpty(strExtensions, ","));
 						config.setCustomTagExtensions(ListUtil.trimItems(arr));
 					}
-					catch (PageException e) {
-					}
+					catch (PageException e) {}
 				}
 				else if (hasCS) {
 					config.setCustomTagExtensions(configServer.getCustomTagExtensions());
@@ -3188,8 +3189,7 @@ public final class ConfigWebFactory extends ConfigFactory {
 					try {
 						keys[i] = URLDecoder.decode(keys[i], "UTF-8", true);
 					}
-					catch (Exception e) {
-					}
+					catch (Exception e) {}
 				}
 
 				csi.setAuthenticationKeys(keys);
@@ -5010,8 +5010,7 @@ public final class ConfigWebFactory extends ConfigFactory {
 						}
 					}
 				}
-				catch (SecurityException e) {
-				}
+				catch (SecurityException e) {}
 			}
 
 			if (hasAccess) {
