@@ -3946,9 +3946,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				else ConfigFactoryImpl.createFileFromResourceCheckSizeDiffEL("/resource/context/lucee-admin.lar", f);
 			}
 
-			create("/resource/context/",
-					new String[] { "lucee-context.lar", "lucee-doc.lar", "component-dump.cfm", "Application.cfc", "form.cfm", "graph.cfm", "wddx.cfm", "admin.cfm" }, contextDir,
-					doNew);
+			create("/resource/context/", new String[] { "lucee-context.lar", "lucee-doc.lar", "component-dump.cfm", "Application.cfc", "form.cfm", "graph.cfm", "wddx.cfm",
+					"admin.cfm", "formtag-form.cfm" }, contextDir, doNew);
 		}
 
 		// customtags
