@@ -71,6 +71,7 @@ import lucee.transformer.expression.var.NamedArgument;
 import lucee.transformer.expression.var.NamedMember;
 import lucee.transformer.expression.var.Variable;
 import lucee.transformer.interpreter.literal.LitStringImpl;
+import lucee.transformer.library.ClassDefinitionImpl;
 import lucee.transformer.library.function.FunctionLibFunction;
 import lucee.transformer.library.function.FunctionLibFunctionArg;
 import lucee.transformer.library.tag.TagLibTag;
@@ -127,6 +128,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 	private static final Method STATIC_GET1 = new Method("staticGet", Types.OBJECT, new Type[] { Types.OBJECT });
 	private static final Method STATIC_TOUCH1 = new Method("staticTouch", Types.OBJECT, new Type[] { Types.OBJECT });
 	private static final Method INVOKE3 = new Method("invoke", Types.OBJECT, new Type[] { Types.PAGE_CONTEXT, Types.OBJECT_ARRAY, Types.STRING });
+	private static final Method INVOKE4 = new Method("invoke", Types.OBJECT, new Type[] { Types.PAGE_CONTEXT, Types.OBJECT_ARRAY, Types.STRING, Types.STRING });
 	private static final Method INVOKE5 = new Method("invoke", Types.OBJECT, new Type[] { Types.PAGE_CONTEXT, Types.OBJECT_ARRAY, Types.STRING, Types.STRING, Types.STRING });
 
 	// GET
@@ -549,8 +551,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 			try {
 				if (clazzz.getMethods("call", true, -1).size() == 0) core = false;
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 		// load method
 		List<lucee.transformer.dynamic.meta.Method> methods = null;
@@ -559,8 +560,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				methods = clazzz.getMethods("call", true, args.length + 1);
 				if (methods != null && methods.size() == 0) methods = null;
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 
 		if (bif.getArgType() == FunctionLibFunction.ARG_FIX && !bifCD.isBundle() && core) {
@@ -721,6 +721,11 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				else ASMConstants.NULL(adapter);
 
 				adapter.invokeStatic(Types.FUNCTION_HANDLER_POOL, INVOKE5);
+			}
+			else if (((ClassDefinitionImpl) bifCD).isMaven()) {
+				adapter.push(((ClassDefinitionImpl) bifCD).getMavenRaw());// maven data
+
+				adapter.invokeStatic(Types.FUNCTION_HANDLER_POOL, INVOKE4);
 			}
 			else adapter.invokeStatic(Types.FUNCTION_HANDLER_POOL, INVOKE3);
 			rtnType = Types.OBJECT;
@@ -1130,7 +1135,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 		// Build from left to right
 		for (int i = 0; i < members.size(); i++) {
 			Member member = members.get(i);
-			Struct newNode = new StructImpl(Struct.TYPE_LINKED);
+			Struct newNode = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 
 			if (member instanceof FunctionMember) {
 				// Function call
@@ -1144,7 +1149,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				// Set callee to current chain (or base identifier)
 				if (current == null) {
 					// First element - base identifier
-					Struct callee = new StructImpl(Struct.TYPE_LINKED);
+					Struct callee = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 					callee.setEL(KeyConstants._type, "Identifier");
 					callee.setEL(KeyConstants._name, getName((FunctionMember) member));
 					newNode.setEL(KeyConstants._callee, callee);
@@ -1154,11 +1159,11 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 				}
 
 				// Add arguments
-				Array arrArgs = new ArrayImpl();
+				Array arrArgs = new ArrayImpl(8, false);
 				newNode.setEL(KeyConstants._arguments, arrArgs);
 				FunctionMember fm = (FunctionMember) member;
 				for (Argument arg: fm.getArguments()) {
-					Struct sctArg = new StructImpl(Struct.TYPE_LINKED);
+					Struct sctArg = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 					arrArgs.appendEL(sctArg);
 					arg.dump(sctArg);
 				}
@@ -1177,7 +1182,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 					newNode.setEL(KeyConstants._computed, false);
 					newNode.setEL(KeyConstants._object, current);
 
-					Struct property = new StructImpl(Struct.TYPE_LINKED);
+					Struct property = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 					property.setEL(KeyConstants._type, "Identifier");
 					property.setEL(KeyConstants._name, getName((DataMember) member));
 					newNode.setEL(KeyConstants._property, property);
@@ -1195,7 +1200,7 @@ public final class VariableImpl extends ExpressionBase implements Variable {
 		if (dm.getName() instanceof Literal) {
 			return dm.getName().toString();
 		}
-		Struct name = new StructImpl(Struct.TYPE_LINKED);
+		Struct name = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 		dm.getName().dump(name);
 		return name;
 	}

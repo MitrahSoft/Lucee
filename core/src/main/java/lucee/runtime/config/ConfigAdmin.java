@@ -231,7 +231,7 @@ public final class ConfigAdmin {
 	 */
 	public void setPassword(Password password) throws SecurityException, IOException {
 		checkWriteAccess();
-		PasswordImpl.writeToStruct(root, password, false);
+		PasswordImpl.writeToStruct(root, password);
 	}
 
 	/*
@@ -356,7 +356,12 @@ public final class ConfigAdmin {
 		// if(storeInMemoryData)XMLCaster.writeTo(doc,config.getConfigFile());
 		CFMLEngine engine = ConfigUtil.getCFMLEngine(config);
 		ConfigServerImpl cs = config;
-		ConfigFactoryImpl.reloadInstance(engine, cs);
+		try {
+			ConfigFactoryImpl.reloadInstance(engine, cs);
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
 		ConfigWeb[] webs = cs.getConfigWebs();
 		for (ConfigWeb web: webs) {
 			ConfigFactoryImpl.reloadInstance(engine, config, (ConfigWebImpl) web, true);
@@ -1533,9 +1538,9 @@ public final class ConfigAdmin {
 	 * @throws PageException
 	 */
 	public void updateDataSource(String id, String bundleName, String bundleVersion, String name, String newName, ClassDefinition cd, String dsn, String username, String password,
-			String host, String database, int port, int connectionLimit, int idleTimeout, int liveTimeout, long metaCacheTimeout, boolean blob, boolean clob, int allow,
-			boolean validate, boolean storage, String timezone, Struct custom, String dbdriver, ParamSyntax paramSyntax, boolean literalTimestampWithTSOffset,
-			boolean alwaysSetTimeout, boolean requestExclusive, boolean alwaysResetConnections) throws PageException {
+			String host, String database, int port, int connectionLimit, int idleTimeout, int liveTimeout, int minIdle, int maxIdle, long metaCacheTimeout, boolean blob,
+			boolean clob, int allow, boolean validate, boolean storage, String timezone, Struct custom, String dbdriver, ParamSyntax paramSyntax,
+			boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout, boolean requestExclusive, boolean alwaysResetConnections) throws PageException {
 
 		checkWriteAccess();
 		SecurityManager sm = config.getSecurityManager();
@@ -1594,6 +1599,10 @@ public final class ConfigAdmin {
 				el.setEL(KeyConstants._connectionLimit, Caster.toString(connectionLimit));
 				el.setEL(KeyConstants._connectionTimeout, Caster.toString(idleTimeout));
 				el.setEL(KeyConstants._liveTimeout, Caster.toString(liveTimeout));
+				if (minIdle > 0) el.setEL("minIdle", Caster.toString(minIdle));
+				else if (el.containsKey("minIdle")) el.removeEL(KeyImpl.init("minIdle"));
+				if (maxIdle > 0) el.setEL("maxIdle", Caster.toString(maxIdle));
+				else if (el.containsKey("maxIdle")) el.removeEL(KeyImpl.init("maxIdle"));
 				el.setEL(KeyConstants._metaCacheTimeout, Caster.toString(metaCacheTimeout));
 				el.setEL(KeyConstants._blob, Caster.toString(blob));
 				el.setEL(KeyConstants._clob, Caster.toString(clob));
@@ -1706,15 +1715,13 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
 
-	private void _removeStartupHook(ClassDefinition cd) throws PageException {
-
-		if (!cd.isBundle()) throw new ApplicationException("missing bundle name");
+	private void _removeStartupHook(ClassDefinitionImpl cd) throws PageException {
+		if (!cd.isBundle() && !cd.isMaven()) throw new ApplicationException("Cannot remove extension startup hook [" + cd + "]: missing bundle name or maven coordinates");
 
 		Array children = ConfigUtil.getAsArray("startupHooks", root);
 		Key[] keys = children.keys();
@@ -1732,15 +1739,14 @@ public final class ConfigAdmin {
 		}
 
 		// now unload (maybe not necessary)
+		unloadStartupIfNecessary(config, cd, true);
 		if (cd.isBundle()) {
-			unloadStartupIfNecessary(config, cd, true);
 			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
 			if (bl != null) {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -1764,7 +1770,7 @@ public final class ConfigAdmin {
 	}
 
 	private void unloadStartupIfNecessary(ConfigPro config, ClassDefinition<?> cd, boolean force) {
-		ConfigBase.Startup startup = config.getStartups().get(cd.getClassName());
+		Startup startup = config.getStartups().get(cd.getClassName());
 		if (startup == null) return;
 		if (startup.cd.equals(cd) && !force) return;
 
@@ -1775,8 +1781,7 @@ public final class ConfigAdmin {
 			}
 			config.getStartups().remove(cd.getClassName());
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 	}
 
 	public void updateJDBCDriver(String label, String id, ClassDefinition cd, String connectionString) throws PageException {
@@ -1827,16 +1832,15 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
 
-	private void _updateStartupHook(ClassDefinition cd) throws PageException {
+	private void _updateStartupHook(ClassDefinitionImpl cd) throws PageException {
 		unloadStartupIfNecessary(config, cd, false);
-		// check if it is a bundle
-		if (!cd.isBundle()) throw new ApplicationException("missing bundle info");
+		// check if it is a bundle or maven
+		if (!cd.isBundle() && !cd.isMaven()) throw new ApplicationException("Cannot register extension startup hook [" + cd + "]: missing bundle name or maven coordinates");
 
 		Array children = ConfigUtil.getAsArray("startupHooks", root);
 
@@ -1861,18 +1865,8 @@ public final class ConfigAdmin {
 
 		// make sure the class exists
 		setClass(child, null, "", cd);
-
-		// now unload again, JDBC driver can be loaded when necessary
-		if (cd.isBundle()) {
-			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
-			if (bl != null) {
-				try {
-					OSGiUtil.uninstall(bl);
-				}
-				catch (BundleException e) {
-				}
-			}
-		}
+		// Note: Unlike JDBC drivers, startup hooks are NOT lazy-loaded - they are instantiated
+		// immediately via resetStartups().getStartups(). Do not uninstall the bundle here.
 	}
 
 	private void _updateStartupHook(String component) {
@@ -3487,33 +3481,6 @@ public final class ConfigAdmin {
 	}
 
 	/**
-	 * @return returns the default password
-	 * @throws SecurityException
-	 */
-	public Password getDefaultPassword() throws SecurityException {
-		checkReadAccess();
-		return config.getDefaultPassword();
-	}
-
-	/**
-	 * @param password
-	 * @throws SecurityException
-	 * @throws IOException
-	 * @throws DOMException
-	 */
-	public void updateDefaultPassword(String password) throws SecurityException, IOException {
-		// MUST this is not very good, make it better
-		checkWriteAccess();
-		config.setDefaultPassword(PasswordImpl.writeToStruct(root, password, true));
-	}
-
-	public void removeDefaultPassword() throws SecurityException {
-		checkWriteAccess();
-		PasswordImpl.removeFromStruct(root, true);
-		config.resetDefaultPassword();
-	}
-
-	/**
 	 * session type update
 	 * 
 	 * @param type
@@ -3853,7 +3820,7 @@ public final class ConfigAdmin {
 
 		;
 		try {
-			IOUtil.copy(new MavenUpdateProvider().getCore(version), new FileOutputStream(newLucee), true, true);
+			IOUtil.copy(new MavenUpdateProvider(config).getCore(version), new FileOutputStream(newLucee), true, true);
 		}
 		catch (PageException e) {
 			throw e;
@@ -4606,84 +4573,50 @@ public final class ConfigAdmin {
 		}
 	}
 
-	public static RHExtension _updateRHExtension(ConfigPro config, ExtensionDefintion ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
+	public static RHExtension _updateRHExtension(ConfigPro config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force, short action, Log log)
+			throws PageException {
 		try {
 			ConfigAdmin admin = new ConfigAdmin(config, null, true);
-			return admin.updateRHExtension(config, ext, filter, reload, force, action);
+			return admin.updateExtension(config, rhext, filter, reload, force, action, log);
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);
 		}
 	}
 
-	public static RHExtension _updateRHExtension(ConfigPro config, Resource ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
-		try {
-			ConfigAdmin admin = new ConfigAdmin(config, null, true);
-			return admin.updateRHExtension(config, ext, filter, reload, force, action);
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-	}
-
-	protected static void _updateRHExtension(ConfigPro config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force) throws PageException {
-		try {
-			ConfigAdmin admin = new ConfigAdmin(config, null, true);
-			admin.updateExtension(config, rhext, filter, reload, force);
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-	}
-
-	public RHExtension updateRHExtension(Config config, ExtensionDefintion ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
-		RHExtension rhext = RHExtension.getInstance(config, ext);
+	private RHExtension updateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force, short action, Log log) throws PageException {
 		synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
+			// install
 			try {
-				rhext = RHExtension.getInstance(config, ext);
-				if (RHExtension.ACTION_COPY == action) rhext.copyToInstalled(config);
-				else if (RHExtension.ACTION_MOVE == action) rhext.moveToInstalled(config);
-				rhext.validate(config);
-			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				throw Caster.toPageException(t);
-			}
-			unSyncUpdateExtension(config, rhext, filter, reload, force);
-		}
-		return rhext;
-	}
 
-	public RHExtension updateRHExtension(Config config, Resource ext, ResetFilter filter, boolean reload, boolean force, short action) throws PageException {
-		RHExtension rhext = RHExtension.getInstance(config, ext);
-		synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
+				unSyncUpdateExtension(config, rhext, filter, reload, force, log);
+			}
+			catch (Exception ex) {
+				RHExtension.flush(rhext);
+				throw Caster.toPageException(ex);
+			}
+
 			try {
-				if (RHExtension.ACTION_COPY == action) rhext.copyToInstalled(config);
-				else if (RHExtension.ACTION_MOVE == action) rhext.moveToInstalled(config);
-				rhext.validate(config);
+				rhext.addToAvailable(config);
+				if (RHExtension.ACTION_COPY == action) rhext.act(config, RHExtension.ACTION_COPY);
+				else if (RHExtension.ACTION_MOVE == action) rhext.act(config, RHExtension.ACTION_MOVE);
 			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				if (ext != null) DeployHandler.moveToFailedFolder(ext.getParentResource(), ext);
-				throw Caster.toPageException(t);
+			catch (Exception ex) {
+				throw Caster.toPageException(ex);
 			}
-			unSyncUpdateExtension(config, rhext, filter, reload, force);
-		}
-		return rhext;
-	}
-
-	private void updateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force) throws PageException {
-		synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
-			unSyncUpdateExtension(config, rhext, filter, reload, force);
+			return rhext;
 		}
 	}
 
-	private void unSyncUpdateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force) throws PageException {
+	private void unSyncUpdateExtension(Config config, RHExtension rhext, ResetFilter filter, boolean reload, boolean force, Log log) throws PageException {
+		if (LogUtil.doesDebug(log)) {
+			log.debug("extension", "install extension [" + rhext.toExtensionDefinition() + "] ");
+		}
 
+		rhext.validate(config);
 		// MUST 7 rest all values set
 		try {
-			if (!force && _hasRHExtensionInstalled((ConfigPro) config, rhext.toExtensionDefinition()) != null) {
-
+			if (!force && rhext.installed()) {
 				throw new AlreadyInstalledExtension(rhext);
 			}
 		}
@@ -4691,20 +4624,19 @@ public final class ConfigAdmin {
 			throw Caster.toPageException(e);
 		}
 
+		filter.add("resetExtensionDefinitions", "resetRHExtensions");
+
 		ConfigPro ci = (ConfigPro) config;
 		Log logger = ThreadLocalPageContext.getLog(ci, "deploy");
 		String type = ci instanceof ConfigWeb ? "web" : "server";
-		// load already installed previous version and uninstall the parts no longer needed
-		String installedVersion = getInstalledExtensionVersion(ci, rhext.getId(), null);
 
-		if (installedVersion != null && installedVersion.compareTo(rhext.getVersion()) != 0) {
+		// is there a existing extension with a different version?
+		RHExtension other = RHExtension.getInstalledDifferentVersion(config, rhext.toExtensionDefinition(), log);
+		if (other != null) {
 			try {
-				RHExtension existingRH = RHExtension.getInstance(config, rhext.getId(), installedVersion);
-				synchronized (SystemUtil.createToken("updateExtension", existingRH.getId())) {
-					unSyncRemoveExtension(config, existingRH, rhext, filter, true);
+				synchronized (SystemUtil.createToken("updateExtension", other.getId())) {
+					unSyncRemoveExtension(config, other, rhext, filter, true, log);
 				}
-				filter.add("resetExtensionDefinitions", "resetRHExtensions");
-
 			}
 			catch (Exception e) {
 				logger.error("extension", e);
@@ -4927,6 +4859,7 @@ public final class ConfigAdmin {
 					gavso = itl.next();
 					if (gavso != null) {
 						_updateMaven(gavso);
+						filter.add("resetJavaSettings");
 						reloadNecessary = true;
 					}
 					logger.info("extension", "Update maven endpoint [" + gavso + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
@@ -5037,11 +4970,11 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = (ClassDefinitionImpl) ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
 					// class
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || cd.isMaven())) {
 						_updateStartupHook(cd);
 						filter.add("resetStartups");
 						reloadNecessary = true;
@@ -5053,6 +4986,12 @@ public final class ConfigAdmin {
 						filter.add("resetStartups");
 						reloadNecessary = true;
 						logger.info("extension", "Update Startup Hook [" + cfc + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
+					}
+					// neither valid class nor component - log error
+					else {
+						logger.error("extension",
+								"Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "] could not be registered: class definition [" + cd
+										+ "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
 					}
 				}
 			}
@@ -5183,17 +5122,15 @@ public final class ConfigAdmin {
 			reloadNecessary = true;
 			storeAndReload(false, true, reload && reloadNecessary, false);
 
+			// Trigger startup hooks if they were added/updated (LDEV-5955)
+			if (filter.allow("resetStartups")) {
+				ConfigUtil.getConfigServerImpl(config).resetStartups().getStartups();
+			}
+
 		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
+		catch (Exception ex) {
 			DeployHandler.moveToFailedFolder(rhext.getExtensionFile().getParentResource(), rhext.getExtensionFile());
-			try {
-				ConfigAdmin.removeRHExtensions((ConfigPro) config, ThreadLocalPageContext.getLog(config, "deploy"), new String[] { rhext.getId() }, false);
-			}
-			catch (Throwable t2) {
-				ExceptionUtil.rethrowIfNecessary(t2);
-			}
-			throw Caster.toPageException(t);
+			throw Caster.toPageException(ex);
 		}
 	}
 
@@ -5211,46 +5148,29 @@ public final class ConfigAdmin {
 		}
 	}
 
-	public void removeRHExtension(String id) throws PageException {
+	public void removeRHExtension(ExtensionDefintion ed, Log log) throws PageException {
 		checkWriteAccess();
-		if (StringUtil.isEmpty(id, true)) return;
+		if (ed == null) return;
 
-		Array children = ConfigUtil.getAsArray("extensions", root);
-		int[] keys = children.intKeys();
-		Struct child;
-		RHExtension rhe;
-		int key;
-		for (int i = keys.length - 1; i >= 0; i--) {
-			key = keys[i];
-			child = Caster.toStruct(children.get(key, null), null);
-			if (child == null) continue;
+		ResetFilter filter = new ResetFilter();
+		try {
+			_removeRHExtension(config, ed.toRHExtension(config), null, filter, true, log);
 
+		}
+		finally {
 			try {
-				rhe = RHExtension.getInstance(config, Caster.toString(child.get(KeyConstants._id), null), Caster.toString(child.get(KeyConstants._version), null));
+				if (filter != null) filter.reset(config);
 			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-				continue;
-			}
-
-			if (id.equalsIgnoreCase(rhe.getId()) || id.equalsIgnoreCase(rhe.getMetadata().getSymbolicName())) {
-				ResetFilter filter = new ResetFilter();
-				try {
-					synchronized (SystemUtil.createToken("updateExtension", rhe.getId())) {
-						unSyncRemoveExtension(config, rhe, null, filter, true);
-					}
-				}
-				finally {
-					filter.resetThrowPageException(config);
-				}
-				children.removeEL(key);
+			catch (Exception e) {
+				LogUtil.log("deploy", "start-bundles", e);
 			}
 		}
 	}
 
-	public void removeExtension(String provider, String id) throws PageException {
-		removeRHExtension(id);
-	}
+	/*
+	 * public void removeExtension(String provider, String id) throws PageException {
+	 * removeRHExtension(id); }
+	 */
 
 	/**
 	 * removes an installed extension from the system
@@ -5261,13 +5181,14 @@ public final class ConfigAdmin {
 	 *            defined in this extension.
 	 * @throws PageException
 	 */
-	private void unSyncRemoveExtension(Config config, RHExtension rhe, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension) throws PageException {
+	private void unSyncRemoveExtension(Config config, RHExtension rhe, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension, Log log) throws PageException {
 		ConfigPro ci = ((ConfigPro) config);
 		Log logger = ThreadLocalPageContext.getLog(ci, "deploy");
-
+		filter.add("resetExtensionDefinitions", "resetRHExtensions");
 		// MUST check replacementRH everywhere
 
 		try {
+
 			// remove the bundles
 			BundleDefinition[] candidatesToRemove = OSGiUtil.toBundleDefinitions(rhe.getMetadata().getBundles(EMPTY));
 			if (replacementRH != null) {
@@ -5453,10 +5374,10 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = (ClassDefinitionImpl) ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || cd.isMaven())) {
 						_removeStartupHook(cd);
 						filter.add("resetStartups");
 					}
@@ -5535,7 +5456,9 @@ public final class ConfigAdmin {
 			}
 
 			// now we can delete the extension
-			if (deleteExtension) rhe.getExtensionFile().delete();
+			if (deleteExtension) {
+				rhe.delete(this.config, log);
+			}
 
 		}
 		catch (Exception e) {
@@ -6215,6 +6138,7 @@ public final class ConfigAdmin {
 		Resource context = config.getConfigDir().getRealResource("context");
 		Resource trg = context.getRealResource(realpath);
 		if (trg.exists()) {
+			LogUtil.log(config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath());
 			trg.remove(true);
 			if (_store) ConfigAdmin._storeAndReload((ConfigPro) config);
 			ResourceUtil.removeEmptyFolders(context, null);
@@ -6335,11 +6259,12 @@ public final class ConfigAdmin {
 		if (trg.exists()) trg.remove(true);
 	}
 
-	protected static void _removeRHExtension(ConfigPro config, RHExtension rhext, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension) throws PageException {
+	protected static void _removeRHExtension(ConfigPro config, RHExtension rhext, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension, Log log)
+			throws PageException {
 		try {
 			ConfigAdmin admin = new ConfigAdmin(config, null, true);
 			synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
-				admin.unSyncRemoveExtension(config, rhext, replacementRH, filter, deleteExtension);
+				admin.unSyncRemoveExtension(config, rhext, replacementRH, filter, deleteExtension, log);
 			}
 		}
 		catch (Exception e) {
@@ -6347,114 +6272,19 @@ public final class ConfigAdmin {
 		}
 	}
 
-	public static void removeRHExtensions(ConfigPro config, Log log, String[] extensionIDs, boolean removePhysical)
-			throws IOException, PageException, BundleException, ConverterException {
+	public static void removeRHExtensions(ConfigPro config, Log log, java.util.Collection<RHExtension> rhexs, boolean removePhysical, ResetFilter filter)
+			throws IOException, PageException {
 		ConfigAdmin admin = new ConfigAdmin(config, null);
-		Map<String, BundleDefinition> oldMap = new HashMap<>();
-		BundleDefinition[] bds;
-		for (String extensionID: extensionIDs) {
+		for (RHExtension rhe: rhexs) {
 			try {
-				synchronized (SystemUtil.createToken("updateExtension", extensionID)) {
-					bds = admin.removeExtensionX(config, extensionID, removePhysical);
-				}
-				if (bds != null) {
-					for (BundleDefinition bd: bds) {
-						if (bd == null) continue;// TODO why are they Null?
-						oldMap.put(bd.toString(), bd);
-					}
+				synchronized (SystemUtil.createToken("updateExtension", rhe.getId())) {
+					admin.unSyncRemoveExtension(config, rhe, null, filter, removePhysical, log);
 				}
 			}
 			catch (Exception e) {
 				log.log(Log.LEVEL_ERROR, ConfigAdmin.class.getName(), e);
 			}
 		}
-
-		admin._storeAndReload();
-
-		if (!oldMap.isEmpty() && config instanceof ConfigServer) {
-			ConfigServer cs = (ConfigServer) config;
-			ConfigWeb[] webs = cs.getConfigWebs();
-			for (int i = 0; i < webs.length; i++) {
-				try {
-					admin._storeAndReload((ConfigPro) webs[i]);
-				}
-				catch (Exception e) {
-					log.log(Log.LEVEL_ERROR, ConfigAdmin.class.getName(), e);
-				}
-			}
-		}
-		cleanBundles(null, config, oldMap.values().toArray(new BundleDefinition[oldMap.size()])); // clean after populating the new ones
-
-	}
-
-	private BundleDefinition[] removeExtensionX(ConfigPro config, String extensionID, boolean removePhysical)
-			throws IOException, PageException, BundleException, ConverterException {
-		if (!Decision.isUUId(extensionID)) throw new IOException("id [" + extensionID + "] is invalid, it has to be a UUID");
-
-		Array children = ConfigUtil.getAsArray("extensions", root);
-		int[] keys = children.intKeys();
-
-		// Update
-		Struct el;
-		String id;
-		String[] arr;
-		boolean storeChildren = false;
-		BundleDefinition[] bundles;
-		Log log = ThreadLocalPageContext.getLog(config, "deploy");
-		int key;
-		for (int i = keys.length - 1; i >= 0; i--) {
-			key = keys[i];
-			el = Caster.toStruct(children.get(key, null), null);
-			if (el == null) continue;
-
-			id = Caster.toString(el.get(KeyConstants._id, null), null);
-			if (extensionID.equalsIgnoreCase(id)) {
-				bundles = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
-
-				// bundles
-				arr = _removeExtensionCheckOtherUsage(children, el, "bundles");
-				// removeBundles(arr,removePhysical);
-				// flds
-				arr = _removeExtensionCheckOtherUsage(children, el, "flds");
-				removeFLDs(log, arr);
-				// tlds
-				arr = _removeExtensionCheckOtherUsage(children, el, "tlds");
-				removeTLDs(log, arr);
-				// contexts
-				arr = _removeExtensionCheckOtherUsage(children, el, "contexts");
-				storeChildren = removeContext(config, false, log, arr);
-
-				// webcontexts
-				arr = _removeExtensionCheckOtherUsage(children, el, "webcontexts");
-				storeChildren = removeWebContexts(config, false, log, arr);
-
-				// applications
-				arr = _removeExtensionCheckOtherUsage(children, el, "applications");
-				removeApplications(config, log, arr);
-
-				// components
-				arr = _removeExtensionCheckOtherUsage(children, el, "components");
-				removeComponents(config, false, arr);
-
-				// configs
-				arr = _removeExtensionCheckOtherUsage(children, el, "config");
-				removeConfigs(config, false, arr);
-
-				// plugins
-				arr = _removeExtensionCheckOtherUsage(children, el, "plugins");
-				removePlugins(config, log, arr);
-				children.removeEL(key);
-
-				// remove files
-				String version = Caster.toString(el.get(KeyConstants._version, null), null);
-				Resource file = RHExtension.getMetaDataFile(config, id, version);
-				if (file.isFile()) file.delete();
-				RHExtension.removeExtensionInstalledFile(config, id, version);
-
-				return bundles;
-			}
-		}
-		return null;
 	}
 
 	public static void cleanBundles(RHExtension rhe, ConfigPro config, BundleDefinition[] candiatesToRemove) {
@@ -6474,10 +6304,15 @@ public final class ConfigAdmin {
 		}
 
 		// all extension
-		Iterator<RHExtension> itt = config.getAllRHExtensions().iterator();
 		RHExtension _rhe;
-		while (itt.hasNext()) {
-			_rhe = itt.next();
+		// because this method is called indirectly by getRHExtensions, we cannot use that method
+		for (ExtensionDefintion ed: ConfigUtil.getConfigServerImpl(config).getExtensionDefinitions()) {
+			try {
+				_rhe = ed.toRHExtension(config);
+			}
+			catch (PageException e) {
+				continue;
+			}
 			if (rhe != null && rhe.equals(_rhe)) continue;
 			BundleInfo[] bundles = _rhe.getMetadata().getBundles(null);
 			if (bundles != null) {
@@ -6546,13 +6381,12 @@ public final class ConfigAdmin {
 	 * @throws PageException
 	 */
 	public BundleDefinition[] _updateExtension(ConfigPro config, RHExtension ext) throws IOException, BundleException, PageException {
-		if (!Decision.isUUId(ext.getId())) throw new IOException("id [" + ext.getId() + "] is invalid, it has to be a UUID");
 		Array children = ConfigUtil.getAsArray("extensions", root);
 		int[] keys = children.intKeys();
 		int key;
 		// Update
 		Struct el;
-		String id;
+		String id, gav;
 		BundleDefinition[] old;
 		boolean hasNoneId = false;
 
@@ -6563,8 +6397,9 @@ public final class ConfigAdmin {
 				el = Caster.toStruct(children.get(key, null), null);
 				if (el == null) continue;
 				id = Caster.toString(el.get(KeyConstants._id, null), null);
+				gav = Caster.toString(el.get(KeyConstants._maven, null), null);
 				if (StringUtil.isEmpty(id)) hasNoneId = true;
-				if (ext.getId().equalsIgnoreCase(id)) {
+				if (ext.same(el)) {
 					old = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
 					ext.populate(el, false);
 					old = minus(old, OSGiUtil.toBundleDefinitions(ext.getMetadata().getBundles()));
@@ -6590,16 +6425,15 @@ public final class ConfigAdmin {
 					Resource r;
 					if (!StringUtil.isEmpty(res) && (r = ResourceUtil.toResourceExisting(config, res, null)) != null) {
 						try {
-							RHExtension _ext = RHExtension.getInstance(config, r);// TODO not load it again!
-							if (_ext != null && _ext.getId().equalsIgnoreCase(ext.getId())) {
+							RHExtension _ext = RHExtension.getInstance(config, r, config.getLog("deploy"));// TODO not load it again!
+							if (_ext != null && _ext.same(ext)) {
 								old = RHExtension.toBundleDefinitions(ConfigUtil.getAsString("bundles", el, null)); // get existing bundles before populate new ones
 								ext.populate(el, false);
 								old = minus(old, OSGiUtil.toBundleDefinitions(ext.getMetadata().getBundles()));
 								return old;
 							}
 						}
-						catch (Exception ee) {
-						}
+						catch (Exception ee) {}
 					}
 				}
 				catch (Exception e) {
@@ -6632,30 +6466,6 @@ public final class ConfigAdmin {
 		return list.toArray(new BundleDefinition[list.size()]);
 	}
 
-	private String getInstalledExtensionVersion(final ConfigPro config, final String id, final String defaultValue) {
-		Array children = ConfigUtil.getAsArray("extensions", root);
-
-		if (children != null) {
-			int[] keys = children.intKeys();
-			for (int i: keys) {
-
-				Struct tmp = Caster.toStruct(children.get(i, null), null);
-				if (tmp == null) continue;
-
-				String _id = Caster.toString(tmp.get(KeyConstants._id, null), null);
-				if (!id.equals(_id)) continue;
-
-				String _version = Caster.toString(tmp.get(KeyConstants._version, null), null);
-				if (_version == null) continue;
-
-				Resource res = RHExtension.getExtensionInstalledFile(config, _id, _version, null);
-				if (res != null) return _version;
-
-			}
-		}
-		return defaultValue;
-	}
-
 	/**
 	 * returns the version if the extension is available
 	 * 
@@ -6665,33 +6475,24 @@ public final class ConfigAdmin {
 	 * @throws PageException
 	 * @throws IOException
 	 */
-	public static RHExtension hasRHExtensionInstalled(ConfigPro config, ExtensionDefintion ed) throws PageException, IOException {
-		ConfigAdmin admin = new ConfigAdmin(config, null);
-		return admin._hasRHExtensionInstalled(config, ed);
-	}
-
-	private RHExtension _hasRHExtensionInstalled(ConfigPro config, ExtensionDefintion ed) throws PageException {
-
-		Array children = ConfigUtil.getAsArray("extensions", root);
-		int[] keys = children.intKeys();
-		RHExtension tmp;
-		try {
-			String id, v;
-			for (int key: keys) {
-				Struct sct = Caster.toStruct(children.get(key, null), null);
-				if (sct == null) continue;
-				id = Caster.toString(sct.get(KeyConstants._id, null), null);
-				v = Caster.toString(sct.get(KeyConstants._version, null), null);
-				if (!RHExtension.isInstalled(config, id, v)) continue;
-
-				if (ed.equals(new ExtensionDefintion(id, v))) return RHExtension.getInstance(config, id, v);
-			}
-			return null;
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-	}
+	/*
+	 * public static RHExtension hasRHExtensionInstalledX(ConfigPro config, ExtensionDefintion ed)
+	 * throws PageException, IOException { ConfigAdmin admin = new ConfigAdmin(config, null); return
+	 * admin._hasRHExtensionInstalled(config, ed); }
+	 * 
+	 * private RHExtension _hasRHExtensionInstalled(ConfigPro config, ExtensionDefintion ed) throws
+	 * PageException {
+	 * 
+	 * Array children = ConfigUtil.getAsArray("extensions", root); int[] keys = children.intKeys();
+	 * RHExtension tmp; try { String id, v; for (int key: keys) { Struct sct =
+	 * Caster.toStruct(children.get(key, null), null); if (sct == null) continue; id =
+	 * Caster.toString(sct.get(KeyConstants._id, null), null); v =
+	 * Caster.toString(sct.get(KeyConstants._version, null), null); if (!RHExtension.isInstalled(config,
+	 * id, v)) continue;
+	 * 
+	 * if (ed.equals(new ExtensionDefintion(id, v))) return RHExtension.getInstance(config, id, v); }
+	 * return null; } catch (Exception e) { throw Caster.toPageException(e); } }
+	 */
 
 	public void updateAuthKey(String key) throws PageException {
 		checkWriteAccess();

@@ -181,8 +181,7 @@ public final class ConfigWebHelper {
 
 	public WSHandler getWSHandler() throws PageException {
 		if (wsHandler == null) {
-			ClassDefinition cd = cw instanceof ConfigImpl ? ((ConfigImpl) cw).getWSHandlerClassDefinition() : null;
-			if (isEmpty(cd)) cd = cs.getWSHandlerClassDefinition();
+			ClassDefinition cd = ConfigUtil.getConfigServerImpl(cw).getWSHandlerClassDefinition();
 			try {
 				if (isEmpty(cd)) return new DummyWSHandler();
 				Object obj = ClassUtil.newInstance(cd.getClazz());
@@ -198,7 +197,7 @@ public final class ConfigWebHelper {
 
 	public CFMLWriter getCFMLWriter(PageContext pc, HttpServletRequest req, HttpServletResponse rsp) {
 		if (cw.getCFMLWriterType() == ConfigPro.CFML_WRITER_WS) return new CFMLWriterWS(pc, req, rsp, -1, false, cw.closeConnection(), cw.isShowVersion(), cw.contentLength());
-		else if (cw.getCFMLWriterType() == ConfigPro.CFML_WRITER_REFULAR)
+		else if (cw.getCFMLWriterType() == ConfigPro.CFML_WRITER_REGULAR)
 			return new CFMLWriterImpl(pc, req, rsp, -1, false, cw.closeConnection(), cw.isShowVersion(), cw.contentLength());
 		else return new CFMLWriterWSPref(pc, req, rsp, -1, false, cw.closeConnection(), cw.isShowVersion(), cw.contentLength());
 

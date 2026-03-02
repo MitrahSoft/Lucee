@@ -121,16 +121,10 @@ public final class FileResource extends File implements Resource {
 
 	@Override
 	public void copyTo(Resource res, boolean append) throws IOException {
-
 		if (res instanceof File && (!append || !res.isFile())) {
-			try {
-				Files.copy(this.toPath(), ((File) res).toPath(), COPY_OPTIONS);
-				applyPermissionsToResource(res);
-				return;
-			}
-			catch (Exception e) {
-				LogUtil.warn("file-resource-provider", e);
-			}
+			Files.copy(this.toPath(), ((File) res).toPath(), COPY_OPTIONS);
+			applyPermissionsToResource(res);
+			return;
 		}
 
 		IOUtil.copy(this, res.getOutputStream(append), true);
@@ -445,8 +439,7 @@ public final class FileResource extends File implements Resource {
 			moveTo(dest);
 			return true;
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 		return false;
 	}
 
@@ -644,8 +637,7 @@ public final class FileResource extends File implements Resource {
 		try {
 			provider.read(this);
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 
 		return super.exists();
 	}

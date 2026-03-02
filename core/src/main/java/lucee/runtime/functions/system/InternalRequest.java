@@ -13,7 +13,7 @@ import java.util.Map.Entry;
 import jakarta.servlet.http.HttpSession;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.mimetype.ContentType;
@@ -104,7 +104,7 @@ public class InternalRequest implements Function {
 					ContentType ct = HTTPUtil.toContentType(strCT, null);
 					if (ct != null) {
 						String strCS = ct.getCharset();
-						if (!StringUtil.isEmpty(strCS)) cs = CharsetUtil.toCharSet(strCS, CharSet.UTF8).toCharset();
+						if (!StringUtil.isEmpty(strCS)) cs = CharsetUtil.toCharsetX(strCS, CharsetX.UTF8).toCharset();
 					}
 				}
 			}

@@ -28,6 +28,7 @@
   <property name="extHibernate" value="org.lucee:hibernate-extension:5.4.29.27-BETA"/>
   <property name="extEHCache"   value="org.lucee:ehcache-extension:2.10.0.38"/>
   <property name="extJtds"      value="org.lucee:jtds-jdbc-extension:1.3.1"/>
+  <property name="extFtp"      value="org.lucee:ftp-extension:1.0.0.1-BETA"/>
 
 
   <property name="stableLoader" value="lucee-5.3.7.48"/>
@@ -227,6 +228,14 @@
         </or>
     </condition>
 </fail>
+<fail message="Missing FTP data from [Require-Extension] inside ${coreManifest}.">
+    <condition>
+        <or>
+            <not><isset property="extFtpExtension"/></not>
+            <not><isset property="extFtpExtensionVersion"/></not>
+        </or>
+    </condition>
+</fail>
 
 <echo level="info">  
 
@@ -307,7 +316,7 @@
         </sequential>
     </macrodef>
 
-    <target name="check" depends="check-mysql,check-mssql,check-postgre,check-s3,check-pdf,check-admin,check-doc,check-image,check-esapi,check-scheduler,check-compress,check-mail,check-testbox,check-lucee-loader-jar,download-lucee-loader-jar">
+    <target name="check" depends="check-mysql,check-mssql,check-postgre,check-s3,check-pdf,check-admin,check-doc,check-image,check-esapi,check-scheduler,check-compress,check-mail,check-ftp,check-testbox,check-lucee-loader-jar,download-lucee-loader-jar">
       <mkdir dir="${temp}/loader/extensions/"/>
     </target> 
 
@@ -609,7 +618,7 @@
     <echots message="building different archives that get bundled (admin,doc) with help of the temporary generated lucee.jar"/>
     <echots message="generating lucee bytecode for java ${javaVersionCoreDefault}"/>
     <!-- build the lucee-context.lar -->
-    <java classname="org.apache.tools.ant.launch.Launcher" dir="${ant}" fork="true" failonerror="true" errorproperty="exc">
+    <java classname="org.apache.tools.ant.launch.Launcher" dir="${ant}" fork="true" failonerror="false" errorproperty="exc" resultproperty="exitcode">
       <classpath path="${java.class.path}">
           <pathelement location="${temp}/lucee.jar"/>
           <pathelement path="${runtime_classpath}"/>
@@ -642,6 +651,13 @@
       -->
 
     </java>
+    <echo level="error" message="Exit code: ${exitcode}"/>
+    <echo level="error" message="Error output: ${exc}"/>
+    <fail message="Archive creation failed with exit code ${exitcode}">
+      <condition>
+        <not><equals arg1="${exitcode}" arg2="0"/></not>
+      </condition>
+    </fail>
     <outputTrimmedString str="${exc}"/>
 </target>
 
@@ -747,7 +763,7 @@
       <jvmarg value="-Dlucee.base.dir=${temp}/archive/base"/>
       <jvmarg value="-Dlucee.web.dir=${temp}/archive/webroot"/>
       <!-- TODO remove axis, lucene -->
-      <jvmarg value="-Dlucee-extensions=${extH2},${extMongo},${extOracle},${extLucene},${extAxis},${extChart},${extRedis},${extHibernate},${extEHCache},${extJtds}"/>
+      <jvmarg value="-Dlucee-extensions=${extH2},${extMongo},${extOracle},${extLucene},${extAxis},${extChart},${extRedis},${extEHCache},${extJtds},${extFtp}"/>
       <jvmarg value="-Dlucee.enable.dialect=true"/>
       <jvmarg value="-Dlucee.extensions.install=true"/>
       <jvmarg value="-Dlucee.full.null.support=false"/>
@@ -755,6 +771,10 @@
       <jvmarg value="-Dlucee.ssl.checkserveridentity=false"/>
       <jvmarg value="-DLUCEE_BUILD_ENV=${LUCEE_BUILD_ENV}"/>
       <jvmarg value="-Dlucee.enable.bundle.download=true"/>
+      <!-- some test cases downoad jars, so that is okay, but we wanna see them -->
+      <jvmarg value="-Dlucee.maven.download.policy.startup=warn"/>
+      <jvmarg value="-Dlucee.maven.download.policy.runtime=warn"/>
+      <jvmarg value="-Dlucee.maven.download.policy.log.level=info"/>
 
       <jvmarg value="-XX:+UnlockExperimentalVMOptions" if:true="${UseEpsilonGC}"/>
       <jvmarg value="-XX:+UseEpsilonGC" if:true="${UseEpsilonGC}"/>

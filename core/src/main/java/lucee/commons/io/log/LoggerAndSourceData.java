@@ -39,10 +39,10 @@ public final class LoggerAndSourceData {
 	private Log _log;
 	private final ClassDefinition cdAppender;
 	private Object _appender;
-	private final Map<String, String> appenderArgs;
+	public final Map<String, String> appenderArgs;
 	private final ClassDefinition cdLayout;
 	private Object layout;
-	private final Map<String, String> layoutArgs;
+	public final Map<String, String> layoutArgs;
 	private final int level;
 	private final String name;
 	private Config config;
@@ -69,7 +69,7 @@ public final class LoggerAndSourceData {
 		return id;
 	}
 
-	private void init() {
+	public LoggerAndSourceData init() {
 		if (_log == null) {
 			config = ThreadLocalPageContext.getConfig(config);
 			try {
@@ -81,6 +81,7 @@ public final class LoggerAndSourceData {
 				ExceptionUtil.rethrowIfNecessary(t);
 			}
 		}
+		return this;
 	}
 
 	public String getName() {
@@ -113,6 +114,10 @@ public final class LoggerAndSourceData {
 
 	public Map<String, String> getAppenderArgs(boolean catchException) throws PageException {
 		getLog(catchException);// initialize if necessary
+		return appenderArgs;
+	}
+
+	protected Map<String, String> getAppenderArgsRaw() {
 		return appenderArgs;
 	}
 

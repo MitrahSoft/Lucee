@@ -1750,6 +1750,29 @@ The returned AST uses **neutral, language-agnostic node types** following ESTree
 			<type>string</type>
 		</return>
 	</function>
+	<!-- breakpoint -->
+	<function>
+		<name>breakpoint</name>
+		<class>lucee.runtime.functions.system.Breakpoint</class>
+		<keywords>debug,debugger</keywords>
+		<description>Programmatic breakpoint - like JavaScript's "debugger;" statement. Suspends execution when a debugger is attached, allowing inspection of variables. Returns true if breakpoint was hit, false if skipped.</description>
+		<argument>
+			<name>label</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Optional label to identify this breakpoint in the debugger UI.</description>
+		</argument>
+		<argument>
+			<name>condition</name>
+			<type>boolean</type>
+			<required>No</required>
+			<default>true</default>
+			<description>When true, execution suspends. Use for conditional breakpoints.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
 	<!-- bitAnd -->
 	<function>
 		<name>bitAnd</name>
@@ -3454,13 +3477,21 @@ You can find a list of all available timezones in the Lucee administrator (Setti
 	<function>
 		<name>dbPoolClear</name>
 		<class>lucee.runtime.functions.system.DBPoolClear</class>
-		<description>clears all existing datasource connection</description>
+		<description>Clears idle database connections from the connection pool. By default (force=true) clears all idle connections immediately. With force=false, only evicts connections that have exceeded their idleTimeout. The controller thread runs eviction automatically every minute.</description>
 		<argument>
 			<name>datasource</name>
 			<alias>datasourceName,name,ds</alias>
 			<type>string</type>
 			<required>no</required>
 			<description>specific datasource to clear, if not set all datasources get removed.</description>
+		</argument>
+		<argument>
+			<name>force</name>
+			<type>boolean</type>
+			<required>no</required>
+			<default>true</default>
+			<introduced>6.2.5.4</introduced>
+			<description>If true (default), clears all idle connections immediately. If false, only evicts connections that have exceeded their idleTimeout.</description>
 		</argument>
 		<return>
 			<type>boolean</type>
@@ -6594,7 +6625,7 @@ The returned number of unallocated bytes is a hint, but not a guarantee, that it
 	<!-- SecretProviderGet -->
 	<function>
 		<name>SecretProviderGet</name>
-		<class>lucee.runtime.functions.security.GetSecret</class>
+		<class>lucee.runtime.functions.security.SecretProviderGet</class>
 		<introduced>7.0.0.197</introduced>
 		<description>
 Returns a reference to a secret value stored in a configured Secret Provider. The function doesn't immediately return the actual value, but rather a value object that can be handled by Lucee like a simple value.
@@ -6626,6 +6657,117 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<return>
 			<type>any</type>
+		</return>
+	</function>
+	
+	<!-- SecretProviderList -->
+	<function>
+		<name>SecretProviderList</name>
+		<class>lucee.runtime.functions.security.SecretProviderList</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Returns a struct containing all secrets from a configured Secret Provider. Each key in the struct corresponds to a secret name, and each value is a reference object (similar to SecretProviderGet) that resolves to the actual secret value when used.
+	
+	When no provider name is specified, the function aggregates secrets from all configured providers. If the same secret key exists in multiple providers, the first provider (in configuration order) takes precedence.
+		</description>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Name of the Secret Provider to list secrets from, as configured in .CFConfig.json. If not defined, the function lists secrets from all configured providers.</description>
+		</argument>
+		<argument>
+			<name>resolve</name>
+			<type>boolean</type>
+			<required>No</required>
+			<description>If set to true, all secrets are resolved immediately. If set to false (default), secrets are resolved when used.</description>
+		</argument>
+		<return>
+			<type>struct</type>
+		</return>
+	</function>
+
+
+	<!-- SecretProviderListNames -->
+	<function>
+		<name>SecretProviderListNames</name>
+		<class>lucee.runtime.functions.security.SecretProviderListNames</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Returns an array containing the names (keys) of all secrets available in a configured Secret Provider. This function only returns the secret names, not the actual secret values.
+	
+	When no provider name is specified, the function aggregates secret names from all configured providers, returning a deduplicated and sorted list.
+		</description>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Name of the Secret Provider to list secret names from, as configured in .CFConfig.json. If not defined, the function lists secret names from all configured providers.</description>
+		</argument>
+		<return>
+			<type>array</type>
+		</return>
+	</function>
+
+	<!-- SecretProviderSet -->
+	<function>
+		<name>SecretProviderSet</name>
+		<class>lucee.runtime.functions.security.SecretProviderSet</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Sets a secret value in a configured Secret Provider. The value type is automatically detected and stored appropriately as a string, boolean, or integer.
+
+	Note: Not all Secret Providers support writing. Providers that are read-only (such as environment variables) will throw an exception when attempting to set a value.
+		</description>
+		<argument>
+			<name>key</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>Key to store the secret under (e.g., "database.password", "api.key")</description>
+		</argument>
+		<argument>
+			<name>value</name>
+			<type>any</type>
+			<required>Yes</required>
+			<description>The secret value to store. Can be a string, boolean, or integer.</description>
+		</argument>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>Name of the Secret Provider to write to, as configured in .CFConfig.json.</description>
+		</argument>
+		<return>
+			<type>void</type>
+		</return>
+	</function>
+	
+	<!-- SecretProviderRemove -->
+	<function>
+		<name>SecretProviderRemove</name>
+		<class>lucee.runtime.functions.security.SecretProviderRemove</class>
+		<introduced>7.0.2.94</introduced>
+		<description>
+	Removes a secret from a configured Secret Provider.
+
+	When no provider name is specified, the function searches all configured providers and removes the secret from the first provider that contains it.
+
+	Note: Not all Secret Providers support removal. Providers that are read-only (such as environment variables) will throw an exception when attempting to remove a value.
+		</description>
+		<argument>
+			<name>key</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>Key of the secret to remove (e.g., "database.password", "api.key")</description>
+		</argument>
+		<argument>
+			<name>name</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Name of the Secret Provider to remove from, as configured in .CFConfig.json. If not defined, the function searches all configured providers and removes from the first one that contains the key.</description>
+		</argument>
+		<return>
+			<type>void</type>
 		</return>
 	</function>
 	
@@ -6756,7 +6898,7 @@ When used, the function automatically validates that the secret exists and throw
 	<function>
 		<name>GetSystemMetrics</name>
 		<class>lucee.runtime.functions.system.GetSystemInfo</class>
-		<status>hidden</status>
+		<introduced>5.2.5.7</introduced>
 		<description></description>
 		<return>
 			<type>struct</type>
@@ -8172,6 +8314,17 @@ The following things are considered to be empty:
 		<class>lucee.runtime.functions.decision.IsDebugMode</class>
 		<keywords>decision</keywords>
 		<description>Determines whether debugging output is enabled.</description>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
+	<!-- isDebuggerEnabled -->
+	<function>
+		<name>isDebuggerEnabled</name>
+		<class>lucee.runtime.functions.decision.IsDebuggerEnabled</class>
+		<keywords>decision,debug,debugger</keywords>
+		<description>Returns true if DAP debugger support is enabled (via LUCEE_DAP_SECRET env var or lucee.dap.secret system property). Use with breakpoint() BIF.</description>
 		<return>
 			<type>boolean</type>
 		</return>
@@ -10220,7 +10373,7 @@ mavenLoad([
 	<!-- CreateAISession -->
 	<function>
 		<name>CreateAISession</name>
-		<alias>LuceeCreateAISession</alias>
+		<alias>LuceeCreateAISession,aiCreateSession</alias>
 		<class>lucee.runtime.functions.ai.CreateAISession</class>
 		<description>Creates a new AI session for interaction with Large Language Models (LLMs). 
 		The session maintains conversation history and context between interactions. 
@@ -10307,7 +10460,7 @@ For exception analysis and debugging, lower temperatures (0.2-0.3) are recommend
 	<!-- InquiryAISession -->
 	<function>
 		<name>InquiryAISession</name>
-		<alias>LuceeInquiryAISession</alias>
+		<alias>LuceeInquiryAISession,aiInquirySession</alias>
 		<class>lucee.runtime.functions.ai.InquiryAISession</class>
 		<description>Sends a question/message to an AI session and returns the response. The function maintains conversation context from previous interactions within the same session.
 	
@@ -10321,12 +10474,26 @@ For exception analysis and debugging, lower temperatures (0.2-0.3) are recommend
 		</argument>
 		<argument>
 			<name>question</name>
-			<alias>message</alias>
-			<type>string</type>
+			<alias>message,parts</alias>
+			<type>any</type>
 			<required>yes</required>
-			<description>The question or message to send to the AI. This can be plain text or structured data (like JSON) depending on how the session was configured in its system message.
-	
-	The question becomes part of the conversation history and provides context for future interactions within the same session.</description>
+			<description>The question or message to send to the AI. Can be:
+- A string: Plain text question
+- An array: Multipart content with text and binary data (images, PDFs, audio, etc.)
+  Array elements can be:
+  * String: Text content or file path (if path exists, file is read automatically)
+  * Binary: File content as binary
+  * Struct: Part object with content and metadata
+  
+Examples:
+- Simple: "What is the capital of France?"
+- Multipart: ["Analyze this image", imageBytes]
+- With paths: ["Summarize this PDF", "/path/to/document.pdf"]
+- Mixed: ["Compare these", image1Bytes, "/path/to/image2.jpg"]
+- Struct: ["do you like these", {"contenttype":"audio/mpeg","path":"/path/to/music.mp3"}]
+- Struct: ["do you like these", {"contenttype":"audio/mpeg","binary":bin,"metadata":metadata}]
+
+The question becomes part of the conversation history and provides context for future interactions within the same session.</description>
 		</argument>
 		<argument>
 			<name>listener</name>
@@ -15388,6 +15555,36 @@ function(key1, key2)
 		</return>
 	</function>
 
+	<!-- IsThreadInterrupted -->
+	<function>
+		<name>IsThreadInterrupted</name>
+		<class>lucee.runtime.functions.thread.IsThreadInterrupted</class>
+		<introduced>7.0.2.1</introduced>
+		<keywords>threading</keywords>
+		<description>Checks whether a specified thread has been interrupted. The interrupted status of the thread is unaffected by this method.</description>
+		<argument>
+			<name>threadName</name>
+			<type>string</type>
+			<required>Yes</required>
+			<description>The name of the thread to check.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
+	<!-- ThreadInterrupted -->
+	<function>
+		<name>ThreadInterrupted</name>
+		<class>lucee.runtime.functions.thread.ThreadInterrupted</class>
+		<introduced>7.0.2.1</introduced>
+		<keywords>threading</keywords>
+		<description>Checks whether the current thread has been interrupted and clears the interrupted status. The interrupted status of the thread is cleared by this method, unlike IsThreadInterrupted which leaves it unchanged.</description>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+
 	<!-- toBase64 -->
 	<function>
 		<name>toBase64</name>
@@ -15735,6 +15932,7 @@ For optimal results, ensure the input string contains valid URL encoding.
 	<function>
 		<name>val</name>
 		<class>lucee.runtime.functions.string.ValNumber</class>
+		<member-name>val</member-name>
 		<description>Converts numeric characters that occur at the beginning of a
         string to a number. If conversion fails, returns zero.</description>
 		<argument>
@@ -19258,6 +19456,60 @@ The following things are considered to be empty:
 		</argument>
 		<return>
 			<type>number</type>
+		</return>
+	</function>
+	<!-- CachedWithinFlush -->
+	<function>
+		<name>CachedWithinFlush</name>
+		<class>lucee.runtime.functions.cache.CachedWithinFlush</class>
+		<description>Flushes a specific cached entry from the cache. Works with cached queries, functions, and HTTP results. 
+		This allows selective cache invalidation instead of clearing entire caches, enabling fine-grained cache control when underlying data changes.</description>
+		<argument>
+			<name>cacheObject</name>
+			<type>any</type>
+			<required>yes</required>
+			<description>The cached object to flush from cache. Must be a valid cache object such as a query result, function reference, or HTTP result struct that was cached using the `cachedwithin` attribute.</description>
+		</argument>
+		<argument>
+			<name>arguments</name>
+			<type>any</type>
+			<required>no</required>
+			<description>The arguments used when the cache entry was created. 
+			Required for cached functions to identify the specific cache entry, as each unique set of arguments creates a separate cache entry. 
+			Can be provided as an array `[arg1, arg2]` for positional arguments or as a struct `{key: value}` for named arguments. 
+			Not required for queries or HTTP results.</description>
+		</argument>
+		<return>
+			<type>boolean</type>
+		</return>
+	</function>
+	
+		
+	<!-- CachedWithinId -->
+	<function>
+		<name>CachedWithinId</name>
+		<class>lucee.runtime.functions.cache.CachedWithinId</class>
+		<description>Returns the cache identifier (cache key) for a cached object. 
+		This ID can be used with `cacheRemove()` to manually flush the cache entry. 
+		Works with cached queries, functions, and HTTP results. 
+		For cached functions, the cache ID is unique per combination of function and arguments.</description>
+		<argument>
+			<name>cacheObject</name>
+			<type>any</type>
+			<required>yes</required>
+			<description>The cached object to retrieve the cache ID for. 
+			Must be a valid cache object such as a query result, function reference, or HTTP result struct that was cached using the `cachedwithin` attribute.</description>
+		</argument>
+		<argument>
+			<name>arguments</name>
+			<type>any</type>
+			<required>no</required>
+			<description>The arguments used when the cache entry was created. 
+			Required for cached functions to identify the specific cache entry, as each unique set of arguments creates a separate cache entry. 
+			Can be provided as an array `[arg1, arg2]` for positional arguments or as a struct `{key: value}` for named arguments. Not required for queries or HTTP results.</description>
+		</argument>
+		<return>
+			<type>String</type>
 		</return>
 	</function>
 	<!-- lSDateTimeFormat -->

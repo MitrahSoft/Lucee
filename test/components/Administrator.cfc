@@ -279,6 +279,13 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 					}
 				});
 
+				it(title="checking verifyDatasource() without credentials", body=function( currentSpec ) {
+					if(structCount(getCredentials("mysql"))) {
+						// LDEV-6066: verifyDatasource should use stored credentials when not provided
+						adminWeb.verifyDatasource(name = 'TestDSN1');
+					}
+				});
+
 				it(title="testremoveDatasource()", body=function( currentSpec ) {
 					if(structCount(getCredentials("mysql"))) {
 						adminWeb.removeDatasource('testDSN1');
@@ -1486,30 +1493,20 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 			describe( title="test password function", body=function() {
 				it(title="checking updatePassword()", body=function( currentSpec ) {
 					admin.updatePassword(oldPassword="#request.ServerAdminPassword#", newPassword="server" );
-					try{
+					
+					var failed=false;
+					try {
 						// This fails, if prev statement updates the password for server admin.
 						admin.updatePassword(oldPassword="#request.ServerAdminPassword#", newPassword="server" );
-					}catch( any e ){
+					}catch( any e ) {
+						failed=true;
 						assertEquals( e.message, 'No access, password is invalid' );
 					}
+					assertEquals( failed, true );
+
 					admin.updatePassword(oldPassword="server", newPassword="#request.ServerAdminPassword#" );
 				});
 
-				it(title="checking getDefaultPassword()", body=function( currentSpec ) {
-					var defaultPassword = admin.getDefaultPassword();
-					expect(defaultPassword).toBeTypeOf("string");
-				});
-
-				it(title="checking removeDefaultPassword()", body=function( currentSpec ) {
-					admin.removeDefaultPassword();
-					var defaultPassword = admin.getDefaultPassword();
-				});
-
-				it(title="checking updateDefaultPassword()", body=function( currentSpec ) {
-					admin.updateDefaultPassword(newPassword="server");
-					var defaultPassword = admin.getDefaultPassword();
-					expect(defaultPassword).toBeTypeOf("string");
-				});
 				// TODO failing No access, password is invalid
 				it(title="checking resetPassword()", skip=true, body=function( currentSpec ) {
 					var contexts = adminWeb.getContexts();
@@ -1565,11 +1562,39 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 					//var path = "#expandpath('../')#test\components\Administrator\TestArchive";
 					var curr=getDirectoryFromPath(GetCurrentTemplatePath());
 					var path = curr&"/Administrator/TestArchive";
+					var adminLengthBefore=len(adminWeb.getCustomTagMappings());
+					var configLengthBefore=len(_customTagMappings());
 
 					adminWeb.updatecustomtag( virtual="/testcustomtag", physical=path, archive="", primary="Resource", inspect="");
+
 					var customTagMappings = adminWeb.getCustomTagMappings();
-					assertEquals(isQuery(customTagMappings) ,true);
+					var adminLengthAfter=len(adminWeb.getCustomTagMappings());
+					var configLengthAfter=len(_customTagMappings());
+					
+					assertEquals(isQuery(customTagMappings) ,true);	
+					assertEquals(adminLengthBefore+1 ,adminLengthAfter);
+					assertEquals(configLengthBefore+1 ,configLengthAfter);
 					assertEquals( listFindNoCase(valueList(customTagMappings.virtual), "/testcustomtag") NEQ 0, true );
+				});
+
+				it(title="checking updatecomponent()", body=function( currentSpec ) {
+					//var path = "#expandpath('../')#test\components\Administrator\TestArchive";
+					var curr=getDirectoryFromPath(GetCurrentTemplatePath());
+					var path = curr&"/Administrator/TestArchiveX";
+
+					var adminLengthBefore=len(adminWeb.getComponentMappings());
+					var configLengthBefore=len(_componentMappings());
+
+					adminWeb.updateComponentMapping( virtual="/testcomponent", physical=path, archive="", primary="Resource", inspect="");
+					var cfcMappings = adminWeb.getComponentMappings();
+					
+					var adminLengthAfter=len(adminWeb.getComponentMappings());
+					var configLengthAfter=len(_componentMappings());
+					
+					assertEquals(isQuery(cfcMappings) ,true);
+					assertEquals(adminLengthBefore+1 ,adminLengthAfter);
+					assertEquals(configLengthBefore+1 ,configLengthAfter);
+					assertEquals( listFindNoCase(valueList(cfcMappings.virtual), "/testcomponent") NEQ 0, true );
 				});
 
 				it(title="checking createCTArchive()", body=function( currentSpec ) {
@@ -1605,12 +1630,16 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 						errorTemplate = {};
 						errorTemplate.template404 = errorGet.templates.404;
 						errorTemplate.template500 = errorGet.templates.500;
+						//errorTemplate.template404 = errorGet.templatesUnresolved.404;
+						//errorTemplate.template500 = errorGet.templatesUnresolved.500;
+
+						
 					}
 				});
 
 				afterEach(function( currentSpec ){
 					if(currentSpec == 'checking updateError()' || currentSpec == 'checking resetError()'){
-						adminWeb.updateError(argumentCollection=errorTemplate);
+						adminWeb.updateError(argumentCollection={"template404": "/lucee/templates/error/error.cfm", "template500": "/lucee/templates/error/error.cfm"});
 					}
 				});
 
@@ -1884,4 +1913,23 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 		// getting the credentials from the environment variables
 		return server.getDatasource(service=arguments.service, onlyConfig=true);
 	}
+
+	private function _customTagMappings() {
+		var mappings=getPageContext().getConfig().getCustomTagMappings();
+		var arr=[];
+		loop array=mappings item="local.m" {
+			arrayAppend(arr,m.getStrPhysical());
+		}
+		return arr;
+	}
+
+	private function _componentMappings() {
+		var mappings=getPageContext().getConfig().getComponentMappings();
+		var arr=[];
+		loop array=mappings item="local.m" {
+			arrayAppend(arr,m.getStrPhysical());
+		}
+		return arr;
+	}
+
 }

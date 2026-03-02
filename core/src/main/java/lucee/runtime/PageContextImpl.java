@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
@@ -110,8 +109,11 @@ import lucee.runtime.debug.DebugCFMLWriter;
 import lucee.runtime.debug.DebugEntryTemplate;
 import lucee.runtime.debug.Debugger;
 import lucee.runtime.debug.DebuggerImpl;
+import lucee.runtime.debug.DebuggerListener;
+import lucee.runtime.debug.DebuggerRegistry;
 import lucee.runtime.dump.DumpUtil;
 import lucee.runtime.dump.DumpWriter;
+import lucee.runtime.engine.DebuggerExecutionLog;
 import lucee.runtime.engine.ExecutionLog;
 import lucee.runtime.err.ErrorPage;
 import lucee.runtime.err.ErrorPageImpl;
@@ -127,6 +129,7 @@ import lucee.runtime.exp.MissingIncludeException;
 import lucee.runtime.exp.NoLongerSupported;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.PageExceptionBox;
+import lucee.runtime.exp.PageExceptionImpl;
 import lucee.runtime.exp.PageRuntimeException;
 import lucee.runtime.exp.PageServletException;
 import lucee.runtime.exp.RequestTimeoutException;
@@ -147,7 +150,6 @@ import lucee.runtime.listener.SessionCookieData;
 import lucee.runtime.listener.SessionCookieDataImpl;
 import lucee.runtime.monitor.RequestMonitor;
 import lucee.runtime.monitor.RequestMonitorPro;
-import lucee.runtime.net.ftp.FTPPoolImpl;
 import lucee.runtime.net.http.HTTPServletRequestWrap;
 import lucee.runtime.net.http.ReqRspUtil;
 // import lucee.runtime.net.mail.ServerImpl; // removed with mail functionality
@@ -310,7 +312,6 @@ public final class PageContextImpl extends PageContext {
 	// Pools
 	private final ErrorPagePool errorPagePool = new ErrorPagePool();
 	private TagHandlerPool tagHandlerPool;
-	private FTPPoolImpl ftpPool;
 
 	private Component activeComponent;
 	private UDF activeUDF;
@@ -357,6 +358,7 @@ public final class PageContextImpl extends PageContext {
 	private boolean gatewayContext;
 	private boolean listenerContext;
 	private Password serverPassword;
+	private LinkedList<DebuggerFrame> debuggerFrames;
 
 	private PageException pe;
 	// private Throwable requestTimeoutException;
@@ -436,6 +438,12 @@ public final class PageContextImpl extends PageContext {
 		this.timeoutStacktrace = thread.getStackTrace();
 	}
 
+	public boolean getExecutionLogEnabled() {
+		// we use this because we do not wanna change our mind in mid request when the underlaying config
+		// setting may change.
+		return debuggerFrames != null;
+	}
+
 	@Override
 	public void initialize(Servlet servlet, ServletRequest req, ServletResponse rsp, String errorPageURL, boolean needsSession, int bufferSize, boolean autoFlush)
 			throws IOException, IllegalStateException, IllegalArgumentException {
@@ -461,6 +469,7 @@ public final class PageContextImpl extends PageContext {
 		caller = null;
 		callerTemplate = null;
 		root = null;
+		debuggerFrames = config.getExecutionLogEnabled() ? new LinkedList<DebuggerFrame>() : null;
 
 		boolean clone = tmplPC != null;
 		requestId = counter++;
@@ -570,7 +579,7 @@ public final class PageContextImpl extends PageContext {
 			_psq = null;
 		}
 		fdEnabled = !config.allowRequestTimeout();
-		if (config.getExecutionLogEnabled()) this.execLog = config.getExecutionLogFactory().getInstance(this);
+		if (debuggerFrames != null) this.execLog = config.getExecutionLogFactory().getInstance(this);
 		if (debugger != null) debugger.init(config);
 		if (clone) {
 			((UndefinedImpl) undefined).initialize(this, tmplPC.getScopeCascadingType(), tmplPC.hasDebugOptions(ConfigPro.DEBUG_IMPLICIT_ACCESS));
@@ -629,10 +638,12 @@ public final class PageContextImpl extends PageContext {
 	@Override
 	public void release() {
 		config.releaseCacheHandlers(this);
-
-		if (config.getExecutionLogEnabled() && execLog != null) {
-			execLog.release();
-			execLog = null;
+		if (debuggerFrames != null) {
+			debuggerFrames = null;
+			if (execLog != null) {
+				execLog.release();
+				execLog = null;
+			}
 		}
 
 		if (PageContextUtil.debug(this)) {
@@ -762,7 +773,6 @@ public final class PageContextImpl extends PageContext {
 		// activeComponent=null;
 		remoteUser = null;
 		exception = null;
-		if (ftpPool != null) ftpPool.clear();
 		parentTag = null;
 		currentTag = null;
 
@@ -801,8 +811,7 @@ public final class PageContextImpl extends PageContext {
 			try {
 				releaseORM();
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 		startTime = 0L;
 	}
@@ -885,8 +894,7 @@ public final class PageContextImpl extends PageContext {
 		try {
 			getOut().flush();
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 	}
 
 	@Override
@@ -1166,30 +1174,26 @@ public final class PageContextImpl extends PageContext {
 
 	@Override
 	public PageSource getCurrentPageSource() {
-		try {
-			return pathList.getLast();
+		PageSource ps = pathList.peekLast();
+		if (ps != null) return ps;
+
+		if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
+			return parent.getCurrentPageSource();
 		}
-		catch (NoSuchElementException e) {
-			if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
-				return parent.getCurrentPageSource();
-			}
-			else if (caller != null) return caller;
-			return null;
-		}
+		else if (caller != null) return caller;
+		return null;
 	}
 
 	@Override
 	public PageSource getCurrentPageSource(PageSource defaultvalue) {
-		try {
-			return pathList.getLast();
+		PageSource ps = pathList.peekLast();
+		if (ps != null) return ps;
+
+		if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
+			return parent.getCurrentPageSource(defaultvalue);
 		}
-		catch (NoSuchElementException e) {
-			if (parent != null && parent != this && parent.isInitialized()) { // second comparision should not be necesary, just in case ...
-				return parent.getCurrentPageSource(defaultvalue);
-			}
-			else if (caller != null) return caller;
-			return defaultvalue;
-		}
+		else if (caller != null) return caller;
+		return defaultvalue;
 	}
 
 	/**
@@ -2149,8 +2153,7 @@ public final class PageContextImpl extends PageContext {
 			if (value == null) removeVariable(name);
 			else setVariable(name, value);
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 	}
 
 	@Override
@@ -2344,6 +2347,8 @@ public final class PageContextImpl extends PageContext {
 
 	public void handlePageException(final PageException pe, boolean setHeader) {
 		if (!Abort.isSilentAbort(pe)) {
+			// Note: Debugger exception notification now happens in _setCatch() where frames are still intact
+
 			// if(requestTimeoutException!=null)
 			// pe=Caster.toPageException(requestTimeoutException);
 
@@ -2439,8 +2444,7 @@ public final class PageContextImpl extends PageContext {
 					}
 				}
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 	}
 
@@ -2816,8 +2820,7 @@ public final class PageContextImpl extends PageContext {
 					releaseORM();
 					removeLastPageSource(true);
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 			PageException pe;
 			if (ExceptionUtil.isThreadDeath(t) && getTimeoutStackTrace() != null) {
@@ -2830,6 +2833,11 @@ public final class PageContextImpl extends PageContext {
 				log(true);
 				if (fdEnabled) {
 					FDSignal.signal(pe, false);
+				}
+				// External debugger extension - uncaught exception
+				if (debuggerFrames != null) {
+					DebuggerListener debugListener = DebuggerRegistry.getListener();
+					debuggerNotifyException(debugListener, pe, false);
 				}
 				listener.onError(this, pe); // call Application.onError()
 			}
@@ -2960,8 +2968,7 @@ public final class PageContextImpl extends PageContext {
 			// print.o(getOut().getClass().getName());
 			getOut().clear();
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 	}
 
 	@Override
@@ -3386,8 +3393,7 @@ public final class PageContextImpl extends PageContext {
 		try {
 			sessionScope().removeEL(KeyImpl.init(name));
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 
 	}
 
@@ -3429,8 +3435,16 @@ public final class PageContextImpl extends PageContext {
 	}
 
 	public void _setCatch(PageException pe, String name, boolean caught, boolean store, boolean signal) {
-		if (signal && fdEnabled) {
-			FDSignal.signal(pe, caught);
+		if (signal && pe != null) {
+			// FusionDebug support
+			if (fdEnabled) {
+				FDSignal.signal(pe, caught);
+			}
+			// External debugger extension - frames are still intact at this point
+			if (debuggerFrames != null) {
+				DebuggerListener listener = DebuggerRegistry.getListener();
+				debuggerNotifyException(listener, pe, caught);
+			}
 		}
 		// boolean outer = exception != null && exception == pe;
 		exception = pe;
@@ -3499,10 +3513,246 @@ public final class PageContextImpl extends PageContext {
 		if (!udfs.isEmpty()) udfs.removeLast();
 	}
 
-	public FTPPoolImpl getFTPPool() {
-		if (ftpPool == null) ftpPool = new FTPPoolImpl();
-		return ftpPool;
+	// ==================== Debugger Stack Frame Support ====================
+
+	/**
+	 * Represents a captured CFML stack frame for external debugger inspection. Stores references to
+	 * scopes at the time of function entry so debuggers can inspect variables in any frame, not just
+	 * the current one.
+	 */
+	public static final class DebuggerFrame {
+		public final Local local;
+		public final Argument arguments;
+		public final Variables variables;
+		public final PageSource pageSource;
+		public final String functionName;
+		private volatile int line;
+
+		DebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName) {
+			this.local = local;
+			this.arguments = arguments;
+			this.variables = variables;
+			this.pageSource = pageSource;
+			this.functionName = functionName;
+			this.line = 0;
+		}
+
+		public int getLine() {
+			return line;
+		}
+
+		public void setLine(int line) {
+			this.line = line;
+		}
+
+		public String getFile() {
+			return pageSource != null ? pageSource.getDisplayPath() : null;
+		}
 	}
+
+	/**
+	 * Push a new debugger frame onto the stack. Called on UDF entry when DEBUGGER is enabled.
+	 */
+	public void pushDebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName, int startLine) {
+		if (debuggerFrames != null) {
+			debuggerFrames.add(new DebuggerFrame(local, arguments, variables, pageSource, functionName));
+
+			// Notify debugger listener of function entry (for function breakpoints)
+			DebuggerListener listener = DebuggerRegistry.getListener();
+			if (listener != null && listener.isClientConnected()) {
+				String file = pageSource != null ? pageSource.getDisplayPath() : null;
+				String componentName = (variables instanceof ComponentScope) ? ((ComponentScope) variables).getComponent().getName() : null;
+				if (listener.onFunctionEntry(this, functionName, componentName, file, startLine)) {
+					debuggerSuspend(file, startLine, "function breakpoint: " + functionName);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Pop the topmost debugger frame. Called on UDF exit when DEBUGGER is enabled.
+	 */
+	public void popDebuggerFrame() {
+		if (debuggerFrames != null && !debuggerFrames.isEmpty()) {
+			debuggerFrames.removeLast();
+		}
+	}
+
+	/**
+	 * Get all debugger frames for the current call stack. Returns null if debugger is not enabled.
+	 * Called via reflection by the debugger extension.
+	 */
+	public DebuggerFrame[] getDebuggerFrames() {
+		if (debuggerFrames == null) return null;
+		return debuggerFrames.toArray(new DebuggerFrame[0]);
+	}
+
+	/**
+	 * Get the topmost debugger frame, or null if none.
+	 */
+	public DebuggerFrame getTopmostDebuggerFrame() {
+		if (debuggerFrames == null || debuggerFrames.isEmpty()) return null;
+		return debuggerFrames.getLast();
+	}
+
+	/**
+	 * Notify the debugger listener of an exception and suspend if requested.
+	 */
+	private void debuggerNotifyException(DebuggerListener listener, PageException pe, boolean caught) {
+		if (listener == null || !listener.isClientConnected() || !listener.onException(this, pe, caught)) return;
+		String file = null;
+		int line = 0;
+		if (pe instanceof PageExceptionImpl) {
+			PageExceptionImpl pei = (PageExceptionImpl) pe;
+			file = pei.getFile(getConfig());
+			try {
+				String lineStr = pei.getLine(getConfig());
+				if (lineStr != null && !lineStr.isEmpty()) {
+					line = Integer.parseInt(lineStr);
+				}
+			}
+			catch (NumberFormatException ignored) {
+			}
+		}
+		String label = caught ? "Caught exception: " : "Uncaught exception: ";
+		debuggerSuspend(file, line, label + pe.getClass().getSimpleName());
+	}
+
+	// Debugger suspension support
+	private volatile boolean debuggerSuspended = false;
+	private volatile String debuggerSuspendLabel = null;
+	private final Object debuggerSuspendLock = new Object();
+	private long debuggerSuspendStartNano = 0;
+	private long debuggerTotalSuspendedNanos = 0;
+
+	/**
+	 * Suspend execution for debugger. Call from breakpoint() BIF or when hitting a breakpoint. Thread
+	 * will wait until debuggerResume() is called.
+	 * 
+	 * @param label Optional label to identify the breakpoint in debugger UI
+	 */
+	public void debuggerSuspend(String label) {
+		if (debuggerFrames == null) return;
+
+		// Get current file/line for listener callback
+		DebuggerFrame frame = getTopmostDebuggerFrame();
+		String file = null;
+		int line = 0;
+		if (frame != null) {
+			file = frame.getFile();
+			line = frame.getLine();
+		}
+		else {
+			// Top-level code (outside functions) - try ExecutionLog's thread-local first
+			file = DebuggerExecutionLog.getCurrentFile();
+			line = DebuggerExecutionLog.getCurrentLine();
+
+			// Fall back to page source for file if thread-local not set
+			if (file == null) {
+				PageSource ps = getCurrentPageSource(null);
+				if (ps != null) {
+					Resource res = ps.getPhyscalFile();
+					if (res != null) {
+						file = res.getAbsolutePath();
+					}
+				}
+			}
+		}
+
+		debuggerSuspendImpl(file, line, label);
+	}
+
+	/**
+	 * Suspend execution for debugger with explicit file and line. Used by DebuggerExecutionLog which
+	 * already knows the current location.
+	 * 
+	 * @param file Source file path
+	 * @param line Line number
+	 * @param label Optional label to identify the breakpoint in debugger UI
+	 */
+	public void debuggerSuspend(String file, int line, String label) {
+		if (debuggerFrames == null) return;
+		debuggerSuspendImpl(file, line, label);
+	}
+
+	private void debuggerSuspendImpl(String file, int line, String label) {
+		debuggerSuspendLabel = label;
+		debuggerSuspended = true;
+		debuggerSuspendStartNano = System.nanoTime();
+
+		// Notify listener before blocking
+		DebuggerListener listener = DebuggerRegistry.getListener();
+		if (listener != null) {
+			listener.onSuspend(this, file, line, label);
+		}
+
+		synchronized (debuggerSuspendLock) {
+			while (debuggerSuspended) {
+				try {
+					debuggerSuspendLock.wait(5000);
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					LogUtil.log(this, "application", "debugger", e, Log.LEVEL_WARN);
+					break;
+				}
+				// Auto-resume if debugger disconnected while suspended
+				if (debuggerSuspended && !DebuggerRegistry.isClientConnected()) {
+					LogUtil.log(Log.LEVEL_WARN, "application", "Debugger disconnected while thread suspended - auto-resuming");
+					debuggerSuspended = false;
+				}
+			}
+		}
+		debuggerTotalSuspendedNanos += System.nanoTime() - debuggerSuspendStartNano;
+		debuggerSuspendLabel = null;
+
+		// Notify listener after resuming
+		if (listener != null) {
+			listener.onResume(this);
+		}
+	}
+
+	/**
+	 * Resume execution after debugger suspension.
+	 * Called via reflection by the debugger extension.
+	 */
+	public void debuggerResume() {
+		debuggerSuspended = false;
+		synchronized (debuggerSuspendLock) {
+			debuggerSuspendLock.notify();
+		}
+	}
+
+	/**
+	 * Check if this PageContext is currently suspended.
+	 * Available for debugger extensions via reflection.
+	 */
+	public boolean isDebuggerSuspended() {
+		return debuggerSuspended;
+	}
+
+	/**
+	 * Get the label of the current suspension point, or null.
+	 * Available for debugger extensions via reflection.
+	 */
+	public String getDebuggerSuspendLabel() {
+		return debuggerSuspendLabel;
+	}
+
+	/**
+	 * Get total time spent suspended in milliseconds, including current suspend if active. Used for
+	 * adjusting request timeout calculations.
+	 */
+	public long getDebuggerTotalSuspendedMillis() {
+		long total = debuggerTotalSuspendedNanos;
+		// If currently suspended, add the time since suspend started
+		if (debuggerSuspended && debuggerSuspendStartNano > 0) {
+			total += System.nanoTime() - debuggerSuspendStartNano;
+		}
+		return total / 1_000_000; // Convert nanos to millis
+	}
+
+	// ==================== End Debugger Stack Frame Support ====================
 
 	/*
 	 * *

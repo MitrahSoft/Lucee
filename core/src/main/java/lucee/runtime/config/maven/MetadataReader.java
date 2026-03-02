@@ -20,6 +20,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
+import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
@@ -70,32 +71,36 @@ public final class MetadataReader extends DefaultHandler {
 
 	public List<Version> read() throws IOException, GeneralSecurityException, SAXException {
 		// cache read
-		List<Version> versionsFromCache = readFromCache("");
-		if (versionsFromCache != null) {
-			return versionsFromCache;
-		}
+		synchronized (SystemUtil.createToken("MetadataReader", group + ":" + artifact)) {
 
-		this.versions = new ArrayList<>();
+			List<Version> versionsFromCache = readFromCache("");
+			if (versionsFromCache != null) {
+				return versionsFromCache;
+			}
 
-		// Updated URL with correct parameter names and no classifier filter
-		URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
+			this.versions = new ArrayList<>();
 
-		// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
-		Reader r = null;
-		try {
-			r = IOUtil.getReader( HTTPDownloader.get( url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE ), (Charset) null );
-			init(new InputSource(r));
-		}
-		catch (IOException ioe) {
-			// 404 or other errors - return empty list
+			// Updated URL with correct parameter names and no classifier filter
+			URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
+
+			// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
+			Reader r = null;
+			try {
+				r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
+						(Charset) null);
+				init(new InputSource(r));
+			}
+			catch (IOException ioe) {
+				// 404 or other errors - return empty list
+				storeToCache(versions, "");
+				return versions;
+			}
+			finally {
+				IOUtil.close(r);
+			}
 			storeToCache(versions, "");
 			return versions;
 		}
-		finally {
-			IOUtil.close(r);
-		}
-		storeToCache(versions, "");
-		return versions;
 
 	}
 

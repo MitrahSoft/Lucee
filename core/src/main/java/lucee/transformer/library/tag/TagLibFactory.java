@@ -199,7 +199,14 @@ public final class TagLibFactory extends DefaultHandler {
 	public void startElement(String uri, String name, String qName, Attributes attributes) {
 
 		inside = qName;
-		this.attributes = SaxUtil.toMap(attributes);
+		// Only convert attributes to Map for elements that need them
+		if ((qName.equals("tag-class") || qName.equals("tagclass") || qName.equals("tte-class") ||
+		     qName.equals("ttt-class") || qName.equals("tdbt-class") || qName.equals("att-class") ||
+		     qName.equals("el-class")) && attributes.getLength() > 0) {
+			this.attributes = SaxUtil.toMap(attributes);
+		} else {
+			this.attributes = null;
+		}
 
 		if (qName.equals("tag")) startTag();
 		else if (qName.equals("attribute")) startAtt();
@@ -217,7 +224,7 @@ public final class TagLibFactory extends DefaultHandler {
 	@Override
 	public void endElement(String uri, String name, String qName) {
 		setContent(content.toString().trim());
-		content = new StringBuilder();
+		content.setLength(0);
 		inside = "";
 		/*
 		 * if(tag!=null && tag.getName().equalsIgnoreCase("input")) {
@@ -240,7 +247,7 @@ public final class TagLibFactory extends DefaultHandler {
 	 */
 	@Override
 	public void characters(char ch[], int start, int length) {
-		content.append(new String(ch, start, length));
+		content.append(ch, start, length);
 	}
 
 	private void setContent(String value) {
@@ -349,12 +356,13 @@ public final class TagLibFactory extends DefaultHandler {
 				// Att Type
 				else if (inside.equals("attribute-type")) {
 					int type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
-					if (value.toLowerCase().equals("fix")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
-					else if (value.toLowerCase().equals("fixed")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
-					else if (value.toLowerCase().equals("dynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;
-					else if (value.toLowerCase().equals("noname")) type = TagLibTag.ATTRIBUTE_TYPE_NONAME;
-					else if (value.toLowerCase().equals("mixed")) type = TagLibTag.ATTRIBUTE_TYPE_MIXED;
-					else if (value.toLowerCase().equals("fulldynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;// deprecated
+					String valueLower = value.toLowerCase();
+					if (valueLower.equals("fix")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
+					else if (valueLower.equals("fixed")) type = TagLibTag.ATTRIBUTE_TYPE_FIXED;
+					else if (valueLower.equals("dynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;
+					else if (valueLower.equals("noname")) type = TagLibTag.ATTRIBUTE_TYPE_NONAME;
+					else if (valueLower.equals("mixed")) type = TagLibTag.ATTRIBUTE_TYPE_MIXED;
+					else if (valueLower.equals("fulldynamic")) type = TagLibTag.ATTRIBUTE_TYPE_DYNAMIC;// deprecated
 					tag.setAttributeType(type);
 				}
 			}

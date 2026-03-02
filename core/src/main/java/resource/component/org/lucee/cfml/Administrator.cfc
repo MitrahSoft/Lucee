@@ -447,17 +447,26 @@ component {
 	/**
 	* @hint verifies whether it is datasource or not
 	* @name name of the datasource to be verified
-	* @dbusername username of the database
-	* @dbpassword password of the database
+	* @dbusername username of the database (optional, uses stored credentials if not provided)
+	* @dbpassword password of the database (optional, uses stored credentials if not provided)
 	*/
-	public void function verifyDatasource( required string name, required string dbusername, required string dbpassword ){
-		admin
-			action="verifyDatasource"
-			type="#variables.type#"
-			password="#variables.password#"
-			name="#arguments.name#"
-			dbusername="#arguments.dbusername#"
-			dbpassword="#arguments.dbpassword#";
+	public void function verifyDatasource( required string name, string dbusername, string dbpassword ){
+		if ( !isNull( arguments.dbusername ) && !isNull( arguments.dbpassword ) ) {
+			admin
+				action="verifyDatasource"
+				type="#variables.type#"
+				password="#variables.password#"
+				name="#arguments.name#"
+				dbusername="#arguments.dbusername#"
+				dbpassword="#arguments.dbpassword#";
+		}
+		else {
+			admin
+				action="verifyDatasource"
+				type="#variables.type#"
+				password="#variables.password#"
+				name="#arguments.name#";
+		}
 	}
 
 	/**
@@ -2289,40 +2298,6 @@ component {
 			type="#variables.type#"
 			password="#variables.password#"
 			contextPath="#arguments.contextPath#";
-	}
-
-	/**
-	* @hint to get default password.
-	*/
-	public string function getDefaultPassword() {
-		admin
-			action="getDefaultPassword"
-			type="#variables.type#"
-			password="#variables.password#"
-			returnVariable="defaultPassword";
-		return defaultPassword;
-	}
-
-	/**
-	* @hint update the default password.
-	* @newPassword the new password to set.
-	*/
-	public void function updateDefaultPassword( required string newPassword) {
-		admin
-			action="updateDefaultPassword"
-			type="#variables.type#"
-			password="#variables.password#"
-			newPassword="#arguments.newPassword#";
-	}
-
-	/**
-	* @hint remove the default password.
-	*/
-	public void function removeDefaultPassword() {
-		admin
-			action="removeDefaultPassword"
-			type="#variables.type#"
-			password="#variables.password#";
 	}
 
 	/**

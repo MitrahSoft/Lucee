@@ -39,7 +39,7 @@ import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.type.ftp.IFTPConnectionData;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.SerializableObject;
@@ -231,8 +231,8 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 
 	private TimeZone timeZone;
 	private boolean initTimeZone;
-	private CharSet webCharset;
-	private CharSet resourceCharset;
+	private CharsetX webCharset;
+	private CharsetX resourceCharset;
 	private boolean initCGIScopeReadonly;
 	private boolean initPreciseMath;
 	private boolean initReturnFormat;
@@ -974,8 +974,7 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 			else LogUtil.log(ThreadLocalPageContext.getConfig(config), Log.LEVEL_ERROR, ModernApplicationContext.class.getName(),
 					"method [init(Config,String[],Struct[]):void] for class [" + cd.toString() + "] is not static");
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		initCacheConnections.put(id, cc);
 		return cc;
 
@@ -1359,40 +1358,40 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 
 	@Override
 	public Charset getWebCharset() {
-		return CharsetUtil.toCharset(getWebCharSet());
+		return CharsetUtil.toCharset(getWebCharsetX());
 	}
 
-	public CharSet getWebCharSet() {
+	public CharsetX getWebCharsetX() {
 		if (webCharset == null) {
 			Object o = get(component, KeyConstants._charset, null);
 			if (o != null) {
 				Struct sct = Caster.toStruct(o, null);
 				if (sct != null) {
-					CharSet web = CharsetUtil.toCharSet(Caster.toString(sct.get(KeyConstants._web, null), null), null);
+					CharsetX web = CharsetUtil.toCharsetX(Caster.toString(sct.get(KeyConstants._web, null), null), null);
 					if (web != null) webCharset = web;
 				}
 			}
-			if (webCharset == null) webCharset = ((ConfigPro) config).getWebCharSet();
+			if (webCharset == null) webCharset = ((ConfigPro) config).getWebCharsetX();
 		}
 		return webCharset;
 	}
 
 	@Override
 	public Charset getResourceCharset() {
-		return CharsetUtil.toCharset(getResourceCharSet());
+		return CharsetUtil.toCharset(getResourceCharsetX());
 	}
 
-	public CharSet getResourceCharSet() {
+	public CharsetX getResourceCharsetX() {
 		if (resourceCharset == null) {
 			Object o = get(component, KeyConstants._charset, null);
 			if (o != null) {
 				Struct sct = Caster.toStruct(o, null);
 				if (sct != null) {
-					CharSet web = CharsetUtil.toCharSet(Caster.toString(sct.get(KeyConstants._resource, null), null), null);
+					CharsetX web = CharsetUtil.toCharsetX(Caster.toString(sct.get(KeyConstants._resource, null), null), null);
 					if (web != null) resourceCharset = web;
 				}
 			}
-			if (resourceCharset == null) resourceCharset = ((ConfigPro) config).getResourceCharSet();
+			if (resourceCharset == null) resourceCharset = ((ConfigPro) config).getResourceCharsetX();
 		}
 		return resourceCharset;
 	}
@@ -1658,12 +1657,12 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 
 	@Override
 	public void setWebCharset(Charset webCharset) {
-		this.webCharset = CharsetUtil.toCharSet(webCharset);
+		this.webCharset = CharsetUtil.toCharsetX(webCharset);
 	}
 
 	@Override
 	public void setResourceCharset(Charset resourceCharset) {
-		this.resourceCharset = CharsetUtil.toCharSet(resourceCharset);
+		this.resourceCharset = CharsetUtil.toCharsetX(resourceCharset);
 	}
 
 	@Override
@@ -1781,22 +1780,32 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 	@Override
 	public JavaSettings getJavaSettings() {
 		if (!initJavaSettings) {
-			// PATCH to avoid cycle
 			if (initJavaSettingsBefore) {
-				return null;
-			}
-			initJavaSettingsBefore = true;
-			Object o = javaSettings != null ? null : get(component, KeyConstants._javasettings, null);
-			if (javaSettings != null || (o != null && Decision.isStruct(o))) {
-				if (javaSettings == null) javaSettings = JavaSettingsImpl.getInstance(config, Caster.toStruct(o, null), null);
+				return null; // Cycle detected
 			}
 
-			initJavaSettings = true;
-			initJavaSettingsBefore = false;
+			initJavaSettingsBefore = true;
+			try {
+				if (javaSettings == null) {
+
+					Object o = get(component, KeyConstants._javasettings, null);
+					if (o != null && Decision.isStruct(o)) {
+						Struct raw = Caster.toStruct(o, null);
+						javaSettings = JavaSettingsImpl.getInstance(config, raw, null);
+
+						if (javaSettings != null && JavaSettingsImpl.doMerge(raw, true)) {
+							javaSettings = JavaSettingsImpl.merge(config, javaSettings, ((ConfigPro) config).getJavaSettings());
+						}
+					}
+				}
+				initJavaSettings = true;
+			}
+			finally {
+				initJavaSettingsBefore = false;
+			}
 		}
 
-		if (javaSettings == null) return ((ConfigPro) config).getJavaSettings();
-		return javaSettings;
+		return javaSettings != null ? javaSettings : ((ConfigPro) config).getJavaSettings();
 	}
 
 	public static ClassLoader getDefaultClassLoader(ConfigWeb config) throws IOException {

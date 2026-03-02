@@ -322,11 +322,12 @@ public final class MappingImpl implements Mapping {
 
 	/**
 	 * remove all Page from Pool using this classloader
-	 * 
+	 *
 	 * @param cl
+	 * @return count of pages cleared
 	 */
-	public void clearPages(ClassLoader cl) {
-		pageSourcePool.clearPages(cl);
+	public int clearPages(ClassLoader cl) {
+		return pageSourcePool.clearPages(cl);
 	}
 
 	public void clearUnused() {
@@ -735,5 +736,4 @@ public final class MappingImpl implements Mapping {
 			throw Caster.toPageRuntimeException(e);
 		}
 	}
-
 }

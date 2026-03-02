@@ -6,7 +6,9 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -33,9 +35,9 @@ import lucee.commons.io.log.log4j2.LogAdapter;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourceProvider;
 import lucee.commons.io.res.ResourcesImpl;
-import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
+import lucee.commons.io.res.ResourcesImpl.InnerResourceProviderFactory;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.PhysicalClassLoader;
 import lucee.commons.lang.types.RefBoolean;
@@ -59,6 +61,7 @@ import lucee.runtime.cfx.CFXTagPool;
 import lucee.runtime.compiler.CFMLCompilerImpl;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.config.gateway.GatewayMap;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.customtag.InitFile;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.db.DataSource;
@@ -107,6 +110,7 @@ import lucee.runtime.security.SecurityManagerImpl;
 import lucee.runtime.spooler.SpoolerEngine;
 import lucee.runtime.tag.TagHandlerPool;
 import lucee.runtime.type.Collection.Key;
+import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.UDF;
 import lucee.runtime.type.dt.TimeSpan;
@@ -115,7 +119,7 @@ import lucee.runtime.writer.CFMLWriter;
 import lucee.transformer.library.function.FunctionLib;
 import lucee.transformer.library.tag.TagLib;
 
-public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
+public final class ConfigWebImpl implements ConfigWebPro {
 
 	private ConfigServerImpl cs;
 	private ConfigWebHelper helper;
@@ -125,6 +129,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	private String _id;
 	private Resource rootDir;
 
+	private Map<Key, String> placeHolderdata;
+	private boolean insidePlaceHolder;
 	private Mapping[] mappings;
 	private ComponentPathCache componentPathCache = new ComponentPathCache();
 	private Map<String, Log> logs = new ConcurrentHashMap<>();
@@ -156,6 +162,43 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 
 	public ConfigServerImpl getConfigServerImpl() {
 		return cs;
+	}
+
+	public Map<Key, String> getPlaceHolderData() {
+		if (placeHolderdata == null) {
+			synchronized (SystemUtil.createToken("configweb", "placeHolderdata")) {
+				if (placeHolderdata == null) {
+					if (insidePlaceHolder) return new HashMap<>();
+					insidePlaceHolder = true;
+					try {
+						Map<Key, String> data = new HashMap<>(cs.getPlaceHolderData());
+
+						data.put(KeyImpl.init("web-root"), getRootDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("web-root-dir"), getRootDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("web-root-directory"), getRootDirectory().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-server"), this.getConfigServerDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-server-dir"), this.getConfigServerDir().getAbsolutePath());
+						data.put(KeyImpl.init("lucee-server-directory"), this.getConfigServerDir().getAbsolutePath());
+
+						placeHolderdata = Collections.unmodifiableMap(data);
+					}
+					finally {
+						insidePlaceHolder = false;
+					}
+				}
+			}
+		}
+		return placeHolderdata;
+	}
+
+	@Override
+	public String replacePlaceHolder(String str) {
+		return ConfigUtil.replacePlaceHolder(this, str, getPlaceHolderData());
+	}
+
+	@Override
+	public String replacePlaceHolder(String str, Map<Key, String> customPlaceHolderData) {
+		return ConfigUtil.replacePlaceHolder(this, str, customPlaceHolderData != null ? ConfigUtil.merge(getPlaceHolderData(), customPlaceHolderData) : getPlaceHolderData());
 	}
 
 	@Override
@@ -403,13 +446,13 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 
 	@Override
 	public PageSource[] getPageSources(PageContext pc, Mapping[] mappings, String realPath, boolean onlyTopLevel, boolean useSpecialMappings, boolean useDefaultMapping) {
-		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, false, onlyFirstMatch);
+		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, false, cs.getOnlyFirstMatch());
 	}
 
 	@Override
 	public PageSource[] getPageSources(PageContext pc, Mapping[] mappings, String realPath, boolean onlyTopLevel, boolean useSpecialMappings, boolean useDefaultMapping,
 			boolean useComponentMappings) {
-		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, useComponentMappings, onlyFirstMatch);
+		return ConfigUtil.getPageSources(pc, this, mappings, realPath, onlyTopLevel, useSpecialMappings, useDefaultMapping, useComponentMappings, cs.getOnlyFirstMatch());
 	}
 
 	@Override
@@ -585,8 +628,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public CharSet getWebCharSet() {
-		return cs.getWebCharSet();
+	public CharsetX getWebCharsetX() {
+		return cs.getWebCharsetX();
 	}
 
 	@Override
@@ -595,8 +638,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public CharSet getResourceCharSet() {
-		return cs.getResourceCharSet();
+	public CharsetX getResourceCharsetX() {
+		return cs.getResourceCharsetX();
 	}
 
 	@Override
@@ -634,8 +677,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 		return cs.getMailDefaultCharset();
 	}
 
-	public CharSet getMailDefaultCharSet() {
-		return cs.getMailDefaultCharSet();
+	public CharsetX getMailDefaultCharsetX() {
+		return cs.getMailDefaultCharsetX();
 	}
 
 	@Override
@@ -654,7 +697,7 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public ResourceProviderFactory[] getResourceProviderFactories() {
+	public InnerResourceProviderFactory[] getResourceProviderFactories() {
 		return cs.getResourceProviderFactories();
 	}
 
@@ -1345,11 +1388,6 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 	}
 
 	@Override
-	public RHExtension[] getServerRHExtensions() {
-		return cs.getRHExtensions();
-	}
-
-	@Override
 	public Cluster createClusterScope() throws PageException {
 		return cs.createClusterScope();
 	}
@@ -1666,7 +1704,7 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 
 	@Override
 	public Password updatePasswordIfNecessary(boolean server, String passwordRaw) {
-		return PasswordImpl.updatePasswordIfNecessary(cs, cs.password, passwordRaw);
+		return PasswordImpl.updatePasswordIfNecessary(cs, cs.hspw, passwordRaw);
 	}
 
 	@Override
@@ -1941,8 +1979,8 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 		cs.createTag(arg0, arg1, arg2);
 	}
 
-	public CharSet getTemplateCharSet() {
-		return cs.getTemplateCharSet();
+	public CharsetX getTemplateCharsetX() {
+		return cs.getTemplateCharsetX();
 	}
 
 	public void flushCTPathCache() {
@@ -2093,5 +2131,25 @@ public final class ConfigWebImpl extends ConfigBase implements ConfigWebPro {
 			_id = tmp;
 		}
 		return _id;
+	}
+
+	@Override
+	public Repository[] getMavenRepository() {
+		return cs.getMavenRepository();
+	}
+
+	@Override
+	public Repository[] getMavenSnapshotRepository() {
+		return cs.getMavenSnapshotRepository();
+	}
+
+	@Override
+	public String getDapSecret() {
+		return cs.getDapSecret();
+	}
+
+	@Override
+	public boolean getDapBreakpoint() {
+		return cs.getDapBreakpoint();
 	}
 }

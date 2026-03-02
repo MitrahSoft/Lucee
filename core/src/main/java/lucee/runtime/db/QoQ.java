@@ -106,6 +106,8 @@ public final class QoQ {
 
 	/**
 	 * execute a SQL Statement against CFML Scopes
+	 *
+	 * @return QueryImpl result, or null if native QoQ cannot handle this query
 	 */
 	public QueryImpl execute(PageContext pc, SQL sql, Selects selects, int maxrows) throws PageException {
 		Select[] arrSelects = selects.getSelects();
@@ -118,7 +120,8 @@ public final class QoQ {
 			arrSelects[i].getFroms();
 			Column[] froms = arrSelects[i].getFroms();
 
-			if (froms.length > 1) throw new DatabaseException("QoQ can only select from a single tables at a time.", null, sql, null);
+			// Native QoQ doesn't support joins (multiple tables) - return null to trigger HSQLDB fallback
+			if (froms.length > 1) return null;
 
 			// Lookup actual Query variable on page
 			QueryImpl source = getSingleTable(pc, froms[0]);

@@ -52,7 +52,7 @@ public final class LuceeVersionsListMvn extends BIF {
 			else throw new FunctionException(pc, functionName, 1, "type",
 					"type name [" + type + "] is invalid, valid types names are [all,snapshot,relase,latest,latest:release,latest:snapshot]");
 		}
-		MavenUpdateProvider mup = new MavenUpdateProvider();
+		MavenUpdateProvider mup = new MavenUpdateProvider(pc.getConfig());
 		try {
 			String key;
 			// just the latest of every cycle

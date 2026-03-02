@@ -12,8 +12,8 @@ import org.osgi.framework.Version;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogEngine;
 import lucee.commons.io.res.Resource;
-import lucee.commons.io.res.ResourcesImpl.ResourceProviderFactory;
-import lucee.commons.lang.CharSet;
+import lucee.commons.io.res.ResourcesImpl.InnerResourceProviderFactory;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassException;
 import lucee.commons.lang.PhysicalClassLoader;
 import lucee.commons.lang.types.RefBoolean;
@@ -26,6 +26,7 @@ import lucee.runtime.ai.AIEngine;
 import lucee.runtime.ai.AIEnginePool;
 import lucee.runtime.cache.tag.CacheHandler;
 import lucee.runtime.component.ImportDefintion;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.customtag.InitFile;
 import lucee.runtime.db.ClassDefinition;
 import lucee.runtime.db.DataSource;
@@ -55,7 +56,6 @@ public interface ConfigPro extends Config {
 
 	public static final int CLIENT_BOOLEAN_TRUE = 0;
 	public static final int CLIENT_BOOLEAN_FALSE = 1;
-	public static final int SERVER_BOOLEAN_TRUE = 2;
 	public static final int SERVER_BOOLEAN_FALSE = 3;
 
 	public static final int DEBUG_DATABASE = 1;
@@ -73,7 +73,7 @@ public interface ConfigPro extends Config {
 	public static final int MODE_CUSTOM = 1;
 	public static final int MODE_STRICT = 2;
 
-	public static final int CFML_WRITER_REFULAR = 1;
+	public static final int CFML_WRITER_REGULAR = 1;
 	public static final int CFML_WRITER_WS = 2;
 	public static final int CFML_WRITER_WS_PREF = 3;
 
@@ -102,6 +102,10 @@ public interface ConfigPro extends Config {
 	public static final boolean DEFAULT_ALLOW_COMPRESSION = false;
 	public static final boolean DEFAULT_BUFFER_TAG_BODY_OUTPUT = false;
 	public static final boolean DEFAULT_DEVELOP_MODE = false;
+
+	public static final int MAVEN_DOWNLOAD_POLICY_ERROR = 2;
+	public static final int MAVEN_DOWNLOAD_POLICY_WARN = 1;
+	public static final int MAVEN_DOWNLOAD_POLICY_IGNORE = 0;
 
 	public Iterator<Entry<String, Class<CacheHandler>>> getCacheHandlers();
 
@@ -153,8 +157,6 @@ public interface ConfigPro extends Config {
 	public UDF getFromFunctionCache(String key);
 
 	public void putToFunctionCache(String key, UDF udf);
-
-	public RHExtension[] getServerRHExtensions();
 
 	// zhis only exists for the hibernate extension that uses this
 	public MockPool getDatasourceConnectionPool();
@@ -248,7 +250,7 @@ public interface ConfigPro extends Config {
 
 	public void clearApplicationCache();
 
-	public Map<String, ConfigBase.Startup> getStartups();
+	public Map<String, Startup> getStartups();
 
 	public AdminSync getAdminSync() throws ClassException;
 
@@ -294,9 +296,9 @@ public interface ConfigPro extends Config {
 
 	public boolean isUserset();// used in mail extension
 
-	public CharSet getResourceCharSet();
+	public CharsetX getResourceCharsetX();
 
-	public CharSet getWebCharSet();
+	public CharsetX getWebCharsetX();
 
 	public Map<String, ClassDefinition> getCacheDefinitions();
 
@@ -306,7 +308,7 @@ public interface ConfigPro extends Config {
 
 	public Map<Key, Map<Key, Object>> getTagDefaultAttributeValues();
 
-	public ResourceProviderFactory[] getResourceProviderFactories();
+	public InnerResourceProviderFactory[] getResourceProviderFactories();
 
 	public boolean hasResourceProvider(String scheme);
 
@@ -419,4 +421,16 @@ public interface ConfigPro extends Config {
 	public boolean isLoggingLoaded();
 
 	public String getId();
+
+	public Repository[] getMavenRepository();
+
+	public Repository[] getMavenSnapshotRepository();
+
+	public String getDapSecret();
+
+	public boolean getDapBreakpoint();
+
+	public String replacePlaceHolder(String str);
+
+	public String replacePlaceHolder(String str, Map<Key, String> customPlaceHolderData);
 }

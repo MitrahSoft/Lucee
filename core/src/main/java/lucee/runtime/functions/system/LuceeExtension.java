@@ -9,6 +9,7 @@ import lucee.commons.io.res.Resource;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.maven.ExtensionProvider;
+import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.FunctionException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.BIF;
@@ -27,7 +28,7 @@ public final class LuceeExtension extends BIF {
 	@Override
 	public Object invoke(PageContext pc, Object[] args) throws PageException {
 
-		ExtensionProvider ep = new ExtensionProvider();
+		ExtensionProvider ep = new ExtensionProvider(ThreadLocalPageContext.getConfig(pc));
 		try {
 			// list extensions
 			if (args.length == 0) {
@@ -64,7 +65,7 @@ public final class LuceeExtension extends BIF {
 				return sct;
 			}
 			else {
-				throw new FunctionException(pc, "LuceeVersionsListS3", 0, 1, args.length);
+				throw new FunctionException(pc, "LuceeExtension", 0, 1, args.length);
 			}
 		}
 		catch (Exception e) {

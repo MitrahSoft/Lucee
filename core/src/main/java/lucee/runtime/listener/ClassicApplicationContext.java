@@ -33,7 +33,7 @@ import lucee.commons.io.log.Log;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.type.ftp.FTPConnectionData;
 import lucee.commons.io.res.type.ftp.IFTPConnectionData;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.Mapping;
@@ -106,8 +106,8 @@ public final class ClassicApplicationContext extends ApplicationContextSupport {
 	private Integer localMode;
 	private Locale locale;
 	private TimeZone timeZone;
-	private CharSet webCharset;
-	private CharSet resourceCharset;
+	private CharsetX webCharset;
+	private CharsetX resourceCharset;
 	private Short sessionType;
 	private Boolean sessionCluster;
 	private Boolean clientCluster;
@@ -623,21 +623,21 @@ public final class ClassicApplicationContext extends ApplicationContextSupport {
 
 	@Override
 	public Charset getWebCharset() {
-		return CharsetUtil.toCharset(getWebCharSet());
+		return CharsetUtil.toCharset(getWebCharsetX());
 	}
 
-	public CharSet getWebCharSet() {
-		if (webCharset == null) return ((ConfigPro) config).getWebCharSet();
+	public CharsetX getWebCharsetX() {
+		if (webCharset == null) return ((ConfigPro) config).getWebCharsetX();
 		return webCharset;
 	}
 
 	@Override
 	public Charset getResourceCharset() {
-		return CharsetUtil.toCharset(getResourceCharSet());
+		return CharsetUtil.toCharset(getResourceCharsetX());
 	}
 
-	public CharSet getResourceCharSet() {
-		if (resourceCharset == null) return ((ConfigPro) config).getResourceCharSet();
+	public CharsetX getResourceCharsetX() {
+		if (resourceCharset == null) return ((ConfigPro) config).getResourceCharsetX();
 		return resourceCharset;
 	}
 
@@ -666,12 +666,12 @@ public final class ClassicApplicationContext extends ApplicationContextSupport {
 
 	@Override
 	public void setWebCharset(Charset webCharset) {
-		this.webCharset = CharsetUtil.toCharSet(webCharset);
+		this.webCharset = CharsetUtil.toCharsetX(webCharset);
 	}
 
 	@Override
 	public void setResourceCharset(Charset resourceCharset) {
-		this.resourceCharset = CharsetUtil.toCharSet(resourceCharset);
+		this.resourceCharset = CharsetUtil.toCharsetX(resourceCharset);
 	}
 
 	/**

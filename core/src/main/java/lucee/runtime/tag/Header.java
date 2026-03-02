@@ -20,7 +20,7 @@ package lucee.runtime.tag;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lucee.commons.io.CharsetUtil;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.runtime.PageContextImpl;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.exp.TemplateException;
@@ -52,7 +52,7 @@ public final class Header extends TagImpl {
 
 	private boolean hasStatucCode;
 
-	private CharSet charset;
+	private CharsetX charset;
 
 	@Override
 	public void release() {
@@ -108,7 +108,7 @@ public final class Header extends TagImpl {
 	 * @param charset The charset to set.
 	 */
 	public void setCharset(String charset) {
-		this.charset = CharsetUtil.toCharSet(charset);
+		this.charset = CharsetUtil.toCharsetX(charset);
 	}
 
 	@Override
@@ -120,7 +120,7 @@ public final class Header extends TagImpl {
 		// set name value
 		if (name != null) {
 			if (charset == null && name.equalsIgnoreCase("content-disposition")) {
-				charset = CharsetUtil.toCharSet(((PageContextImpl) pageContext).getWebCharset());
+				charset = CharsetUtil.toCharsetX(((PageContextImpl) pageContext).getWebCharset());
 			}
 			if (charset != null) {
 				name = new String(name.getBytes(CharsetUtil.toCharset(charset)), CharsetUtil.ISO88591);

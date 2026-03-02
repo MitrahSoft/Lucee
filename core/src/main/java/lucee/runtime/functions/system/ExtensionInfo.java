@@ -9,6 +9,8 @@ import lucee.runtime.ext.function.BIF;
 import lucee.runtime.ext.function.Function;
 import lucee.runtime.extension.ExtensionMetadata;
 import lucee.runtime.extension.RHExtension;
+import lucee.runtime.mvn.MavenUtil;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.op.Caster;
 import lucee.runtime.osgi.BundleInfo;
 import lucee.runtime.type.Collection.Key;
@@ -41,14 +43,18 @@ public final class ExtensionInfo extends BIF implements Function {
 
 	public static Struct call(PageContext pc, String id) throws PageException {
 		if (StringUtil.isEmpty(id, true)) return new StructImpl();
-		Struct info = getInfo(id.trim(), ((ConfigWebPro) pc.getConfig()).getRHExtensions());
-		return info.size() > 0 ? info : getInfo(id.trim(), ((ConfigWebPro) pc.getConfig()).getServerRHExtensions());
+		return getInfo(id.trim(), ((ConfigWebPro) pc.getConfig()).getRHExtensions());
 	}
 
 	private static Struct getInfo(String id, RHExtension[] extensions) throws PageException {
 		Struct sct = new StructImpl();
+
+		// is id a gav?
+		GAVSO gav = MavenUtil.toGAVSO(id, null);
+
 		for (RHExtension ext: extensions) {
-			if (ext.getId().equalsIgnoreCase(id) || ext.getMetadata().getSymbolicName().equalsIgnoreCase(id)) {
+			if ((gav != null && ext.hasGAV() && new GAVSO(ext.getGroupId(), ext.getArtifactId(), ext.getVersion()).equals(gav))
+					|| (ext.getId().equalsIgnoreCase(id) || ext.getMetadata().getSymbolicName().equalsIgnoreCase(id))) {
 
 				ExtensionMetadata md = ext.getMetadata();
 				String ver = ext.getVersion().toString();

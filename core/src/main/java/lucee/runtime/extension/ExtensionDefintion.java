@@ -10,10 +10,12 @@ import org.osgi.framework.Version;
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.config.Config;
-import lucee.runtime.exp.ApplicationException;
+import lucee.runtime.config.maven.ExtensionProvider;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.mvn.MavenUtil.GAVSO;
+import lucee.runtime.op.Decision;
 import lucee.runtime.osgi.OSGiUtil;
+import lucee.runtime.type.util.ListUtil;
 
 public final class ExtensionDefintion {
 
@@ -24,8 +26,7 @@ public final class ExtensionDefintion {
 	private RHExtension rhe;
 	private GAVSO gavso;
 
-	public ExtensionDefintion() {
-	}
+	public ExtensionDefintion() {}
 
 	public ExtensionDefintion(String id) {
 		this.id = id;
@@ -34,6 +35,10 @@ public final class ExtensionDefintion {
 	public ExtensionDefintion(String id, String version) {
 		this.id = id;
 		setParam("version", version);
+	}
+
+	public ExtensionDefintion(RHExtension rhe) {
+		this.rhe = rhe;
 	}
 
 	public ExtensionDefintion(RHExtension rhe, String id, String version) {
@@ -50,11 +55,19 @@ public final class ExtensionDefintion {
 		return id;
 	}
 
-	public GAVSO getGAVSO() {
-		return gavso;
+	public GAVSO getGAVSO(Config config) {
+		if (gavso != null) return gavso;
+		ExtensionProvider ep = new ExtensionProvider(config);
+		try {
+			gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+			return gavso;
+		}
+		catch (PageException e) {}
+
+		return null;
 	}
 
-	public void setGAVSO(GAVSO gavso) {
+	public ExtensionDefintion setGAVSO(GAVSO gavso) {
 		this.gavso = gavso;
 		if (gavso != null) {
 			if (!StringUtil.isEmpty(gavso.g, true)) setParam("groupId", gavso.g);
@@ -63,15 +76,36 @@ public final class ExtensionDefintion {
 			if (!StringUtil.isEmpty(gavso.s, true)) setParam("scope", gavso.s);
 			if (!StringUtil.isEmpty(gavso.o, true)) setParam("optional", gavso.o);
 		}
+		return this;
 	}
 
 	public String getArtifactId() {
 		if (gavso != null) return gavso.a;
+
+		if (!StringUtil.isEmpty(getId())) {
+			ExtensionProvider ep = new ExtensionProvider(config);
+			try {
+				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+				return gavso.g;
+			}
+			catch (PageException e) {}
+		}
+
 		return null;
 	}
 
 	public String getGroupId() {
 		if (gavso != null) return gavso.g;
+
+		if (getId() != null) {
+			ExtensionProvider ep = new ExtensionProvider(config);
+			try {
+				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+				return gavso.g;
+			}
+			catch (PageException e) {}
+		}
+
 		return null;
 	}
 
@@ -90,8 +124,10 @@ public final class ExtensionDefintion {
 	}
 
 	public String getVersion() {
+
 		String version = params.get("version");
 		if (StringUtil.isEmpty(version)) version = params.get("extension-version");
+		if (gavso != null && !StringUtil.isEmpty(gavso.v)) return gavso.v;
 		if (StringUtil.isEmpty(version)) return null;
 		return version;
 	}
@@ -105,12 +141,13 @@ public final class ExtensionDefintion {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(getId());
+		if (getId() != null) sb.append(getId());
 		Iterator<Entry<String, String>> it = params.entrySet().iterator();
 		Entry<String, String> e;
 		while (it.hasNext()) {
 			e = it.next();
-			sb.append(';').append(e.getKey()).append('=').append(e.getValue());
+			if (sb.length() > 0) sb.append(';');
+			sb.append(e.getKey()).append('=').append(e.getValue());
 		}
 		return sb.toString();
 	}
@@ -119,15 +156,18 @@ public final class ExtensionDefintion {
 	public boolean equals(Object other) {
 		if (other instanceof ExtensionDefintion) {
 			ExtensionDefintion ed = (ExtensionDefintion) other;
+
+			if (ed.getGAVSO(config) != null && getGroupId() != null && getArtifactId() != null) {
+				return ed.getGroupId().equalsIgnoreCase(getGroupId()) && ed.getArtifactId().equalsIgnoreCase(getArtifactId());
+			}
+
 			if (!ed.getId().equalsIgnoreCase(getId())) return false;
 			if (ed.getVersion() == null || getVersion() == null) return true;
 			return ed.getVersion().equalsIgnoreCase(getVersion());
+
 		}
 		else if (other instanceof RHExtension) {
-			RHExtension ed = (RHExtension) other;
-			if (!ed.getId().equalsIgnoreCase(getId())) return false;
-			if (ed.getVersion() == null || getVersion() == null) return true;
-			return ed.getVersion().equalsIgnoreCase(getVersion());
+			throw new RuntimeException("invalid call for equals");
 		}
 		return false;
 	}
@@ -138,7 +178,7 @@ public final class ExtensionDefintion {
 	}
 
 	public ExtensionDefintion setSource(Config config, Resource source) {
-		this.config = config;
+		if (config != null) this.config = config;
 		this.source = source;
 		return this;
 	}
@@ -149,38 +189,103 @@ public final class ExtensionDefintion {
 		if (source == null) {
 			return defaultValue;
 		}
-		rhe = RHExtension.getInstance(config, source, defaultValue);
+		rhe = RHExtension.getInstance(config, source, defaultValue, config.getLog("deploy"));
 		return rhe;
 	}
 
-	public RHExtension toRHExtension() throws PageException {
+	public RHExtension toRHExtension(Config config) throws PageException {
 		if (rhe != null) return rhe;
 
-		if (source == null) {
-			// MUST try to load the Extension
-			throw new ApplicationException("ExtensionDefinition does not contain the necessary data to create the requested object.");
-		}
-		rhe = RHExtension.getInstance(config, source);
-		return rhe;
+		return rhe = RHExtension.getInstance(config, this, true, config.getLog("deploy"));
 	}
 
 	//
-	public Resource getSource(Resource defaultValue) {
+	public Resource getSource(Config config, Resource defaultValue) {
 		if (source != null) return source;
-		if (rhe != null) return rhe.getExtensionFile();
 		try {
-			return source = RHExtension.getExtensionInstalledFile(config, getId(), getVersion(), false);
+			return toRHExtension(config).getExtensionFile();
 		}
 		catch (Exception e) {
 			return defaultValue;
 		}
 	}
 
-	public Resource getSource() throws ApplicationException {
+	public Resource getSource(Config config) throws PageException {
+		if (source != null) return source;
+		return toRHExtension(config).getExtensionFile();
+	}
+
+	Resource _getSource(Resource defaultValue) {
 		if (source != null) return source;
 		if (rhe != null) return rhe.getExtensionFile();
 
-		return source = RHExtension.getExtensionInstalledFile(config, getId(), getVersion(), false);
+		return defaultValue;
 	}
 
+	public String getStorageName() {
+		GAVSO gav = getGAVSO(config);
+
+		if (gav != null) {
+			return getStorageName(gav);
+		}
+		if (!StringUtil.isEmpty(getId()) && !StringUtil.isEmpty(getVersion())) {
+			return getStorageName(getId(), getVersion());
+		}
+		return null;
+
+	}
+
+	public static String getStorageName(GAVSO gav) {
+		return "mvn_" + gav.g + "_" + gav.a + "_" + gav.v + ".lex";
+	}
+
+	public static String getStorageName(String id, String version) {
+		return id + "-" + version + ".lex";
+	}
+
+	public static ExtensionDefintion toExtensionDefinitionFromStorageName(String filename) {
+		int index = filename.lastIndexOf(".lex");
+
+		if (index == -1) {
+			return null;
+		}
+		filename = filename.substring(0, index);
+		String[] arr = ListUtil.listToStringArray(filename, '_');
+
+		// maven
+		if (arr.length == 4 && arr[0].equals("mvn") && OSGiUtil.toVersion(arr[3], null) != null) {
+			return new ExtensionDefintion().setGAVSO(new GAVSO(arr[1], arr[2], arr[3]));
+		}
+		// id
+		if (arr.length == 3 && arr[0].equals("id") && Decision.isUUId(arr[1]) && OSGiUtil.toVersion(arr[2], null) != null) {
+			return new ExtensionDefintion(arr[1], arr[2]);
+		}
+		if (filename.length() > 37) {
+			String uuid = filename.substring(0, 35);
+			if (Decision.isUUId(uuid) && filename.charAt(35) == '-') {
+				String version = filename.substring(36, index);
+				if (OSGiUtil.toVersion(version, null) != null) {
+					return new ExtensionDefintion(uuid, version);
+				}
+			}
+		}
+
+		return null;
+	}
+
+	public static boolean startsWithUUID(String filename) {
+		if (filename.length() > 37) {
+			String uuid = filename.substring(0, 35);
+			return (Decision.isUUId(uuid) && filename.charAt(35) == '-');
+		}
+		return false;
+	}
+
+	/*
+	 * public static void main(String[] args) {
+	 * print.e(toExtensionDefinitionFromStorageName("mvn_org.lucee_administrator-extension_1.0.0.5.lex")
+	 * ); print.e(toExtensionDefinitionFromStorageName(
+	 * "id_E0ACA85A-22DB-48FF-B2D6CD89D5D1709F_1.0.0.0-BETA.lex"));
+	 * print.e(toExtensionDefinitionFromStorageName("7E673D15-D87C-41A6-8B5F1956528C605F-1.2.lex")); }
+	 */
 }

@@ -76,7 +76,7 @@ import lucee.commons.io.res.ResourceProvider;
 import lucee.commons.io.res.ResourcesImpl;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ArchiveClassLoader;
-import lucee.commons.lang.CharSet;
+import lucee.commons.lang.CharsetX;
 import lucee.commons.lang.ClassLoaderHelper;
 import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
@@ -195,7 +195,7 @@ public final class SystemUtil {
 
 	private static Resource homeFile;
 	private static Resource[] classPathes;
-	private static CharSet charset;
+	private static CharsetX charset;
 	private static String lineSeparator = System.getProperty("line.separator", "\n");
 	private static MemoryPoolMXBean permGenSpaceBean;
 
@@ -223,9 +223,9 @@ public final class SystemUtil {
 		String strCharset = System.getProperty("file.encoding");
 		if (strCharset == null || strCharset.equalsIgnoreCase("MacRoman")) strCharset = "cp1252";
 
-		if (strCharset.equalsIgnoreCase("utf-8")) charset = CharSet.UTF8;
-		else if (strCharset.equalsIgnoreCase("iso-8859-1")) charset = CharSet.ISO88591;
-		else charset = CharsetUtil.toCharSet(strCharset, null);
+		if (strCharset.equalsIgnoreCase("utf-8")) charset = CharsetX.UTF8;
+		else if (strCharset.equalsIgnoreCase("iso-8859-1")) charset = CharsetX.ISO88591;
+		else charset = CharsetUtil.toCharsetX(strCharset, null);
 
 		// Perm Gen
 		permGenSpaceBean = getPermGenSpaceBean();
@@ -736,16 +736,16 @@ public final class SystemUtil {
 		return CharsetUtil.toCharset(charset);
 	}
 
-	public static CharSet getCharSet() {
+	public static CharsetX getCharsetX() {
 		return charset;
 	}
 
 	public static void setCharset(String charset) {
-		SystemUtil.charset = CharsetUtil.toCharSet(charset);
+		SystemUtil.charset = CharsetUtil.toCharsetX(charset);
 	}
 
 	public static void setCharset(Charset charset) {
-		SystemUtil.charset = CharsetUtil.toCharSet(charset);
+		SystemUtil.charset = CharsetUtil.toCharsetX(charset);
 	}
 
 	public static String getOSSpecificLineSeparator() {
@@ -1424,8 +1424,8 @@ public final class SystemUtil {
 		suspendEL(thread);
 		try {
 			if (isInLucee(thread)) {
-				if (!force) thread.interrupt();
-				else thread.stop();
+				// Thread.stop() was removed in Java 26, use interrupt() instead
+				thread.interrupt();
 			}
 			else {
 				if (log != null) {

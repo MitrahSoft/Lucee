@@ -44,6 +44,8 @@ import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
+import lucee.runtime.config.ConfigUtil;
+import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.mvn.POMReader.Dependency;
 import lucee.runtime.op.Caster;
@@ -220,7 +222,8 @@ public final class MavenUtil {
 				// v = resolvePlaceholders(pdm, v, pdm.getProperties());
 			}
 			if (v == null) {
-				throw new IOException("could not find version for dependency [" + g + ":" + a + "] in [" + current + "]");
+				throw new IOException("No version defined for dependency [" + g + ":" + a + "] in POM [" + current + "]. "
+						+ "Specify a version directly or ensure it is declared in <dependencyManagement>.");
 			}
 		}
 
@@ -301,7 +304,7 @@ public final class MavenUtil {
 			return sb.toString();
 		}
 
-		private String toGAV() {
+		public String toGAV() {
 			StringBuilder sb = new StringBuilder();
 
 			if (!StringUtil.isEmpty(g, true)) sb.append(g);
@@ -381,6 +384,10 @@ public final class MavenUtil {
 		public boolean equalIDAndVersion(GAVSO other) {
 			if (!v.equalsIgnoreCase(other.v)) return false;
 			return equalID(other);
+		}
+
+		public boolean isValid() {
+			return (!StringUtil.isEmpty(g, true) && !StringUtil.isEmpty(a, true) && !StringUtil.isEmpty(v, true));
 		}
 	}
 
@@ -503,7 +510,8 @@ public final class MavenUtil {
 			if (!modifed) break;
 		}
 		if (value != null && value.indexOf("${") != -1) {
-			throw new IOException("Cannot resolve [" + value + "] for [" + pom + "], available properties are [" + ListUtil.toList(properties.keySet(), ", ") + "]");
+			throw new IOException("Cannot resolve placeholder in [" + value + "] for POM [" + pom + "]. " + "Available properties: [" + ListUtil.toList(properties.keySet(), ", ")
+					+ "]. " + "Ensure the property is defined in the POM, parent POM, or system properties.");
 		}
 		return value;
 	}
@@ -517,8 +525,7 @@ public final class MavenUtil {
 			try {
 				download(pom, repositories, type, log);
 			}
-			catch (IOException e) {
-			}
+			catch (IOException e) {}
 		}, true).start();
 	}
 
@@ -527,7 +534,7 @@ public final class MavenUtil {
 
 		// file is empty or does not exist
 		if (!res.isFile()) {
-			// print.ds("--->" + pom.toString());
+
 			synchronized (SystemUtil.createToken("mvn", res.getAbsolutePath())) {
 				// file is empty or does not exist
 				if (!res.isFile()) {
@@ -553,7 +560,29 @@ public final class MavenUtil {
 							download(pom, repositories, type, log);
 							return res;
 						}
-						throw new IOException("Failed to download [" + pom + "] ");
+
+						throw new IOException("Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] "
+								+ "is not available. A previous download attempt failed and is cached for " + (ARTIFACT_UNAVAILABLE_CACHE_DURATION / 60000) + " minutes. "
+								+ "Delete the '.lastUpdated' file in the local cache to retry immediately.");
+					}
+
+					int policy = ConfigUtil.getMavenDownloadPolicy();
+					if (policy != ConfigPro.MAVEN_DOWNLOAD_POLICY_IGNORE) {
+						LogUtil.log(ConfigUtil.getConfigServerImpl(ThreadLocalPageContext.getConfig()).getMavenDownloadPolicyLogLevel(), "maven",
+								"Downloading Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] " + "(type: " + type
+										+ "). Maven download policy is set to '" + (policy == ConfigPro.MAVEN_DOWNLOAD_POLICY_ERROR ? "error" : "warn") + "'. "
+										+ "To change this behavior, update your .CFConfig.json: "
+										+ "{\"maven\":{\"downloadPolicyStartup\":\"ignore\",\"downloadPolicyRuntime\":\"ignore\"}} "
+										+ "or set the system properties 'lucee.maven.download.policy.startup' / 'lucee.maven.download.policy.runtime' "
+										+ "(environment variables: LUCEE_MAVEN_DOWNLOAD_POLICY_STARTUP / LUCEE_MAVEN_DOWNLOAD_POLICY_RUNTIME) to "
+										+ "'error' to block downloads or 'ignore' to suppress this message.");
+					}
+					if (policy == ConfigPro.MAVEN_DOWNLOAD_POLICY_ERROR) {
+						throw new IOException("Maven download is blocked by policy. " + "Attempted to download [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":"
+								+ pom.getVersion() + "] " + "(type: " + type + "). " + "To allow downloads, update your .CFConfig.json: "
+								+ "{\"maven\":{\"downloadPolicyStartup\":\"warn\",\"downloadPolicyRuntime\":\"warn\"}} "
+								+ "or set the system properties 'lucee.maven.download.policy.startup' / 'lucee.maven.download.policy.runtime' "
+								+ "(environment variables: LUCEE_MAVEN_DOWNLOAD_POLICY_STARTUP / LUCEE_MAVEN_DOWNLOAD_POLICY_RUNTIME) to 'warn' or 'ignore'.");
 					}
 
 					String scriptName = pom.getGroupId().replace('.', '/') + "/" + pom.getArtifactId() + "/" + pom.getVersion() + "/" + pom.getArtifactId() + "-" + pom.getVersion()
@@ -563,11 +592,8 @@ public final class MavenUtil {
 						if (repositories == null || repositories.isEmpty()) repositories = pom.getRepositories();
 
 						if (repositories == null || repositories.size() == 0) {
-							IOException ioe = new IOException("Failed to download java artifact [" + pom.toString() + "] for type [" + type + "]");
-							// "Failed to download java artifact [" + pom.toString() + "] for type [" + type + "], attempted
-							// endpoint(s): [" + sb + "]");
-							// if (cause != null) ExceptionUtil.initCauseEL(ioe, cause);
-							throw ioe;
+							throw new IOException("Failed to download Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] " + "(type: "
+									+ type + "). No repositories are configured. " + "Ensure at least one repository is defined in the POM or Lucee configuration.");
 						}
 						// url = pom.getArtifact(type, repositories);
 						//////// if (log != null) log.info("maven", "download [" + url + "]");
@@ -576,6 +602,7 @@ public final class MavenUtil {
 						for (Repository r: sort(repositories)) {
 							url = null;
 							httpClient = null;
+
 							try {
 								url = new URL(r.getUrl() + scriptName);
 								httpClient = HttpClients.createDefault();
@@ -634,13 +661,16 @@ public final class MavenUtil {
 					}
 					catch (IOException ioe) {
 						createLastUpdated(res, info);
-						IOException ex = new IOException("Failed to download [ " + pom + ":" + type + "]");
+						IOException ex = new IOException("Failed to download Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] "
+								+ "(type: " + type + "). Check network connectivity and repository availability.");
 						ExceptionUtil.initCauseEL(ex, ioe);
 						// MUST add again ResourceUtil.deleteEmptyFoldersInside(pom.getLocalDirectory());
 						throw ex;
 					}
 					createLastUpdated(res, info);
-					throw new IOException("Failed to download [" + pom + ":" + type + "] from " + repositories.size() + " repositories");
+					throw new IOException("Failed to download Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] " + "(type: " + type
+							+ ") after trying all " + repositories.size() + " configured repositories. "
+							+ "Verify the artifact coordinates are correct and the repositories are accessible.");
 				}
 			}
 		}
@@ -703,17 +733,20 @@ public final class MavenUtil {
 	}
 
 	public static int toScopes(String scopes) throws IOException {
-		if (StringUtil.isEmpty(scopes, true)) throw new IOException("there is no scope defined");
+		if (StringUtil.isEmpty(scopes, true))
+			throw new IOException("No Maven dependency scope defined. " + "Specify at least one scope from: compile, test, provided, runtime, system, import.");
 		return toScopes(ListUtil.listToStringArray(scopes, ','));
 	}
 
 	public static int toScopes(String[] scopes) throws IOException {
-		if (scopes.length == 0) throw new IOException("there is no scope defined");
+		if (scopes.length == 0) throw new IOException("No Maven dependency scope defined. " + "Specify at least one scope from: compile, test, provided, runtime, system, import.");
 
 		int rtn = 0, tmp;
 		for (String scope: scopes) {
 			tmp = toScope(scope, 0);
-			if (tmp == 0) throw new IOException("scope [" + scope + "] is not a supported scope, valid scope names are [compile,test,provided,runtime,system,import]");
+			if (tmp == 0) {
+				throw new IOException("Invalid Maven scope [" + scope.trim() + "]. " + "Supported values are: compile, test, provided, runtime, system, import.");
+			}
 			rtn += tmp;
 		}
 		return rtn;
@@ -1018,8 +1051,7 @@ public final class MavenUtil {
 								data.setEL(KeyConstants._location, res.getAbsolutePath());
 								return data;
 							}
-							catch (Exception e) {
-							}
+							catch (Exception e) {}
 						}
 					}
 				}

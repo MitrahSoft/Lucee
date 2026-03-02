@@ -91,19 +91,26 @@ public final class PageSourceImpl implements PageSource {
 	private boolean flush = false;
 
 	private static class PageAndClassName {
-		private Page page;
-		private String className;
+		private Page _page;
+		private String _className;
 
 		public void reset() {
-			this.page = null;
-			this.className = null;
+			this._page = null;
+			this._className = null;
 		}
 
 		public void set(Page page) {
-			this.page = page;
-			if (page != null) className = page.getClass().getName();
+			this._page = page;
+			if (page != null) _className = page.getClass().getName();
 		}
 
+		public Page getPage() {
+			return _page;
+		}
+
+		public String getClassName() {
+			return _className;
+		}
 	}
 
 	PageSourceImpl(MappingImpl mapping, String relPath, boolean isOutSide) {
@@ -119,7 +126,7 @@ public final class PageSourceImpl implements PageSource {
 	 * @return
 	 */
 	public Page getPage() {
-		return pcn.page;
+		return pcn.getPage();
 	}
 
 	public PageSource getParent() {
@@ -152,7 +159,7 @@ public final class PageSourceImpl implements PageSource {
 	public Page loadPage(PageContext pc, boolean forceReload) throws PageException {
 		if (forceReload) pcn.reset();
 
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (mapping.isPhysicalFirst()) {
 			page = loadPhysical(pc, page);
 			if (page == null) page = loadArchive(page);
@@ -171,7 +178,7 @@ public final class PageSourceImpl implements PageSource {
 	public Page loadPageThrowTemplateException(PageContext pc, boolean forceReload, Page defaultValue) throws PageException {
 		if (forceReload) pcn.reset();
 
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (mapping.isPhysicalFirst()) {
 			page = loadPhysical(pc, page);
 			if (page == null) page = loadArchive(page);
@@ -189,7 +196,7 @@ public final class PageSourceImpl implements PageSource {
 	public Page loadPage(PageContext pc, boolean forceReload, Page defaultValue) {
 		if (forceReload) pcn.reset();
 
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		if (mapping.isPhysicalFirst()) {
 			try {
 				page = loadPhysical(pc, page);
@@ -206,8 +213,7 @@ public final class PageSourceImpl implements PageSource {
 				try {
 					page = loadPhysical(pc, page);
 				}
-				catch (TemplateException e) {
-				}
+				catch (TemplateException e) {}
 			}
 			if (page != null) return page;
 		}
@@ -298,8 +304,7 @@ public final class PageSourceImpl implements PageSource {
 							try {
 								same = page.getHash() == PageSourceCode.toString(this, config.getTemplateCharset()).hashCode();
 							}
-							catch (IOException e) {
-							}
+							catch (IOException e) {}
 
 						}
 						if (!same) {
@@ -323,7 +328,7 @@ public final class PageSourceImpl implements PageSource {
 			// synchronized (SystemUtil.createToken("PageSource", getRealpathWithVirtual())) {
 			// new class
 			if (flush || !classFile.exists()) {
-				LogUtil.log(config, Log.LEVEL_DEBUG, "compile", "compile [" + getDisplayPath() + "] no previous class file or flush");
+				LogUtil.log(config, Log.LEVEL_TRACE, "compile", "compile [" + getDisplayPath() + "] no previous class file or flush");
 
 				pcn.set(page = compile(config, classRootDir, null, false, pci != null && pci.ignoreScopes()));
 				flush = false;
@@ -332,7 +337,7 @@ public final class PageSourceImpl implements PageSource {
 			// load page
 			else {
 				try {
-					String cn = pcn.className;
+					String cn = pcn.getClassName();
 					boolean done = false;
 					if (cn != null) {
 						try {
@@ -383,7 +388,7 @@ public final class PageSourceImpl implements PageSource {
 
 	public boolean releaseWhenOutdatted() {
 		if (!mapping.hasPhysical() || !isLoad(LOAD_PHYSICAL)) return false;
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		Resource srcFile = getPhyscalFile();
 		long srcLastModified = srcFile.lastModified();
 		// Page exists
@@ -391,7 +396,7 @@ public final class PageSourceImpl implements PageSource {
 			if (srcLastModified == 0 || srcLastModified != page.getSourceLastModified()) {
 				synchronized (this) {
 					if (srcLastModified == 0 || srcLastModified != page.getSourceLastModified()) {
-						if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "release [" + getDisplayPath() + "] from page source pool");
+						if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "release [" + getDisplayPath() + "] from page source pool");
 						resetLoaded();
 						flush();
 						return true;
@@ -403,13 +408,13 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public void flush() {
-		if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "flush [" + getDisplayPath() + "]");
-		pcn.page = null;
+		if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "flush [" + getDisplayPath() + "]");
+		pcn.reset();
 		flush = true;
 	}
 
 	private boolean isLoad(byte load) {
-		Page page = pcn.page;
+		Page page = pcn.getPage();
 		return page != null && load == page.getLoadType();
 	}
 
@@ -895,25 +900,46 @@ public final class PageSourceImpl implements PageSource {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (obj instanceof PageSourceImpl) return _getClassName().equals(((PageSourceImpl) obj)._getClassName());
-		if (obj instanceof PageSource) return _getClassName().equals(ClassUtil.extractName(((PageSource) obj).getClassName()));
-		return false;
 
+		if (this == obj) return true;
+		if (!(obj instanceof PageSource)) return false;
+
+		/*
+		 * if (LogUtil.does(getMapping().getConfig().getLog("application"), Log.LEVEL_DEBUG)) { PageSource
+		 * ps = ((PageSource) obj); LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" +
+		 * getDisplayPath() + "]\n"
+		 * 
+		 * + "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" +
+		 * ps.getClassName() + "- mapping-virtual(" + (getMapping() == ps.getMapping()) + "): " +
+		 * getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
+		 * 
+		 * ); }
+		 */
+
+		return getDisplayPath().equals(((PageSource) obj).getDisplayPath());
 	}
 
 	/**
 	 * is given object equal to this
-	 * 
+	 *
 	 * @param ps
 	 * @return is same
 	 */
 	public boolean equals(PageSource ps) {
 		if (this == ps) return true;
+		if (ps == null) return false;
 
-		if (ps instanceof PageSourceImpl) return _getClassName().equals(((PageSourceImpl) ps)._getClassName());
-		return _getClassName().equals(ClassUtil.extractName(ps.getClassName()));
-
+		/*
+		 * if (LogUtil.does(getMapping().getConfig().getLog("application"), Log.LEVEL_DEBUG)) {
+		 * LogUtil.log(Log.LEVEL_DEBUG, "page-source", "compare [" + getDisplayPath() + "]\n"
+		 * 
+		 * + "- class-name(" + getClassName().equals(ps.getClassName()) + "): " + getClassName() + ":" +
+		 * ps.getClassName() + "- mapping-virtual(" + (getMapping() == ps.getMapping()) + "): " +
+		 * getMapping().getVirtual() + ":" + ps.getMapping().getVirtual()
+		 * 
+		 * ); }
+		 */
+		return getDisplayPath().equals(ps.getDisplayPath());
 	}
 
 	@Override
@@ -925,14 +951,23 @@ public final class PageSourceImpl implements PageSource {
 	// FUTURE add to interface
 	public PageSource getRealPageSource(PageContext pc, String realPath) {
 		RefBoolean _isOutSide = new RefBooleanImpl(isOutSide);
-
 		String realResolved = resolveReal(realPath, _isOutSide);
 
-		// in case we step outside the mapping we meed to open up to all mappings
+		// in case we step outside the mapping we need to open up to all mappings
 		if (realResolved.startsWith(".")) {
-			// add virtual
-			realResolved = mergeRealPathes(mapping.getVirtualLowerCaseWithSlash(), realResolved, null);
+			// First try to resolve using the physical path of the mapping
+			if (mapping.hasPhysical()) {
+				Resource targetResource = mapping.getPhysical().getRealResource(realResolved);
+				if (targetResource.exists()) {
+					PageSource ps = ThreadLocalPageContext.get(pc).toPageSource(targetResource, null);
+					if (ps != null) {
+						return ps;
+					}
+				}
+			}
 
+			// Fall back to virtual path resolution for archives or when physical resolution fails
+			realResolved = mergeRealPathes(mapping.getVirtualLowerCaseWithSlash(), realResolved, null);
 			PageContextImpl pci = (PageContextImpl) ThreadLocalPageContext.get(pc);
 			return pci.getPageSource(realResolved);
 		}
@@ -1015,8 +1050,8 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public void clear() {
-		mapping.clear(pcn.className);
-		pcn.page = null;
+		mapping.clear(pcn.getClassName());
+		pcn.reset();
 	}
 
 	/**
@@ -1024,15 +1059,17 @@ public final class PageSourceImpl implements PageSource {
 	 * 
 	 * @param cl
 	 */
-	public void clear(ClassLoader cl) {
-		Page page = pcn.page;
+	public boolean clear(ClassLoader cl) {
+		Page page = pcn.getPage();
 		if (page != null && page.getClass().getClassLoader().equals(cl)) {
-			pcn.page = null;
+			pcn.reset();
+			return true;
 		}
+		return false;
 	}
 
 	public boolean isLoad() {
-		return pcn.page != null;//// load!=LOAD_NONE;
+		return pcn.getPage() != null;//// load!=LOAD_NONE;
 	}
 
 	@Override
@@ -1113,13 +1150,13 @@ public final class PageSourceImpl implements PageSource {
 	}
 
 	public void resetLoaded() {
-		if (LogUtil.doesDebug(mapping.getLog())) mapping.getLog().debug("page-source", "reset loaded [" + getDisplayPath() + "]");
-		Page p = pcn.page;
+		if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "reset loaded [" + getDisplayPath() + "]");
+		Page p = pcn.getPage();
 		if (p != null) p.setLoadType((byte) 0);
 	}
 
 	@Override
 	public final int hashCode() {
-		return getDisplayPath().hashCode();
+		return getMapping().getVirtual().hashCode() + getClassName().hashCode();
 	}
 }

@@ -41,6 +41,7 @@ public final class GeminiEngine extends AIEngineSupport {
 	public static final String TYPE_STREAM = "streamGenerateContent?alt=sse&";
 
 	private static final String DEFAULT_URL = "https://generativelanguage.googleapis.com/v1/";
+	private static final String DEFAULT_URL_BETA = "https://generativelanguage.googleapis.com/v1beta/";
 
 	public static final String CHAT = "models/{model}:{cttype}key={apikey}";
 	public static final String MODELS = "models/?key={apikey}";
@@ -64,6 +65,7 @@ public final class GeminiEngine extends AIEngineSupport {
 	String baseURL = null;
 	private int conversationSizeLimit = DEFAULT_CONVERSATION_SIZE_LIMIT;
 	public Double temperature = null;
+	Struct generationConfig;
 
 	@Override
 	public AIEngine init(ClassDefinition<? extends AIEngine> cd, Struct properties, String name, String _default, String id) throws PageException {
@@ -76,7 +78,16 @@ public final class GeminiEngine extends AIEngineSupport {
 			baseURL = str;
 			if (!baseURL.endsWith("/")) baseURL += '/';
 		}
-		else baseURL = DEFAULT_URL;
+		else {
+			// beta?
+			if (Caster.toBooleanValue(Caster.toStringTrim(properties.get("beta", null), null), false)) {
+				baseURL = DEFAULT_URL_BETA;
+			}
+			else {
+				baseURL = DEFAULT_URL;
+			}
+
+		}
 
 		// api key
 		str = Caster.toStringTrim(properties.get("apikey", null), null);
@@ -121,6 +132,9 @@ public final class GeminiEngine extends AIEngineSupport {
 
 			throw new ApplicationException("the property [model] is required for a OpenAI Engine!." + appendix);
 		}
+
+		// responseSchema
+		generationConfig = Caster.toStruct(properties.get("generationConfig", null), null);
 
 		// message
 		systemMessage = Caster.toStringTrim(properties.get(KeyConstants._message, null), null);

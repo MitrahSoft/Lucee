@@ -193,22 +193,22 @@ public final class SpoolerEngineImpl implements SpoolerEngine {
 		InputStream is = null;
 		ObjectInputStream ois = null;
 
-		SpoolerTask task = defaultValue;
 		try {
+			if (!res.isFile()) return defaultValue;
 			is = res.getInputStream();
 			ois = new JavaConverter.ObjectInputStreamImpl(CFMLEngineFactory.getInstance().getClass().getClassLoader(), is);
 
-			task = (SpoolerTask) ois.readObject();
+			return (SpoolerTask) ois.readObject();
 		}
 		catch (Exception e) {
 			LogUtil.log(ThreadLocalPageContext.get(), SpoolerEngineImpl.class.getName(), e);
+			res.delete();
+			return defaultValue;
+		}
+		finally {
 			IOUtil.closeEL(is);
 			IOUtil.closeEL(ois);
-			res.delete();
 		}
-		IOUtil.closeEL(is);
-		IOUtil.closeEL(ois);
-		return task;
 	}
 
 	private void store(ConfigWeb config, SpoolerTask task) {

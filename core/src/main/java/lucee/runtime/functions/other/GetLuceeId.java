@@ -20,7 +20,7 @@ package lucee.runtime.functions.other;
 
 import lucee.runtime.PageContext;
 import lucee.runtime.config.ConfigUtil;
-import lucee.runtime.config.IdentificationServer;
+import lucee.runtime.config.Identification;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.Function;
 import lucee.runtime.op.Caster;
@@ -44,7 +44,7 @@ public final class GetLuceeId implements Function {
 		Struct web = new StructImpl();
 		Struct server = new StructImpl();
 
-		IdentificationServer id = ConfigUtil.getConfigServerImpl(pc.getConfig()).getIdentification();
+		Identification id = ConfigUtil.getConfigServerImpl(pc.getConfig()).getIdentification();
 
 		// Web FUTURE remove
 		web.set(SECURITY_KEY, id.getSecurityKey());

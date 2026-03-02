@@ -197,12 +197,23 @@ public final class RamCache extends CacheSupport {
 
 	@Override
 	public void put(String key, Object value, Long idleTime, Long until) {
+		put(key, value, idleTime, until, false);
+	}
 
+	/**
+	 * Store an entry that is pinned with a hard reference, preventing it from being garbage collected.
+	 * Use this for structural entries (like directory metadata) that must survive memory pressure.
+	 */
+	public void putPinned(String key, Object value, Long idleTime, Long until) {
+		put(key, value, idleTime, until, true);
+	}
+
+	private void put(String key, Object value, Long idleTime, Long until, boolean pinned) {
 		Ref<RamCacheEntry> tmp = entries.get(key);
 		RamCacheEntry entry = tmp == null ? null : tmp.get();
 		if (entry == null) {
 			RamCacheEntry e = new RamCacheEntry(key, decouple(value), idleTime == null ? this.idleTime : idleTime.longValue(), until == null ? this.until : until.longValue());
-			entries.put(key, outOfMemory ? new HardRef<RamCacheEntry>(e) : new SoftRef<RamCacheEntry>(e));
+			entries.put(key, (pinned || outOfMemory) ? new HardRef<RamCacheEntry>(e) : new SoftRef<RamCacheEntry>(e));
 		}
 		else entry.update(value);
 	}

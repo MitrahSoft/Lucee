@@ -57,6 +57,7 @@ import lucee.commons.io.SystemUtil;
 import lucee.commons.io.cache.Cache;
 import lucee.commons.io.cache.CachePro;
 import lucee.commons.io.compress.CompressUtil;
+import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogEngine;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.log.LoggerAndSourceData;
@@ -212,18 +213,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private static final short ACCESS_READ = 10;
 	private static final short ACCESS_WRITE = 11;
-
-	private static final Collection.Key DEBUG = KeyConstants._debug;
-	private static final Collection.Key TEMPLATES = KeyConstants._templates;
-	private static final Collection.Key STR = KeyConstants._str;
-	private static final Collection.Key DO_STATUS_CODE = KeyConstants._doStatusCode;
-	private static final Collection.Key LABEL = KeyConstants._label;
-	private static final Collection.Key FILE_ACCESS = KeyConstants._file_access;
-	private static final Collection.Key IP_RANGE = KeyConstants._ipRange;
-	private static final Collection.Key CUSTOM = KeyConstants._custom;
-	private static final Collection.Key READONLY = KeyConstants._readOnly;
-	private static final Collection.Key LOG_ENABLED = KeyConstants._logEnabled;
-	private static final Collection.Key CLASS = KeyConstants._class;
 
 	private static final Key HAS_OWN_SEC_CONTEXT = KeyConstants._hasOwnSecContext;
 	private static final Key CONFIG_FILE = KeyConstants._config_file;
@@ -536,17 +525,15 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		}
 
 		if (action.equals("getextension")) {
-			if (type == TYPE_SERVER) doGetRHServerExtension();
-			else doGetRHExtension();
+			doGetRHExtension();
 			return;
 		}
 		if (action.equals("getextensions") || action.equals("getrhextensions")) {
-			if (type == TYPE_SERVER) doGetRHServerExtensions();
-			else doGetRHExtensions();
+			doGetRHExtensions();
 			return;
 		}
 		if (action.equals("getserverextensions") || action.equals("getrhserverextensions")) {
-			doGetRHServerExtensions();
+			doGetRHExtensions();
 			return;
 		}
 
@@ -785,7 +772,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("removeExtension", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtension();
 		else if (check("removeExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtensionProvider();
 		else if (check("removeRHExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveRHExtensionProvider();
-		else if (check("removeDefaultPassword", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveDefaultPassword();
 		else if (check("removeGatewayEntry", ACCESS_NOT_WHEN_SERVER) && check2(ACCESS_WRITE)) doRemoveGatewayEntry();
 		else if (check("removeDebugEntry", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveDebugEntry();
 		else if (check("removeCacheDefaultConnection", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveCacheDefaultConnection();
@@ -794,10 +780,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("storageGet", ACCESS_FREE) && check2(ACCESS_READ)) doStorageGet();
 		else if (check("storageSet", ACCESS_FREE) && check2(ACCESS_WRITE)) doStorageSet();
 
-		else if (check("getdefaultpassword", ACCESS_FREE) && check2(ACCESS_READ)) doGetDefaultPassword();
 		else if (check("getContexts", ACCESS_FREE) && check2(ACCESS_READ)) doGetContexts();
 		else if (check("getContextes", ACCESS_FREE) && check2(ACCESS_READ)) doGetContexts();
-		else if (check("updatedefaultpassword", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateDefaultPassword();
 		else if (check("hasindividualsecurity", ACCESS_FREE) && check2(ACCESS_READ)) doHasIndividualSecurity();
 		else if (check("resetpassword", ACCESS_FREE) && check2(ACCESS_WRITE)) doResetPassword();
 		else if (check("stopThread", ACCESS_NOT_WHEN_WEB) && check2(ACCESS_WRITE)) doStopThread();
@@ -861,8 +845,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private boolean check(String action, short access) {
 		if (this.action.equalsIgnoreCase(action)) {
-			if (access == ACCESS_FREE) {
-			}
+			if (access == ACCESS_FREE) {}
 			return true;
 		}
 		return false;
@@ -1175,7 +1158,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					// pageContext.compile(ps);
 				}
 				catch (PageException pe) {
-					LogUtil.log((pageContext), Admin.class.getName(), pe);
 					String template = ps.getDisplayPath();
 
 					if (errors != null) {
@@ -1255,8 +1237,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.removeAPIKey();
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetIdentification();
 	}
@@ -1269,8 +1250,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.updateAuthKey(getString("key", null));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 	}
 
@@ -1278,8 +1258,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.removeAuthKeys(getString("key", null));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 	}
 
@@ -1469,45 +1448,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		}
 	}
 
-	/**
-	 * @throws PageException
-	 * 
-	 */
-	private void doGetDefaultPassword() throws PageException {
-		Password password = admin.getDefaultPassword();
-
-		pageContext.setVariable(getString("admin", action, "returnVariable"), password == null ? "" : password.getPassword());
-	}
-
-	/**
-	 * @throws PageException
-	 * 
-	 */
-	private void doUpdateDefaultPassword() throws PageException {
-		try {
-			admin.updateDefaultPassword(getString("admin", action, "newPassword"));
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
-		store();
-	}
-
-	private void doRemoveDefaultPassword() throws PageException {
-		admin.removeDefaultPassword();
-		store();
-	}
-
-	/*
-	 * *
-	 * 
-	 * @throws PageException
-	 * 
-	 * / private void doUpdatePassword() throws PageException { try {
-	 * ConfigWebAdmin.setPassword(config,password==null?null:Caster.toString(password),getString("admin"
-	 * ,action,"newPassword")); } catch (Exception e) { throw Caster.toPageException(e); } //store(); }
-	 */
-
 	private void doGetSecurity() throws PageException {
 		Struct sct = new StructImpl();
 		pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
@@ -1524,7 +1464,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		Struct sct = new StructImpl();
 		pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 
-		sct.set(DEBUG, Caster.toBoolean(config.debug()));
+		sct.set(KeyConstants._debug, Caster.toBoolean(config.debug()));
 		sct.set(KeyConstants._database, Caster.toBoolean(config.hasDebugOptions(ConfigPro.DEBUG_DATABASE)));
 		sct.set(KeyConstants._exception, Caster.toBoolean(config.hasDebugOptions(ConfigPro.DEBUG_EXCEPTION)));
 		sct.set(KeyConstants._template, Caster.toBoolean(config.hasDebugOptions(ConfigPro.DEBUG_TEMPLATE)));
@@ -1552,13 +1492,16 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		// sct.set("errorTemplate",config.getErrorTemplate());
 
 		Struct templates = new StructImpl();
+		Struct templatesUnresolved = new StructImpl();
 		Struct str = new StructImpl();
-		sct.set(TEMPLATES, templates);
-		sct.set(STR, str);
-		sct.set(DO_STATUS_CODE, Caster.toBoolean(config.getErrorStatusCode()));
+		sct.set(KeyConstants._templates, templates);
+		sct.set("templatesUnresolved", templatesUnresolved);
+		sct.set(KeyConstants._str, str);
+		sct.set(KeyConstants._doStatusCode, Caster.toBoolean(config.getErrorStatusCode()));
 
 		// 500
 		String template = config.getErrorTemplate(500);
+		templatesUnresolved.setEL("500", template);
 		try {
 			PageSource ps = ((PageContextImpl) pageContext).getPageSourceExisting(template);
 			if (ps != null) templates.set("500", ps.getDisplayPath());
@@ -1571,6 +1514,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		// 404
 		template = config.getErrorTemplate(404);
+		templatesUnresolved.setEL("404", template);
 		try {
 			PageSource ps = ((PageContextImpl) pageContext).getPageSourceExisting(template);
 			if (ps != null) templates.set("404", ps.getDisplayPath());
@@ -1723,7 +1667,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private Resource[] getFileAcces() throws PageException {
-		Object value = attributes.get(FILE_ACCESS, null);
+		Object value = attributes.get(KeyConstants._file_access, null);
 		if (value == null) return null;
 		Array arr = Caster.toArray(value);
 		List<Resource> rtn = new ArrayList<Resource>();
@@ -1910,18 +1854,20 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		DebugEntry[] entries = config.getDebugEntries();
 
 		String rtn = getString("admin", action, "returnVariable");
-		lucee.runtime.type.Query qry = new QueryImpl(new Collection.Key[] { KeyConstants._id, LABEL, IP_RANGE, READONLY, KeyConstants._type, CUSTOM }, entries.length, rtn);
+		lucee.runtime.type.Query qry = new QueryImpl(
+				new Collection.Key[] { KeyConstants._id, KeyConstants._label, KeyConstants._ipRange, KeyConstants._readOnly, KeyConstants._type, KeyConstants._custom },
+				entries.length, rtn);
 		pageContext.setVariable(rtn, qry);
 		DebugEntry de;
 		for (int i = 0; i < entries.length; i++) {
 			int row = i + 1;
 			de = entries[i];
 			qry.setAtEL(KeyConstants._id, row, de.getId());
-			qry.setAtEL(LABEL, row, de.getLabel());
-			qry.setAtEL(IP_RANGE, row, de.getIpRangeAsString());
+			qry.setAtEL(KeyConstants._label, row, de.getLabel());
+			qry.setAtEL(KeyConstants._ipRange, row, de.getIpRangeAsString());
 			qry.setAtEL(KeyConstants._type, row, de.getType());
-			qry.setAtEL(READONLY, row, Caster.toBoolean(de.isReadOnly()));
-			qry.setAtEL(CUSTOM, row, de.getCustom());
+			qry.setAtEL(KeyConstants._readOnly, row, Caster.toBoolean(de.isReadOnly()));
+			qry.setAtEL(KeyConstants._custom, row, de.getCustom());
 		}
 	}
 
@@ -1981,9 +1927,16 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveExtension() throws PageException {
-		admin.removeExtension(getString("admin", action, "provider"), getString("admin", action, "id"));
+
+		// TODO make it indentpend of the ID
+		String id = getString("admin", "removeRHExtensions", "id");
+		if (!Decision.isUUId(id)) throw new ApplicationException("Invalid id [" + id + "], id must be a UUID");
+		ExtensionDefintion ed = new ExtensionDefintion(id);
+
+		admin.removeRHExtension(ed, config.getLog("deploy"));
 		store();
-		// adminSync.broadcast(attributes, config);
+		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
+
 	}
 
 	/**
@@ -2356,7 +2309,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		admin.setMailDefaultCharset(getString("admin", action, "defaultencoding"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetMailDefaultCharSet().resetMailSpoolEnable().resetMailSendPartial().resetMailSpoolInterval().resetMailTimeout();
+		ConfigUtil.getConfigServerImpl(config).resetMailDefaultCharsetX().resetMailSpoolEnable().resetMailSendPartial().resetMailSpoolInterval().resetMailTimeout();
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -2566,10 +2519,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
 	}
 
-	private void doGetRHServerExtension() throws PageException {
-		_doGetRHExtension(config.getServerRHExtensions());
-	}
-
 	private void doGetRHExtension() throws PageException {
 		_doGetRHExtension(config.getRHExtensions());
 	}
@@ -2590,10 +2539,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		pageContext.setVariable(getString("admin", action, "returnVariable"), RHExtension.toQuery(config, config.getRHExtensions(), null));
 	}
 
-	private void doGetRHServerExtensions() throws PageException {
-		pageContext.setVariable(getString("admin", action, "returnVariable"), RHExtension.toQuery(config, config.getServerRHExtensions(), null));
-	}
-
 	private void doGetLocalExtension() throws PageException {
 		String id = getString("admin", action, "id");
 		boolean asBinary = getBoolV("asBinary", false);
@@ -2604,7 +2549,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				ext = it.next();
 				if (id.equalsIgnoreCase(ext.getId())) {
 					try {
-						pageContext.setVariable(getString("admin", action, "returnVariable"), IOUtil.toBytes(ext.getSource()));
+						pageContext.setVariable(getString("admin", action, "returnVariable"), IOUtil.toBytes(ext.getSource(config)));
 						return;
 					}
 					catch (IOException e) {
@@ -2616,7 +2561,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		}
 		else {
-			List<RHExtension> locals = RHExtension.toRHExtensions(DeployHandler.getLocalExtensions(config, false));
+			List<RHExtension> locals = RHExtension.toRHExtensions(config, DeployHandler.getLocalExtensions(config, false));
 			Query qry = RHExtension.toQuery(config, locals, null);
 			int rows = qry.getRecordcount();
 			String _id;
@@ -2634,7 +2579,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doGetLocalExtensions() throws PageException {
-		List<RHExtension> locals = RHExtension.toRHExtensions(DeployHandler.getLocalExtensions(config, false));
+		List<RHExtension> locals = RHExtension.toRHExtensions(config, DeployHandler.getLocalExtensions(config, false));
 		Query qry = RHExtension.toQuery(config, locals, null);
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
 	}
@@ -2698,8 +2643,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				try {
 					qry.setAt(KeyConstants._info, i + 1, BundleFile.getInstance(children[i]).info());
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 		}
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
@@ -2799,8 +2743,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		if (verify) _doVerifyDatasource(ds, username, password);
 		// print.out("limit:"+connLimit);
-		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout,
-				metaCacheTimeout, blob, clob, allow, validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
+		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, minIdle,
+				maxIdle, metaCacheTimeout, blob, clob, allow, validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
 				alwaysResetConnections);
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetDataSources();
@@ -2817,9 +2761,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doUpdateAIConnection() throws PageException {
+		String name = getString("admin", action, "name");
 		ClassDefinition cd = ClassDefinitionImpl.toClassDefinitionImpl(attributes, null, true, config.getIdentification());
-		admin.updateAIConnection(getString("admin", action, "name"), cd, getString("default", null), getStruct("admin", action, "custom"));
+		admin.updateAIConnection(name, cd, getString("default", null), getStruct("admin", action, "custom"));
 		store();
+		config.getAIEnginePool().flushEngine(name);
 		ConfigUtil.getConfigServerImpl(config).resetAIEngineFactories();
 		adminSync.broadcast(attributes, config);
 	}
@@ -2974,7 +2920,18 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			_doVerifyDatasource(cd, connStr, getString("admin", action, "dbusername"), getString("admin", action, "dbpassword"));
 		}
 		else {
-			_doVerifyDatasource(getString("admin", action, "name"), getString("admin", action, "dbusername"), getString("admin", action, "dbpassword"));
+			String name = getString("admin", action, "name");
+			String username = getString("dbusername", null);
+			String password = getString("dbpassword", null);
+			// if username/password not provided, get from stored datasource config
+			if (username == null && password == null) {
+				DataSource ds = config.getDataSource(name, null);
+				if (ds != null) {
+					username = ds.getUsername();
+					password = ds.getPassword();
+				}
+			}
+			_doVerifyDatasource(name, username, password);
 		}
 	}
 
@@ -3230,8 +3187,9 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		admin.updateTemplateCharset(getString("admin", action, "templateCharset"));
 
 		store();
-		ConfigUtil.getConfigServerImpl(config).restSuppressWSBeforeArg().resetDotNotationUpperCase().resetFullNullSupport().resetPreciseMath().resetExternalizeStringGTE()
-				.resetHandleUnQuotedAttrValueAsString();
+		ConfigUtil.getConfigServerImpl(config).resetSuppressWSBeforeArg().resetDotNotationUpperCase().resetFullNullSupport().resetPreciseMath().resetExternalizeStringGTE()
+				.resetHandleUnQuotedAttrValueAsString().resetTemplateCharsetX();
+
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -3485,8 +3443,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				headers = bf.getHeaders();
 
 			}
-			catch (BundleException e) {
-			}
+			catch (BundleException e) {}
 
 		}
 
@@ -3586,8 +3543,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					}
 
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 
 			}
 
@@ -3644,10 +3600,12 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		Iterator<BundleDefinition> itt = extBundles.iterator();
 		BundleDefinition bd;
+		ConfigPro ci = config;
+		RHExtension[] rhextensions = ci.getRHExtensions();
 		while (itt.hasNext()) {
 			bd = itt.next();
 			if (_eq(name, version, bd.getName(), bd.getVersion())) {
-				findExtension(extensions, bd);
+				_findExtension(rhextensions, bd, extensions);
 			}
 		}
 
@@ -3655,12 +3613,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		if (extensions.size() == 1) return extensions.iterator().next();
 
 		return ListUtil.arrayToList(extensions.toArray(new String[extensions.size()]), ", ");
-	}
-
-	private void findExtension(Set<String> extensions, BundleDefinition bd) {
-		ConfigPro ci = config;
-		_findExtension(ci.getRHExtensions(), bd, extensions);
-		_findExtension(ci.getServerRHExtensions(), bd, extensions);
 	}
 
 	private void _findExtension(RHExtension[] extensions, BundleDefinition bd, Set set) {
@@ -3676,8 +3628,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					}
 				}
 			}
-			catch (Exception ex) {
-			}
+			catch (Exception ex) {}
 		}
 	}
 
@@ -3694,7 +3645,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		IntervallMonitor[] intervalls = cs.getIntervallMonitors();
 		RequestMonitor[] requests = cs.getRequestMonitors();
 
-		lucee.runtime.type.Query qry = new QueryImpl(new Collection.Key[] { KeyConstants._name, KeyConstants._type, LOG_ENABLED, CLASS }, 0, "monitors");
+		lucee.runtime.type.Query qry = new QueryImpl(new Collection.Key[] { KeyConstants._name, KeyConstants._type, KeyConstants._logEnabled, KeyConstants._class }, 0, "monitors");
 		doGetMonitors(qry, intervalls);
 		doGetMonitors(qry, requests);
 
@@ -3715,8 +3666,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		Struct sct = new StructImpl();
 		sct.setEL(KeyConstants._name, m.getName());
 		sct.setEL(KeyConstants._type, m.getType() == Monitor.TYPE_INTERVAL ? "intervall" : "request");
-		sct.setEL(LOG_ENABLED, m.isLogEnabled());
-		sct.setEL(CLASS, m.getClazz().getName());
+		sct.setEL(KeyConstants._logEnabled, m.isLogEnabled());
+		sct.setEL(KeyConstants._class, m.getClazz().getName());
 
 		pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 	}
@@ -3741,8 +3692,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			row = qry.addRow();
 			qry.setAtEL(KeyConstants._name, row, m.getName());
 			qry.setAtEL(KeyConstants._type, row, m.getType() == Monitor.TYPE_INTERVAL ? "intervall" : "request");
-			qry.setAtEL(LOG_ENABLED, row, m.isLogEnabled());
-			qry.setAtEL(CLASS, row, m.getClazz().getName());
+			qry.setAtEL(KeyConstants._logEnabled, row, m.isLogEnabled());
+			qry.setAtEL(KeyConstants._class, row, m.getClazz().getName());
 		}
 
 	}
@@ -3967,8 +3918,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveAIConnection() throws PageException {
-		admin.removeAIConnection(getString("admin", action, "name"));
+		String name = getString("admin", action, "name");
+		admin.removeAIConnection(name);
 		store();
+		config.getAIEnginePool().flushEngine(name);
 		ConfigUtil.getConfigServerImpl(config).resetAIEngineFactories();
 		adminSync.broadcast(attributes, config);
 	}
@@ -4075,6 +4028,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					sct.setEL("literalTimestampWithTSOffset", Boolean.valueOf(di.getLiteralTimestampWithTSOffset()));
 					sct.setEL("alwaysSetTimeout", Boolean.valueOf(di.getAlwaysSetTimeout()));
 					sct.setEL("dbdriver", Caster.toString(di.getDbDriver(), ""));
+					sct.setEL("minIdle", di.getMinIdle() < 1 ? "" : Caster.toString(di.getMinIdle()));
+					sct.setEL("maxIdle", di.getMaxIdle() < 1 ? "" : Caster.toString(di.getMaxIdle()));
 				}
 				pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 				return;
@@ -4293,7 +4248,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetAllowImplicidQueryCall().resetMergeFormAndURL().resetClientStorage()
 				.resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType().resetSessionManagement().resetClientManagement()
-				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct();// MUST
+				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct().resetScopeCascadingType();// MUST
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -4390,7 +4345,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		lucee.runtime.db.ClassDefinition cd = ClassDefinitionImpl.toClassDefinitionImpl(attributes, null, true, config.getIdentification());
 		admin.updateExecutionLog(cd, getStruct("admin", "updateExecutionLog", "arguments"), getBool("admin", "updateExecutionLog", "enabled"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetExecutionLogEnabled().resetExecutionLogFactory();
+		ConfigUtil.getConfigServerImpl(config).resetDapBreakpoint().resetDapSecret().resetExecutionLogFactory();
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -4453,13 +4408,13 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				}
 			}
 		}
-
+		Log log = config.getLog("deploy");
 		// path
 		if (obj instanceof String) {
 			Resource src = ResourceUtil.toResourceExisting(config, (String) obj);
 			ResetFilter filter = new ResetFilter();
 			try {
-				ConfigAdmin._updateRHExtension(config, src, filter, true, true, RHExtension.ACTION_MOVE);
+				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, src, log), filter, true, true, RHExtension.ACTION_COPY, log);
 			}
 			finally {
 				filter.resetThrowPageException(config);
@@ -4470,7 +4425,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			try {
 				Resource tmp = SystemUtil.getTempFile("lex", true);
 				IOUtil.copy(new ByteArrayInputStream(Caster.toBinary(obj)), tmp, true);
-				ConfigAdmin._updateRHExtension(config, tmp, filter, true, true, RHExtension.ACTION_MOVE);
+				ConfigAdmin._updateRHExtension(config, RHExtension.getInstance(config, tmp, log), filter, true, true, RHExtension.ACTION_COPY, log);
 			}
 			catch (IOException ioe) {
 				throw Caster.toPageException(ioe);
@@ -4483,14 +4438,12 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveRHExtension() throws PageException {
+		// TODO make it indentpend of the ID
 		String id = getString("admin", "removeRHExtensions", "id");
 		if (!Decision.isUUId(id)) throw new ApplicationException("Invalid id [" + id + "], id must be a UUID");
-		try {
-			admin.removeRHExtension(id);
-		}
-		catch (Exception e) {
-			throw Caster.toPageException(e);
-		}
+		ExtensionDefintion ed = new ExtensionDefintion(id);
+
+		admin.removeRHExtension(ed, config.getLog("deploy"));
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
 	}
@@ -4690,7 +4643,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		admin.updateComponentDefaultImport(getString("admin", action, "componentDefaultImport"));
 		admin.updateComponentLocalSearch(getBoolObject("admin", action, "componentLocalSearch"));
 		admin.updateComponentPathCache(getBoolObject("admin", action, "componentPathCache"));
-		admin.updateReturnFormat(getString("admin", action, "returnFormat"));
+
+		String returnFormat = getString("returnFormat", null);
+		if (!StringUtil.isEmpty(returnFormat, true)) {
+			admin.updateReturnFormat(returnFormat);
+		}
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetReturnFormat().resetComponentDefaultImport().resetComponentDeepSearch().resetComponentDumpTemplate()
 				.resetComponentDataMemberDefaultAccess().resetTriggerComponentDataMember().resetComponentLocalSearch().resetComponentPathCache().resetComponentShadow(); // MUST
@@ -4830,7 +4787,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		int delay = getInt("admin", "UpdateLoginSettings", "delay");
 		admin.updateLoginSettings(captcha, rememberMe, delay);
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetLoginCaptcha().resetLoginDelay().resetRememberMe();
+		ConfigUtil.getConfigServerImpl(config).resetLoginDelay().resetLoginCaptcha().resetRememberMe();
 	}
 
 	private void doUpdateLogSettings() throws PageException {
@@ -5171,7 +5128,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		admin.updateTemplateCharset(getString("admin", action, "templateCharset"));
 		admin.updateWebCharset(getString("admin", action, "webCharset"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetResourceCharSet().resetTemplateCharSet().resetWebCharSet();
+		ConfigUtil.getConfigServerImpl(config).resetResourceCharsetX().resetTemplateCharsetX().resetWebCharsetX();
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -5401,6 +5358,15 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	private void store() throws PageException {
 		try {
 			admin.storeAndReload();
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
+	}
+
+	private void storeAndReload(boolean store, boolean reload) throws PageException {
+		try {
+			admin.storeAndReload(true, store, reload, false);
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);

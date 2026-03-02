@@ -102,6 +102,7 @@ public final class DatasourceConnectionFactory extends BasePooledObjectFactory<D
 		}
 		catch (Exception e) {
 			LogUtil.log(config, "connection", e, Log.LEVEL_ERROR, logName);
+			return false; // validation exception means connection is bad
 		}
 
 		if (dc instanceof DatasourceConnectionImpl) {
