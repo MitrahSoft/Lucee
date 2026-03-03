@@ -115,6 +115,9 @@ public final class PageImpl extends BodyBase implements Page {
 
 	private static final long MIN_AGE_TO_CLEAR = 5000l;
 
+	// Maximum UDFs per constructor helper method to avoid JVM's 64KB method bytecode limit, chosen value is a safe estimate, size depends on CFC methdod signatures
+	private static final int MAX_UDF_PER_CONSTRUCTOR_METHOD = 30;
+
 	public static final Type NULL = Type.getType(lucee.runtime.type.Null.class);
 	public static final Type KEY_IMPL = Type.getType(KeyImpl.class);
 	public static final Type KEY_CONSTANTS = Type.getType(KeyConstants.class);
@@ -718,22 +721,31 @@ public final class PageImpl extends BodyBase implements Page {
 		constrAdapter.newArray(Types.UDF_PROPERTIES);
 		constrAdapter.visitFieldInsn(Opcodes.PUTFIELD, getClassName(), "udfs", udfpropsClassName);
 
-		// set item
-		Data data;
-		int index = -1;
-		for (Function f: functions) {
-			index++;
-			data = getMatchingData(f, udfProperties);
-			if (data == null) continue;
+		// set item — split into helper methods if there are enough functions to risk MethodTooLargeException (LDEV-6126)
+		if (functions.length > MAX_UDF_PER_CONSTRUCTOR_METHOD) {
+			int batchNum = 0;
+			for (int batchStart = 0; batchStart < functions.length; batchStart += MAX_UDF_PER_CONSTRUCTOR_METHOD) {
+				int batchEnd = Math.min(batchStart + MAX_UDF_PER_CONSTRUCTOR_METHOD, functions.length);
+				String helperMethodName = ASMUtil.createOverfowMethod("_constrUdfs", batchNum++);
+				Method helperMethod = new Method(helperMethodName, Types.VOID, new Type[] { Types.PAGE_SOURCE });
+				GeneratorAdapter helperAdapter = new GeneratorAdapter(Opcodes.ACC_PRIVATE + Opcodes.ACC_FINAL, helperMethod, null, new Type[] { Types.THROWABLE }, cw);
+				BytecodeContext helperBc = new BytecodeContext(config, optionalPS, constr, this, keys, cw, className, helperAdapter, helperMethod, writeLog(),
+						suppressWSbeforeArg, output, returnValue, sourceCode.getSourceOffset());
 
-			// for (Data data: udfProperties) {
-			constrAdapter.visitVarInsn(Opcodes.ALOAD, 0);
-			constrAdapter.visitFieldInsn(Opcodes.GETFIELD, constr.getClassName(), "udfs", Types.UDF_PROPERTIES_ARRAY.toString());
-			// constrAdapter.push(data.arrayIndex);
-			constrAdapter.push(index);
-			// data.function.createUDFProperties(constr, data.valueIndex, data.type);
-			data.function.createUDFProperties(constr, index, data.type);
-			constrAdapter.visitInsn(Opcodes.AASTORE);
+				// call helper from constructor
+				constrAdapter.visitVarInsn(Opcodes.ALOAD, 0);
+				constrAdapter.visitVarInsn(Opcodes.ALOAD, 1);
+				constrAdapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, className, helperMethodName, "(Llucee/runtime/PageSource;)V");
+
+				// write batch into helper method
+				writeUdfProperties(helperBc, functions, udfProperties, className, udfpropsClassName, batchStart, batchEnd);
+
+				helperAdapter.returnValue();
+				helperAdapter.endMethod();
+			}
+		}
+		else {
+			writeUdfProperties(constr, functions, udfProperties, className, udfpropsClassName, 0, functions.length);
 		}
 
 		// setPageSource(pageSource);
@@ -829,6 +841,21 @@ public final class PageImpl extends BodyBase implements Page {
 					}
 				});
 			}
+		}
+	}
+
+	private void writeUdfProperties(BytecodeContext bc, Function[] functions, List<Data> udfProperties, String className, String udfpropsClassName, int from, int to)
+			throws TransformerException {
+		GeneratorAdapter adapter = bc.getAdapter();
+		for (int i = from; i < to; i++) {
+			Data data = getMatchingData(functions[i], udfProperties);
+			if (data == null) continue;
+
+			adapter.visitVarInsn(Opcodes.ALOAD, 0);
+			adapter.visitFieldInsn(Opcodes.GETFIELD, className, "udfs", udfpropsClassName);
+			adapter.push(i);
+			data.function.createUDFProperties(bc, i, data.type);
+			adapter.visitInsn(Opcodes.AASTORE);
 		}
 	}
 
