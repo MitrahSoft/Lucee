@@ -64,7 +64,7 @@ public final class LuceeExtension extends BIF {
 				return sct;
 			}
 			else {
-				throw new FunctionException(pc, "LuceeVersionsListS3", 0, 1, args.length);
+				throw new FunctionException(pc, "LuceeExtension", 0, 1, args.length);
 			}
 		}
 		catch (Exception e) {

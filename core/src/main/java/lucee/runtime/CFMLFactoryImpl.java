@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -222,18 +221,7 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 			}
 		}
 
-		PageContextImpl pc;
-		if (createNew || pcs.isEmpty()) {
-			pc = null;
-		}
-		else {
-			try {
-				pc = pcs.pop();
-			}
-			catch (NoSuchElementException nsee) {
-				pc = null;
-			}
-		}
+		PageContextImpl pc = createNew ? null : pcs.poll();
 		if (pc == null) pc = new PageContextImpl(scopeContext, config, servlet, tmplPC, ignoreScopes);
 
 		if (timeout > 0) pc.setRequestTimeout(timeout);
@@ -243,7 +231,10 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 
 		}
 		this._servlet = servlet;
-		if (register2Thread) ThreadLocalPageContext.register(pc);
+		if (register2Thread) {
+			if (isChild) ThreadLocalPageContext.registerChild(pc);
+			else ThreadLocalPageContext.register(pc);
+		}
 
 		pc.initialize(servlet, req, rsp, errorPageURL, needsSession, bufferSize, autoflush, isChild, ignoreScopes, tmplPC);
 
@@ -280,7 +271,8 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 		PageContext beforePC = ThreadLocalPageContext.get();
 		boolean tmpRegister = false;
 		if (beforePC != pc) {
-			ThreadLocalPageContext.register(pc);
+			if (parent != null) ThreadLocalPageContext.registerChild(pc);
+			else ThreadLocalPageContext.register(pc);
 			tmpRegister = true;
 		}
 		boolean reuse = true;
@@ -292,7 +284,10 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 			reuse = false;
 			ThreadLocalPageContext.getLog(config, "application").error("release page context", e);
 		}
-		if (tmpRegister) ThreadLocalPageContext.register(beforePC);
+		if (tmpRegister) {
+			if (beforePC != null && beforePC.getParentPageContext() != null) ThreadLocalPageContext.registerChild(beforePC);
+			else ThreadLocalPageContext.register(beforePC);
+		}
 		else if (unregisterFromThread) ThreadLocalPageContext.release();
 
 		runningPcs.remove(Integer.valueOf(pc.getId()));
@@ -346,8 +341,9 @@ public final class CFMLFactoryImpl extends CFMLFactory {
 				if (pc == null) continue;
 				long timeout = pc.getRequestTimeout();
 				Thread th;
-				// reached timeout
-				if (pc.getStartTime() + timeout < System.currentTimeMillis() && Long.MAX_VALUE != timeout) {
+				// reached timeout (adjusted for debugger suspend time)
+				long suspendedMillis = pc.getDebuggerTotalSuspendedMillis();
+				if (pc.getStartTime() + timeout + suspendedMillis < System.currentTimeMillis() && Long.MAX_VALUE != timeout) {
 					Log log = ThreadLocalPageContext.getLog(pc, "requesttimeout");
 					if (reachedConcurrentReqThreshold() && reachedMemoryThreshold() && reachedCPUThreshold()) {
 						if (log != null) {

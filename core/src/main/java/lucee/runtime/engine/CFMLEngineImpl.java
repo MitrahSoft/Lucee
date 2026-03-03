@@ -110,6 +110,7 @@ import lucee.runtime.config.ConfigWeb;
 import lucee.runtime.config.ConfigWebImpl;
 import lucee.runtime.config.ConfigWebPro;
 import lucee.runtime.config.DeployHandler;
+import lucee.runtime.debug.DebuggerPrintStream;
 import lucee.runtime.config.Identification;
 import lucee.runtime.config.Password;
 import lucee.runtime.engine.listener.CFMLServletContextListener;
@@ -189,6 +190,14 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 	private static final boolean IS_WINDOWS = SystemUtil.isWindows();
 
+	public static final int MAVEN_DOWNLOAD_POLICY_STARTUP;
+	public static final int MAVEN_DOWNLOAD_POLICY_RUNTIME;
+	public static final int MAVEN_DOWNLOAD_POLICY_LOG_LEVEL;
+
+	public static final int MAVEN_DOWNLOAD_POLICY_ERROR = 2;
+	public static final int MAVEN_DOWNLOAD_POLICY_WARN = 1;
+	public static final int MAVEN_DOWNLOAD_POLICY_IGNORE = 0;
+
 	static {
 		System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
 		System.setProperty("javax.xml.bind.context.factory", "com.sun.xml.bind.v2.ContextFactory");
@@ -203,12 +212,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		System.setProperty("log4j2.disable.jmx", "true"); // Skip JMX
 		System.setProperty("log4j2.asyncLoggerConfigRingBufferSize", "262144"); // Larger buffer
 
-		// JVM Performance Optimizations
-		System.setProperty("sun.awt.noerasebackground", "true");
-		System.setProperty("sun.java2d.noddraw", "true");
-		System.setProperty("sun.java2d.d3d", "false");
-		System.setProperty("java.awt.headless", "true"); // Disable GUI components
-
 		// Network/DNS Optimizations
 		System.setProperty("sun.net.inetaddr.ttl", "300"); // Cache DNS for 5 mins
 		System.setProperty("sun.net.inetaddr.negative.ttl", "10"); // Cache failures for 10s
@@ -222,10 +225,49 @@ public final class CFMLEngineImpl implements CFMLEngine {
 
 		// Disable reverse DNS lookups
 		System.setProperty("sun.net.useExclusiveBind", "false");
+
+		String tmp = Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.startup", null), null);
+		if ("error".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_STARTUP = MAVEN_DOWNLOAD_POLICY_ERROR;
+		}
+		else if ("warn".equals(tmp) || "warning".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_STARTUP = MAVEN_DOWNLOAD_POLICY_WARN;
+		}
+		else {
+			MAVEN_DOWNLOAD_POLICY_STARTUP = MAVEN_DOWNLOAD_POLICY_IGNORE;
+		}
+
+		tmp = Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.runtime", null), null);
+		if ("error".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_RUNTIME = MAVEN_DOWNLOAD_POLICY_ERROR;
+		}
+		else if ("warn".equals(tmp) || "warning".equals(tmp)) {
+			MAVEN_DOWNLOAD_POLICY_RUNTIME = MAVEN_DOWNLOAD_POLICY_WARN;
+		}
+		else {
+			MAVEN_DOWNLOAD_POLICY_RUNTIME = MAVEN_DOWNLOAD_POLICY_IGNORE;
+		}
+
+		MAVEN_DOWNLOAD_POLICY_LOG_LEVEL = LogUtil.toLevel(Caster.toString(SystemUtil.getSystemPropOrEnvVar("lucee.maven.download.policy.log.level", null), null), Log.LEVEL_ERROR);
 	}
 
-	public static final PrintStream CONSOLE_ERR = System.err;
-	public static final PrintStream CONSOLE_OUT = System.out;
+	public static final PrintStream CONSOLE_ERR;
+	public static final PrintStream CONSOLE_OUT;
+
+	static {
+		// Install debugger print streams when DAP secret is set (debugger extension expected)
+		String dapSecret = SystemUtil.getSystemPropOrEnvVar("lucee.dap.secret", null);
+		if (dapSecret != null && !dapSecret.trim().isEmpty()) {
+			CONSOLE_OUT = new DebuggerPrintStream(System.out, false);
+			CONSOLE_ERR = new DebuggerPrintStream(System.err, true);
+			System.setOut(CONSOLE_OUT);
+			System.setErr(CONSOLE_ERR);
+		}
+		else {
+			CONSOLE_OUT = System.out;
+			CONSOLE_ERR = System.err;
+		}
+	}
 	private static final String LOG_NAME = "deploy";
 	private static final String LOG_TYPE_NAME = "request";
 
@@ -274,16 +316,14 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				FunctionLibFactory.loadFromSystem(null);
 			}
-			catch (FunctionLibException e) {
-			}
+			catch (FunctionLibException e) {}
 		}, true).start();
 
 		ThreadUtil.getThread(() -> {
 			try {
 				TagLibFactory.loadFromSystem(null);
 			}
-			catch (TagLibException e) {
-			}
+			catch (TagLibException e) {}
 		}, true).start();
 
 		// Force localhost resolution early
@@ -291,8 +331,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				Log4j2Engine.prepare();
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}, true).start();
 
 		/*
@@ -528,8 +567,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			try {
 				log = cs.getLog("deploy", true);
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 
 		touchMonitor(cs);
@@ -555,6 +593,18 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			LogUtil.log(cs, Log.LEVEL_INFO, "startup", "Start CFML Controller");
 			controler.start();
 		}
+
+	}
+
+	public static int getActiveDownloadPolicy() {
+		try {
+			CFMLEngine eng = CFMLEngineFactory.getInstance();
+			if (eng != null && eng.uptime() > 0) return MAVEN_DOWNLOAD_POLICY_RUNTIME;
+		}
+		catch (Exception e) {
+			// engine not registered yet = still starting up
+		}
+		return MAVEN_DOWNLOAD_POLICY_STARTUP;
 	}
 
 	private static void checkInvalidExtensions(CFMLEngineImpl eng, ConfigPro config, Set<ExtensionDefintion> extensionsToInstall, Set<String> extensionsToRemove) {
@@ -668,8 +718,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				try {
 					existingMap.put(ed.getSource().getName(), ed);
 				}
-				catch (ApplicationException e) {
-				}
+				catch (ApplicationException e) {}
 			}
 		}
 
@@ -1152,8 +1201,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 						// print.e("mas-done:"+System.currentTimeMillis());
 						break;
 					}
-					// reach request timeout
-					else if (ended == -1 && (pc.getStartTime() + pc.getRequestTimeout()) < System.currentTimeMillis()) {
+					// reach request timeout (adjusted for debugger suspend time)
+					else if (ended == -1 && (pc.getStartTime() + pc.getRequestTimeout() + pc.getDebuggerTotalSuspendedMillis()) < System.currentTimeMillis()) {
 						// print.e("req-time:"+System.currentTimeMillis());
 						CFMLFactoryImpl.terminate(pc, false);
 						ended = System.currentTimeMillis();
@@ -1776,8 +1825,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				Resource rootdir = config.getRootDirectory();
 				listenerTemplateCFMLWebRoot = rootdir.getRealResource(context + "." + lucee.runtime.config.Constants.getCFMLComponentExtension());
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 
 		// dialect

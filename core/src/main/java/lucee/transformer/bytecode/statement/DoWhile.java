@@ -102,13 +102,13 @@ public final class DoWhile extends StatementBaseNoFinal implements FlowControlBr
 
 		// body
 		{
-			Struct body = new StructImpl(Struct.TYPE_LINKED);
+			Struct body = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			this.body.dump(body);
 			sct.setEL(KeyConstants._body, body);
 		}
 		// test
 		{
-			Struct test = new StructImpl(Struct.TYPE_LINKED);
+			Struct test = new StructImpl(StructImpl.TYPE_LINKED_NOT_SYNC, 8);
 			expr.dump(test);
 			sct.setEL(KeyConstants._test, test);
 		}

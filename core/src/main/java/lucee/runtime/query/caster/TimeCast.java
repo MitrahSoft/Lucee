@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
+import java.util.Calendar;
 import java.util.TimeZone;
 
 import lucee.commons.date.JREDateTimeUtil;
@@ -42,6 +43,16 @@ public final class TimeCast implements Cast {
 
 		return new DateTimeImpl(t.getTime());
 
+	}
+
+	@Override
+	public Object toCFType(TimeZone tz, ResultSet rst, int columnIndex, Calendar cal) throws SQLException, IOException {
+		if (!useTimeZone || cal == null) {
+			return toCFType( tz, rst, columnIndex );
+		}
+		Time t = rst.getTime( columnIndex, cal );
+		if (t == null) return null;
+		return new DateTimeImpl( t.getTime() );
 	}
 
 }

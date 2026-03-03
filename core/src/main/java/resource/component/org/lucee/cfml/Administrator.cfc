@@ -447,17 +447,26 @@ component {
 	/**
 	* @hint verifies whether it is datasource or not
 	* @name name of the datasource to be verified
-	* @dbusername username of the database
-	* @dbpassword password of the database
+	* @dbusername username of the database (optional, uses stored credentials if not provided)
+	* @dbpassword password of the database (optional, uses stored credentials if not provided)
 	*/
-	public void function verifyDatasource( required string name, required string dbusername, required string dbpassword ){
-		admin
-			action="verifyDatasource"
-			type="#variables.type#"
-			password="#variables.password#"
-			name="#arguments.name#"
-			dbusername="#arguments.dbusername#"
-			dbpassword="#arguments.dbpassword#";
+	public void function verifyDatasource( required string name, string dbusername, string dbpassword ){
+		if ( !isNull( arguments.dbusername ) && !isNull( arguments.dbpassword ) ) {
+			admin
+				action="verifyDatasource"
+				type="#variables.type#"
+				password="#variables.password#"
+				name="#arguments.name#"
+				dbusername="#arguments.dbusername#"
+				dbpassword="#arguments.dbpassword#";
+		}
+		else {
+			admin
+				action="verifyDatasource"
+				type="#variables.type#"
+				password="#variables.password#"
+				name="#arguments.name#";
+		}
 	}
 
 	/**

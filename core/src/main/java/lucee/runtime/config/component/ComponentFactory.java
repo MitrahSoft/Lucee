@@ -32,7 +32,7 @@ public final class ComponentFactory {
 	 */
 	public static void deploy(Resource dir, boolean doNew) {
 		String path = "/resource/component/" + (Constants.DEFAULT_PACKAGE.replace('.', '/')) + "/";
-		deploy(dir, path, doNew, "HelperBase", "Feed", "Ftp", "Http", "Mail", "Query", "Result", "Administrator", "Component");
+		deploy(dir, path, doNew, "HelperBase", "Feed", "Http", "Mail", "Query", "Result", "Administrator", "Component");
 
 		// orm
 		{

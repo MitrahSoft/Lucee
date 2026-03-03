@@ -198,6 +198,7 @@
 		<available file="${cache}/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex" property="scheduler.present"/>
 		<available file="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex" property="compress.present"/>
 		<available file="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" property="mail.present"/>
+		<available file="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex" property="ftp.present"/>
 	</target>
 
 	<target name="check-mysql" depends="check-cache" unless="mysql.present">
@@ -224,7 +225,7 @@
 	</target>
 	<target name="check-pdf" depends="check-cache" unless="pdf.present">
 		<get 
-			src="${extURLMaven}${extPdfExtensionGroupPath}/${extPdfExtensionArtifact}/${extPdfExtensionVersion}/${extPdfExtensionArtifact}-${extPdfExtensionVersion}.lex" 
+			src="${extURLCDN}${extPdfExtensionGroupPath}/${extPdfExtensionArtifact}/${extPdfExtensionVersion}/${extPdfExtensionArtifact}-${extPdfExtensionVersion}.lex" 
 			dest="${cache}/${extPdfExtension}-${extPdfExtensionVersion}.lex"/>
 	</target>
 	<target name="check-admin" depends="check-cache" unless="admin.present">
@@ -254,13 +255,18 @@
 	</target>
 	<target name="check-compress" depends="check-cache" unless="compress.present">
 		<get 
-			src="${extURLMaven}${extCompressExtensionGroupPath}/${extCompressExtensionArtifact}/${extCompressExtensionVersion}/${extCompressExtensionArtifact}-${extCompressExtensionVersion}.lex" 
+			src="${extURLCDN}${extCompressExtensionGroupPath}/${extCompressExtensionArtifact}/${extCompressExtensionVersion}/${extCompressExtensionArtifact}-${extCompressExtensionVersion}.lex" 
 			dest="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex"/>
 	</target>
 	<target name="check-mail" depends="check-cache" unless="mail.present">
 		<get 
 			src="${extURLMaven}${extMailExtensionGroupPath}/${extMailExtensionArtifact}/${extMailExtensionVersion}/${extMailExtensionArtifact}-${extMailExtensionVersion}.lex" 
 			dest="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex"/>
+	</target>
+	<target name="check-ftp" depends="check-cache" unless="ftp.present">
+		<get 
+			src="${extURLMaven}${extFtpExtensionGroupPath}/${extFtpExtensionArtifact}/${extFtpExtensionVersion}/${extFtpExtensionArtifact}-${extFtpExtensionVersion}.lex" 
+			dest="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex"/>
 	</target>
 
 
@@ -416,6 +422,18 @@
 			tofile="${goal}/extensions/${ext_mail.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_mail.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_mail.filename};</echo>
+
+		<!-- add extension FTP -->
+		<loadmf jar="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex" prefix="ext_ftp."/>
+		<toFileName id="${ext_ftp.id}" name="${ext_ftp.name}" version="${ext_ftp.version}" property="ext_ftp.filename"/>
+		<copy 
+			file="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex" 
+			todir="${goal}/extensions/"/>
+		<move 
+			file="${goal}/extensions/${extFtpExtension}-${extFtpExtensionVersion}.lex" 
+			tofile="${goal}/extensions/${ext_ftp.filename}"/>
+		<echo level="info">add:${goal}/extensions/${ext_ftp.filename}</echo>
+		<echo file="${goal}/extensions/.index" append="true">${ext_ftp.filename};</echo>
 
 	</target>
 

@@ -179,6 +179,23 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private static final RHExtension[] RHEXTENSIONS_EMPTY = new RHExtension[0];
 
+	// DAP secret - required to register a debugger listener. If not set, DAP debugger is disabled.
+	public static final String DEBUGGER_SECRET;
+	// DAP debugger active - controls bytecode instrumentation for stepping/breakpoints (default true when secret set)
+	public static final boolean DEBUGGER;
+	static {
+		String secret = SystemUtil.getSystemPropOrEnvVar("lucee.dap.secret", null);
+		if (secret != null && !secret.trim().isEmpty()) {
+			DEBUGGER_SECRET = secret.trim();
+			// Breakpoint support defaults to true, can be disabled for console-only mode
+			DEBUGGER = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.dap.breakpoint", null), true);
+		}
+		else {
+			DEBUGGER_SECRET = null;
+			DEBUGGER = false;
+		}
+	}
+
 	private Integer mode;
 	private static final double DEFAULT_VERSION = 5.0d;
 	private static final long CACHE_DIR_SIZE_DEFAULT = 1024L * 1024L * 100L;
@@ -1123,8 +1140,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		try {
 			cl = getRPCClassLoader(false);
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 		if (cl != null) return cl;
 		return SystemUtil.getCoreClassLoader();
 
@@ -1402,8 +1418,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 						try {
 							scheduler = new SchedulerImpl(ConfigUtil.getEngine(this), this, new ArrayImpl());
 						}
-						catch (PageException e1) {
-						}
+						catch (PageException e1) {}
 					}
 				}
 			}
@@ -2287,8 +2302,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 									try {
 										physical = p.getCanonicalPath() + " (" + m.getStrPhysical() + ")";
 									}
-									catch (IOException e) {
-									}
+									catch (IOException e) {}
 								}
 
 								Resource a = m.getArchive();
@@ -2297,8 +2311,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 									try {
 										archive = a.getCanonicalPath() + " (" + m.getStrArchive() + ")";
 									}
-									catch (IOException e) {
-									}
+									catch (IOException e) {}
 								}
 
 								detail.append(physical).append(':').append(archive);
@@ -3567,8 +3580,25 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 						if (mt <= 0) mt = Integer.MAX_VALUE;
 					}
 
-					pool = new DatasourceConnPool(this, ds, user, pass, "datasource",
-							DatasourceConnPool.createPoolConfig(null, null, null, dsp.getMinIdle(), dsp.getMaxIdle(), mt, 0, 0, 0, 0, 0, null));
+					// maxWaitMillis: how long to wait for a connection when pool is exhausted (30 seconds)
+					long maxWaitMillis = 30000L;
+					// minEvictableIdleTimeMillis: use idleTimeout (in minutes) for how long connection can be idle
+					// before eviction
+					// -1 = not set (use default 10 minutes), 0 = infinite (no eviction), >0 = use that value
+					int idleTimeout = dsp.getIdleTimeout();
+					long minEvictableIdleTimeMillis;
+					if (idleTimeout > 0) {
+						minEvictableIdleTimeMillis = idleTimeout * 60000L;
+					}
+					else if (idleTimeout == 0) {
+						minEvictableIdleTimeMillis = -1; // infinite - disable eviction
+					}
+					else {
+						minEvictableIdleTimeMillis = 10 * 60000L; // default: 10 minutes
+					}
+
+					pool = new DatasourceConnPool(this, ds, user, pass, "datasource", DatasourceConnPool.createPoolConfig(null, null, null, dsp.getMinIdle(), dsp.getMaxIdle(), mt,
+							maxWaitMillis, minEvictableIdleTimeMillis, 0, 0, 0, null));
 					pools.put(id, pool);
 					cleanConnectionPools(id);
 				}
@@ -4597,6 +4627,8 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	@Override
 	public boolean getExecutionLogEnabled() {
+		if (DEBUGGER) return true;
+
 		if (executionLogEnabled == null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getExecutionLogEnabled")) {
 				if (executionLogEnabled == null) {
@@ -5470,8 +5502,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 				}
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 
 			if (list == null) loggers.clear();
 			else {
@@ -6083,6 +6114,18 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		if (startups != null) {
 			synchronized (SystemUtil.createToken("ConfigImpl", "getStartups")) {
 				if (startups != null) {
+					// Call finalize() on existing startup hook instances before clearing
+					for (Startup startup: startups.values()) {
+						try {
+							Method fin = Reflector.getMethod(startup.instance.getClass(), "finalize", new Class[0], true, null);
+							if (fin != null) {
+								fin.invoke(startup.instance, new Object[0]);
+							}
+						}
+						catch (Exception e) {
+							// ignore - best effort cleanup
+						}
+					}
 					startups = null;
 				}
 			}
@@ -6262,6 +6305,17 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		return javaSettings;
 	}
 
+	public ConfigImpl resetJavaSettings() {
+		if (javaSettings != null) {
+			synchronized (javaSettingsInstances) {
+				if (javaSettings != null) {
+					javaSettings = null;
+				}
+			}
+		}
+		return this;
+	}
+
 	@Override
 	public Resource getExtensionDirectory() {
 		return getExtensionInstalledDir();
@@ -6332,11 +6386,11 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 		baseComponentPageSource = null;
 	}
 
-	public void resetAll() throws IOException {
+	public void resetAll() throws Exception {
 		resetAll(null);
 	}
 
-	public void resetAll(ResetFilter filter) throws IOException {
+	public void resetAll(ResetFilter filter) throws Exception {
 		List<Method> methods = Reflector.getMethods(this.getClass());
 		if (filter == null) {
 			for (Method method: methods) {

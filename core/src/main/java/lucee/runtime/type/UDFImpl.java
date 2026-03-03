@@ -32,6 +32,7 @@ import lucee.runtime.Component;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
 import lucee.runtime.PageSource;
+import lucee.runtime.cache.CacheObject;
 import lucee.runtime.cache.tag.CacheHandler;
 import lucee.runtime.cache.tag.CacheHandlerCollectionImpl;
 import lucee.runtime.cache.tag.CacheHandlerPro;
@@ -39,6 +40,7 @@ import lucee.runtime.cache.tag.CacheItem;
 import lucee.runtime.cache.tag.udf.UDFCacheItem;
 import lucee.runtime.component.MemberSupport;
 import lucee.runtime.config.Config;
+import lucee.runtime.config.ConfigImpl;
 import lucee.runtime.config.NullSupportHelper;
 import lucee.runtime.dump.DumpData;
 import lucee.runtime.dump.DumpProperties;
@@ -63,7 +65,7 @@ import lucee.runtime.writer.BodyContentUtil;
 /**
  * defines an abstract class for a User defined Functions
  */
-public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
+public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable, CacheObject {
 
 	private static final long serialVersionUID = -7288148349256615519L; // do not change
 
@@ -358,6 +360,13 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
 					if (args != null) defineArguments(pci, getFunctionArguments(), args, newArgs);
 					else defineArguments(pci, getFunctionArguments(), values, newArgs);
 				}
+
+				// Debugger frame support - capture scopes for external debuggers
+				// Must be AFTER defineArguments so function arguments are accessible for conditional breakpoints
+				if (ConfigImpl.DEBUGGER) {
+					pci.pushDebuggerFrame(newLocal, newArgs, pc.variablesScope(), ps, getFunctionName(), properties.getStartLine());
+				}
+
 				returnValue = implementation(pci);
 				if (ownerComponent != null) pci.setActiveUDF(parent);
 			}
@@ -388,6 +397,10 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
 		}
 		finally {
 			if (ps != null) pc.removeLastPageSource(psInc != null);
+			// Debugger frame support - pop before removeUDF to maintain consistency
+			if (ConfigImpl.DEBUGGER) {
+				pci.popDebuggerFrame();
+			}
 			pci.removeUDF();
 			pci.setFunctionScopes(oldLocal, oldArgs);
 			pci.setActiveUDFCalledName(oldCalledName);
@@ -623,6 +636,23 @@ public class UDFImpl extends MemberSupport implements UDFPlus, Externalizable {
 	@Override
 	public PageSource getPageSource() {
 		return this.properties.getPageSource();
+	}
+
+	@Override
+	public String getCacheId(Collection arguments, String defaultValue) {
+		if (arguments instanceof Struct) {
+			return CacheHandlerCollectionImpl.createId(this, null, (Struct) arguments);
+		}
+		if (Decision.isCastableToArray(arguments)) {
+			Object[] arr = Caster.toNativeArray(arguments, null);
+			if (arr != null) return CacheHandlerCollectionImpl.createId(this, arr, null);
+		}
+		return defaultValue;
+	}
+
+	@Override
+	public int getCachetype() {
+		return Config.CACHE_TYPE_FUNCTION;
 	}
 
 }

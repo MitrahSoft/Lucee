@@ -32,6 +32,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.osgi.framework.BundleException;
 
@@ -47,7 +50,6 @@ import lucee.commons.lang.SystemOut;
 import lucee.runtime.PageContext;
 import lucee.runtime.PageContextImpl;
 import lucee.runtime.config.ConfigPro;
-import lucee.runtime.config.DatasourceConnPool;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.DatabaseException;
@@ -88,11 +90,32 @@ public final class HSQLDBHandler {
 	private static Object lock = new SerializableObject();
 	private static boolean hsqldbDisable;
 	private static boolean hsqldbDebug;
+	private static int hsqldbPoolSize;
 	private static final Struct columnUsageCache = new StructImpl(StructImpl.TYPE_MAX, 32, 500);
+	private static BlockingQueue<Integer> dbQueue;
+	private static DataSource[] dsCache;
+	private static ClassDefinition<?> hsqldbClassDefinition = null;
+	private static final Object CLASS_DEF_LOCK = new Object();
+	private static volatile boolean hsqldbFallbackWarningLogged = false;
 
 	static {
 		hsqldbDisable = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.disable", "false"), false);
 		hsqldbDebug = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.debug", "false"), false);
+		int defaultPoolSize = Math.min(Runtime.getRuntime().availableProcessors(), 8);
+		hsqldbPoolSize = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.poolsize", String.valueOf(defaultPoolSize)), defaultPoolSize);
+
+		// Pool size of 0 means disable HSQLDB
+		if (hsqldbPoolSize <= 0) {
+			hsqldbDisable = true;
+			hsqldbPoolSize = 1; // Prevent array allocation errors
+		}
+
+		// Initialize queue with DB numbers
+		dbQueue = new ArrayBlockingQueue<>(hsqldbPoolSize);
+		dsCache = new DataSource[hsqldbPoolSize];
+		for (int i = 0; i < hsqldbPoolSize; i++) {
+			dbQueue.offer(i);
+		}
 	}
 
 	/**
@@ -129,8 +152,8 @@ public final class HSQLDBHandler {
 		// reserved words
 		String escape = "";
 
-		// TODO use DECLARE LOCAL TEMPORARY TABLE
-		StringBuilder create = new StringBuilder("CREATE TABLE ").append(escape).append(StringUtil.toUpperCase(dbTableName)).append(escape).append(" (");
+		// Use DECLARE LOCAL TEMPORARY TABLE for session-scoped temp tables to avoid collisions
+		StringBuilder create = new StringBuilder("DECLARE LOCAL TEMPORARY TABLE ").append(escape).append(StringUtil.toUpperCase(dbTableName)).append(escape).append(" (");
 
 		for (int i = 0; i < cols.length; i++) {
 			String col = StringUtil.toUpperCase(cols[i].getString()); // quoted objects are case insensitive
@@ -143,7 +166,7 @@ public final class HSQLDBHandler {
 			create.append(type);
 			comma = ",";
 		}
-		create.append(")");
+		create.append(") ON COMMIT PRESERVE ROWS");
 		// SystemOut.print("SQL: " + Caster.toString(create));
 		stat.execute(create.toString());
 		// SystemOut.print("Create Table: [" + dbTableName + "] took " + stopwatch.time());
@@ -303,66 +326,6 @@ public final class HSQLDBHandler {
 	}
 
 	/**
-	 * remove a table from the memory database
-	 *
-	 * @param conn
-	 * @param name
-	 * @throws DatabaseException
-	 */
-	private static void removeTable(Connection conn, String name) throws SQLException {
-		Statement stat = conn.createStatement();
-		stat.execute("DROP TABLE " + name);
-		DBUtil.commitEL(conn);
-	}
-
-	/**
-	 * remove all table inside the memory database
-	 *
-	 * @param conn
-	 */
-	private static void removeAll(Connection conn, ArrayList<String> qoqTables) {
-		int len = qoqTables.size();
-		for (int i = 0; i < len; i++) {
-			String tableName = qoqTables.get(i).toString();
-			// print.out("remove:"+tableName);
-			try {
-				removeTable(conn, tableName);
-			}
-			catch (Throwable t) {
-				ExceptionUtil.rethrowIfNecessary(t);
-			}
-		}
-	}
-
-	/**
-	 * wrap the execute statement, urrghh ugly
-	 *
-	 * @param conn
-	 * @param sql
-	 */
-	private static void executeStatement(Connection conn, String sql) {
-		try {
-			_executeStatement(conn, sql);
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-		}
-	}
-
-	/**
-	 * toggle database session
-	 *
-	 * @param conn
-	 * @param sql
-	 * @throws DatabaseException
-	 */
-	private static void _executeStatement(Connection conn, String sql) throws SQLException {
-		Statement stat = conn.createStatement();
-		stat.execute(sql);
-		// DBUtil.commitEL(conn);
-	}
-
-	/**
 	 * find out which columns are used for query, by creating a view and reading the VIEW_COLUMN_USAGE
 	 *
 	 * @param conn
@@ -458,13 +421,19 @@ public final class HSQLDBHandler {
 
 		Exception qoqException = null;
 
-		// First Chance
+		// First Chance - try native QoQ
 		try {
 			SelectParser parser = new SelectParser();
 			selects = parser.parse(sql.getSQLString());
+
+			// Try native QoQ - it returns null if it can't handle the query (e.g., joins)
+			// This avoids expensive exception-based flow control for unsupported features
 			QueryImpl q = qoq.execute(pc, sql, selects, maxrows);
-			q.setExecutionTime(stopwatch.time());
-			return q;
+			if (q != null) {
+				q.setExecutionTime(stopwatch.time());
+				return q;
+			}
+			// else: fall through to HSQLDB (Second Chance)
 		}
 		catch (SQLParserException spe) {
 			qoqException = spe;
@@ -560,56 +529,72 @@ public final class HSQLDBHandler {
 		}
 	}
 
-	private static DataSource QOQ_DATASOURCE = null;
+	private static ClassDefinition<?> getHSQLDBClassDefinition(PageContext pc) throws ApplicationException {
+		ClassDefinition<?> cd = hsqldbClassDefinition;
+		if (cd == null) {
+			ConfigPro config = (ConfigPro) pc.getConfig();
+			Log log = ((PageContextImpl) pc).getLog("datasource");
 
-	private static DataSource getHSQLDBDatasource(PageContext pc, SQL sql) throws ClassException, BundleException, SQLException, ApplicationException {
+			JDBCDriver driver = config.getJDBCDriverById("hsqldb", null);
+			if (driver != null) {
+				cd = driver.cd;
+			}
+			else {
+				synchronized (CLASS_DEF_LOCK) {
+					cd = hsqldbClassDefinition;
+					if (cd == null) {
+						if (LogUtil.doesDebug(log)) {
+							log.debug("query-of-query", "HSQLDB extension not installed. Attempting to download and use embedded HSQLDB driver (org.lucee.hsqldb:2.7.2.jdk11).");
+						}
+						cd = new ClassDefinitionImpl<>("org.hsqldb.jdbcDriver", "org.lucee.hsqldb", "2.7.2.jdk11", config.getIdentification());
+						try {
+							cd.getClass();
+						}
+						catch (Exception e) {
+							ApplicationException ae = new ApplicationException("Failed to load HSQLDB driver for query-of-query fallback. " + "Please install the HSQLDB extension "
+									+ "or define a custom 'qoq' datasource to resolve this issue.");
+							ExceptionUtil.initCauseEL(ae, e);
+							throw ae;
+						}
+						hsqldbClassDefinition = cd;
+					}
+				}
+			}
+		}
+		return cd;
+	}
 
-		DataSource ds = pc.getDataSource("qoq", null);
+	private static DataSource getHSQLDBDatasource(PageContext pc, SQL sql, int dbNum) throws ClassException, BundleException, SQLException, ApplicationException {
+
+		// Check cached DataSource for this dbNum
+		DataSource ds = dsCache[dbNum];
 		if (ds != null) return ds;
 
 		ConfigPro config = (ConfigPro) pc.getConfig();
 		Log log = ((PageContextImpl) pc).getLog("datasource");
 
-		if (LogUtil.doesWarn(log)) {
-			log.warn("query-of-query", "Query-of-query statement could not be processed by the native SQL parser and is falling back to HSQLDB datasource. " + "Statement: [" + sql
-					+ "]. " + "This fallback mechanism is deprecated and will be removed in a future version. "
-					+ "To avoid this warning, either: (1) simplify your QoQ syntax to use supported SQL features, or (2) define a custom HSQLDB datasource named 'qoq' in your Lucee administrator.");
+		// Only log the fallback warning once per JVM
+		if (!hsqldbFallbackWarningLogged && LogUtil.doesWarn(log)) {
+			hsqldbFallbackWarningLogged = true;
+			log.warn("query-of-query", "Query-of-query statement could not be processed by the native SQL parser and is falling back to HSQLDB datasource. " + "Statement: [" + sql	+ "]. ");
 		}
 
-		// do we already have a __datasource__?
-		if (QOQ_DATASOURCE == null) {
-			if (LogUtil.doesDebug(log)) {
-				log.debug("query-of-query", "No custom 'qoq' datasource found. Creating default HSQLDB in-memory datasource for query-of-query fallback. "
-						+ "For better control, define an HSQLDB datasource named 'qoq' in your Lucee administrator.");
-			}
+		// Get or load HSQLDB class definition (cached after first load)
+		ClassDefinition<?> cd = getHSQLDBClassDefinition(pc);
 
-			// if the HSQLDB extension is installed, we will have a driver for it
-			JDBCDriver driver = config.getJDBCDriverById("hsqldb", null);
-			ClassDefinition cd;
-			if (driver != null) {
-				cd = driver.cd;
-			}
-			else {
-				if (LogUtil.doesDebug(log)) {
-					log.debug("query-of-query", "HSQLDB extension not installed. Attempting to download and use embedded HSQLDB driver (org.lucee.hsqldb:2.7.2.jdk11).");
-				}
-				cd = new ClassDefinitionImpl("org.hsqldb.jdbcDriver", "org.lucee.hsqldb", "2.7.2.jdk11", config.getIdentification());
-				try {
-					cd.getClass();// this will load the class, may download it if not available locally
-				}
-				catch (Exception e) {
-					ApplicationException ae = new ApplicationException("Failed to load HSQLDB driver for query-of-query fallback. " + "Please install the HSQLDB extension "
-							+ "or define a custom 'qoq' datasource to resolve this issue.");
-					ExceptionUtil.initCauseEL(ae, e);
-					throw ae;
-				}
-			}
+		// Create datasource with unique database name using dbNum
+		String dbName = "qoq_" + dbNum;
+		String connStr = "jdbc:hsqldb:mem:" + dbName + ";sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;";
 
-			QOQ_DATASOURCE = new DataSourceImpl(config, QOQ_DATASOURCE_NAME, cd, "hypersonic-hsqldb",
-					"jdbc:hsqldb:mem:tempQoQ;sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;", null, null, "", -1, "sa", "", null, 100, -1, -1,
-					60000, 0, 0, 0, true, true, DataSource.ALLOW_ALL, new StructImpl(), false, false, false, null, "", ParamSyntaxImpl.DEFAULT, false, false, false, false, log);
-		}
-		return QOQ_DATASOURCE;
+		// We don't use connection pooling - each query creates a fresh connection and closes it immediately.
+		// Concurrency is controlled by the BlockingQueue (dbQueue), not by connection pool limits.
+		ds = new DataSourceImpl(config, QOQ_DATASOURCE_NAME, cd, "hypersonic-hsqldb",
+				connStr, null, null, "", -1, "sa", "", null,
+				-1, -1, -1, 0, 0, 0, -1,
+				true, true, DataSource.ALLOW_ALL, new StructImpl(), false, false, false, null, "", ParamSyntaxImpl.DEFAULT, false, false, false, false, log);
+
+		dsCache[dbNum] = ds;
+		return ds;
 	}
 
 	public static QueryImpl __execute(PageContext pc, SQL sql, int maxrows, int fetchsize, TimeSpan timeout, Stopwatch stopwatch, Set<String> tables, boolean doSimpleTypes)
@@ -620,14 +605,30 @@ public final class HSQLDBHandler {
 		ConfigPro config = (ConfigPro) pc.getConfig();
 		DatasourceConnection dc = null;
 		Connection conn = null;
-		// TODO this is currently single threaded
-		synchronized (lock) {
+		Integer dbNum = null;
+		try {
+			// Get a database number from the queue (blocks if all DBs are in use)
 			try {
-				DatasourceConnPool pool = config.getDatasourceConnectionPool(getHSQLDBDatasource(pc, sql), null, null);
-				dc = pool.borrowObject();
-				conn = dc.getConnection();
-				// executeStatement(conn, "CONNECT"); // TODO create a new HSQLDB session for temp tables
-				DBUtil.setAutoCommitEL(conn, false);
+				long remainingMs = pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime());
+				if (remainingMs <= 0) {
+					throw new DatabaseException("Request timeout exceeded while waiting for available HSQLDB instance", null, sql, null);
+				}
+				dbNum = dbQueue.poll(remainingMs, TimeUnit.MILLISECONDS);
+				if (dbNum == null) {
+					throw new DatabaseException("Timeout waiting for available HSQLDB instance after " + remainingMs + "ms", null, sql, null);
+				}
+			}
+			catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				throw new DatabaseException("Interrupted while waiting for available Query of Query HSQLDB instance", null, sql, null);
+			}
+
+			// Create datasource with unique database name
+			DataSource ds = getHSQLDBDatasource(pc, sql, dbNum);
+			conn = ds.getConnection(config, null, null);
+			// Wrap in DatasourceConnection for QueryImpl compatibility (but with null pool)
+			dc = new DatasourceConnectionImpl(null, conn, (DataSourcePro) ds, null, null);
+			DBUtil.setAutoCommitEL(conn, false);
 
 				try {
 					Iterator<String> it = tables.iterator();
@@ -692,32 +693,36 @@ public final class HSQLDBHandler {
 						DBUtil.setAutoCommitEL(conn, true);
 					}
 
-				}
-				catch (SQLException e) {
-					IllegalQoQException ex = new IllegalQoQException("QoQ HSQLDB: error executing sql statement on query.", e.getMessage(), sql, null);
-					ExceptionUtil.initCauseEL(ex, e);
-					throw ex;
-				}
 			}
-			catch (Exception ee) {
-				IllegalQoQException ex = new IllegalQoQException("QoQ HSQLDB: error executing sql statement on query.", ee.getMessage(), sql, null);
-				ExceptionUtil.initCauseEL(ex, ee);
+			catch (SQLException e) {
+				IllegalQoQException ex = new IllegalQoQException("QoQ HSQLDB: error executing sql statement on query.", e.getMessage(), sql, null);
+				ExceptionUtil.initCauseEL(ex, e);
 				throw ex;
 			}
-			finally {
-				if (conn != null) {
-					removeAll(conn, qoqTables);
-					// executeStatement(conn, "DISCONNECT"); // close HSQLDB session with temp tables
-					DBUtil.setAutoCommitEL(conn, true);
-				}
-				if (dc != null) dc.release();
-
-				// manager.releaseConnection(dc);
-			}
-			// TODO we are swallowing errors, shouldn't be passing a null value back
-			if (nqr != null) nqr.setExecutionTime(stopwatch.time());
-			return nqr;
 		}
+		catch (Exception ee) {
+			IllegalQoQException ex = new IllegalQoQException("QoQ HSQLDB: error executing sql statement on query.", ee.getMessage(), sql, null);
+			ExceptionUtil.initCauseEL(ex, ee);
+			throw ex;
+		}
+		finally {
+			// Close connection directly (no pooling) - temp tables auto-drop on close
+			if (conn != null) {
+				try {
+					conn.close();
+				}
+				catch (SQLException e) {
+					// Log but don't throw - we're cleaning up
+				}
+			}
+			// Return database number to queue for reuse
+			if (dbNum != null) {
+				dbQueue.offer(dbNum);
+			}
+		}
+		// TODO we are swallowing errors, shouldn't be passing a null value back
+		if (nqr != null) nqr.setExecutionTime(stopwatch.time());
+		return nqr;
 
 	}
 }

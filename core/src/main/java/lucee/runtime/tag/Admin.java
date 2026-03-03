@@ -2799,8 +2799,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		if (verify) _doVerifyDatasource(ds, username, password);
 		// print.out("limit:"+connLimit);
-		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout,
-				metaCacheTimeout, blob, clob, allow, validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
+		admin.updateDataSource(id, bundleName, bundleVersion, name, newName, cd, dsn, username, password, host, database, port, connLimit, idleTimeout, liveTimeout, minIdle,
+				maxIdle, metaCacheTimeout, blob, clob, allow, validate, storage, timezone, custom, dbdriver, ps, literalTimestampWithTSOffset, alwaysSetTimeout, requestExclusive,
 				alwaysResetConnections);
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetDataSources();
@@ -2817,9 +2817,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doUpdateAIConnection() throws PageException {
+		String name = getString("admin", action, "name");
 		ClassDefinition cd = ClassDefinitionImpl.toClassDefinitionImpl(attributes, null, true, config.getIdentification());
-		admin.updateAIConnection(getString("admin", action, "name"), cd, getString("default", null), getStruct("admin", action, "custom"));
+		admin.updateAIConnection(name, cd, getString("default", null), getStruct("admin", action, "custom"));
 		store();
+		config.getAIEnginePool().flushEngine(name);
 		ConfigUtil.getConfigServerImpl(config).resetAIEngineFactories();
 		adminSync.broadcast(attributes, config);
 	}
@@ -2974,7 +2976,18 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			_doVerifyDatasource(cd, connStr, getString("admin", action, "dbusername"), getString("admin", action, "dbpassword"));
 		}
 		else {
-			_doVerifyDatasource(getString("admin", action, "name"), getString("admin", action, "dbusername"), getString("admin", action, "dbpassword"));
+			String name = getString("admin", action, "name");
+			String username = getString("dbusername", null);
+			String password = getString("dbpassword", null);
+			// if username/password not provided, get from stored datasource config
+			if (username == null && password == null) {
+				DataSource ds = config.getDataSource(name, null);
+				if (ds != null) {
+					username = ds.getUsername();
+					password = ds.getPassword();
+				}
+			}
+			_doVerifyDatasource(name, username, password);
 		}
 	}
 
@@ -3231,7 +3244,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		store();
 		ConfigUtil.getConfigServerImpl(config).restSuppressWSBeforeArg().resetDotNotationUpperCase().resetFullNullSupport().resetPreciseMath().resetExternalizeStringGTE()
-				.resetHandleUnQuotedAttrValueAsString();
+				.resetHandleUnQuotedAttrValueAsString().resetTemplateCharSet();
 		adminSync.broadcast(attributes, config);
 	}
 
@@ -3967,8 +3980,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 	}
 
 	private void doRemoveAIConnection() throws PageException {
-		admin.removeAIConnection(getString("admin", action, "name"));
+		String name = getString("admin", action, "name");
+		admin.removeAIConnection(name);
 		store();
+		config.getAIEnginePool().flushEngine(name);
 		ConfigUtil.getConfigServerImpl(config).resetAIEngineFactories();
 		adminSync.broadcast(attributes, config);
 	}
@@ -4075,6 +4090,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					sct.setEL("literalTimestampWithTSOffset", Boolean.valueOf(di.getLiteralTimestampWithTSOffset()));
 					sct.setEL("alwaysSetTimeout", Boolean.valueOf(di.getAlwaysSetTimeout()));
 					sct.setEL("dbdriver", Caster.toString(di.getDbDriver(), ""));
+					sct.setEL("minIdle", di.getMinIdle() < 1 ? "" : Caster.toString(di.getMinIdle()));
+					sct.setEL("maxIdle", di.getMaxIdle() < 1 ? "" : Caster.toString(di.getMaxIdle()));
 				}
 				pageContext.setVariable(getString("admin", action, "returnVariable"), sct);
 				return;
@@ -4291,7 +4308,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		config.getFormUrlAsStruct();
 
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetAllowImplicidQueryCall().resetMergeFormAndURL().resetClientStorage()
+		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetScopeCascadingType().resetAllowImplicidQueryCall().resetMergeFormAndURL().resetClientStorage()
 				.resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType().resetSessionManagement().resetClientManagement()
 				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct();// MUST
 		adminSync.broadcast(attributes, config);

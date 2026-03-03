@@ -297,7 +297,12 @@ public final class RHExtension implements Serializable {
 					}
 				}
 				finally {
-					filter.reset(config);
+					try {
+						filter.reset(config);
+					}
+					catch (Exception e) {
+						throw Caster.toPageException(e);
+					}
 					resetExtensionInstalledFile(config, id, version);
 				}
 			}
@@ -1177,8 +1182,7 @@ public final class RHExtension implements Serializable {
 			try {
 				qryBundles = new QueryImpl(new Key[] { KeyConstants._name, KeyConstants._version }, bfs == null ? 0 : bfs.length, "bundles");
 			}
-			catch (DatabaseException e) {
-			}
+			catch (DatabaseException e) {}
 			if (qryBundles != null) {
 				for (int i = 0; i < bfs.length; i++) {
 					qryBundles.setAtEL(KeyConstants._name, i + 1, bfs[i].getSymbolicName());
@@ -1416,7 +1420,7 @@ public final class RHExtension implements Serializable {
 			}
 			// gradle style maven
 			else if (ed.getId() == null && (gavso = MavenUtil.toGAVSO(ss, null)) != null) {
-				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, false, null);
+				ExtensionDefintion tmp = new ExtensionProvider(gavso.g).toExtensionDefintion(c, gavso, true, null);
 				if (tmp != null) ed = tmp;
 			}
 			else if (ed.getId() == null || Decision.isUUId(ed.getId())) {
@@ -1466,7 +1470,7 @@ public final class RHExtension implements Serializable {
 			name = entry.getKey().trim();
 			if (!"id".equalsIgnoreCase(name)) ed.setParam(name, entry.getValue().trim());
 			if ("path".equalsIgnoreCase(name) || "url".equalsIgnoreCase(name) || "resource".equalsIgnoreCase(name)) {
-				res = ResourceUtil.toResourceExisting(config, entry.getValue().trim(), null);
+				res = ResourceUtil.toResourceExisting(config, ConfigUtil.replaceConfigPlaceHolder(config, entry.getValue().trim()), null);
 				if (res != null && res.isFile()) {
 					ed.setSource(config, res);
 					if (ed.getId() == null) {

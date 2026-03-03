@@ -1533,9 +1533,9 @@ public final class ConfigAdmin {
 	 * @throws PageException
 	 */
 	public void updateDataSource(String id, String bundleName, String bundleVersion, String name, String newName, ClassDefinition cd, String dsn, String username, String password,
-			String host, String database, int port, int connectionLimit, int idleTimeout, int liveTimeout, long metaCacheTimeout, boolean blob, boolean clob, int allow,
-			boolean validate, boolean storage, String timezone, Struct custom, String dbdriver, ParamSyntax paramSyntax, boolean literalTimestampWithTSOffset,
-			boolean alwaysSetTimeout, boolean requestExclusive, boolean alwaysResetConnections) throws PageException {
+			String host, String database, int port, int connectionLimit, int idleTimeout, int liveTimeout, int minIdle, int maxIdle, long metaCacheTimeout, boolean blob,
+			boolean clob, int allow, boolean validate, boolean storage, String timezone, Struct custom, String dbdriver, ParamSyntax paramSyntax,
+			boolean literalTimestampWithTSOffset, boolean alwaysSetTimeout, boolean requestExclusive, boolean alwaysResetConnections) throws PageException {
 
 		checkWriteAccess();
 		SecurityManager sm = config.getSecurityManager();
@@ -1594,6 +1594,10 @@ public final class ConfigAdmin {
 				el.setEL(KeyConstants._connectionLimit, Caster.toString(connectionLimit));
 				el.setEL(KeyConstants._connectionTimeout, Caster.toString(idleTimeout));
 				el.setEL(KeyConstants._liveTimeout, Caster.toString(liveTimeout));
+				if (minIdle > 0) el.setEL("minIdle", Caster.toString(minIdle));
+				else if (el.containsKey("minIdle")) el.removeEL(KeyImpl.init("minIdle"));
+				if (maxIdle > 0) el.setEL("maxIdle", Caster.toString(maxIdle));
+				else if (el.containsKey("maxIdle")) el.removeEL(KeyImpl.init("maxIdle"));
 				el.setEL(KeyConstants._metaCacheTimeout, Caster.toString(metaCacheTimeout));
 				el.setEL(KeyConstants._blob, Caster.toString(blob));
 				el.setEL(KeyConstants._clob, Caster.toString(clob));
@@ -1706,15 +1710,13 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
 
-	private void _removeStartupHook(ClassDefinition cd) throws PageException {
-
-		if (!cd.isBundle()) throw new ApplicationException("missing bundle name");
+	private void _removeStartupHook(ClassDefinitionImpl cd) throws PageException {
+		if (!cd.isBundle() && !cd.isMaven()) throw new ApplicationException("Cannot remove extension startup hook [" + cd + "]: missing bundle name or maven coordinates");
 
 		Array children = ConfigUtil.getAsArray("startupHooks", root);
 		Key[] keys = children.keys();
@@ -1732,15 +1734,14 @@ public final class ConfigAdmin {
 		}
 
 		// now unload (maybe not necessary)
+		unloadStartupIfNecessary(config, cd, true);
 		if (cd.isBundle()) {
-			unloadStartupIfNecessary(config, cd, true);
 			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
 			if (bl != null) {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
@@ -1775,8 +1776,7 @@ public final class ConfigAdmin {
 			}
 			config.getStartups().remove(cd.getClassName());
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 	}
 
 	public void updateJDBCDriver(String label, String id, ClassDefinition cd, String connectionString) throws PageException {
@@ -1827,16 +1827,15 @@ public final class ConfigAdmin {
 				try {
 					OSGiUtil.uninstall(bl);
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 			}
 		}
 	}
 
-	private void _updateStartupHook(ClassDefinition cd) throws PageException {
+	private void _updateStartupHook(ClassDefinitionImpl cd) throws PageException {
 		unloadStartupIfNecessary(config, cd, false);
-		// check if it is a bundle
-		if (!cd.isBundle()) throw new ApplicationException("missing bundle info");
+		// check if it is a bundle or maven
+		if (!cd.isBundle() && !cd.isMaven()) throw new ApplicationException("Cannot register extension startup hook [" + cd + "]: missing bundle name or maven coordinates");
 
 		Array children = ConfigUtil.getAsArray("startupHooks", root);
 
@@ -1861,18 +1860,8 @@ public final class ConfigAdmin {
 
 		// make sure the class exists
 		setClass(child, null, "", cd);
-
-		// now unload again, JDBC driver can be loaded when necessary
-		if (cd.isBundle()) {
-			Bundle bl = OSGiUtil.getBundleLoaded(cd.getName(), cd.getVersion(), null);
-			if (bl != null) {
-				try {
-					OSGiUtil.uninstall(bl);
-				}
-				catch (BundleException e) {
-				}
-			}
-		}
+		// Note: Unlike JDBC drivers, startup hooks are NOT lazy-loaded - they are instantiated
+		// immediately via resetStartups().getStartups(). Do not uninstall the bundle here.
 	}
 
 	private void _updateStartupHook(String component) {
@@ -4927,6 +4916,7 @@ public final class ConfigAdmin {
 					gavso = itl.next();
 					if (gavso != null) {
 						_updateMaven(gavso);
+						filter.add("resetJavaSettings");
 						reloadNecessary = true;
 					}
 					logger.info("extension", "Update maven endpoint [" + gavso + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
@@ -5037,11 +5027,11 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = (ClassDefinitionImpl) ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
 					// class
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || cd.isMaven())) {
 						_updateStartupHook(cd);
 						filter.add("resetStartups");
 						reloadNecessary = true;
@@ -5053,6 +5043,12 @@ public final class ConfigAdmin {
 						filter.add("resetStartups");
 						reloadNecessary = true;
 						logger.info("extension", "Update Startup Hook [" + cfc + "] from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "]");
+					}
+					// neither valid class nor component - log error
+					else {
+						logger.error("extension",
+								"Startup Hook from extension [" + rhext.getMetadata().getName() + ":" + rhext.getVersion() + "] could not be registered: class definition [" + cd
+										+ "] is not a valid OSGi bundle (missing bundle-name/bundle-version?) and no component specified");
 					}
 				}
 			}
@@ -5182,6 +5178,11 @@ public final class ConfigAdmin {
 			// if(reloadNecessary){
 			reloadNecessary = true;
 			storeAndReload(false, true, reload && reloadNecessary, false);
+
+			// Trigger startup hooks if they were added/updated (LDEV-5955)
+			if (filter.allow("resetStartups")) {
+				((ConfigImpl) config).resetStartups().getStartups();
+			}
 
 		}
 		catch (Throwable t) {
@@ -5453,10 +5454,10 @@ public final class ConfigAdmin {
 				Map<String, String> map;
 				while (itl.hasNext()) {
 					map = itl.next();
-					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
+					ClassDefinitionImpl cd = (ClassDefinitionImpl) ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
 					String cfc = map.get("component");
 
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || cd.isMaven())) {
 						_removeStartupHook(cd);
 						filter.add("resetStartups");
 					}
@@ -6215,6 +6216,7 @@ public final class ConfigAdmin {
 		Resource context = config.getConfigDir().getRealResource("context");
 		Resource trg = context.getRealResource(realpath);
 		if (trg.exists()) {
+			LogUtil.log(config, Log.LEVEL_INFO, "deploy", "_removeContext() removing: " + trg.getAbsolutePath());
 			trg.remove(true);
 			if (_store) ConfigAdmin._storeAndReload((ConfigPro) config);
 			ResourceUtil.removeEmptyFolders(context, null);
@@ -6598,8 +6600,7 @@ public final class ConfigAdmin {
 								return old;
 							}
 						}
-						catch (Exception ee) {
-						}
+						catch (Exception ee) {}
 					}
 				}
 				catch (Exception e) {

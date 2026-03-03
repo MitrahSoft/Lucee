@@ -155,8 +155,7 @@ import lucee.runtime.util.ForEachUtil;
  * This class can cast object of one type to another by CFML rules
  */
 public final class Caster {
-	private Caster() {
-	}
+	private Caster() {}
 	// static Map calendarsMap=new ReferenceMap(ReferenceMap.SOFT,ReferenceMap.SOFT);
 
 	private static final int NUMBERS_MIN = 0;
@@ -1008,7 +1007,7 @@ public final class Caster {
 
 	private static String toDecimal(double value, char decDel, char thsDel) {
 		// TODO Caster toDecimal bessere impl.
-		String str = Caster.toBigDecimal((StrictMath.round(value * 100) / 100D)).toString();
+		String str = Caster.toBigDecimal((StrictMath.round(value * 100) / 100D)).toPlainString();
 		// str=toDouble(value).toString();
 		String[] arr = str.split("\\.");
 
@@ -2876,8 +2875,7 @@ public final class Caster {
 					Object tmp = Reflector.componentToClass(ThreadLocalPageContext.get(), (Component) o, Map.class);
 					if (tmp instanceof Map) return (Map) tmp;
 				}
-				catch (PageException e) {
-				}
+				catch (PageException e) {}
 			}
 			if (duplicate) return (Map) Duplicator.duplicate(o, false);
 			return ((Struct) o);
@@ -2972,6 +2970,10 @@ public final class Caster {
 	 * it=map.keySet().iterator(); while(it.hasNext()) { Object key=it.next();
 	 * sct.set(StringUtil.toLowerCase(Caster.toString(key)),map.get(key)); } return sct; }
 	 */
+
+	public static byte[] toBinary(Resource res) throws IOException {
+		return IOUtil.toBytes(res);
+	}
 
 	/**
 	 * cast an Object to a Binary
@@ -3521,8 +3523,7 @@ public final class Caster {
 					}
 					return new TimeSpanImpl(values[0], values[1], values[2], values[3]);
 				}
-				catch (ExpressionException e) {
-				}
+				catch (ExpressionException e) {}
 			}
 		}
 		else if (o instanceof ObjectWrap) {
@@ -3603,7 +3604,7 @@ public final class Caster {
 			}
 
 		}
-		return NativeException.newInstance(t, rethrowIfNecessary);
+		return NativeException.getInstance(t, rethrowIfNecessary);
 	}
 
 	/**
@@ -3658,8 +3659,7 @@ public final class Caster {
 			try {
 				return toClassName(((ObjectWrap) o).getEmbededObject());
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 		return toClassName(o.getClass());
 	}
@@ -4268,8 +4268,7 @@ public final class Caster {
 					try {
 						val = Caster.castTo(pc, p.getType(), pair.getValue(), false);
 					}
-					catch (PageException e) {
-					}
+					catch (PageException e) {}
 
 					// store in variables and this scope
 					scope.setEL(pair.getName(), val);
@@ -4278,8 +4277,7 @@ public final class Caster {
 				return cfc;
 			}
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 		return defaultValue;
 	}
 
@@ -4520,8 +4518,7 @@ public final class Caster {
 				Object tmp = Reflector.componentToClass(ThreadLocalPageContext.get(), (Component) o, Collection.class);
 				if (tmp instanceof Collection) return (Collection) tmp;
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 		else if (o instanceof Map) {
 			return MapAsStruct.toStruct((Map) o, true);// StructImpl((Map)o);
@@ -4593,8 +4590,7 @@ public final class Caster {
 				Object tmp = Reflector.componentToClass(ThreadLocalPageContext.get(), (Component) o, Collection.class);
 				if (tmp instanceof Collection) return (Collection) tmp;
 			}
-			catch (PageException e) {
-			}
+			catch (PageException e) {}
 		}
 		else if (o instanceof Map) {
 			return MapAsStruct.toStruct((Map) o, true);
@@ -4667,10 +4663,8 @@ public final class Caster {
 					valueStr = args[i].getClass().getName();
 				}
 				if (valueStr.length() > 50) valueStr = valueStr.substring(0, 50) + "...";
-				throw new ExpressionException(
-						"Missing argument name, when using named parameters to a function, all parameters must be named. "
-								+ "Argument at position " + (i - offset + 1) + " [" + valueStr + "] is missing a name. "
-								+ "Either name all arguments (e.g., argumentName=value) or use positional arguments only.");
+				throw new ExpressionException("Missing argument name, when using named parameters to a function, all parameters must be named. " + "Argument at position "
+						+ (i - offset + 1) + " [" + valueStr + "] is missing a name. " + "Either name all arguments (e.g., argumentName=value) or use positional arguments only.");
 			}
 		}
 		return sct;
@@ -5010,8 +5004,7 @@ public final class Caster {
 				return new ScriptConverter().serialize(value);
 			}
 		}
-		catch (ConverterException e) {
-		}
+		catch (ConverterException e) {}
 		return defaultValue;
 	}
 
@@ -5224,8 +5217,7 @@ public final class Caster {
 		try {
 			return toBigDecimal(str);
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		return defaultValue;
 	}
 
@@ -5275,8 +5267,7 @@ public final class Caster {
 				Object tmp = Reflector.componentToClass(ThreadLocalPageContext.get(), (Component) obj, CharSequence.class);
 				if (tmp instanceof CharSequence) return (CharSequence) tmp;
 			}
-			catch (PageException pe) {
-			}
+			catch (PageException pe) {}
 		}
 		return Caster.toString(obj);
 	}
@@ -5288,8 +5279,7 @@ public final class Caster {
 				Object tmp = Reflector.componentToClass(ThreadLocalPageContext.get(), (Component) obj, CharSequence.class);
 				if (tmp instanceof CharSequence) return (CharSequence) tmp;
 			}
-			catch (PageException pe) {
-			}
+			catch (PageException pe) {}
 		}
 
 		String str = Caster.toString(obj, null);

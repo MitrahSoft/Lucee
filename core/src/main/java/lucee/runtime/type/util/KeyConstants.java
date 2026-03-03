@@ -467,6 +467,7 @@ public final class KeyConstants {
 	public static final Key _idx = init("idx");
 	public static final Key _indexOf = init("indexOf");
 	public static final Key _init = init("init");
+	public static final Key _index = init("index");
 	public static final Key _innerJoin = init("innerJoin");
 	public static final Key _insert = init("insert");
 	public static final Key _instance = init("instance");
@@ -747,6 +748,7 @@ public final class KeyConstants {
 	public static final Key _recordcount = init("recordcount");
 	public static final Key _cached = init("cached");
 	public static final Key _cachedWithin = init("cachedWithin");
+	public static final Key _cachedWithinId = init("cachedWithinId");
 	public static final Key _COLUMNLIST = init("COLUMNLIST");
 	public static final Key _columnlist = init("columnlist");
 	public static final Key _CURRENTROW = init("CURRENTROW");
@@ -866,6 +868,7 @@ public final class KeyConstants {
 	public static final Key _mappings = init("mappings");
 	public static final Key _web = init("web");
 	public static final Key _mimetype = init("mimetype");
+	public static final Key _mimeType = init("mimeType");
 	public static final Key _0 = init("0");
 	public static final Key _1 = init("1");
 	public static final Key _2 = init("2");
@@ -3117,6 +3120,9 @@ public final class KeyConstants {
 	public static final Key _srcall = init("srcall");
 	public static final Key __tick = init("_tick");
 	public static final Key __start = init("_start");
+	public static final Key _binary = init("binary");
+	public static final Key _Code = init("Code");
+	public static final Key _statusText = init("statusText");
 
 	public static Map<String, Key> getKeys() {
 		return keys;
