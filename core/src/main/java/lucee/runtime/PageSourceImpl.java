@@ -423,7 +423,15 @@ public final class PageSourceImpl implements PageSource {
 					// synchronized (SystemUtil.createToken("PageSource", getRealpathWithVirtual())) {
 					if (srcLastModified == 0 || srcLastModified != page.getSourceLastModified()) {// || (page instanceof PagePro && ((PagePro) page).getSourceLength() !=
 																									// srcFile.length())
-						if (LogUtil.doesTrace(mapping.getLog())) mapping.getLog().trace("page-source", "release [" + getDisplayPath() + "] from page source pool");
+						if (LogUtil.doesTrace(mapping.getLog())) {
+							if (srcLastModified == 0) {
+								mapping.getLog().trace("page-source", "release [" + getDisplayPath() + "] from page source pool because there is no timestamp for the source");
+							}
+							else {
+								mapping.getLog().trace("page-source", "release [" + getDisplayPath() + "] from page source pool because the source file has a different timestamp ["
+										+ srcLastModified + "] than the timestamp in the page [" + page.getSourceLastModified() + "]");
+							}
+						}
 						resetLoaded();
 						flush();
 						return true;

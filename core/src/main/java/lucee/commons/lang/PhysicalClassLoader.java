@@ -101,6 +101,11 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		super(urls, parentClassLoader == null ? (parentClassLoader = SystemUtil.getCombinedClassLoader()) : parentClassLoader);
 		this.resources = resources;
 		config = (ConfigPro) c;
+
+		if (c != null && LogUtil.doesTrace(c.getLog("application"))) {
+			c.getLog("application").trace("page-source", "PhysicalClassLoader<init>:" + ExceptionUtil.getStacktrace(new Throwable(), false));
+		}
+
 		this.addionalClassLoader = addionalClassLoader;
 		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
 
@@ -137,9 +142,8 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			allClassesBytes += i.intValue();
 		}
 		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
-		LogUtil.log(level, "physical-classloader",
-				"flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", " + StringUtil.byteFormat(allClassesBytes)
-						+ ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
+		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
+				+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
 		return clone;
 	}
 
