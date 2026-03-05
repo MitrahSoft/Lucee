@@ -76,7 +76,7 @@ public class JavaSettingsImpl implements JavaSettings {
 	private boolean hasBundlesTranslated;
 	private Config config;
 
-	private String id;
+	private final String id;
 
 	private JavaSettingsImpl(String id, Config config, Collection<POM> poms, Collection<BD> osgis, Resource[] resources, Resource[] bundles, Boolean loadCFMLClassPath,
 			boolean reloadOnChange, int watchInterval, String[] watchedExtensions) {
@@ -343,6 +343,10 @@ public class JavaSettingsImpl implements JavaSettings {
 		Collections.sort(names);
 		String id = HashUtil.create64BitHashAsString(names.toString());
 
+		if (config != null && LogUtil.doesTrace(config.getLog("application"))) {
+			config.getLog("application").trace("page-source", "create key [" + id + "] from valaue [" + names.toString() + "]");
+		}
+
 		JavaSettings js = ((ConfigPro) config).getJavaSettings(id);
 		if (js != null) {
 			return js;
@@ -551,6 +555,9 @@ public class JavaSettingsImpl implements JavaSettings {
 
 		Collections.sort(names);
 		String id = HashUtil.create64BitHashAsString(names.toString());
+		if (config != null && LogUtil.doesTrace(config.getLog("application"))) {
+			config.getLog("application").trace("page-source", "create key [" + id + "] from valaue [" + names.toString() + "]");
+		}
 
 		JavaSettings js = ((ConfigPro) config).getJavaSettings(id);
 		if (js != null) {
