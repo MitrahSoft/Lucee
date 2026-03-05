@@ -60,6 +60,21 @@ public class Hash {
 		}
 	}
 
+	public static String md5(Resource res, int maxlength) throws IOException {
+
+		try (InputStream is = res.getInputStream()) {
+			byte[] buffer = new byte[maxlength];
+			int bytesRead = is.read(buffer);
+
+			if (bytesRead < 0) {
+				throw new IOException("Unable to read the file: " + res);
+			}
+
+			// Adjust buffer if less than 100 bytes were read
+			return DigestUtils.md5Hex(bytesRead < 100 ? java.util.Arrays.copyOf(buffer, bytesRead) : buffer);
+		}
+	}
+
 	public static String md5(String str) throws NoSuchAlgorithmException {
 		return hash(str, ALGORITHM_MD5, ENCODING_HEX, CharsetUtil.UTF8);
 	}

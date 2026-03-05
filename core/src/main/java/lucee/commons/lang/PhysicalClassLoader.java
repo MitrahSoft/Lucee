@@ -150,6 +150,10 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 	static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
 		double all;
 
+		if (existing.allLoadedClasses.size() == 0) {
+			return null;
+		}
+
 		if (LogUtil.does(Log.LEVEL_TRACE)) {
 			int allClasses = existing.allLoadedClasses.size();
 			int allClassesBytes = 0;
