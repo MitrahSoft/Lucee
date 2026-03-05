@@ -16,6 +16,8 @@ import lucee.commons.digest.HashUtil;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
+import lucee.commons.io.log.Log;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.type.file.FileResource;
 import lucee.commons.io.res.util.ResourceUtil;
@@ -54,6 +56,9 @@ public class PhysicalClassLoaderFactory {
 						PhysicalClassLoader existing = classLoaders.get(key);
 						if (existing != null) PhysicalClassLoader.flush(existing, c);
 					}
+					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
+							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
+
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, new ArrayList<Resource>(), directory, SystemUtil.getCombinedClassLoader(), null, false));
 					return rpccl;
 				}
@@ -63,6 +68,8 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
 		if (flushed != null) {
+			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
+					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 			classLoaders.put(key, rpccl = flushed);
 		}
 		return rpccl;
@@ -94,6 +101,8 @@ public class PhysicalClassLoaderFactory {
 					}
 					Resource dir = storeResourceMeta(c, key, js, resources);
 					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
+					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
+							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, resources, dir, parent != null ? parent : SystemUtil.getCombinedClassLoader(), null, true));
 					return rpccl;
 				}
@@ -103,6 +112,8 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
 		if (flushed != null) {
+			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
+					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 			classLoaders.put(key, rpccl = flushed);
 		}
 		return rpccl;
@@ -123,6 +134,8 @@ public class PhysicalClassLoaderFactory {
 					Resource dir = c.getClassDirectory().getRealResource("RPC/" + key);
 					if (!dir.exists()) ResourceUtil.createDirectoryEL(dir, true);
 					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
+					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
+							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, new ArrayList<Resource>(), dir, SystemUtil.getCombinedClassLoader(), bcl, true));
 					return rpccl;
 				}
@@ -131,6 +144,8 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
 		if (flushed != null) {
+			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
+					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 			classLoaders.put(key, rpccl = flushed);
 		}
 

@@ -30,8 +30,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lucee.commons.io.SystemUtil;
+import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.watch.PageSourcePoolWatcher;
+import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.SerializableObject;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
@@ -362,6 +364,9 @@ public final class PageSourcePool implements Dumpable {
 	}
 
 	public void resetPages(ClassLoader cl) {
+		if (LogUtil.doesTrace(mapping.getLog())) {
+			mapping.getLog().trace("page-source", "reset pages:" + ExceptionUtil.getStacktrace(new Throwable(), false));
+		}
 		Iterator<SoftReference<PageSource>> it = this.pageSources.values().iterator();
 		PageSourceImpl psi;
 		SoftReference<PageSource> sr;
@@ -393,6 +398,11 @@ public final class PageSourcePool implements Dumpable {
 		if (Constants.isCFML(file)) {
 			ApplicationContext ac = pc.getApplicationContext();
 			List<PageSource> sources = ConfigWebUtil.toAllLoadedPageSource((ConfigPro) pc.getConfig(), ac == null ? null : ac.getMappings(), file);
+
+			if (LogUtil.doesTrace(pc.getConfig().getLog("application"))) {
+				pc.getConfig().getLog("application").trace("page-source", "flush pages:" + ExceptionUtil.getStacktrace(new Throwable(), false));
+			}
+
 			for (PageSource ps: sources) {
 				((PageSourceImpl) ps).resetLoaded();
 				((PageSourceImpl) ps).flush();
