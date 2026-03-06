@@ -695,4 +695,18 @@ public final class ClazzDynamic extends Clazz {
 		}
 		return o;
 	}
+
+	public static void flush(ClassLoader cl) {
+		if (cl == null) return;
+
+		synchronized (classes) {
+			Iterator<Class> it = classes.keySet().iterator();
+			while (it.hasNext()) {
+				Class clazz = it.next();
+				if (clazz.getClassLoader() == cl) {
+					it.remove();
+				}
+			}
+		}
+	}
 }

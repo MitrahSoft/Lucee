@@ -39,6 +39,7 @@ import lucee.commons.io.res.filter.ResourceFilter;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.ParentThreasRefThread;
+import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.runtime.CFMLFactoryImpl;
@@ -525,6 +526,19 @@ public final class Controler extends ParentThreasRefThread {
 						if (log != null) log.error("controler", t);
 					}
 					checkStopWatch(config, stopwatch, "cleanupDynamicInvoker");
+
+					// clean up PhysicalClassLoader
+					if (doit) {
+						stopwatch.start();
+						try {
+							PhysicalClassLoaderFactory.clean(config);
+						}
+						catch (Throwable t) {
+							ExceptionUtil.rethrowIfNecessary(t);
+							if (log != null) log.error("controler", t);
+						}
+						checkStopWatch(config, stopwatch, "cleanupPhysicalClassLoaderFactory");
+					}
 				}
 			}
 		}
