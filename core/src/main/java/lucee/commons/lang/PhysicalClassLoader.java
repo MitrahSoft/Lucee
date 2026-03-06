@@ -81,8 +81,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 	private boolean rpc;
 
-	private String birthplace;
-
 	public final String id;
 
 	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc)
@@ -102,7 +100,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
-		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
+		// this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
 
 		this.directory = directory;
 		this.rpc = rpc;
@@ -180,10 +178,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 			}
 		}
 		return null;
-	}
-
-	public String getBirthplace() {
-		return birthplace;
 	}
 
 	public boolean isRPC() {
