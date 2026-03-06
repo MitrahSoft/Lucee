@@ -91,18 +91,6 @@ public final class ClazzDynamic extends Clazz {
 		return cd;
 	}
 
-	public static void flush(ClassLoader cl) {
-		synchronized (classes) {
-			Iterator<Class> it = classes.keySet().iterator();
-			while (it.hasNext()) {
-				Class clazz = it.next();
-				if (clazz.getClassLoader() == cl) {
-					it.remove();
-				}
-			}
-		}
-	}
-
 	private ClazzDynamic(Map<String, FunctionMember> members, Class clazz, Log log) {
 		super(clazz, log);
 
@@ -704,5 +692,19 @@ public final class ClazzDynamic extends Clazz {
 			IOUtil.close(ois);
 		}
 		return o;
+	}
+
+	public static void flush(ClassLoader cl) {
+		if (cl == null) return;
+
+		synchronized (classes) {
+			Iterator<Class> it = classes.keySet().iterator();
+			while (it.hasNext()) {
+				Class clazz = it.next();
+				if (clazz.getClassLoader() == cl) {
+					it.remove();
+				}
+			}
+		}
 	}
 }

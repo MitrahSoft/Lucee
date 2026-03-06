@@ -81,8 +81,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 	private boolean rpc;
 
-	private String birthplace;
-
 	public final String id;
 
 	PhysicalClassLoader(String key, Config c, List<Resource> resources, Resource directory, ClassLoader parentClassLoader, ClassLoader addionalClassLoader, boolean rpc)
@@ -102,17 +100,19 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		this.resources = resources;
 		config = (ConfigPro) c;
 		this.addionalClassLoader = addionalClassLoader;
-		this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
+		// this.birthplace = ExceptionUtil.getStacktrace(new Throwable(), false);
 
 		this.directory = directory;
 		this.rpc = rpc;
 		id = key;
 	}
 
-	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
+	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config, boolean doClone) {
 
-		PhysicalClassLoader clone = new PhysicalClassLoader(existing.id, config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(),
-				existing.addionalClassLoader, existing.rpc);
+		PhysicalClassLoader clone = doClone
+				? new PhysicalClassLoader(existing.id, config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(), existing.addionalClassLoader,
+						existing.rpc)
+				: null;
 
 		// flush PageSourcePools
 		int pagesCleared = PageSourcePool.clearPages(config, existing, false);
@@ -133,6 +133,11 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		}
 
 		ClazzDynamic.flush(existing);
+
+		try {
+			existing.close();
+		}
+		catch (IOException e) {}
 
 		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
 		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
@@ -175,7 +180,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		// check size
 		if ((all = existing.allLoadedClasses.size()) > CLASSLOADER_INSPECTION_COUNT) {
 			if ((all / existing.loadedClasses.size()) > CLASSLOADER_INSPECTION_RATIO) {
-				return flush(existing, config);
+				return flush(existing, config, true);
 			}
 
 			int allClassesBytes = 0;
@@ -183,14 +188,10 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 				allClassesBytes += i.intValue();
 			}
 			if (allClassesBytes > CLASSLOADER_INSPECTION_SIZEBYTES) {
-				return flush(existing, config);
+				return flush(existing, config, true);
 			}
 		}
 		return null;
-	}
-
-	public String getBirthplace() {
-		return birthplace;
 	}
 
 	public boolean isRPC() {
