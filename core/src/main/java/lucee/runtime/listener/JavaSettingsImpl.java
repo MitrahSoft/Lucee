@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.osgi.framework.BundleException;
 
+import lucee.commons.digest.Hash;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
@@ -41,6 +42,7 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.filter.ExtensionResourceFilter;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
+import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.Config;
@@ -313,10 +315,16 @@ public final class JavaSettingsImpl implements JavaSettings {
 	public Resource[] getResourcesTranslated() {
 		if (resourcesTranslated == null) {
 			List<Resource> list = new ArrayList<Resource>();
-			_getResourcesTranslated(list, resources, true);
+			_getResourcesTranslated(list, resources, true, true, false);
 			resourcesTranslated = list.toArray(new Resource[list.size()]);
 		}
 		return resourcesTranslated;
+	}
+
+	private static List<Resource> getResourcesTranslatedForChecksum(Resource[] resources) {
+		List<Resource> list = new ArrayList<Resource>();
+		_getResourcesTranslated(list, resources, true, false, true);
+		return list;
 	}
 
 	@Override
@@ -342,15 +350,17 @@ public final class JavaSettingsImpl implements JavaSettings {
 		return bundlesTranslated;
 	}
 
-	public static void _getResourcesTranslated(List<Resource> list, Resource[] resources, boolean deep) {
+	private static void _getResourcesTranslated(List<Resource> list, Resource[] resources, boolean deep, boolean includeDirectories, boolean includeClasses) {
 		if (ArrayUtil.isEmpty(resources)) return;
 		for (Resource resource: resources) {
 			if (resource.isFile()) {
-				if (ResourceUtil.getExtension(resource, "").equalsIgnoreCase("jar")) list.add(resource);
+				if (ResourceUtil.getExtension(resource, "").equalsIgnoreCase("jar") || (includeClasses && ResourceUtil.getExtension(resource, "").equalsIgnoreCase("class"))) {
+					list.add(resource);
+				}
 			}
 			else if (deep && resource.isDirectory()) {
-				list.add(resource); // add as possible classes dir
-				_getResourcesTranslated(list, resource.listResources(ExtensionResourceFilter.EXTENSION_JAR_NO_DIR), false);
+				if (includeDirectories) list.add(resource); // add as possible classes dir
+				_getResourcesTranslated(list, resource.listResources(ExtensionResourceFilter.EXTENSION_JAR_NO_DIR), false, includeDirectories, includeClasses);
 			}
 		}
 	}
@@ -562,9 +572,11 @@ public final class JavaSettingsImpl implements JavaSettings {
 			}
 		}
 		Collection<Resource> paths = null;
+		List<String> pathNames = null;
 		if (mapPath != null) {
+			pathNames = new ArrayList<>();
 			for (String k: mapPath.keySet()) {
-				names.add(k);
+				pathNames.add(k);
 			}
 			paths = mapPath.values();
 		}
@@ -598,19 +610,12 @@ public final class JavaSettingsImpl implements JavaSettings {
 		}
 		loadCFMLClassPath = Boolean.TRUE.equals(loadCFMLClassPath);
 		names.add("loadCFMLClassPath:" + loadCFMLClassPath);
-		//// if (loadCFMLClassPath == null) loadCFMLClassPath = base.loadCFMLClassPath();
 
 		// reloadOnChange
-		//// boolean reloadOnChange = Caster.toBooleanValue(sct.get(KeyConstants._reloadOnChange, null),
-		// base.reloadOnChange());
 		boolean reloadOnChange = Caster.toBooleanValue(data == null ? null : data.get(KeyConstants._reloadOnChange, null), false);
-		names.add("reloadOnChange:" + reloadOnChange);
 
 		// watchInterval
-		//// int watchInterval = Caster.toIntValue(sct.get(KeyConstants._watchInterval, null),
-		// base.watchInterval());
 		int watchInterval = Caster.toIntValue(data == null ? null : data.get(KeyConstants._watchInterval, null), DEFAULT_WATCH_INTERVAL);
-		names.add("watchInterval:" + watchInterval);
 
 		// watchExtensions
 		Object obj = data == null ? null : data.get(KeyConstants._watchExtensions, null);
@@ -641,8 +646,7 @@ public final class JavaSettingsImpl implements JavaSettings {
 			}
 		}
 
-		Collections.sort(names);
-		String id = HashUtil.create64BitHashAsString(names.toString());
+		String id = createId(config, names, paths, pathNames, reloadOnChange ? watchInterval : 0);
 
 		JavaSettings js = ((ConfigPro) config).getJavaSettings(id);
 		if (js != null) {
@@ -663,6 +667,68 @@ public final class JavaSettingsImpl implements JavaSettings {
 
 		((ConfigPro) config).setJavaSettings(id, js);
 		return js;
+	}
+
+	private static final Map<String, Pair<Long, String>> quickMapping = new ConcurrentHashMap<>();
+
+	private static String createId(Config config, List<String> names, Collection<Resource> paths, List<String> pathNames, int watchInterval) {
+		Collections.sort(names);
+		String base = names.toString();
+		log(config, "createId (watchInterval=" + watchInterval + "s) base: " + base);
+
+		if (paths == null || paths.size() == 0) {
+			String id = HashUtil.create64BitHashAsString(base);
+			log(config, "no paths, returning base hash: " + id);
+			return id;
+		}
+
+		Collections.sort(pathNames);
+		String quick = HashUtil.create64BitHashAsString(base + ":" + pathNames.toString());
+		log(config, "quick hash: " + quick + " from paths: " + pathNames);
+
+		Pair<Long, String> cached = quickMapping.get(quick);
+		if (cached != null) {
+			if (watchInterval <= 0) {
+				log(config, "cache hit (no expiry), returning: " + cached.getValue());
+				return cached.getValue();
+			}
+			long ageSeconds = (System.currentTimeMillis() - cached.getName()) / 1000;
+			if (ageSeconds < watchInterval) {
+				log(config, "cache hit (age=" + ageSeconds + "s < watchInterval=" + watchInterval + "s), returning: " + cached.getValue());
+				return cached.getValue();
+			}
+			log(config, "cache expired (age=" + ageSeconds + "s >= watchInterval=" + watchInterval + "s), recomputing");
+			quickMapping.remove(quick);
+		}
+		else {
+			log(config, "cache miss, computing slow hash");
+		}
+
+		List<String> checksums = new ArrayList<>();
+		String slow;
+		try {
+			for (Resource res: JavaSettingsImpl.getResourcesTranslatedForChecksum(paths.toArray(new Resource[paths.size()]))) {
+				checksums.add(Hash.md5(res, 1024));
+			}
+			Collections.sort(checksums);
+			log(config, "checksums: " + checksums);
+			slow = HashUtil.create64BitHashAsString(base + ":" + checksums.toString());
+			log(config, "slow hash: " + slow);
+		}
+		catch (IOException e) {
+			LogUtil.log(config, Log.LEVEL_ERROR, "page-source", "IOException computing checksums, falling back to quick hash: " + e.getMessage());
+			slow = quick;
+		}
+
+		quickMapping.put(quick, new Pair<Long, String>(System.currentTimeMillis(), slow));
+		log(config, "cached and returning: " + slow);
+		return slow;
+	}
+
+	private static void log(Config config, String msg) {
+		if (config != null && LogUtil.doesTrace(config.getLog("application"))) {
+			config.getLog("application").trace("page-source", msg);
+		}
 	}
 
 	public static JavaSettings readJavaSettings(PageContext pc, Struct meta) throws IOException {
