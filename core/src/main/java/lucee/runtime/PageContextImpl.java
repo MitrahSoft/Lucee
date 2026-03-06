@@ -803,6 +803,7 @@ public final class PageContextImpl extends PageContext {
 				releaseORM();
 			}
 			catch (Exception e) {
+				LogUtil.log(this, "orm", PageContextImpl.class.getName(), e);
 			}
 		}
 		startTime = 0L;
@@ -832,7 +833,13 @@ public final class PageContextImpl extends PageContext {
 			ORMEngine engine = ormSession.getEngine();
 			ORMConfiguration config = engine.getConfiguration(this);
 			if (config == null || (config.flushAtRequestEnd() && config.autoManageSession())) {
-				ormSession.flushAll(this);
+				try {
+					ormSession.flushAll(this);
+				}
+				catch (PageException | RuntimeException e) {
+					LogUtil.log(this, "orm", PageContextImpl.class.getName(), e, Log.LEVEL_WARN);
+					throw e;
+				}
 			}
 			ormSession.closeAll(this);
 			manager.releaseORM();
