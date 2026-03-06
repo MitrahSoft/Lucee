@@ -29,6 +29,7 @@ import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.listener.JavaSettings;
 import lucee.runtime.listener.JavaSettingsImpl;
 import lucee.runtime.listener.SerializationSettings;
+import lucee.runtime.op.Caster;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.util.KeyConstants;
@@ -40,39 +41,42 @@ public class PhysicalClassLoaderFactory {
 	private static String start = Long.toString(_start, Character.MAX_RADIX);
 	private static Object countToken = new Object();
 
-	private static Map<String, PhysicalClassLoader> classLoaders = new ConcurrentHashMap<>();
+	private static final long IDLE_TIMEOUT_MS = Math.max(60000, Caster.toLongValue(SystemUtil.getSystemPropOrEnvVar("lucee.classloader.idle.timeout", null), 300000L));
+	private static final int IDLE_MINSIZE = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.classloader.idle.minsize", null), 75);
+
+	private static Map<String, CachedLoader> classLoaders = new ConcurrentHashMap<>();
 	private static RC rc = new RC();
 
 	public static PhysicalClassLoader getPhysicalClassLoader(Config c, Resource directory, boolean reload) throws IOException {
 		String key = HashUtil.create64BitHashAsString(directory.getAbsolutePath());
 
-		PhysicalClassLoader rpccl = reload ? null : classLoaders.get(key);
-		if (rpccl == null) {
+		CachedLoader cached = reload ? null : classLoaders.get(key);
+		if (cached == null) {
 			synchronized (SystemUtil.createToken("PhysicalClassLoader", key)) {
-				rpccl = reload ? null : classLoaders.get(key);
-				if (rpccl == null) {
+				cached = reload ? null : classLoaders.get(key);
+				if (cached == null) {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
-						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) PhysicalClassLoader.flush(existing, c);
+						CachedLoader existing = classLoaders.get(key);
+						if (existing != null) PhysicalClassLoader.flush(existing.get(), c, false);
 					}
 					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
 							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
-
-					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, new ArrayList<Resource>(), directory, SystemUtil.getCombinedClassLoader(), null, false));
-					return rpccl;
+					PhysicalClassLoader pcl = new PhysicalClassLoader(c, new ArrayList<Resource>(), directory, SystemUtil.getCombinedClassLoader(), null, false);
+					classLoaders.put(key, new CachedLoader(pcl));
+					return pcl;
 				}
 			}
 		}
 
 		// at this point we know we had an existing one
-		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
 			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
 					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
-			classLoaders.put(key, rpccl = flushed);
+			classLoaders.put(key, new CachedLoader(flushed));
 		}
-		return rpccl;
+		return cached.get();
 	}
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, boolean reload, ClassLoader parent) throws IOException {
@@ -81,16 +85,16 @@ public class PhysicalClassLoaderFactory {
 			if (parent instanceof PhysicalClassLoader) key += "_" + ((PhysicalClassLoader) parent).id;
 			else key += "_" + parent.hashCode();
 		}
-		PhysicalClassLoader rpccl = reload ? null : classLoaders.get(key);
 
-		if (rpccl == null) {
+		CachedLoader cached = reload ? null : classLoaders.get(key);
+		if (cached == null) {
 			synchronized (SystemUtil.createToken("PhysicalClassLoader", key)) {
-				rpccl = reload ? null : classLoaders.get(key);
-				if (rpccl == null) {
+				cached = reload ? null : classLoaders.get(key);
+				if (cached == null) {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
-						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) PhysicalClassLoader.flush(existing, c);
+						CachedLoader existing = classLoaders.get(key);
+						if (existing != null) PhysicalClassLoader.flush(existing.get(), c, false);
 					}
 					List<Resource> resources;
 					if (js == null) {
@@ -100,56 +104,92 @@ public class PhysicalClassLoaderFactory {
 						resources = toSortedList(((JavaSettingsImpl) js).getAllResources());
 					}
 					Resource dir = storeResourceMeta(c, key, js, resources);
-					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
 					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
 							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
-					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, resources, dir, parent != null ? parent : SystemUtil.getCombinedClassLoader(), null, true));
-					return rpccl;
+					PhysicalClassLoader pcl = new PhysicalClassLoader(c, resources, dir, parent != null ? parent : SystemUtil.getCombinedClassLoader(), null, true);
+					classLoaders.put(key, new CachedLoader(pcl));
+					return pcl;
 				}
 			}
 		}
 
 		// at this point we know we had an existing one
-		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
 			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
 					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
-			classLoaders.put(key, rpccl = flushed);
+			classLoaders.put(key, new CachedLoader(flushed));
 		}
-		return rpccl;
+		return cached.get();
 	}
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, BundleClassLoader bcl, boolean reload) throws IOException {
 		String key = HashUtil.create64BitHashAsString(bcl + "");
-		PhysicalClassLoader rpccl = reload ? null : classLoaders.get(key);
-		if (rpccl == null) {
+
+		CachedLoader cached = reload ? null : classLoaders.get(key);
+		if (cached == null) {
 			synchronized (SystemUtil.createToken("PhysicalClassLoader", key)) {
-				rpccl = reload ? null : classLoaders.get(key);
-				if (rpccl == null) {
+				cached = reload ? null : classLoaders.get(key);
+				if (cached == null) {
 					// if we have a reload, clear the existing before set a new one
 					if (reload) {
-						PhysicalClassLoader existing = classLoaders.get(key);
-						if (existing != null) PhysicalClassLoader.flush(existing, c);
+						CachedLoader existing = classLoaders.get(key);
+						if (existing != null) PhysicalClassLoader.flush(existing.get(), c, false);
 					}
 					Resource dir = c.getClassDirectory().getRealResource("RPC/" + key);
 					if (!dir.exists()) ResourceUtil.createDirectoryEL(dir, true);
-					// (Config config, String key, JavaSettings js, Collection<Resource> _resources)
 					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
 							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
-					classLoaders.put(key, rpccl = new PhysicalClassLoader(c, new ArrayList<Resource>(), dir, SystemUtil.getCombinedClassLoader(), bcl, true));
-					return rpccl;
+					PhysicalClassLoader pcl = new PhysicalClassLoader(c, new ArrayList<Resource>(), dir, SystemUtil.getCombinedClassLoader(), bcl, true);
+					classLoaders.put(key, new CachedLoader(pcl));
+					return pcl;
 				}
 			}
 		}
+
 		// at this point we know we had an existing one
-		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(rpccl, c);
+		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
 			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
 					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
-			classLoaders.put(key, rpccl = flushed);
+			classLoaders.put(key, new CachedLoader(flushed));
+		}
+		return cached.get();
+	}
+
+	/**
+	 * Evicts classloaders that have not been accessed within the idle timeout window. Intended to be
+	 * called periodically by the Lucee Controller thread.
+	 */
+	public static void clean(Config config) {
+		int sizeBefore = classLoaders.size();
+		LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader",
+				"clean called, checking " + sizeBefore + " PhysicalClassLoaders for idle timeout (>" + (IDLE_TIMEOUT_MS / 1000) + "s), min size threshold: " + IDLE_MINSIZE);
+
+		if (sizeBefore <= IDLE_MINSIZE) {
+			LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader", "clean skipped, size " + sizeBefore + " is within min size threshold " + IDLE_MINSIZE);
+			return;
 		}
 
-		return rpccl;
+		int evicted = 0;
+		for (Map.Entry<String, CachedLoader> entry: classLoaders.entrySet()) {
+			CachedLoader cached = entry.getValue();
+			if (cached.isIdle()) {
+				if (classLoaders.remove(entry.getKey(), cached)) {
+					PhysicalClassLoader.flush(cached.loader, config, false);
+					evicted++;
+					LogUtil.log(Log.LEVEL_INFO, "physical-classloader", "evicted idle PhysicalClassLoader with key [" + entry.getKey() + "], idle for >" + (IDLE_TIMEOUT_MS / 1000)
+							+ "s" + ", remaining: " + classLoaders.size());
+				}
+			}
+		}
+
+		if (evicted > 0) {
+			System.gc();
+		}
+
+		LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader",
+				"clean finished, evicted " + evicted + " of " + sizeBefore + " PhysicalClassLoaders, remaining: " + classLoaders.size());
 	}
 
 	static String uid() {
@@ -248,6 +288,25 @@ public class PhysicalClassLoaderFactory {
 		@Override
 		public int compare(Resource l, Resource r) {
 			return l.getAbsolutePath().compareTo(r.getAbsolutePath());
+		}
+	}
+
+	private static class CachedLoader {
+		final PhysicalClassLoader loader;
+		volatile long lastAccess;
+
+		CachedLoader(PhysicalClassLoader loader) {
+			this.loader = loader;
+			this.lastAccess = System.currentTimeMillis();
+		}
+
+		PhysicalClassLoader get() {
+			this.lastAccess = System.currentTimeMillis();
+			return this.loader;
+		}
+
+		boolean isIdle() {
+			return (System.currentTimeMillis() - lastAccess) > IDLE_TIMEOUT_MS;
 		}
 	}
 

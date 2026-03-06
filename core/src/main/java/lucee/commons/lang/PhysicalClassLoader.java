@@ -122,9 +122,10 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		id = HashUtil.create64BitHashAsString(sb.toString());
 	}
 
-	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config) {
-		PhysicalClassLoader clone = new PhysicalClassLoader(config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(), existing.addionalClassLoader,
-				existing.rpc);
+	static PhysicalClassLoader flush(PhysicalClassLoader existing, Config config, boolean doClone) {
+		PhysicalClassLoader clone = doClone
+				? new PhysicalClassLoader(config, existing.getURLs(), existing.resources, existing.directory, existing.getParent(), existing.addionalClassLoader, existing.rpc)
+				: null;
 
 		// flush PageSourcePools
 		int pagesCleared = PageSourcePool.clearPages(config, existing, false);
@@ -144,6 +145,14 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
 		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
 				+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
+
+		ClazzDynamic.flush(existing);
+
+		try {
+			existing.close();
+		}
+		catch (IOException e) {}
+
 		return clone;
 	}
 
@@ -181,7 +190,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		// check size
 		if ((all = existing.allLoadedClasses.size()) > CLASSLOADER_INSPECTION_COUNT) {
 			if ((all / existing.loadedClasses.size()) > CLASSLOADER_INSPECTION_RATIO) {
-				return flush(existing, config);
+				return flush(existing, config, true);
 			}
 
 			int allClassesBytes = 0;
@@ -189,7 +198,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 				allClassesBytes += i.intValue();
 			}
 			if (allClassesBytes > CLASSLOADER_INSPECTION_SIZEBYTES) {
-				return flush(existing, config);
+				return flush(existing, config, true);
 			}
 		}
 		return null;

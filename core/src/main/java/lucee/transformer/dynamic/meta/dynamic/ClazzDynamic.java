@@ -99,6 +99,20 @@ public class ClazzDynamic extends Clazz {
 		return cd;
 	}
 
+	public static void flush(ClassLoader cl) {
+		if (cl == null) return;
+
+		synchronized (classes) {
+			Iterator<Class> it = classes.keySet().iterator();
+			while (it.hasNext()) {
+				Class clazz = it.next();
+				if (clazz.getClassLoader() == cl) {
+					it.remove();
+				}
+			}
+		}
+	}
+
 	public static int remove(PhysicalClassLoader pcl) {
 		int count = 0;
 		// Use iterator to safely remove during iteration
