@@ -131,6 +131,9 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		for (Integer i: existing.allLoadedClasses.values()) {
 			allClassesBytes += i.intValue();
 		}
+
+		ClazzDynamic.flush(existing);
+
 		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
 		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
 				+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
@@ -140,6 +143,10 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 	static PhysicalClassLoader flushIfNecessary(PhysicalClassLoader existing, Config config) {
 		double all;
+
+		if (existing.allLoadedClasses.size() == 0) {
+			return null;
+		}
 
 		if (LogUtil.does(Log.LEVEL_TRACE)) {
 			int allClasses = existing.allLoadedClasses.size();
