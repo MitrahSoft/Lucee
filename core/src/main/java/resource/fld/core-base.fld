@@ -10813,8 +10813,6 @@ Use `LoadAISession()` to restore a serialized session.
 	- **`group` only** → returns an array of artifact IDs for that Maven group
 	- **`group` + `artifact`** → returns an array of version strings for that extension
 	- **`group` + `artifact` + `version`** → returns a struct with artifact details: `lex`, `pom`, `local`, `lastModified`
-	
-	**Since 7.0.3.2**: The first argument is `group`. Prior to this the signature was `(artifact, version)`.
 	    </description>
 	    <argument>
 	        <name>group</name>
@@ -10836,6 +10834,13 @@ Use `LoadAISession()` to restore a serialized session.
 	        <type>string</type>
 	        <required>No</required>
 	        <description>The version to retrieve details for. If omitted, all available versions for the artifact are returned.</description>
+	    </argument>
+	    <argument>
+	        <name>download</name>
+	        <type>boolean</type>
+	        <required>No</required>
+	        <default>false</default>
+	        <description>create a local copy of the extension and at path to resulting struct with the key "local".</description>
 	    </argument>
 	    <return>
 	        <type>any</type>

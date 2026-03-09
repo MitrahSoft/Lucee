@@ -48,26 +48,31 @@ public final class LuceeExtension extends BIF {
 				return arr;
 			}
 			// detail to a specific extension
-			else if (args.length == 3) {
+			else if (args.length == 3 || args.length == 4) {
 				ExtensionProvider ep = new ExtensionProvider(Caster.toString(args[0]).trim());
 				String artifactId = Caster.toString(args[1]).trim();
 				Version version = OSGiUtil.toVersion(Caster.toString(args[2]).trim());
 
 				// detail
 				Struct sct = new StructImpl();
+				sct.set(KeyConstants._version, version.toString());
 				Map<String, Object> data = ep.detail(artifactId, version);
 				for (Entry<String, Object> e: data.entrySet()) {
 					sct.set(Caster.toKey(e.getKey()), e.getValue());
 				}
 
+				boolean download = args.length == 4 ? Caster.toBooleanValue(args[3]) : false;
+
 				// local resource
-				Resource local = ep.getResource((ConfigPro) pc.getConfig(), artifactId, version);
-				sct.set(KeyConstants._local, local.getAbsolutePath());
+				if (download) {
+					Resource local = ep.getResource((ConfigPro) pc.getConfig(), artifactId, version);
+					sct.set(KeyConstants._local, local.getAbsolutePath());
+				}
 
 				return sct;
 			}
 			else {
-				throw new FunctionException(pc, "LuceeExtension", 0, 3, args.length);
+				throw new FunctionException(pc, "LuceeExtension", 0, 4, args.length);
 			}
 		}
 		catch (Exception e) {
