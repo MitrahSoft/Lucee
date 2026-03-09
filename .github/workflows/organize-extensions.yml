@@ -40,7 +40,7 @@ on:
           - org.lucee.mssql
           - org.lucee.oracle
           - org.postgresql.postgresql
-          - org.h2.h2
+          - org.h2
           - org.mongodb.mongo-java-driver
           - quartz-extension
           - pdf-extension
@@ -72,6 +72,7 @@ on:
           - exasol-jdbc-extension
           - form-extension
           - git-extension
+          - h2-jdbc-extension
           - hibernate-extension
           - image-extension
           - jtds-jdbc-extension
