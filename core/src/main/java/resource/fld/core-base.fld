@@ -10800,28 +10800,47 @@ Use `LoadAISession()` to restore a serialized session.
 		</return>
 	</function>
 	
-		<!-- LuceeExtension -->
+	<!-- LuceeExtension -->
 	<function>
-		<name>LuceeExtension</name>
-		<status>hidden</status>
-		<class>lucee.runtime.functions.system.LuceeExtension</class>
-		<description>List all Lucee extensions</description>
-		<argument>
-			<name>artifact</name>
-			<alias>artifactid</alias>
-			<type>string</type>
-			<required>No</required>
-			<description></description>
-		</argument>
-		<argument>
-			<name>version</name>
-			<type>string</type>
-			<required>No</required>
-			<description></description>
-		</argument>
-		<return>
-			<type>any</type>
-		</return>
+	    <name>LuceeExtension</name>
+	    <status>hidden</status>
+	    <class>lucee.runtime.functions.system.LuceeExtension</class>
+	    <description>Lists available Lucee extensions or retrieves details for a specific one from Maven.
+	
+	The behavior depends on which arguments are provided:
+	
+	- **No arguments** → returns an array of all extension artifact IDs for the default group (`org.lucee`)
+	- **`group` only** → returns an array of artifact IDs for that Maven group
+	- **`group` + `artifact`** → returns an array of version strings for that extension
+	- **`group` + `artifact` + `version`** → returns a struct with artifact details: `lex`, `pom`, `local`, `lastModified`
+	
+	**Since 7.0.3.2**: The first argument is `group`. Prior to this the signature was `(artifact, version)`.
+	    </description>
+	    <argument>
+	        <name>group</name>
+	        <alias>groupid</alias>
+	        <type>string</type>
+	        <required>No</required>
+	        <default>org.lucee</default>
+	        <description>Maven group ID of the extension provider.</description>
+	    </argument>
+	    <argument>
+	        <name>artifact</name>
+	        <alias>artifactid</alias>
+	        <type>string</type>
+	        <required>No</required>
+	        <description>The extension artifact ID. If omitted, all artifact IDs for the group are returned.</description>
+	    </argument>
+	    <argument>
+	        <name>version</name>
+	        <type>string</type>
+	        <required>No</required>
+	        <description>The version to retrieve details for. If omitted, all available versions for the artifact are returned.</description>
+	    </argument>
+	    <return>
+	        <type>any</type>
+	        <description>Array of strings (artifact IDs or versions) or a struct with artifact details depending on the arguments provided.</description>
+	    </return>
 	</function>
 	
 	<!-- metaphone -->

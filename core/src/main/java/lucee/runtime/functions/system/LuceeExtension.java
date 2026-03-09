@@ -9,6 +9,7 @@ import lucee.commons.io.res.Resource;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.maven.ExtensionProvider;
+import lucee.runtime.config.maven.MavenUpdateProvider;
 import lucee.runtime.exp.FunctionException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.BIF;
@@ -27,10 +28,10 @@ public final class LuceeExtension extends BIF {
 	@Override
 	public Object invoke(PageContext pc, Object[] args) throws PageException {
 
-		ExtensionProvider ep = new ExtensionProvider();
 		try {
 			// list extensions
-			if (args.length == 0) {
+			if (args.length < 2) {
+				ExtensionProvider ep = new ExtensionProvider(args.length == 0 ? MavenUpdateProvider.DEFAULT_GROUP : Caster.toString(args[0]).trim());
 				Array arr = new ArrayImpl();
 				for (String artifact: ep.list()) {
 					arr.appendEL(artifact);
@@ -38,17 +39,19 @@ public final class LuceeExtension extends BIF {
 				return arr;
 			}
 			// list versions of an extension
-			else if (args.length == 1) {
+			else if (args.length == 2) {
+				ExtensionProvider ep = new ExtensionProvider(Caster.toString(args[0]).trim());
 				Array arr = new ArrayImpl();
-				for (Version version: ep.list(Caster.toString(args[0]))) {
+				for (Version version: ep.list(Caster.toString(args[1]).trim())) {
 					arr.appendEL(version.toString());
 				}
 				return arr;
 			}
 			// detail to a specific extension
-			else if (args.length == 2) {
-				String artifactId = Caster.toString(args[0]);
-				Version version = OSGiUtil.toVersion(Caster.toString(args[1]));
+			else if (args.length == 3) {
+				ExtensionProvider ep = new ExtensionProvider(Caster.toString(args[0]).trim());
+				String artifactId = Caster.toString(args[1]).trim();
+				Version version = OSGiUtil.toVersion(Caster.toString(args[2]).trim());
 
 				// detail
 				Struct sct = new StructImpl();
@@ -64,7 +67,7 @@ public final class LuceeExtension extends BIF {
 				return sct;
 			}
 			else {
-				throw new FunctionException(pc, "LuceeVersionsListS3", 0, 1, args.length);
+				throw new FunctionException(pc, "LuceeExtension", 0, 3, args.length);
 			}
 		}
 		catch (Exception e) {
