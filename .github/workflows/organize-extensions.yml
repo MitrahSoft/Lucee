@@ -52,6 +52,7 @@ on:
           - redis.clients.jedis
           - sentry-extension
           - s3-extension
+          - sapdbc
           - cfspreadsheet
           - websocket-extension
         default: com.mysql.cj
@@ -99,6 +100,7 @@ on:
           - spreadsheet-extension
           - scheduler-classic-extension
           - sentry-extension
+          - sap-jdbc-extension
           - tasks-extension
           - websocket-client-extension
           - websocket-extension
