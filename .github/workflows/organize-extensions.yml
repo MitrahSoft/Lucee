@@ -35,6 +35,7 @@ on:
           - lucene-search-extension
           - memcached-extension
           - mongodb-extension
+          - mssqljdbc4
           - org.lucee.athena.jdbc
           - org.lucee.axis.extension
           - org.lucee.exasol
