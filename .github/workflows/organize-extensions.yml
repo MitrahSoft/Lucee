@@ -69,6 +69,7 @@ on:
           - ec2-extension
           - ehcache-extension
           - esapi-extension
+          - exasol-jdbc-extension
           - form-extension
           - git-extension
           - hibernate-extension
