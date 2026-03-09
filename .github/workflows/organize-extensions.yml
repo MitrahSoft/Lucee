@@ -15,6 +15,7 @@ on:
           - com.microsoft.sqlserver.mssql-jdbc
           - com.mysql.cj
           - com.oracle.database.jdbc
+          - com.teradata.jdbc
           - compress-extension
           - ec2-extension
           - ehcache-extension
@@ -102,6 +103,7 @@ on:
           - sentry-extension
           - sap-jdbc-extension
           - tasks-extension
+          - teradata-jdbc-extension
           - websocket-client-extension
           - websocket-extension
         default: mysql-jdbc-extension
