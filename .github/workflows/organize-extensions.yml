@@ -36,6 +36,7 @@ on:
           - org.lucee.athena.jdbc
           - org.lucee.axis.extension
           - org.lucee.exasol
+          - org.duckdb.duckdb_jdbc
           - org.lucee.mssql
           - org.lucee.oracle
           - org.postgresql.postgresql
@@ -64,6 +65,7 @@ on:
           - compress-extension
           - couchbase-extension
           - documentation-extension
+          - duckdb-jdbc-extension
           - ec2-extension
           - ehcache-extension
           - esapi-extension
