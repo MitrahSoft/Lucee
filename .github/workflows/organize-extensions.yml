@@ -20,6 +20,7 @@ on:
           - ehcache-extension
           - extension-memcached
           - extension-infinispan
+          - extension-json-extension
           - esapi-extension
           - form-extension
           - git-extension
@@ -77,6 +78,7 @@ on:
           - image-extension
           - infinispan-extension
           - jtds-jdbc-extension
+          - json-extension
           - kinesis-extension
           - lucene-search-extension
           - memcached-extension
