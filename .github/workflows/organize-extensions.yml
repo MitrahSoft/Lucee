@@ -19,10 +19,10 @@ on:
           - ec2-extension
           - ehcache-extension
           - extension-memcached
+          - extension-infinispan
           - esapi-extension
           - form-extension
           - git-extension
-          - hibernate.extension
           - hibernate-orm
           - image-extension
           - jtds
@@ -75,6 +75,7 @@ on:
           - h2-jdbc-extension
           - hibernate-extension
           - image-extension
+          - infinispan-extension
           - jtds-jdbc-extension
           - kinesis-extension
           - lucene-search-extension
