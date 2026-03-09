@@ -56,6 +56,7 @@ on:
           - sapdbc
           - cfspreadsheet
           - websocket-extension
+          - websocket-client-extension
         default: com.mysql.cj
       target_artifact_id:
         description: 'Target artifact ID'
