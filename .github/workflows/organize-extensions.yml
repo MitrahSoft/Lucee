@@ -33,6 +33,7 @@ on:
           - lucene-search-extension
           - memcached-extension
           - mongodb-extension
+          - org.lucee.athena.jdbc
           - org.lucee.axis.extension
           - org.lucee.exasol
           - org.lucee.mssql
@@ -57,6 +58,7 @@ on:
           - administrator-extension
           - ajax-extension
           - axis-extension
+          - athena-jdbc-extension
           - argon2-extension
           - chart-extension
           - compress-extension
