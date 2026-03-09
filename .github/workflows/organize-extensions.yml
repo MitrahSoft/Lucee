@@ -26,6 +26,7 @@ on:
           - hibernate-orm
           - image-extension
           - jtds
+          - kinesis-extension
           - lucee.extension.couchbase
           - lucee.image.extension
           - lucene-search
@@ -45,6 +46,7 @@ on:
           - redis.clients.jedis
           - sentry-extension
           - s3-extension
+          - cfspreadsheet
           - websocket-extension
         default: com.mysql.cj
       target_artifact_id:
@@ -80,6 +82,7 @@ on:
           - quartz-extension
           - redis-extension
           - s3-extension
+          - spreadsheet-extension
           - scheduler-classic-extension
           - sentry-extension
           - tasks-extension
