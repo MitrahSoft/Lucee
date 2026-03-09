@@ -21,6 +21,7 @@ on:
           - extension-memcached
           - extension-infinispan
           - extension-json-extension
+          - extension-loganalyzer
           - esapi-extension
           - form-extension
           - git-extension
@@ -81,6 +82,7 @@ on:
           - json-extension
           - kinesis-extension
           - lucene-search-extension
+          - loganalyzer-extension
           - memcached-extension
           - mongodb-extension
           - mssql-jdbc-extension
