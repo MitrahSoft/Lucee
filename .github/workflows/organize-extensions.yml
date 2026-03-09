@@ -47,6 +47,7 @@ on:
           - org.mongodb.mongo-java-driver
           - quartz-extension
           - pdf-extension
+          - poi-extension
           - redis.extension
           - redis.clients.jedis
           - sentry-extension
@@ -90,6 +91,7 @@ on:
           - mysql-jdbc-extension
           - oracle-jdbc-extension
           - postgresql-jdbc-extension
+          - poi-extension
           - pdf-extension
           - quartz-extension
           - redis-extension
