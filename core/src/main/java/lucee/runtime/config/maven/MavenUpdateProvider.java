@@ -19,7 +19,6 @@ import java.util.Stack;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.osgi.framework.Version;
 import org.xml.sax.SAXException;
 
 import lucee.commons.digest.HashUtil;
@@ -44,7 +43,6 @@ import lucee.runtime.listener.SerializationSettings;
 import lucee.runtime.op.CastImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.date.DateCaster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.util.ListUtil;
 
@@ -55,7 +53,7 @@ public final class MavenUpdateProvider {
 
 	// new last 90 days
 	private static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
-			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
+			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
 
 	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_CORE = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
 	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_EXTENSIONS = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
@@ -209,6 +207,11 @@ public final class MavenUpdateProvider {
 				threads.add(thread);
 			}
 
+			// Join all threads
+			for (Thread thread: threads) {
+				thread.join();
+			}
+
 			// handle exceptions
 			if (exceptions.size() > 0) {
 				Exception e = exceptions.pop();
@@ -218,14 +221,9 @@ public final class MavenUpdateProvider {
 				throw ExceptionUtil.toIOException(new IOException("Failed to list available versions from Maven repositories for [" + group + ":" + artifact + "]", e));
 			}
 
-			// Join all threads
-			for (Thread thread: threads) {
-				thread.join();
-			}
-
 			if (versions.size() > 0) {
 				List<Version> sortedList = new ArrayList<>(versions);
-				Collections.sort(sortedList, OSGiUtil::compare);
+				Collections.sort(sortedList, Version::compare);
 				return sortedList;
 			}
 

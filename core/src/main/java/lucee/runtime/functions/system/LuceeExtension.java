@@ -3,18 +3,18 @@ package lucee.runtime.functions.system;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.osgi.framework.Version;
-
 import lucee.commons.io.res.Resource;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.maven.ExtensionProvider;
 import lucee.runtime.config.maven.MavenUpdateProvider;
+import lucee.runtime.config.maven.Version;
 import lucee.runtime.exp.FunctionException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.ext.function.BIF;
+import lucee.runtime.extension.ExtensionMetadata;
+import lucee.runtime.extension.RHExtension;
 import lucee.runtime.op.Caster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
 import lucee.runtime.type.Struct;
@@ -51,7 +51,7 @@ public final class LuceeExtension extends BIF {
 			else if (args.length == 3 || args.length == 4) {
 				ExtensionProvider ep = new ExtensionProvider(Caster.toString(args[0]).trim());
 				String artifactId = Caster.toString(args[1]).trim();
-				Version version = OSGiUtil.toVersion(Caster.toString(args[2]).trim());
+				Version version = Version.parseVersion(Caster.toString(args[2]).trim());
 
 				// detail
 				Struct sct = new StructImpl();
@@ -67,6 +67,16 @@ public final class LuceeExtension extends BIF {
 				if (download) {
 					Resource local = ep.getResource((ConfigPro) pc.getConfig(), artifactId, version);
 					sct.set(KeyConstants._local, local.getAbsolutePath());
+
+					RHExtension ext = RHExtension.getInstance(pc.getConfig(), local);
+					ExtensionMetadata em = ext.getMetadata();
+					Struct meta = new StructImpl();
+					meta.set(KeyConstants._id, em._getId());
+					meta.set(KeyConstants._name, em.getName());
+					meta.set(KeyConstants._description, em.getDescription());
+					meta.set(KeyConstants._image, em.getImage());
+					if (em.getBuiltDate() != null) meta.set("buildDate", em.getBuiltDate());
+					sct.set(KeyConstants._metadata, meta);
 				}
 
 				return sct;
