@@ -840,11 +840,15 @@ public final class PageContextImpl extends PageContext {
 					throw e;
 				}
 			}
-			ormSession.closeAll(this);
-			manager.releaseORM();
 		}
 		finally {
-			ormSession = null;
+			try {
+				ormSession.closeAll(this);
+				manager.releaseORM();
+			}
+			finally {
+				ormSession = null;
+			}
 		}
 	}
 
