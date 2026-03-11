@@ -18,6 +18,7 @@
  **/
 package lucee.runtime.exp;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.commons.collections4.map.LRUMap;
@@ -41,7 +42,7 @@ public class NativeException extends PageExceptionImpl {
 	private static final long serialVersionUID = 6221156691846424801L;
 
 	private Throwable t;
-	private static final Map<Throwable, NativeException> instances = new LRUMap<Throwable, NativeException>(1000);
+	private static final Map<Throwable, NativeException> instances = Collections.synchronizedMap( new LRUMap<Throwable, NativeException>( 1000 ) );
 
 	/**
 	 * Standart constructor for native Exception class
