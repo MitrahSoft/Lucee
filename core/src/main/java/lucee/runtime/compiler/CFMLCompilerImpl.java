@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.objectweb.asm.MethodTooLargeException;
+
 import lucee.commons.digest.RSA;
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
@@ -207,6 +209,14 @@ public final class CFMLCompilerImpl implements CFMLCompiler {
 			try {
 				byte[] barr = page.execute(className);
 				result = new Result(page, barr, page.getJavaFunctions());
+			}
+			catch (MethodTooLargeException mtle) {
+				String source = ps != null ? ps.getDisplayPath() : className;
+				String methodName = mtle.getMethodName();
+				int codeSize = mtle.getCodeSize();
+				throw new RuntimeException(
+					"Bytecode too large compiling [" + source + "]: method [" + methodName + "] generated " + codeSize + " bytes (limit 65535)",
+					mtle);
 			}
 			catch (RuntimeException re) {
 				/*
