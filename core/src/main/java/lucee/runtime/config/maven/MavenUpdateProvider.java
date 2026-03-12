@@ -272,7 +272,7 @@ public final class MavenUpdateProvider {
 		// SNAPSHOT - snapshot have a more complicated structure, ebcause there can be udaptes/multiple
 		// versions
 
-		boolean isSnap = version.getQualifier().endsWith("-SNAPSHOT");
+		boolean isSnap = version.getQualifier().equals("SNAPSHOT");
 		List<Repository> repos = isSnap ? merge(repoSnapshots, repoMixed) : merge(repoReleases, repoMixed);
 
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";
