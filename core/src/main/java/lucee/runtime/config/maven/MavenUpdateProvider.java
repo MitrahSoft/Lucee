@@ -55,8 +55,7 @@ public final class MavenUpdateProvider {
 	private static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
 			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
 
-	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_CORE = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
-	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS_EXTENSIONS = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
+	private static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS = new Repository[] { DEFAULT_REPOSITORY_SONATYPE_LAST90 };
 
 	private static final Repository[] DEFAULT_REPOSITORY_RELEASES = new Repository[] {
 			new Repository("Maven Release Repository", "https://repo1.maven.org/maven2/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER) };
@@ -69,8 +68,7 @@ public final class MavenUpdateProvider {
 	public static final String DEFAULT_ARTIFACT = "lucee";
 
 	private static Repository[] defaultRepositoryReleases;
-	private static Repository[] defaultRepositorySnapshotsCore;
-	private static Repository[] defaultRepositorySnapshotsExtensions;
+	private static Repository[] defaultRepositorySnapshots;
 	private static Repository[] defaultRepositoryMixed;
 
 	private final String group;
@@ -87,18 +85,11 @@ public final class MavenUpdateProvider {
 		return defaultRepositoryReleases;
 	}
 
-	public static Repository[] getDefaultRepositorySnapshotsCore() {
-		if (defaultRepositorySnapshotsCore == null) {
-			defaultRepositorySnapshotsCore = readReposFromEnvVar("lucee.mvn.repo.snapshots", DEFAULT_REPOSITORY_SNAPSHOTS_CORE);
+	public static Repository[] getDefaultRepositorySnapshots() {
+		if (defaultRepositorySnapshots == null) {
+			defaultRepositorySnapshots = readReposFromEnvVar("lucee.mvn.repo.snapshots", DEFAULT_REPOSITORY_SNAPSHOTS);
 		}
-		return defaultRepositorySnapshotsCore;
-	}
-
-	public static Repository[] getDefaultRepositorySnapshotsExtension() {
-		if (defaultRepositorySnapshotsExtensions == null) {
-			defaultRepositorySnapshotsExtensions = readReposFromEnvVar("lucee.mvn.repo.snapshots", DEFAULT_REPOSITORY_SNAPSHOTS_EXTENSIONS);
-		}
-		return defaultRepositorySnapshotsExtensions;
+		return defaultRepositorySnapshots;
 	}
 
 	public static Repository[] getDefaultRepositoryMixed() {
@@ -132,7 +123,7 @@ public final class MavenUpdateProvider {
 	}
 
 	public MavenUpdateProvider() {
-		this.repoSnapshots = getDefaultRepositorySnapshotsCore();
+		this.repoSnapshots = getDefaultRepositorySnapshots();
 		this.repoReleases = getDefaultRepositoryReleases();
 		this.repoMixed = getDefaultRepositoryMixed();
 		this.repos = merge(repoSnapshots, repoReleases, repoMixed);
@@ -141,7 +132,7 @@ public final class MavenUpdateProvider {
 	}
 
 	public MavenUpdateProvider(String group, String artifact) {
-		this.repoSnapshots = getDefaultRepositorySnapshotsCore();
+		this.repoSnapshots = getDefaultRepositorySnapshots();
 		this.repoReleases = getDefaultRepositoryReleases();
 		this.repoMixed = getDefaultRepositoryMixed();
 		this.repos = merge(repoSnapshots, repoReleases, repoMixed);
