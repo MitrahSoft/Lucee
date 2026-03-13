@@ -383,6 +383,10 @@ public final class HTTPEngine4Impl {
 		return defaultValue;
 	}
 
+	public static Map<String, PoolingHttpClientConnectionManager> getConnectionManagers() {
+		return connectionManagers;
+	}
+
 	public static void closeIdleConnections() {
 		for (PoolingHttpClientConnectionManager cm: connectionManagers.values()) {
 			cm.closeIdleConnections(POOL_CONN_TTL_MS, TimeUnit.MILLISECONDS);
