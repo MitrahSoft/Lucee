@@ -49,6 +49,15 @@ public final class HTTPDownloader {
 	private static volatile CloseableHttpClient SHARED_CLIENT;
 	private static final Object CLIENT_LOCK = new Object();
 
+	public static void releaseSharedClient() {
+		synchronized (CLIENT_LOCK) {
+			if (SHARED_CLIENT != null) {
+				IOUtil.closeEL(SHARED_CLIENT);
+				SHARED_CLIENT = null;
+			}
+		}
+	}
+
 	private static CloseableHttpClient getSharedClient() throws GeneralSecurityException, IOException {
 		if (SHARED_CLIENT == null) {
 			synchronized (CLIENT_LOCK) {
