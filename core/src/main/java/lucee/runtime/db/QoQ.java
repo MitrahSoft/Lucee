@@ -78,9 +78,14 @@ import lucee.runtime.util.DBUtilImpl;
 public final class QoQ {
 	final static private Collection.Key paramKey = new KeyImpl("?");
 	private static int qoqParallelism;
+	private boolean caseSensitive;
 
 	static {
 		qoqParallelism = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.parallelism", "50"), 50);
+	}
+
+	public void setCaseSensitive(boolean caseSensitive) {
+		this.caseSensitive = caseSensitive;
 	}
 
 	/**
@@ -1229,7 +1234,12 @@ public final class QoQ {
 	 */
 	private int executeCompare(PageContext pc, SQL sql, QueryImpl source, Operation2 op, int row) throws PageException {
 		// print.e(op.getLeft().getClass().getName());
-		return OpUtil.compare(pc, executeExp(pc, sql, source, op.getLeft(), row), executeExp(pc, sql, source, op.getRight(), row));
+		Object left = executeExp(pc, sql, source, op.getLeft(), row);
+		Object right = executeExp(pc, sql, source, op.getRight(), row);
+		if (caseSensitive && left instanceof String && right instanceof String) {
+			return ((String) left).compareTo((String) right);
+		}
+		return OpUtil.compare(pc, left, right);
 	}
 
 	private Object executeMod(PageContext pc, SQL sql, QueryImpl source, Operation2 expression, int row) throws PageException {
@@ -1265,7 +1275,15 @@ public final class QoQ {
 		Object left = executeExp(pc, sql, source, operators[0], row);
 
 		for (int i = 1; i < operators.length; i++) {
-			if (OpUtil.compare(pc, left, executeExp(pc, sql, source, operators[i], row)) == 0) return isNot ? Boolean.FALSE : Boolean.TRUE;
+			Object right = executeExp(pc, sql, source, operators[i], row);
+			int cmp;
+			if (caseSensitive && left instanceof String && right instanceof String) {
+				cmp = ((String) left).compareTo((String) right);
+			}
+			else {
+				cmp = OpUtil.compare(pc, left, right);
+			}
+			if (cmp == 0) return isNot ? Boolean.FALSE : Boolean.TRUE;
 		}
 		return isNot ? Boolean.TRUE : Boolean.FALSE;
 	}
@@ -1458,13 +1476,14 @@ public final class QoQ {
 
 	private Object executeLike(PageContext pc, SQL sql, QueryImpl source, Operation3 expression, int row) throws PageException {
 		return LikeCompare.like(sql, Caster.toString(executeExp(pc, sql, source, expression.getExp(), row)),
-				Caster.toString(executeExp(pc, sql, source, expression.getLeft(), row)), Caster.toString(executeExp(pc, sql, source, expression.getRight(), row))) ? Boolean.TRUE
+				Caster.toString(executeExp(pc, sql, source, expression.getLeft(), row)),
+				Caster.toString(executeExp(pc, sql, source, expression.getRight(), row)), caseSensitive) ? Boolean.TRUE
 						: Boolean.FALSE;
 	}
 
 	private boolean executeLike(PageContext pc, SQL sql, QueryImpl source, Operation2 expression, int row) throws PageException {
 		return LikeCompare.like(sql, Caster.toString(executeExp(pc, sql, source, expression.getLeft(), row)),
-				Caster.toString(executeExp(pc, sql, source, expression.getRight(), row)));
+				Caster.toString(executeExp(pc, sql, source, expression.getRight(), row)), caseSensitive);
 	}
 
 	/**

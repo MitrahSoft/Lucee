@@ -877,6 +877,16 @@
 		"default": false
 	},
 	{
+		"sysprop": "lucee.qoq.caseSensitive",
+		"envvar": "LUCEE_QOQ_CASESENSITIVE",
+		"desc": "When true, QoQ string comparisons (LIKE, =, <>, IN) are case-sensitive, matching ACF behaviour. Default: false",
+		"category": "query",
+		"tags": [ "cfquery" ],
+		"functions": [ "queryExecute" ],
+		"type": "boolean",
+		"default": false
+	},
+	{
 		"sysprop": "lucee.qoq.hsqldb.debug",
 		"envvar": "LUCEE_QOQ_HSQLDB_DEBUG",
 		"desc": "Boolean value to enable debug logging for HSQLDB Query of Queries operations",

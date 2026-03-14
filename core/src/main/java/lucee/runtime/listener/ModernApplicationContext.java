@@ -242,6 +242,10 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 	private boolean initQueryPSQ;
 	private boolean initQueryCacheAfter;
 	private boolean initQueryVarUsage;
+	private boolean initQoQCaseSensitive;
+	private Boolean qoqCaseSensitive;
+	private boolean initQoQEngine;
+	private String qoqEngine;
 	private boolean initProxyData;
 	private boolean initBlockedExtForFileUpload;
 	private boolean initXmlFeatures;
@@ -2140,6 +2144,35 @@ public final class ModernApplicationContext extends ApplicationContextSupport {
 	public void setQueryVarUsage(int varUsage) {
 		this.queryVarUsage = varUsage;
 		this.initQueryVarUsage = true;
+	}
+
+	private Struct getQoQStruct() {
+		Struct qry = Caster.toStruct(get(component, KeyConstants._query, null), null);
+		if (qry == null) return null;
+		return Caster.toStruct(qry.get("qoq", null), null);
+	}
+
+	@Override
+	public Boolean getQoQCaseSensitive() {
+		if (!initQoQCaseSensitive) {
+			Struct qoq = getQoQStruct();
+			if (qoq != null) qoqCaseSensitive = Caster.toBoolean(qoq.get("caseSensitive", null), null);
+			initQoQCaseSensitive = true;
+		}
+		return qoqCaseSensitive;
+	}
+
+	@Override
+	public String getQoQEngine() {
+		if (!initQoQEngine) {
+			Struct qoq = getQoQStruct();
+			if (qoq != null) {
+				String eng = Caster.toString(qoq.get("engine", null), null);
+				if (!StringUtil.isEmpty(eng)) qoqEngine = eng.toLowerCase();
+			}
+			initQoQEngine = true;
+		}
+		return qoqEngine;
 	}
 
 	@Override
