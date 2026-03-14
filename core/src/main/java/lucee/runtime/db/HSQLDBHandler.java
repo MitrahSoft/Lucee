@@ -136,14 +136,37 @@ public final class HSQLDBHandler {
 	 * @throws PageException
 	 */
 	private static String createTable(Connection conn, PageContext pc, String dbTableName, String cfQueryName, boolean doSimpleTypes) throws SQLException, PageException {
+		return createTable(conn, pc, dbTableName, cfQueryName, doSimpleTypes, null);
+	}
+
+	/**
+	 * Creates a table in the HSQLDB database. If usedColumns is provided, only those columns are
+	 * created (minimal table). If null, all source columns are created.
+	 */
+	private static String createTable(Connection conn, PageContext pc, String dbTableName, String cfQueryName, boolean doSimpleTypes, Struct usedColumns)
+			throws SQLException, PageException {
 
 		// Stopwatch stopwatch = new Stopwatch(Stopwatch.UNIT_MILLI);
 		// stopwatch.start();
 
-		Query query = Caster.toQuery(pc.getVariable(StringUtil.removeQuotes(cfQueryName, true)));
-		Statement stat;
+		String sql = buildCreateTableSql(pc, dbTableName, cfQueryName, doSimpleTypes, usedColumns);
+		Statement stat = conn.createStatement();
+		stat.execute(sql);
+		// SystemOut.print("Create Table: [" + dbTableName + "] took " + stopwatch.time());
+		return sql;
+	}
 
-		stat = conn.createStatement();
+	/**
+	 * Builds the CREATE TABLE SQL string without executing it. When usedColumns is null, all source
+	 * columns are included (used for cache keys and cache-miss table creation). When usedColumns is
+	 * provided, only those columns are included (minimal table on cache hit).
+	 */
+	private static String buildCreateTableSql(PageContext pc, String dbTableName, String cfQueryName, boolean doSimpleTypes) throws PageException {
+		return buildCreateTableSql(pc, dbTableName, cfQueryName, doSimpleTypes, null);
+	}
+
+	private static String buildCreateTableSql(PageContext pc, String dbTableName, String cfQueryName, boolean doSimpleTypes, Struct usedColumns) throws PageException {
+		Query query = Caster.toQuery(pc.getVariable(StringUtil.removeQuotes(cfQueryName, true)));
 		Key[] cols = CollectionUtil.keys(query);
 		int[] types = query.getTypes();
 
@@ -152,11 +175,12 @@ public final class HSQLDBHandler {
 		// reserved words
 		String escape = "";
 
-		// Use DECLARE LOCAL TEMPORARY TABLE for session-scoped temp tables to avoid collisions
 		StringBuilder create = new StringBuilder("DECLARE LOCAL TEMPORARY TABLE ").append(escape).append(StringUtil.toUpperCase(dbTableName)).append(escape).append(" (");
 
 		for (int i = 0; i < cols.length; i++) {
 			String col = StringUtil.toUpperCase(cols[i].getString()); // quoted objects are case insensitive
+			// skip columns not referenced in the SQL (when we know which ones are needed)
+			if (usedColumns != null && !usedColumns.containsKey(col)) continue;
 			String type = (doSimpleTypes) ? "VARCHAR_IGNORECASE" : toUsableType(types[i]);
 			create.append(comma);
 			create.append(escape);
@@ -167,9 +191,6 @@ public final class HSQLDBHandler {
 			comma = ",";
 		}
 		create.append(") ON COMMIT PRESERVE ROWS");
-		// SystemOut.print("SQL: " + Caster.toString(create));
-		stat.execute(create.toString());
-		// SystemOut.print("Create Table: [" + dbTableName + "] took " + stopwatch.time());
 		return create.toString();
 	}
 
@@ -192,23 +213,22 @@ public final class HSQLDBHandler {
 		Query query = Caster.toQuery(pc.getVariable(StringUtil.removeQuotes(cfQueryName, true)));
 
 		Key[] cols = CollectionUtil.keys(query);
-		ArrayList<String> targetCols = new ArrayList<String>();
+		ArrayList<QueryColumn> targetColumns = new ArrayList<QueryColumn>();
 
 		int[] srcTypes = query.getTypes();
 		int[] srcQueryTypes = toInnerTypes(srcTypes);
-		int[] targetTypes = new int[srcTypes.length]; // track the type in the target table, which maybe a subset of the columns in the source table
+		ArrayList<Integer> targetTypeList = new ArrayList<Integer>();
 		String comma = "";
 
 		StringBuilder insert = new StringBuilder("INSERT INTO  ").append(StringUtil.toUpperCase(dbTableName)).append(" (");
 		StringBuilder values = new StringBuilder("VALUES (");
-		Key colName = null;
 		// tableCols = null; // set this to avoid optimised loading of only required tables
 		for (int i = 0; i < cols.length; i++) {
 			String col = StringUtil.toUpperCase(cols[i].getString()); // quoted objects are case insensitive in HSQLDB
-			// colName = Caster.toKey(cols[i].getString());
 			if (tableCols == null || tableCols.containsKey(col)) {
-				targetCols.add(col);
-				targetTypes[targetCols.size() - 1] = srcQueryTypes[i];
+				// grab the QueryColumn directly by index — avoids O(n) name lookup via getIndexFromKey
+				targetColumns.add(query.getColumn(cols[i]));
+				targetTypeList.add(srcQueryTypes[i]);
 				insert.append(comma);
 				insert.append(col);
 
@@ -220,7 +240,7 @@ public final class HSQLDBHandler {
 		insert.append(")");
 		values.append(")");
 
-		if (tableCols != null && targetCols.size() == 0) {
+		if (tableCols != null && targetColumns.size() == 0) {
 			// SystemOut.print("Populate Table, table has no used columns: " + dbTableName);
 			return;
 		}
@@ -237,14 +257,12 @@ public final class HSQLDBHandler {
 		PreparedStatement prepStat = conn.prepareStatement(insert.toString() + values.toString());
 
 		int rows = query.getRecordcount();
-		int count = targetCols.size();
-		// String col = null;
+		int count = targetColumns.size();
 		int rowsToCommit = 0;
 
-		QueryColumn[] columns = new QueryColumn[count];
-		for (int i = 0; i < count; i++) {
-			columns[i] = query.getColumn(Caster.toKey(targetCols.get(i)));
-		}
+		QueryColumn[] columns = targetColumns.toArray(new QueryColumn[0]);
+		int[] targetTypes = new int[count];
+		for (int i = 0; i < count; i++) targetTypes[i] = targetTypeList.get(i);
 
 		// aprint.o(query);
 		// aprint.o(tableCols); aprint.o(srcTypes);
@@ -292,7 +310,6 @@ public final class HSQLDBHandler {
 		conn.commit();
 		Statement stat2 = conn.createStatement();
 		stat2.execute("SET FILES LOG TRUE");
-
 		// SystemOut.print("Populate Table: [" + dbTableName + "] with [" + rows + "] rows, [" + count + "]
 		// //columns, took " + stopwatch.time() + "ms");
 	}
@@ -339,7 +356,9 @@ public final class HSQLDBHandler {
 
 		Key sqlKey = Caster.toKey(sql.toString() + createSql.toString());
 		Object cachedColumnUsage = columnUsageCache.get(sqlKey, null);
-		if (cachedColumnUsage != null) return (Struct) cachedColumnUsage;
+		if (cachedColumnUsage != null) {
+			return (Struct) cachedColumnUsage;
+		}
 
 		ResultSet rs = null;
 		ResultSetMetaData rsmd = null;
@@ -365,9 +384,8 @@ public final class HSQLDBHandler {
 			int tablePos = -1;
 			for (int i = 1; i <= columnCount; i++) {
 				name = rsmd.getColumnName(i);
-				if (name == "COLUMN_NAME") colPos = i;
-				else if (name == "TABLE_NAME") tablePos = i;
-				// SystemOut.print("Column : [" + name + "] at pos " + i);
+				if (name.equals("COLUMN_NAME")) colPos = i;
+				else if (name.equals("TABLE_NAME")) tablePos = i;
 			}
 
 			// load used tables and columns into a nested struct
@@ -377,15 +395,10 @@ public final class HSQLDBHandler {
 				Struct tableCols = ((Struct) tables.get(tableName));
 				tableCols.setEL(Caster.toKey(rs.getString(colPos)), null);
 			}
-			// aprint.o(rs);
-			// aprint.o(tables);
 			// don't need the view anymore, bye bye
 			stat.execute("DROP VIEW " + view);
 		}
 		catch (Exception e) {
-			// aprint.o(e.getMessage());
-			// SystemOut.print("VIEW Exception, fall back to loading all data: [" + e.toString() + "], sql [" +
-			// sql.toString() + "]");
 			tables = null; // give up trying to be smart
 		}
 		finally {
@@ -395,7 +408,6 @@ public final class HSQLDBHandler {
 				}
 			}
 			catch (SQLException e) {
-				SystemOut.print(e.toString());
 			}
 		}
 		// SystemOut.print("getUsedColumnsForQuery: took " + stopwatch.time());
@@ -635,10 +647,12 @@ public final class HSQLDBHandler {
 					String cfQueryName = null; // name of the source cfml query variable
 					String dbTableName = null; // name of the target table in the database
 					String modSql = null;
+
+					// First pass: fix up SQL table names and build the full CREATE SQL for cache key
 					StringBuilder createSql = new StringBuilder();
-					// int len=tables.size();
+					ArrayList<String[]> tableNames = new ArrayList<String[]>(); // [cfQueryName, dbTableName] pairs
 					while (it.hasNext()) {
-						cfQueryName = it.next().toString();// tables.get(i).toString();
+						cfQueryName = it.next().toString();
 						dbTableName = cfQueryName.replace('.', '_');
 
 						if (!cfQueryName.toLowerCase().equals(dbTableName.toLowerCase())) {
@@ -647,26 +661,37 @@ public final class HSQLDBHandler {
 							sql.setSQLString(modSql);
 						}
 						if (sql.getItems() != null && sql.getItems().length > 0) sql = new SQLImpl(sql.toString());
-						// temp tables still get created will all the source columns,
-						// only populateTables is driven by the required columns calculated from the view
-						createSql.append(createTable(conn, pc, dbTableName, cfQueryName, doSimpleTypes));
-						qoqTables.add(dbTableName);
+						// build the full CREATE SQL (all columns) for a stable cache key
+						createSql.append(buildCreateTableSql(pc, dbTableName, cfQueryName, doSimpleTypes));
+						tableNames.add(new String[] { cfQueryName, dbTableName });
 					}
 
-					// SystemOut.print("QoQ HSQLDB CREATED TABLES: " + sql.toString());
+					// check if we already know which columns are needed (cache-only check)
+					Key cacheKey = Caster.toKey(sql.toString() + createSql.toString());
+					Struct allTableColumns = (Struct) columnUsageCache.get(cacheKey, null);
 
-					// create the sql as a view, to find out which table columns are needed
-					Struct allTableColumns = getUsedColumnsForQuery(conn, sql, createSql);
+					if (allTableColumns != null) {
+						// Cache hit — create minimal tables with only needed columns
+						for (String[] tn : tableNames) {
+							Key tableKey = Caster.toKey(tn[1]);
+							Struct tableCols = allTableColumns.containsKey(tableKey) ? ((Struct) allTableColumns.get(tableKey)) : null;
+							createTable(conn, pc, tn[1], tn[0], doSimpleTypes, tableCols);
+							qoqTables.add(tn[1]);
+						}
+					}
+					else {
+						// Cache miss — create full tables (needed for VIEW discovery), then discover used columns
+						for (String[] tn : tableNames) {
+							createTable(conn, pc, tn[1], tn[0], doSimpleTypes);
+							qoqTables.add(tn[1]);
+						}
+						allTableColumns = getUsedColumnsForQuery(conn, sql, createSql);
+					}
+					// load data into tables
 					Struct tableColumns = null;
 					Key tableKey = null;
-
-					// load data into tables
-					it = tables.iterator();
-					while (it.hasNext()) {
-						cfQueryName = it.next().toString();
-						dbTableName = cfQueryName.replace('.', '_');
-
-						tableKey = Caster.toKey(dbTableName);
+					for (String[] tn : tableNames) {
+						tableKey = Caster.toKey(tn[1]);
 						if (allTableColumns != null && allTableColumns.containsKey(tableKey)) {
 							tableColumns = ((Struct) allTableColumns.get(tableKey));
 						}
@@ -676,7 +701,7 @@ public final class HSQLDBHandler {
 
 						// only populate tables with data if there are used columns, or no needed column data at all
 						if (tableColumns == null || tableColumns.size() > 0) {
-							populateTable(conn, pc, dbTableName, cfQueryName, doSimpleTypes, tableColumns);
+							populateTable(conn, pc, tn[1], tn[0], doSimpleTypes, tableColumns);
 						}
 					}
 
