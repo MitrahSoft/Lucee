@@ -901,7 +901,7 @@ public final class QoQ {
 				if (op.equals("sign")) return Double.valueOf(MathUtil.sgn(Caster.toDoubleValue(value)));
 				if (op.equals("sin")) return Double.valueOf(Math.sin(Caster.toDoubleValue(value)));
 				if (op.equals("soundex")) return StringUtil.soundex(Caster.toString(value));
-				if (op.equals("sin")) return Double.valueOf(Math.sqrt(Caster.toDoubleValue(value)));
+				if (op.equals("sqrt")) return Double.valueOf(Math.sqrt(Caster.toDoubleValue(value)));
 				if (op.equals("sum")) {
 					// If there are no non-null values, return empty
 					if (aggregateValues.length == 0) {
