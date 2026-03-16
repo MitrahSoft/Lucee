@@ -129,7 +129,6 @@ public abstract class Clazz implements Serializable {
 			return ClazzDynamic.getInstance(clazz, root, log);
 		}
 		catch (Exception e) {
-			if (log != null) log.error("dynamic", e);
 			if (allowReflection()) return new ClazzReflection(clazz, log);
 			else throw new RuntimeException(e);
 		}
@@ -370,8 +369,7 @@ public abstract class Clazz implements Serializable {
 						}
 						return p.getName();
 					}
-					catch (PageException pe) {
-					}
+					catch (PageException pe) {}
 				}
 			}
 		}
