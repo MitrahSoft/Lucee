@@ -127,7 +127,7 @@ public class ExtensionProvider {
 	}
 
 	public ExtensionProvider(String group) {
-		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshotsExtension();
+		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshots();
 		this.repoReleases = MavenUpdateProvider.getDefaultRepositoryReleases();
 		this.repoMixed = MavenUpdateProvider.getDefaultRepositoryMixed();
 		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
@@ -135,7 +135,7 @@ public class ExtensionProvider {
 	}
 
 	public ExtensionProvider() {
-		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshotsExtension();
+		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshots();
 		this.repoReleases = MavenUpdateProvider.getDefaultRepositoryReleases();
 		this.repoMixed = MavenUpdateProvider.getDefaultRepositoryMixed();
 		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
@@ -378,7 +378,7 @@ public class ExtensionProvider {
 		Version lastRel = null;
 
 		for (Version v: list(artifact)) {
-			if (v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
+			if (!v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
 				if (lastRel == null || Version.compare(lastRel, v) < 0) {
 					lastRel = v;
 				}
