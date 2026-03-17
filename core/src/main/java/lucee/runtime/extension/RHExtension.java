@@ -1332,12 +1332,11 @@ public final class RHExtension implements Serializable {
 	}
 
 	private static Query createQuery() throws DatabaseException {
-		return new QueryImpl(
-				new Key[] { KeyConstants._id, KeyConstants._version, KeyConstants._name, KeyConstants._symbolicName, KeyConstants._type, KeyConstants._description,
-						KeyConstants._image, KeyConstants._releaseType, KeyConstants._trial, KeyConstants._categories, KeyConstants._startBundles, KeyConstants._bundles,
-						KeyConstants._flds, KeyConstants._tlds, KeyConstants._tags, KeyConstants._functions, KeyConstants._contexts, KeyConstants._webcontexts,
-						KeyConstants._config, KeyConstants._applications, KeyConstants._components, KeyConstants._plugins, KeyConstants._eventGateways, KeyConstants._archives },
-				0, "Extensions");
+		return new QueryImpl(new Key[] { KeyConstants._id, KeyConstants._version, KeyConstants._name, KeyConstants._groupId, KeyConstants._artifactId, KeyConstants._symbolicName,
+				KeyConstants._type, KeyConstants._description, KeyConstants._image, KeyConstants._releaseType, KeyConstants._trial, KeyConstants._categories,
+				KeyConstants._startBundles, KeyConstants._bundles, KeyConstants._flds, KeyConstants._tlds, KeyConstants._tags, KeyConstants._functions, KeyConstants._contexts,
+				KeyConstants._webcontexts, KeyConstants._config, KeyConstants._applications, KeyConstants._components, KeyConstants._plugins, KeyConstants._eventGateways,
+				KeyConstants._archives }, 0, "Extensions");
 	}
 
 	public Struct toStruct() {
@@ -1351,6 +1350,9 @@ public final class RHExtension implements Serializable {
 	private static Collection _populate(Collection coll, ExtensionMetadata md) {
 
 		coll.setEL(KeyConstants._id, md._getId());
+		coll.setEL(KeyConstants._name, md.getName());
+		coll.setEL(KeyConstants._groupId, md.getGroupId());
+		coll.setEL(KeyConstants._artifactId, md.getArtifactId());
 		coll.setEL(KeyConstants._name, md.getName());
 		coll.setEL(KeyConstants._symbolicName, md.getSymbolicName());
 		coll.setEL(KeyConstants._image, md.getImage());
