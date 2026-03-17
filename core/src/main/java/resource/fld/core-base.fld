@@ -6640,6 +6640,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>if set to true the secret is resolved right away, if set to false, it is resolved when used.</description>
@@ -6667,6 +6668,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>If set to true, all secrets are resolved immediately. If set to false (default), secrets are resolved when used.</description>
