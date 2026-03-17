@@ -7097,7 +7097,7 @@ if this attribute is not provided all types are returned.</description>
 	<function>
 		<name>getPropertyString</name>
 		<class>lucee.runtime.functions.system.GetPropertyString</class>
-		<description>Sets the value of a property entry in a properties file.</description>
+		<description>Gets the value of a property entry from a properties file.</description>
 		<introduced>7.0.0.108</introduced>
 		<argument>
 			<name>filePath</name>
