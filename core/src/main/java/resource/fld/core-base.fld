@@ -1754,6 +1754,7 @@ The returned AST uses **neutral, language-agnostic node types** following ESTree
 	<function>
 		<name>breakpoint</name>
 		<class>lucee.runtime.functions.system.Breakpoint</class>
+		<introduced>7.1.0.45</introduced>
 		<keywords>debug,debugger</keywords>
 		<description>Programmatic breakpoint - like JavaScript's "debugger;" statement. Suspends execution when a debugger is attached, allowing inspection of variables. Returns true if breakpoint was hit, false if skipped.</description>
 		<argument>
@@ -8323,6 +8324,7 @@ The following things are considered to be empty:
 	<function>
 		<name>isDebuggerEnabled</name>
 		<class>lucee.runtime.functions.decision.IsDebuggerEnabled</class>
+		<introduced>7.1.0.45</introduced>
 		<keywords>decision,debug,debugger</keywords>
 		<description>Returns true if DAP debugger support is enabled (via LUCEE_DAP_SECRET env var or lucee.dap.secret system property). Use with breakpoint() BIF.</description>
 		<return>
@@ -19462,6 +19464,7 @@ The following things are considered to be empty:
 	<function>
 		<name>CachedWithinFlush</name>
 		<class>lucee.runtime.functions.cache.CachedWithinFlush</class>
+		<introduced>7.1.0.11</introduced>
 		<description>Flushes a specific cached entry from the cache. Works with cached queries, functions, and HTTP results. 
 		This allows selective cache invalidation instead of clearing entire caches, enabling fine-grained cache control when underlying data changes.</description>
 		<argument>
@@ -19489,6 +19492,7 @@ The following things are considered to be empty:
 	<function>
 		<name>CachedWithinId</name>
 		<class>lucee.runtime.functions.cache.CachedWithinId</class>
+		<introduced>7.1.0.11</introduced>
 		<description>Returns the cache identifier (cache key) for a cached object. 
 		This ID can be used with `cacheRemove()` to manually flush the cache entry. 
 		Works with cached queries, functions, and HTTP results. 
