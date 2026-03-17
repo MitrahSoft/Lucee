@@ -205,5 +205,42 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="qoq" {
 			});
 
 		});
+
+		describe( "LDEV-6151 - struct dbtype with INNER JOIN falls back to HSQLDB", function() {
+
+			it( title="INNER JOIN works with struct dbtype and no engine specified", body=function( currentSpec ) {
+				var t1 = queryNew( "id,val", "integer,double", [ [ 1, 10 ] ] );
+				var t2 = queryNew( "id,name", "integer,varchar", [ [ 1, "A" ] ] );
+				var result = queryExecute(
+					"SELECT * FROM t1 INNER JOIN t2 ON t1.id = t2.id",
+					{},
+					{ dbtype: { type: "query" } }
+				);
+				expect( result.recordCount ).toBe( 1 );
+			});
+
+			it( title="INNER JOIN works with string dbtype", body=function( currentSpec ) {
+				var t1 = queryNew( "id,val", "integer,double", [ [ 1, 10 ] ] );
+				var t2 = queryNew( "id,name", "integer,varchar", [ [ 1, "A" ] ] );
+				var result = queryExecute(
+					"SELECT * FROM t1 INNER JOIN t2 ON t1.id = t2.id",
+					{},
+					{ dbtype: "query" }
+				);
+				expect( result.recordCount ).toBe( 1 );
+			});
+
+			it( title="INNER JOIN works with explicit engine=auto", body=function( currentSpec ) {
+				var t1 = queryNew( "id,val", "integer,double", [ [ 1, 10 ] ] );
+				var t2 = queryNew( "id,name", "integer,varchar", [ [ 1, "A" ] ] );
+				var result = queryExecute(
+					"SELECT * FROM t1 INNER JOIN t2 ON t1.id = t2.id",
+					{},
+					{ dbtype: { type: "query", engine: "auto" } }
+				);
+				expect( result.recordCount ).toBe( 1 );
+			});
+
+		});
 	}
 }
