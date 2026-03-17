@@ -617,7 +617,7 @@ public final class HSQLDBHandler {
 
 		// Create datasource with unique database name using dbNum
 		String dbName = "qoq_" + dbNum;
-		String connStr = "jdbc:hsqldb:mem:" + dbName + ";sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;";
+		String connStr = "jdbc:hsqldb:mem:" + dbName + ";sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;sql.concat_nulls=false;";
 
 		// We don't use connection pooling - each query creates a fresh connection and closes it immediately.
 		// Concurrency is controlled by the BlockingQueue (dbQueue), not by connection pool limits.

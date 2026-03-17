@@ -735,6 +735,8 @@ public final class QoQ {
 				return executeMinus(pc, sql, source, op2, row);
 			case Operation.OPERATION2_PLUS:
 				return executePlus(pc, sql, source, op2, row);
+			case Operation.OPERATION2_CONCAT:
+				return executeConcat(pc, sql, source, op2, row);
 			case Operation.OPERATION2_DIVIDE:
 				return executeDivide(pc, sql, source, op2, row);
 			case Operation.OPERATION2_MULTIPLY:
@@ -988,6 +990,8 @@ public final class QoQ {
 
 		if (op.equals("in")) return executeIn(pc, sql, source, opn, row, false);
 		if (op.equals("not_in")) return executeIn(pc, sql, source, opn, row, true);
+
+		if (op.equals("concat")) return executeConcat(pc, sql, source, operators, row);
 
 		if (op.equals("coalesce")) return executeCoalesce(pc, sql, source, operators, row);
 
@@ -1451,6 +1455,20 @@ public final class QoQ {
 		catch (PageException e) {
 			return Caster.toString(left) + Caster.toString(right);
 		}
+	}
+
+	private Object executeConcat(PageContext pc, SQL sql, QueryImpl source, Operation2 expression, int row) throws PageException {
+		Object left = executeExp(pc, sql, source, expression.getLeft(), row);
+		Object right = executeExp(pc, sql, source, expression.getRight(), row);
+		return Caster.toString(left) + Caster.toString(right);
+	}
+
+	private Object executeConcat(PageContext pc, SQL sql, QueryImpl source, Expression[] operands, int row) throws PageException {
+		StringBuilder sb = new StringBuilder();
+		for (Expression operand : operands) {
+			sb.append(Caster.toString(executeExp(pc, sql, source, operand, row)));
+		}
+		return sb.toString();
 	}
 
 	/**
