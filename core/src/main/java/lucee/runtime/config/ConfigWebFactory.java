@@ -1575,7 +1575,7 @@ public final class ConfigWebFactory extends ConfigFactory {
 		f = contextDir.getRealResource("graph." + TEMPLATE_EXTENSION);
 		if (!f.exists() || doNew) createFileFromResourceEL("/resource/context/graph." + TEMPLATE_EXTENSION, f);
 
-		f = contextDir.getRealResource("graph." + TEMPLATE_EXTENSION);
+		f = contextDir.getRealResource("formtag-form." + TEMPLATE_EXTENSION);
 		if (!f.exists() || doNew) createFileFromResourceEL("/resource/context/formtag-form." + TEMPLATE_EXTENSION, f);
 
 		f = contextDir.getRealResource("wddx." + TEMPLATE_EXTENSION);
