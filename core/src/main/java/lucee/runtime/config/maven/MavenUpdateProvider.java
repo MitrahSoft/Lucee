@@ -8,6 +8,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -62,19 +63,23 @@ import lucee.runtime.type.util.ListUtil;
 
 public final class MavenUpdateProvider {
 
+	public static final int TYPE_ALL = 0;
+	public static final int TYPE_SNAPSHOT = 1;
+	public static final int TYPE_RELEASE = 2;
+
 	public static final int CONNECTION_TIMEOUT = 10000; // 10 seconds - for establishing connection
 	public static final int READ_TIMEOUT = 60000; // 60 seconds - for reading response data
 
 	// new last 90 days
-	private static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
+	public static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
 			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
 
 	// versions provided by Lucee
 	private static final Repository DEFAULT_REPOSITORY_LUCEE = new Repository("Lucee Maven repository", "https://cdn.lucee.org/", Repository.TIMEOUT_1HOUR,
 			Repository.TIMEOUT_NEVER);
 
-	private static final Repository DEFAULT_REPOSITORY_SNAPSHOT = DEFAULT_REPOSITORY_SONATYPE_LAST90;
-	private static final Repository DEFAULT_REPOSITORY_RELEASE = new Repository("Maven Release Repository", "https://repo1.maven.org/maven2/", Repository.TIMEOUT_1HOUR,
+	public static final Repository DEFAULT_REPOSITORY_SNAPSHOT = DEFAULT_REPOSITORY_SONATYPE_LAST90;
+	public static final Repository DEFAULT_REPOSITORY_RELEASE = new Repository("Maven Release Repository", "https://repo1.maven.org/maven2/", Repository.TIMEOUT_1HOUR,
 			Repository.TIMEOUT_NEVER);
 
 	public static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS = new Repository[] { DEFAULT_REPOSITORY_SNAPSHOT, DEFAULT_REPOSITORY_LUCEE };
@@ -191,7 +196,38 @@ public final class MavenUpdateProvider {
 		return list;
 	}
 
+	public static Version last(Collection<Repository> repos, String group, String artifact, int type)
+			throws IOException, GeneralSecurityException, SAXException, InterruptedException {
+		List<Version> list = list(repos, group, artifact);
+
+		if (list == null || list.isEmpty()) {
+			throw new IOException(
+					"No versions found for artifact [" + group + ":" + artifact + "] " + "in " + repos.size() + " repositor" + (repos.size() == 1 ? "y" : "ies") + ".");
+		}
+
+		if (TYPE_ALL == type) {
+			return list.get(list.size() - 1);
+		}
+
+		Version version;
+		for (int i = list.size() - 1; i >= 0; i--) {
+			version = list.get(i);
+			boolean isSnapshot = version.getQualifier() != null && version.getQualifier().endsWith("-SNAPSHOT");
+			if ((type == TYPE_SNAPSHOT && isSnapshot) || (type == TYPE_RELEASE && !isSnapshot)) {
+				return version;
+			}
+		}
+
+		throw new IOException("No " + (type == TYPE_SNAPSHOT ? "snapshot" : "release") + " version found for [" + group + ":" + artifact + "]. " + list.size() + " version"
+				+ (list.size() == 1 ? "" : "s") + " exist but none matched the requested type. " + "Available versions: " + list);
+
+	}
+
 	public List<Version> list() throws IOException, GeneralSecurityException, SAXException, InterruptedException {
+		return list(repos, group, artifact);
+	}
+
+	public static List<Version> list(Collection<Repository> repos, String group, String artifact) throws IOException, GeneralSecurityException, SAXException, InterruptedException {
 		try {
 			Set<Version> versions = Collections.synchronizedSet(new HashSet<>());
 			List<Thread> threads = new ArrayList<>();
@@ -201,7 +237,6 @@ public final class MavenUpdateProvider {
 					try {
 						MetadataReader mr = new MetadataReader(repo, group, artifact);
 						for (Version v: mr.read()) {
-							// print.e(repo.label + "(" + repo.url + "):" + v);
 							versions.add(v);
 						}
 					}
@@ -563,6 +598,10 @@ public final class MavenUpdateProvider {
 			Resource cacheDirectory = cacheRootDirectory.getRealResource("mvn/cache/" + HashUtil.create64BitHashAsString(url, Character.MAX_RADIX) + "/");
 			cacheDirectory.mkdirs();
 			return cacheDirectory;
+		}
+
+		public String getUrl() {
+			return url;
 		}
 
 		@Override

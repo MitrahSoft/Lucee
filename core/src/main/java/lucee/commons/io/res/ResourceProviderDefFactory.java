@@ -17,6 +17,7 @@ import lucee.runtime.type.KeyImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.util.KeyConstants;
+import lucee.transformer.library.ClassDefinitionImpl;
 
 public class ResourceProviderDefFactory implements PropFactory<ResourceProviderDef> {
 
@@ -66,7 +67,7 @@ public class ResourceProviderDefFactory implements PropFactory<ResourceProviderD
 
 			}
 			if ("lucee.commons.io.res.type.ftp.FTPResourceProvider".equals(cd.getClassName())) {
-				throw new ApplicationException("[" + cd.getClassName() + "] no longer supported");
+				cd = new ClassDefinitionImpl("org.lucee.extension.ftp.vfs.FTPResourceProvider", "org.lucee:ftp");
 			}
 
 			Map<String, String> args = ConfigFactoryImpl.toArguments(defaultProvider, "arguments", true, false);

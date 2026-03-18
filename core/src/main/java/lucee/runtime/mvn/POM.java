@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.osgi.framework.Version;
 import org.xml.sax.SAXException;
 
 import lucee.commons.digest.HashUtil;
@@ -24,6 +25,8 @@ import lucee.commons.lang.SerializableObject;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.tree.TreeNode;
+import lucee.runtime.config.maven.MavenUpdateProvider;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.mvn.POMReader.Dependency;
 import lucee.runtime.op.Caster;
 import lucee.runtime.thread.ThreadUtil;
@@ -33,21 +36,24 @@ public final class POM {
 
 	public static final List<Repository> REPOSITORIES = new ArrayList<>();
 
-	public static final Repository REPOSITORY_MAVEN_CENTRAL = new Repository("maven-central", "Maven Central", "https://repo1.maven.org/maven2/");
-	public static final Repository REPOSITORY_SONATYPE = new Repository("sonatype", "Sonatype", "https://oss.sonatype.org/content/repositories/releases/");
-	public static final Repository REPOSITORY_JCENTER = new Repository("jcenter", "JCenter", "https://jcenter.bintray.com/");
+	public static final MavenUpdateProvider.Repository REPOSITORY_MAVEN_CENTRAL = MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASE;
 
-	// only google specific stuff
-	public static final Repository REPOSITORY_GOOGLE = new Repository("google", "Google Maven", "https://maven.google.com/");
+	public static final MavenUpdateProvider.Repository REPOSITORY_SONATYPE = new MavenUpdateProvider.Repository("Sonatype",
+			"https://oss.sonatype.org/content/repositories/releases/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
+
+	public static final MavenUpdateProvider.Repository REPOSITORY_JCENTER = new MavenUpdateProvider.Repository("JCenter", "https://jcenter.bintray.com/", Repository.TIMEOUT_1HOUR,
+			Repository.TIMEOUT_NEVER);
+
+	public static final MavenUpdateProvider.Repository REPOSITORY_GOOGLE = new MavenUpdateProvider.Repository("Google Maven", "https://maven.google.com/", Repository.TIMEOUT_1HOUR,
+			Repository.TIMEOUT_NEVER);
+
 	// only apache specific stuff
-	public static final Repository REPOSITORY_APACHE = new Repository("apache", "Apache Repository", "https://repository.apache.org/content/repositories/releases/");
-	// only spring specific stuff
-	public static final Repository REPOSITORY_SPRING = new Repository("spring", "Spring Repository", "https://repo.spring.io/release/");
-	// currently not supported
-	// public static final Repository REPOSITORY_ALIYUN = new Repository("aliyun", "Aliyun Maven
-	// Mirror", "https://maven.aliyun.com/repository/public");
+	public static final MavenUpdateProvider.Repository REPOSITORY_APACHE = new MavenUpdateProvider.Repository("Apache Repository",
+			"https://repository.apache.org/content/repositories/releases/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
 
-	// public static final Repository DEFAULT_REPOSITORY;
+	// only spring specific stuff
+	public static final MavenUpdateProvider.Repository REPOSITORY_SPRING = new MavenUpdateProvider.Repository("Spring Repository", "https://repo.spring.io/release/",
+			Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
 
 	static {
 		String strRep = SystemUtil.getSystemPropOrEnvVar("lucee.maven.default.repositories", null);
@@ -57,7 +63,7 @@ public final class POM {
 
 				if (!StringUtil.isEmpty(strURL, true)) {
 					strURL = strURL.trim();
-					REPOSITORIES.add(new Repository(strURL));
+					REPOSITORIES.add(new MavenUpdateProvider.Repository(strURL, strURL, Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER));
 				}
 			}
 		}
@@ -163,14 +169,11 @@ public final class POM {
 	}
 
 	private POM(Resource localDirectory, Collection<Repository> repositories, String groupId, String artifactId, String version, String scope, String optional, String checksum,
-			int dependencyScope, int dependencyScopeManagement, boolean triggeerLoad, Log log) {
+			int dependencyScope, int dependencyScopeManagement, boolean triggeerLoad, Log list) {
 
 		if (groupId == null) throw new IllegalArgumentException("groupId cannot be null");
 		if (artifactId == null) throw new IllegalArgumentException("artifactId cannot be null");
-		if (version == null) throw new IllegalArgumentException("version cannot be null");
 
-		this.localDirectory = localDirectory;
-		this.checksum = checksum;
 		if (repositories == null) {
 			this.initRepositories = new ArrayList<>();
 			for (Repository r: REPOSITORIES) {
@@ -178,6 +181,22 @@ public final class POM {
 			}
 		}
 		else this.initRepositories = repositories;
+
+		if (version == null) {
+			try {
+				Version v = MavenUpdateProvider.last(initRepositories, groupId, artifactId, MavenUpdateProvider.TYPE_RELEASE);
+				version = v.toString();
+			}
+			catch (Exception e) {
+				IllegalArgumentException iae = new IllegalArgumentException(
+						"version cannot be null for [" + groupId + ":" + artifactId + "] " + "and fetching the latest release version also failed: " + e.getMessage());
+				ExceptionUtil.initCauseEL(iae, e);
+				throw iae;
+			}
+		}
+
+		this.localDirectory = localDirectory;
+		this.checksum = checksum;
 		this.groupId = groupId.trim();
 		this.artifactId = artifactId.trim();
 		this.version = version == null ? null : version.trim();
@@ -197,8 +216,7 @@ public final class POM {
 				try {
 					initXML();
 				}
-				catch (IOException e) {
-				}
+				catch (IOException e) {}
 			}
 		}, true).start();
 	}

@@ -323,7 +323,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private FunctionLib coreFLDs;
 	private LinkedHashMapMaxSize<Long, String> previousNonces = new LinkedHashMapMaxSize<Long, String>(100);
 	private Map<Key, String> placeHolderdata;
-	private boolean insidePlaceHolder;
+	private AtomicBoolean insidePlaceHolder = new AtomicBoolean(false);
 	//////////////////////////
 	//////////////////////////
 
@@ -1324,10 +1324,11 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 	Map<Key, String> getPlaceHolderData() {
 		if (this.placeHolderdata == null) {
+			if (insidePlaceHolder.get()) return new HashMap<>();
 			synchronized (SystemUtil.createToken("configweb", "placeHolderdata")) {
 				if (this.placeHolderdata == null) {
-					if (insidePlaceHolder) return new HashMap<>();
-					insidePlaceHolder = true;
+					if (insidePlaceHolder.get()) return new HashMap<>();
+					insidePlaceHolder.set(true);
 					try {
 						Map<Key, String> data = new HashMap<>();
 						data.put(KeyImpl.init("lucee-config"), getConfigDir().getAbsolutePath());
@@ -1353,7 +1354,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						this.placeHolderdata = Collections.unmodifiableMap(data);
 					}
 					finally {
-						insidePlaceHolder = false;
+						insidePlaceHolder.set(false);
 					}
 				}
 			}
@@ -7609,6 +7610,11 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 	public Map<String, LoggerAndSourceData> getLoggers() {
 		if (loggers == null) {
+
+			if (insideLoggers.get()) {
+				return new HashMap<String, LoggerAndSourceData>(); // avoid cycle loop
+			}
+
 			synchronized (SystemUtil.createToken("config", "loggers")) {
 				if (loggers == null) {
 					if (root == null || insideLoggers.get()) {
@@ -7677,7 +7683,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			las = LogFactory.createLogger(this, name, Log.LEVEL_ERROR, appender, null, layout, null, true, true);
 
 			String id = LoggerAndSourceData.id(name.toLowerCase(), appender, null, layout, null, Log.LEVEL_ERROR, true);
-			LoggerAndSourceData existing = loggers.get(name.toLowerCase());
+			LoggerAndSourceData existing = loggers != null ? loggers.get(name.toLowerCase()) : null;
 			if (existing != null) {
 				if (existing.id().equals(id)) {
 					return existing;

@@ -45,6 +45,7 @@ import lucee.commons.net.HTTPUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.ConfigUtil;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.mvn.POMReader.Dependency;
@@ -149,11 +150,13 @@ public final class MavenUtil {
 			for (POMReader.Repository rep: rawRepositories) {
 				Repository r = new Repository(
 
-						resolvePlaceholders(current, rep.id, properties),
-
 						resolvePlaceholders(current, rep.name, properties),
 
-						resolvePlaceholders(current, rep.url, properties)
+						resolvePlaceholders(current, rep.url, properties),
+
+						Repository.TIMEOUT_1HOUR,
+
+						Repository.TIMEOUT_NEVER
 
 				);
 				repositories.put(r.getUrl(), r);

@@ -82,7 +82,6 @@ public final class MetadataReader extends DefaultHandler {
 
 			// Updated URL with correct parameter names and no classifier filter
 			URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
-
 			// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
 			Reader r = null;
 			try {
@@ -106,9 +105,10 @@ public final class MetadataReader extends DefaultHandler {
 
 	private void storeToCache(List<Version> versions, String appendix) {
 		try {
-			Resource resLastmod = repository.cacheDirectory.getRealResource(HashUtil.create64BitHashAsString(group + "_" + artifact + appendix + "_lastmod", Character.MAX_RADIX));
+			Resource resLastmod = repository.cacheDirectory
+					.getRealResource(HashUtil.create64BitHashAsString(repository.url + "_" + group + "_" + artifact + appendix + "_lastmod", Character.MAX_RADIX));
 			Resource resVersions = repository.cacheDirectory
-					.getRealResource(HashUtil.create64BitHashAsString(group + "_" + artifact + appendix + "_versions", Character.MAX_RADIX));
+					.getRealResource(HashUtil.create64BitHashAsString(repository.url + "_" + group + "_" + artifact + appendix + "_versions", Character.MAX_RADIX));
 			StringBuilder sb = new StringBuilder();
 			for (Version v: versions) {
 				sb.append(v.toString()).append(',');
@@ -125,13 +125,14 @@ public final class MetadataReader extends DefaultHandler {
 	private List<Version> readFromCache(String appendix) {
 		if (DEBUG) return null;
 		try {
-			Resource resLastmod = repository.cacheDirectory.getRealResource(HashUtil.create64BitHashAsString(group + "_" + artifact + appendix + "_lastmod", Character.MAX_RADIX));
+			Resource resLastmod = repository.cacheDirectory
+					.getRealResource(HashUtil.create64BitHashAsString(repository.url + "_" + group + "_" + artifact + appendix + "_lastmod", Character.MAX_RADIX));
 			if (resLastmod.isFile()) {
 				long lastmod = repository.timeoutList == Repository.TIMEOUT_NEVER ? Repository.TIMEOUT_NEVER
 						: Caster.toLongValue(IOUtil.toString(resLastmod, CharsetUtil.UTF8), 0L);
 				if (repository.timeoutList == Repository.TIMEOUT_NEVER || lastmod + repository.timeoutList > System.currentTimeMillis()) {
 					Resource resVersions = repository.cacheDirectory
-							.getRealResource(HashUtil.create64BitHashAsString(group + "_" + artifact + appendix + "_versions", Character.MAX_RADIX));
+							.getRealResource(HashUtil.create64BitHashAsString(repository.url + "_" + group + "_" + artifact + appendix + "_versions", Character.MAX_RADIX));
 					String content = IOUtil.toString(resVersions, CharsetUtil.UTF8);
 					List<Version> versions = new ArrayList<>();
 					if (content.length() > 0) {
