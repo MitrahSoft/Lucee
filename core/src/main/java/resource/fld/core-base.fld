@@ -6652,6 +6652,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>if set to true the secret is resolved right away, if set to false, it is resolved when used.</description>
@@ -6679,6 +6680,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>If set to true, all secrets are resolved immediately. If set to false (default), secrets are resolved when used.</description>
@@ -7107,7 +7109,7 @@ if this attribute is not provided all types are returned.</description>
 	<function>
 		<name>getPropertyString</name>
 		<class>lucee.runtime.functions.system.GetPropertyString</class>
-		<description>Sets the value of a property entry in a properties file.</description>
+		<description>Gets the value of a property entry from a properties file.</description>
 		<introduced>7.0.0.108</introduced>
 		<argument>
 			<name>filePath</name>
@@ -10824,28 +10826,52 @@ Use `LoadAISession()` to restore a serialized session.
 		</return>
 	</function>
 	
-		<!-- LuceeExtension -->
+	<!-- LuceeExtension -->
 	<function>
-		<name>LuceeExtension</name>
-		<status>hidden</status>
-		<class>lucee.runtime.functions.system.LuceeExtension</class>
-		<description>List all Lucee extensions</description>
-		<argument>
-			<name>artifact</name>
-			<alias>artifactid</alias>
-			<type>string</type>
-			<required>No</required>
-			<description></description>
-		</argument>
-		<argument>
-			<name>version</name>
-			<type>string</type>
-			<required>No</required>
-			<description></description>
-		</argument>
-		<return>
-			<type>any</type>
-		</return>
+	    <name>LuceeExtension</name>
+	    <status>hidden</status>
+	    <class>lucee.runtime.functions.system.LuceeExtension</class>
+	    <description>Lists available Lucee extensions or retrieves details for a specific one from Maven.
+	
+	The behavior depends on which arguments are provided:
+	
+	- **No arguments** → returns an array of all extension artifact IDs for the default group (`org.lucee`)
+	- **`group` only** → returns an array of artifact IDs for that Maven group
+	- **`group` + `artifact`** → returns an array of version strings for that extension
+	- **`group` + `artifact` + `version`** → returns a struct with artifact details: `lex`, `pom`, `local`, `lastModified`
+	    </description>
+	    <argument>
+	        <name>group</name>
+	        <alias>groupid</alias>
+	        <type>string</type>
+	        <required>No</required>
+	        <default>org.lucee</default>
+	        <description>Maven group ID of the extension provider.</description>
+	    </argument>
+	    <argument>
+	        <name>artifact</name>
+	        <alias>artifactid</alias>
+	        <type>string</type>
+	        <required>No</required>
+	        <description>The extension artifact ID. If omitted, all artifact IDs for the group are returned.</description>
+	    </argument>
+	    <argument>
+	        <name>version</name>
+	        <type>string</type>
+	        <required>No</required>
+	        <description>The version to retrieve details for. If omitted, all available versions for the artifact are returned.</description>
+	    </argument>
+	    <argument>
+	        <name>download</name>
+	        <type>boolean</type>
+	        <required>No</required>
+	        <default>false</default>
+	        <description>create a local copy of the extension and at path to resulting struct with the key "local".</description>
+	    </argument>
+	    <return>
+	        <type>any</type>
+	        <description>Array of strings (artifact IDs or versions) or a struct with artifact details depending on the arguments provided.</description>
+	    </return>
 	</function>
 	
 	<!-- metaphone -->

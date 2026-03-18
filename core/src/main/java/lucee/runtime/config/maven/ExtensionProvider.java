@@ -18,7 +18,6 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.osgi.framework.Version;
 import org.xml.sax.SAXException;
 
 import lucee.aprint;
@@ -42,7 +41,6 @@ import lucee.runtime.extension.RHExtension;
 import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.mvn.POM;
 import lucee.runtime.op.Caster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.tag.Http;
 import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.util.ArrayUtil;
@@ -131,7 +129,7 @@ public class ExtensionProvider {
 	}
 
 	public ExtensionProvider(String group) {
-		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshotsExtension();
+		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshots();
 		this.repoReleases = MavenUpdateProvider.getDefaultRepositoryReleases();
 		this.repoMixed = MavenUpdateProvider.getDefaultRepositoryMixed();
 		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
@@ -139,7 +137,7 @@ public class ExtensionProvider {
 	}
 
 	public ExtensionProvider() {
-		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshotsExtension();
+		this.repoSnapshots = MavenUpdateProvider.getDefaultRepositorySnapshots();
 		this.repoReleases = MavenUpdateProvider.getDefaultRepositoryReleases();
 		this.repoMixed = MavenUpdateProvider.getDefaultRepositoryMixed();
 		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, repoMixed);
@@ -216,6 +214,11 @@ public class ExtensionProvider {
 			threads.add(thread);
 		}
 
+		// Join all threads
+		for (Thread thread: threads) {
+			thread.join();
+		}
+
 		// handle exceptions
 		if (exceptions.size() > 0) {
 			Exception e = exceptions.pop();
@@ -223,10 +226,6 @@ public class ExtensionProvider {
 			throw ExceptionUtil.toIOException(e);
 		}
 
-		// Join all threads
-		for (Thread thread: threads) {
-			thread.join();
-		}
 		return subfolders;
 	}
 
@@ -290,7 +289,7 @@ public class ExtensionProvider {
 					version = last(gavso.a);
 				}
 				else {
-					version = OSGiUtil.toVersion(gavso.v);
+					version = Version.parseVersion(gavso.v);
 				}
 
 				Resource res = getResource((ConfigPro) config, gavso.a, version);
@@ -381,13 +380,13 @@ public class ExtensionProvider {
 		Version lastRel = null;
 
 		for (Version v: list(artifact)) {
-			if (v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
-				if (lastRel == null || OSGiUtil.compare(lastRel, v) < 0) {
+			if (!v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
+				if (lastRel == null || Version.compare(lastRel, v) < 0) {
 					lastRel = v;
 				}
 			}
 
-			if (last == null || OSGiUtil.compare(last, v) < 0) {
+			if (last == null || Version.compare(last, v) < 0) {
 				last = v;
 			}
 
@@ -436,8 +435,7 @@ public class ExtensionProvider {
 			detail = mup.detail(version, EXTENSION_EXTENSION, false);
 			if (detail != null) return detail;
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 
 		return defaultValue;
 	}
@@ -447,12 +445,7 @@ public class ExtensionProvider {
 		if (detail != null) {
 			URL url = HTTPUtil.toURL(Caster.toString(detail.get(EXTENSION_EXTENSION), null), Http.ENCODED_NO, null);
 			if (url != null) {
-				return HTTPDownloader.get(
-					url,
-					DOWNLOAD_CONNECT_TIMEOUT,
-					DOWNLOAD_READ_TIMEOUT,
-					DOWNLOAD_USER_AGENT
-				);
+				return HTTPDownloader.get(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 			}
 		}
 		throw new ApplicationException("there is no [" + EXTENSION_EXTENSION + "] artifact for [" + this.group + ":" + artifact + ":" + version + "]");
@@ -464,15 +457,9 @@ public class ExtensionProvider {
 			URL url = HTTPUtil.toURL(Caster.toString(detail.get(EXTENSION_EXTENSION), null), Http.ENCODED_NO, null);
 			if (url != null) {
 				try {
-					return HTTPDownloader.get(
-						url,
-						DOWNLOAD_CONNECT_TIMEOUT,
-						DOWNLOAD_READ_TIMEOUT,
-						DOWNLOAD_USER_AGENT
-					);
+					return HTTPDownloader.get(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 		}
 		return defaultValue;
@@ -509,8 +496,7 @@ public class ExtensionProvider {
 				zipStream.closeEntry();
 			}
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 
 		return null;
 	}
@@ -593,8 +579,19 @@ public class ExtensionProvider {
 
 		long start = System.currentTimeMillis();
 		// org.lucee:h2-jdbc-extension:2.1.214.0001L
-		aprint.e(ep.list());
-		aprint.e("list-all-extensions:" + (System.currentTimeMillis() - start));
+		// aprint.e(ep.list());
+		// aprint.e("list-all-extensions:" + (System.currentTimeMillis() - start));
+		{
+			start = System.currentTimeMillis();
+			List<Version> list = ep.list("image-extension");
+			for (Version v: list) {
+				aprint.e(ep.detail("image-extension", v));
+			}
+
+			aprint.e(list);
+			aprint.e("extension-image:" + (System.currentTimeMillis() - start));
+		}
+		if (true) return;
 
 		start = System.currentTimeMillis();
 		aprint.e(ep.list("ehcache-extension"));
@@ -606,11 +603,11 @@ public class ExtensionProvider {
 
 		{
 			start = System.currentTimeMillis();
-			Map<String, Object> detail = ep.detail("redis-extension", OSGiUtil.toVersion("3.0.0.56-SNAPSHOT"));
+			Map<String, Object> detail = ep.detail("redis-extension", Version.parseVersion("3.0.0.56-SNAPSHOT"));
 			aprint.e("detail:" + (System.currentTimeMillis() - start));
 			aprint.e(detail);
 
-			ep.get("redis-extension", OSGiUtil.toVersion("3.0.0.56-SNAPSHOT"));
+			ep.get("redis-extension", Version.parseVersion("3.0.0.56-SNAPSHOT"));
 
 		}
 		if (true) return;
@@ -645,7 +642,7 @@ public class ExtensionProvider {
 		aprint.e(versions);
 
 		start = System.currentTimeMillis();
-		Map<String, Object> detail = ep.detail("mssql-jdbc-extension", OSGiUtil.toVersion("6.5.4"));
+		Map<String, Object> detail = ep.detail("mssql-jdbc-extension", Version.parseVersion("6.5.4"));
 		aprint.e("detail:" + (System.currentTimeMillis() - start));
 		aprint.e(detail);
 
