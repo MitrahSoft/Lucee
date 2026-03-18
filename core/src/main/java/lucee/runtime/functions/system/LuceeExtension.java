@@ -15,6 +15,7 @@ import lucee.runtime.ext.function.BIF;
 import lucee.runtime.extension.ExtensionMetadata;
 import lucee.runtime.extension.RHExtension;
 import lucee.runtime.op.Caster;
+import lucee.runtime.osgi.VersionRange;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
 import lucee.runtime.type.Struct;
@@ -75,7 +76,20 @@ public final class LuceeExtension extends BIF {
 					meta.set(KeyConstants._name, em.getName());
 					meta.set(KeyConstants._description, em.getDescription());
 					meta.set(KeyConstants._image, em.getImage());
-					if (em.getBuiltDate() != null) meta.set("buildDate", em.getBuiltDate());
+					if (em.getBuiltDate() != null) {
+						meta.set("buildDate", em.getBuiltDate());
+					}
+
+					// min core
+					VersionRange minCore = em.getMinCoreVersion();
+					if (minCore != null) {
+						meta.set("MinCoreVersion", minCore.toString());
+					}
+					// min loader
+					double minLoader = em.getMinLoaderVersion();
+					if (minLoader > 0D) {
+						meta.set("MinCoreVersion", minLoader);
+					}
 					sct.set(KeyConstants._metadata, meta);
 				}
 

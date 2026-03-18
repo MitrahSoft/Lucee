@@ -6640,6 +6640,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>if set to true the secret is resolved right away, if set to false, it is resolved when used.</description>
@@ -6667,6 +6668,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>If set to true, all secrets are resolved immediately. If set to false (default), secrets are resolved when used.</description>
@@ -7095,7 +7097,7 @@ if this attribute is not provided all types are returned.</description>
 	<function>
 		<name>getPropertyString</name>
 		<class>lucee.runtime.functions.system.GetPropertyString</class>
-		<description>Sets the value of a property entry in a properties file.</description>
+		<description>Gets the value of a property entry from a properties file.</description>
 		<introduced>7.0.0.108</introduced>
 		<argument>
 			<name>filePath</name>
