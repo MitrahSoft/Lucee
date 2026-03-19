@@ -368,7 +368,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 			Boolean cs = Caster.toBoolean(sct.get("caseSensitive", null), null);
 			if (cs != null) data.qoqCaseSensitive = cs;
 			String eng = Caster.toString(sct.get("engine", null), null);
-			if (eng != null) data.qoqEngine = eng.toLowerCase();
+			if (!StringUtil.isEmpty(eng)) data.qoqEngine = eng.toLowerCase();
 		}
 		else {
 			String str = require ? Caster.toString(dbtype).toLowerCase() : Caster.toString(dbtype, null);
@@ -1143,7 +1143,7 @@ public final class Query extends BodyTagTryCatchFinallyImpl {
 		}
 
 		boolean cs = caseSensitive != null ? caseSensitive.booleanValue() : QOQ_CASE_SENSITIVE_DEFAULT;
-		if (engine == null) engine = "auto";
+		if (StringUtil.isEmpty(engine)) engine = "auto";
 
 		try {
 			return new HSQLDBHandler().execute( pc, sql, data.maxrows, data.blockfactor, data.timeout, cs, engine );
