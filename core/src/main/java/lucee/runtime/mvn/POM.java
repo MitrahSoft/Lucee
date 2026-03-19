@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.osgi.framework.Version;
 import org.xml.sax.SAXException;
 
 import lucee.commons.digest.HashUtil;
@@ -27,6 +26,7 @@ import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.tree.TreeNode;
 import lucee.runtime.config.maven.MavenUpdateProvider;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
+import lucee.runtime.config.maven.Version;
 import lucee.runtime.mvn.POMReader.Dependency;
 import lucee.runtime.op.Caster;
 import lucee.runtime.thread.ThreadUtil;

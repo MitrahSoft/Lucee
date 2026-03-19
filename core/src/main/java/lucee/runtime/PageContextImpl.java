@@ -842,11 +842,15 @@ public final class PageContextImpl extends PageContext {
 			if (config == null || (config.flushAtRequestEnd() && config.autoManageSession())) {
 				ormSession.flushAll(this);
 			}
-			ormSession.closeAll(this);
-			manager.releaseORM();
 		}
 		finally {
-			ormSession = null;
+			try {
+				ormSession.closeAll(this);
+				manager.releaseORM();
+			}
+			finally {
+				ormSession = null;
+			}
 		}
 	}
 

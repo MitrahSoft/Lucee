@@ -9,8 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-import org.osgi.framework.BundleException;
-import org.osgi.framework.Version;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -20,14 +18,12 @@ import org.xml.sax.helpers.DefaultHandler;
 import lucee.commons.digest.HashUtil;
 import lucee.commons.io.CharsetUtil;
 import lucee.commons.io.IOUtil;
-import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.op.Caster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.text.xml.XMLUtil;
 import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.library.function.FunctionLibEntityResolver;
@@ -71,35 +67,33 @@ public final class MetadataReader extends DefaultHandler {
 
 	public List<Version> read() throws IOException, GeneralSecurityException, SAXException {
 		// cache read
-		synchronized (SystemUtil.createToken("MetadataReader", group + ":" + artifact)) {
+		List<Version> versionsFromCache = readFromCache("");
+		if (versionsFromCache != null) {
+			return versionsFromCache;
+		}
 
-			List<Version> versionsFromCache = readFromCache("");
-			if (versionsFromCache != null) {
-				return versionsFromCache;
-			}
+		this.versions = new ArrayList<>();
 
-			this.versions = new ArrayList<>();
+		// Updated URL with correct parameter names and no classifier filter
+		URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
 
-			// Updated URL with correct parameter names and no classifier filter
-			URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
-			// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
-			Reader r = null;
-			try {
-				r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
-						(Charset) null);
-				init(new InputSource(r));
-			}
-			catch (IOException ioe) {
-				// 404 or other errors - return empty list
-				storeToCache(versions, "");
-				return versions;
-			}
-			finally {
-				IOUtil.close(r);
-			}
+		// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
+		Reader r = null;
+		try {
+			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
+					(Charset) null);
+			init(new InputSource(r));
+		}
+		catch (IOException ioe) {
+			// 404 or other errors - return empty list
 			storeToCache(versions, "");
 			return versions;
 		}
+		finally {
+			IOUtil.close(r);
+		}
+		storeToCache(versions, "");
+		return versions;
 
 	}
 
@@ -138,7 +132,7 @@ public final class MetadataReader extends DefaultHandler {
 					if (content.length() > 0) {
 						List<String> list = ListUtil.listToList(content, ',', true);
 						for (String v: list) {
-							versions.add(OSGiUtil.toVersion(v.trim()));
+							versions.add(Version.parseVersion(v.trim()));
 						}
 					}
 					return versions;
@@ -182,9 +176,9 @@ public final class MetadataReader extends DefaultHandler {
 		if (insideVersion) {
 			insideVersion = false;
 			try {
-				versions.add(OSGiUtil.toVersion(content.toString().trim(), false));
+				versions.add(Version.parseVersion(content.toString().trim()));
 			}
-			catch (BundleException e) {
+			catch (IOException e) {
 				LogUtil.log("MavenReader", e);
 			}
 		}

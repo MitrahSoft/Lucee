@@ -20,7 +20,6 @@ import java.util.Stack;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.osgi.framework.Version;
 import org.xml.sax.SAXException;
 
 import lucee.commons.digest.HashUtil;
@@ -51,7 +50,6 @@ import lucee.runtime.listener.SerializationSettings;
 import lucee.runtime.op.CastImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.date.DateCaster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
@@ -72,7 +70,7 @@ public final class MavenUpdateProvider {
 
 	// new last 90 days
 	public static final Repository DEFAULT_REPOSITORY_SONATYPE_LAST90 = new Repository("Sonatype Repositry for Snapshots (last 90 days)",
-			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
+			"https://central.sonatype.com/repository/maven-snapshots/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
 
 	// versions provided by Lucee
 	private static final Repository DEFAULT_REPOSITORY_LUCEE = new Repository("Lucee Maven repository", "https://cdn.lucee.org/", Repository.TIMEOUT_1HOUR,
@@ -82,7 +80,7 @@ public final class MavenUpdateProvider {
 	public static final Repository DEFAULT_REPOSITORY_RELEASE = new Repository("Maven Release Repository", "https://repo1.maven.org/maven2/", Repository.TIMEOUT_1HOUR,
 			Repository.TIMEOUT_NEVER);
 
-	public static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS = new Repository[] { DEFAULT_REPOSITORY_SNAPSHOT, DEFAULT_REPOSITORY_LUCEE };
+	public static final Repository[] DEFAULT_REPOSITORY_SNAPSHOTS = new Repository[] { DEFAULT_REPOSITORY_SNAPSHOT };
 
 	public static final Repository[] DEFAULT_REPOSITORY_RELEASES = new Repository[] { DEFAULT_REPOSITORY_RELEASE, DEFAULT_REPOSITORY_LUCEE };
 
@@ -92,31 +90,11 @@ public final class MavenUpdateProvider {
 	public static final String DEFAULT_GROUP = "org.lucee";
 	public static final String DEFAULT_ARTIFACT = "lucee";
 
-	private static Repository[] defaultRepositoryReleases;
-	private static Repository[] defaultRepositorySnapshots;
-	// private static Repository[] defaultRepositoryMixed;
-
 	private final String group;
 	private final String artifact;
 	private final Repository[] repoSnapshots;
 	private final Repository[] repoReleases;
-	// private final Repository[] repoMixed;
 	private final List<Repository> repos;
-
-	/*
-	 * public static Repository[] getDefaultRepositoryReleasesX() { if (defaultRepositoryReleases ==
-	 * null) { print.ds(); defaultRepositoryReleases = readReposFromEnvVar("lucee.mvn.repo.releases",
-	 * DEFAULT_REPOSITORY_RELEASES); } return defaultRepositoryReleases; }
-	 * 
-	 * public static Repository[] getDefaultRepositorySnapshotsX() { if (defaultRepositorySnapshots ==
-	 * null) { defaultRepositorySnapshots = readReposFromEnvVar("lucee.mvn.repo.snapshots",
-	 * DEFAULT_REPOSITORY_SNAPSHOTS); } return defaultRepositorySnapshots; }
-	 * 
-	 * 
-	 * public static Repository[] getDefaultRepositoryMixed() { if (defaultRepositoryMixed == null) {
-	 * print.ds(); defaultRepositoryMixed = readReposFromEnvVar("lucee.mvn.repo.snapshots",
-	 * DEFAULT_REPOSITORY_MIXED); } return defaultRepositoryMixed; }
-	 */
 
 	private static Repository[] readReposFromEnvVar(String envVarName, Repository[] defaultValue) {
 		String str = SystemUtil.getSystemPropOrEnvVar(envVarName, null);
@@ -145,8 +123,7 @@ public final class MavenUpdateProvider {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 		this.repoSnapshots = cp == null ? DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
 		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
-		// this.repoMixed = getDefaultRepositoryMixed();
-		this.repos = merge(repoSnapshots, repoReleases/* , repoMixed */);
+		this.repos = merge(repoSnapshots, repoReleases);
 		this.group = DEFAULT_GROUP;
 		this.artifact = DEFAULT_ARTIFACT;
 	}
@@ -155,8 +132,7 @@ public final class MavenUpdateProvider {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 		this.repoSnapshots = cp == null ? DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
 		this.repoReleases = cp == null ? DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
-		// this.repoMixed = getDefaultRepositoryMixed();
-		this.repos = merge(repoSnapshots, repoReleases/* , repoMixed */);
+		this.repos = merge(repoSnapshots, repoReleases);
 		this.group = group;
 		this.artifact = artifact;
 	}
@@ -248,6 +224,11 @@ public final class MavenUpdateProvider {
 				threads.add(thread);
 			}
 
+			// Join all threads
+			for (Thread thread: threads) {
+				thread.join();
+			}
+
 			// handle exceptions
 			if (exceptions.size() > 0) {
 				Exception e = exceptions.pop();
@@ -257,14 +238,9 @@ public final class MavenUpdateProvider {
 				throw ExceptionUtil.toIOException(new IOException("Failed to list available versions from Maven repositories for [" + group + ":" + artifact + "]", e));
 			}
 
-			// Join all threads
-			for (Thread thread: threads) {
-				thread.join();
-			}
-
 			if (versions.size() > 0) {
 				List<Version> sortedList = new ArrayList<>(versions);
-				Collections.sort(sortedList, OSGiUtil::compare);
+				Collections.sort(sortedList, Version::compare);
 				return sortedList;
 			}
 
@@ -314,8 +290,6 @@ public final class MavenUpdateProvider {
 		// versions
 
 		boolean isSnap = version.getQualifier().endsWith("-SNAPSHOT");
-		// List<Repository> repos = isSnap ? merge(repoSnapshots, repoMixed) : merge(repoReleases,
-		// repoMixed);
 		Repository[] repos = isSnap ? repoSnapshots : repoReleases;
 
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";

@@ -26,6 +26,11 @@ import javax.management.AttributeList;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import org.apache.http.conn.routing.HttpRoute;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.pool.PoolStats;
+
+import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.runtime.CFMLFactoryImpl;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.ConfigWebPro;
@@ -76,6 +81,37 @@ public final class GetSystemInfo implements Function {
 			sct.put("idleDatasourceConnections", idle);
 			sct.put("waitingForConn", waiters);
 			sct.put("datasourceConnections", dsPoolInfo);
+		}
+
+		// HTTP connection pool
+		{
+			Struct httpPoolInfo = new StructImpl();
+			int httpLeased = 0, httpAvailable = 0, httpPending = 0, httpMax = 0;
+			for (PoolingHttpClientConnectionManager cm: HTTPEngine4Impl.getConnectionManagers().values()) {
+				PoolStats totals = cm.getTotalStats();
+				httpLeased += totals.getLeased();
+				httpAvailable += totals.getAvailable();
+				httpPending += totals.getPending();
+				httpMax += totals.getMax();
+
+				for (HttpRoute route: cm.getRoutes()) {
+					PoolStats stats = cm.getStats(route);
+					if ((stats.getLeased() + stats.getAvailable() + stats.getPending()) == 0) continue;
+
+					Struct hc = new StructImpl();
+					hc.put("activeHttpConnections", stats.getLeased());
+					hc.put("idleHttpConnections", stats.getAvailable());
+					hc.put("waitingForHttpConn", stats.getPending());
+					hc.put("max", stats.getMax());
+					hc.put("route", route.getTargetHost().toHostString());
+					httpPoolInfo.put(route.getTargetHost().toHostString(), hc);
+				}
+			}
+			sct.put("activeHttpConnections", httpLeased);
+			sct.put("idleHttpConnections", httpAvailable);
+			sct.put("waitingForHttpConn", httpPending);
+			sct.put("maxHttpConnections", httpMax);
+			sct.put("httpConnections", httpPoolInfo);
 		}
 
 		// tasks

@@ -880,11 +880,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private void doMvnChangeVersionTo() throws PageException {
 		try {
-			Version version = OSGiUtil.toVersion(getString("admin", "changeVersionTo", "version"));
+			lucee.runtime.config.maven.Version version = lucee.runtime.config.maven.Version.parseVersion(getString("admin", "changeVersionTo", "version"));
 			admin.mvnChangeVersionTo(version, password, pageContext.getConfig().getIdentification());
 			adminSync.broadcast(attributes, config);
 		}
-		catch (BundleException e) {
+		catch (IOException e) {
 			throw Caster.toPageException(e);
 		}
 	}
@@ -4246,9 +4246,9 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		config.getFormUrlAsStruct();
 
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetAllowImplicidQueryCall().resetMergeFormAndURL().resetClientStorage()
-				.resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType().resetSessionManagement().resetClientManagement()
-				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct().resetScopeCascadingType();// MUST
+		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetScopeCascadingType().resetAllowImplicidQueryCall()
+				.resetMergeFormAndURL().resetClientStorage().resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType()
+				.resetSessionManagement().resetClientManagement().resetClientCookies().resetDomainCookies().resetFormUrlAsStruct();// MUST
 		adminSync.broadcast(attributes, config);
 	}
 

@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -93,6 +94,7 @@ import lucee.runtime.type.Query;
 import lucee.runtime.type.QueryImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
+import lucee.runtime.type.dt.DateTime;
 import lucee.runtime.type.query.CurrentRow;
 import lucee.runtime.type.util.ArrayUtil;
 import lucee.runtime.type.util.KeyConstants;
@@ -956,6 +958,11 @@ public final class RHExtension implements Serializable {
 		label += " : " + metadata._getVersion();
 		metadata.setId(StringUtil.unwrap(attr.getValue("id")), label);
 		metadata.setDescription(StringUtil.unwrap(attr.getValue("description")));
+		String str = StringUtil.unwrap(attr.getValue("Built-Date"));
+		if (!StringUtil.isEmpty(str, true)) {
+			DateTime dt = Caster.toDate(str, false, TimeZone.getDefault(), null);
+			if (dt != null) metadata.setBuiltDate(dt);
+		}
 		metadata.setTrial(Caster.toBooleanValue(StringUtil.unwrap(attr.getValue("trial")), false));
 		if (_img == null) _img = StringUtil.unwrap(attr.getValue("image"));
 		metadata.setImage(_img);

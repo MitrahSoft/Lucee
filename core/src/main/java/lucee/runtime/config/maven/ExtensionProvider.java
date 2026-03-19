@@ -18,7 +18,6 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import org.osgi.framework.Version;
 import org.xml.sax.SAXException;
 
 import lucee.aprint;
@@ -43,7 +42,6 @@ import lucee.runtime.extension.RHExtension;
 import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.mvn.POM;
 import lucee.runtime.op.Caster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.tag.Http;
 import lucee.runtime.thread.ThreadUtil;
 import lucee.runtime.type.util.ArrayUtil;
@@ -208,16 +206,16 @@ public class ExtensionProvider {
 			threads.add(thread);
 		}
 
+		// Join all threads
+		for (Thread thread: threads) {
+			thread.join();
+		}
+
 		// handle exceptions
 		if (exceptions.size() > 0) {
 			Exception e = exceptions.pop();
 			if (e instanceof InterruptedException) throw (InterruptedException) e;
 			throw ExceptionUtil.toIOException(e);
-		}
-
-		// Join all threads
-		for (Thread thread: threads) {
-			thread.join();
 		}
 		return subfolders;
 	}
@@ -279,7 +277,7 @@ public class ExtensionProvider {
 					version = last(gavso.a);
 				}
 				else {
-					version = OSGiUtil.toVersion(gavso.v);
+					version = Version.parseVersion(gavso.v);
 				}
 
 				Resource res = getResource((ConfigPro) config, gavso.a, version);
@@ -370,13 +368,13 @@ public class ExtensionProvider {
 		Version lastRel = null;
 
 		for (Version v: list(artifact)) {
-			if (v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
-				if (lastRel == null || OSGiUtil.compare(lastRel, v) < 0) {
+			if (!v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
+				if (lastRel == null || Version.compare(lastRel, v) < 0) {
 					lastRel = v;
 				}
 			}
 
-			if (last == null || OSGiUtil.compare(last, v) < 0) {
+			if (last == null || Version.compare(last, v) < 0) {
 				last = v;
 			}
 
@@ -582,11 +580,11 @@ public class ExtensionProvider {
 
 		{
 			start = System.currentTimeMillis();
-			Map<String, Object> detail = ep.detail("redis-extension", OSGiUtil.toVersion("3.0.0.56-SNAPSHOT"));
+			Map<String, Object> detail = ep.detail("redis-extension", Version.parseVersion("3.0.0.56-SNAPSHOT"));
 			aprint.e("detail:" + (System.currentTimeMillis() - start));
 			aprint.e(detail);
 
-			ep.get("redis-extension", OSGiUtil.toVersion("3.0.0.56-SNAPSHOT"));
+			ep.get("redis-extension", Version.parseVersion("3.0.0.56-SNAPSHOT"));
 
 		}
 		if (true) return;
@@ -621,7 +619,7 @@ public class ExtensionProvider {
 		aprint.e(versions);
 
 		start = System.currentTimeMillis();
-		Map<String, Object> detail = ep.detail("mssql-jdbc-extension", OSGiUtil.toVersion("6.5.4"));
+		Map<String, Object> detail = ep.detail("mssql-jdbc-extension", Version.parseVersion("6.5.4"));
 		aprint.e("detail:" + (System.currentTimeMillis() - start));
 		aprint.e(detail);
 

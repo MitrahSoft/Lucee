@@ -4374,13 +4374,14 @@ Lucee uses the number of characters in the file.</description>
 			<description>The name of the data source from which this query should retrieve data.</description>
 		</attribute>
 		<attribute>
-			<type>string</type>
+			<type>any</type>
 			<name>dbType</name>
 			<required>false</required>
 			<rtexprvalue>true</rtexprvalue>
 			<description>support the following values:
 			- query: for doing a query on an existing query object
-			- hql: for doing a query on orm </description>
+			- hql: for doing a query on orm
+			- struct: { type: "query", caseSensitive: true, engine: "native"|"hsqldb"|"auto" } </description>
 		</attribute>
 		<attribute>
 			<type>string</type>

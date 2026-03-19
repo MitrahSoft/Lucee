@@ -395,4 +395,12 @@ public abstract class ApplicationContextSupport implements ApplicationContext {
 		return las;
 	}
 
+	public Boolean getQoQCaseSensitive() {
+		return null;
+	}
+
+	public String getQoQEngine() {
+		return null;
+	}
+
 }

@@ -46,11 +46,35 @@ public final class HTTPDownloader {
 		// Utility class, prevent instantiation
 	}
 
+	private static volatile CloseableHttpClient SHARED_CLIENT;
+	private static final Object CLIENT_LOCK = new Object();
+
+	public static void releaseSharedClient() {
+		synchronized (CLIENT_LOCK) {
+			if (SHARED_CLIENT != null) {
+				IOUtil.closeEL(SHARED_CLIENT);
+				SHARED_CLIENT = null;
+			}
+		}
+	}
+
+	private static CloseableHttpClient getSharedClient() throws GeneralSecurityException, IOException {
+		if (SHARED_CLIENT == null) {
+			synchronized (CLIENT_LOCK) {
+				if (SHARED_CLIENT == null) {
+					HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
+					SHARED_CLIENT = builder.build();
+				}
+			}
+		}
+		return SHARED_CLIENT;
+	}
+
 	/**
 	 * Build RequestConfig with separate connection and socket timeouts (following Http.java pattern)
 	 */
 	private static RequestConfig buildRequestConfig(long connectTimeout, long socketTimeout) {
-		return RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).setConnectionRequestTimeout((int) connectTimeout).setConnectTimeout((int) connectTimeout)
+		return RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).setConnectionRequestTimeout(2000).setConnectTimeout((int) connectTimeout)
 				.setSocketTimeout((int) socketTimeout).build();
 	}
 
@@ -187,22 +211,25 @@ public final class HTTPDownloader {
 		long start = System.currentTimeMillis();
 
 		try {
-			// Get configured HttpClientBuilder (with connection pooling, true = use pooling)
-			HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
-
 			// Create HTTP GET request
 			HttpGet request = new HttpGet(url.toString());
-			if (userAgent != null) {
-				request.setHeader("User-Agent", userAgent);
-			}
-			else {
-				request.setHeader("User-Agent", DEFAULT_USER_AGENT);
-			}
+			request.setHeader("User-Agent", userAgent != null ? userAgent : DEFAULT_USER_AGENT);
 
-			// Setup client with proxy, credentials, and timeouts
-			ClientContext cc = buildHttpClient(url, username, password, connectTimeout, readTimeout, builder, request);
+			// Apply timeouts per-request (not per-client)
+			request.setConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).setConnectionRequestTimeout(2000) // fast-fail if pool exhausted
+					.setConnectTimeout((int) connectTimeout).setSocketTimeout((int) readTimeout).build());
 
-			HTTPResponse rsp = new HTTPResponse4Impl(url, cc.context, request, cc.client.execute(request, cc.context));
+			// Handle proxy and credentials
+			ProxyData proxy = getProxyData(url.getHost());
+			HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
+			HttpHost httpHost = new HttpHost(url.getHost(), url.getPort());
+			HttpContext context = HTTPEngine4Impl.setCredentials(builder, httpHost, username, password, false);
+			HTTPEngine4Impl.setProxy(url.getHost(), builder, request, proxy);
+			if (context == null) context = new HttpClientContext();
+
+			// Use shared client — not cc.client.execute() anymore
+			HTTPResponse rsp = new HTTPResponse4Impl(url, context, request, getSharedClient().execute(request, context));
+
 			int statusCode = rsp.getStatusCode();
 			if (statusCode < 200 || statusCode >= 300) {
 				throw new IOException("Failed to download from [" + url + "], status code: " + statusCode);
@@ -217,7 +244,6 @@ public final class HTTPDownloader {
 			throw e;
 		}
 		catch (Exception e) {
-			// Log the original exception, then wrap and throw
 			throw new IOException("Failed to download from [" + url + "]: " + e.getMessage(), e);
 		}
 	}

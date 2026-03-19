@@ -25,8 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.osgi.framework.Version;
-
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
@@ -47,6 +45,7 @@ import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.commons.net.http.httpclient.HeaderImpl;
 import lucee.runtime.config.ConfigAdmin.AlreadyInstalledExtension;
 import lucee.runtime.config.maven.ExtensionProvider;
+import lucee.runtime.config.maven.Version;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ThreadQueue;
 import lucee.runtime.exp.ApplicationException;
@@ -57,7 +56,6 @@ import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.functions.conversion.DeserializeJSON;
 import lucee.runtime.net.http.ReqRspUtil;
 import lucee.runtime.op.Caster;
-import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.util.ArrayUtil;
 import lucee.runtime.type.util.KeyConstants;
@@ -342,7 +340,7 @@ public final class DeployHandler {
 			}
 			if (artifact == null) return null;
 
-			Version version = StringUtil.isEmpty(ed.getVersion(), true) ? null : OSGiUtil.toVersion(ed.getVersion(), null);
+			Version version = StringUtil.isEmpty(ed.getVersion(), true) ? null : Version.parseVersion(ed.getVersion(), null);
 			// get latest version when no version is defined
 			if (version == null) {
 				// find out the last version still needs some investigated effort, maybe we will improve on that in
@@ -406,7 +404,7 @@ public final class DeployHandler {
 
 				content = rsp.getContentAsString();
 				Struct sct = Caster.toStruct(DeserializeJSON.call(null, content));
-				Version remoteVersion = OSGiUtil.toVersion(Caster.toString(sct.get(KeyConstants._version)), null);
+				Version remoteVersion = Version.parseVersion(Caster.toString(sct.get(KeyConstants._version)), null);
 
 				// the local version is as good as the remote
 				if (remoteVersion != null) {
@@ -455,7 +453,7 @@ public final class DeployHandler {
 				}
 			}
 			else {
-				version = OSGiUtil.toVersion(ed.getVersion(), false);
+				version = Version.parseVersion(ed.getVersion());
 				if (LogUtil.doesDebug(log) && version != null) {
 					log.debug("main", "use defined [" + version + "] for artifact [" + artifact + "]");
 				}
