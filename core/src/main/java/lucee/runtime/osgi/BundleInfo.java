@@ -131,7 +131,11 @@ public class BundleInfo implements Serializable {
 				else if (!StringUtil.isEmpty(exportPackage, true) || !StringUtil.isEmpty(fragementHost, true)) {
 					valid = true;
 				}
-				// has no exportPackage, fine wjhen it has other files than just class files or has no class files
+				// LAR archive (Lucee mapping archive) — always valid, not a real OSGi bundle
+				else if (attrs.getValue("mapping-type") != null) {
+					valid = true;
+				}
+				// has no exportPackage, fine when it has other files than just class files or has no class files
 				// at all
 				else {
 					valid = true;
