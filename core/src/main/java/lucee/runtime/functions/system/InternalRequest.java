@@ -134,7 +134,7 @@ public class InternalRequest implements Function {
 		}
 		catch (Throwable t) {
 			ExceptionUtil.rethrowIfNecessary(t);
-			if (!(t instanceof Abort)) {
+			if (!Abort.isSilentAbort(t)) {
 				if (throwonerror) throw Caster.toPageException(t);
 				pe = Caster.toPageException(t);
 			}
