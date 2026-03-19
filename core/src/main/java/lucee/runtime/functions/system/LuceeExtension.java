@@ -73,6 +73,8 @@ public final class LuceeExtension extends BIF {
 					ExtensionMetadata em = ext.getMetadata();
 					Struct meta = new StructImpl();
 					meta.set(KeyConstants._id, em._getId());
+					meta.set(KeyConstants._groupId, ext.getGroupId());
+					meta.set(KeyConstants._artifactId, ext.getArtifactId());
 					meta.set(KeyConstants._name, em.getName());
 					meta.set(KeyConstants._description, em.getDescription());
 					meta.set(KeyConstants._image, em.getImage());
