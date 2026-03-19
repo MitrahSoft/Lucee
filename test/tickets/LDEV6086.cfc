@@ -13,16 +13,21 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="internalRequest" {
 					throwonerror: false
 				);
 				expect( result ).toHaveKey( "error" );
-				expect( result.error.type ).toBe( "lucee.runtime.exp.RequestTimeoutException" );
+				expect( result.error.message ).toInclude( "timeout" );
 			});
 
-			it( title="InternalRequest should throw RequestTimeoutException with throwonerror=true", body=function() {
-				expect( function() {
+			it( title="InternalRequest should throw with throwonerror=true on RequestTimeoutException", body=function() {
+				try {
 					_InternalRequest(
 						template: "#variables.uri#/timeout.cfm",
 						throwonerror: true
 					);
-				}).toThrow( "lucee.runtime.exp.RequestTimeoutException" );
+					fail( "expected exception was not thrown" );
+				}
+				catch ( application e ) {
+					// wrapped in ApplicationException so it doesn't kill the parent request
+					expect( e.message ).toInclude( "timeout" );
+				}
 			});
 
 		});
