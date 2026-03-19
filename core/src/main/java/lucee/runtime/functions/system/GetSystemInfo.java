@@ -20,7 +20,6 @@ package lucee.runtime.functions.system;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.util.Map;
 
 import javax.management.Attribute;
 import javax.management.AttributeList;
