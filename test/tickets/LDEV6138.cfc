@@ -8,7 +8,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm,postgres" {
 		describe( "LDEV-6138 releaseConnection leaks unmanaged connections", function() {
 
 			it( title="ORM operations inside transaction should not leak connections",
-				skip="#notHasPostgres()#", body=function( currentSpec ) {
+				skip="#notHasRequirements()#", body=function( currentSpec ) {
 				var result = _InternalRequest(
 					template: "#variables.uri#/LDEV6138.cfm"
 				);
@@ -21,8 +21,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="orm,postgres" {
 		});
 	}
 
-	private boolean function notHasPostgres() {
-		return !structCount( server.getDatasource( "postgres" ) );
+	private boolean function notHasRequirements() {
+		return !structCount( server.getDatasource( "postgres" ) )
+			|| ( structCount( server.getTestService( "orm" ) ) eq 0 );
 	}
 
 	private string function createURI( string calledName ) {
