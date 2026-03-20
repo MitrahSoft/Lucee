@@ -861,8 +861,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private boolean check(String action, short access) {
 		if (this.action.equalsIgnoreCase(action)) {
-			if (access == ACCESS_FREE) {
-			}
+			if (access == ACCESS_FREE) {}
 			return true;
 		}
 		return false;
@@ -897,11 +896,11 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	private void doMvnChangeVersionTo() throws PageException {
 		try {
-			Version version = OSGiUtil.toVersion(getString("admin", "changeVersionTo", "version"));
+			lucee.runtime.config.maven.Version version = lucee.runtime.config.maven.Version.parseVersion(getString("admin", "changeVersionTo", "version"));
 			admin.mvnChangeVersionTo(version, password, pageContext.getConfig().getIdentification());
 			adminSync.broadcast(attributes, config);
 		}
-		catch (BundleException e) {
+		catch (IOException e) {
 			throw Caster.toPageException(e);
 		}
 	}
@@ -1255,8 +1254,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.removeAPIKey();
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 		ConfigUtil.getConfigServerImpl(config).resetIdentification();
 	}
@@ -1269,8 +1267,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.updateAuthKey(getString("key", null));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 	}
 
@@ -1278,8 +1275,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		try {
 			admin.removeAuthKeys(getString("key", null));
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 		store();
 	}
 
@@ -2698,8 +2694,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				try {
 					qry.setAt(KeyConstants._info, i + 1, BundleFile.getInstance(children[i]).info());
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 		}
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
@@ -3498,8 +3493,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 				headers = bf.getHeaders();
 
 			}
-			catch (BundleException e) {
-			}
+			catch (BundleException e) {}
 
 		}
 
@@ -3599,8 +3593,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					}
 
 				}
-				catch (BundleException e) {
-				}
+				catch (BundleException e) {}
 
 			}
 
@@ -3689,8 +3682,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 					}
 				}
 			}
-			catch (Exception ex) {
-			}
+			catch (Exception ex) {}
 		}
 	}
 
@@ -4308,9 +4300,9 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		config.getFormUrlAsStruct();
 
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetScopeCascadingType().resetAllowImplicidQueryCall().resetMergeFormAndURL().resetClientStorage()
-				.resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType().resetSessionManagement().resetClientManagement()
-				.resetClientCookies().resetDomainCookies().resetFormUrlAsStruct();// MUST
+		ConfigUtil.getConfigServerImpl(config).resetLocalMode().resetCGIScopeReadonly().resetSessionType().resetScopeCascadingType().resetAllowImplicidQueryCall()
+				.resetMergeFormAndURL().resetClientStorage().resetSessionStorage().resetClientTimeout().resetSessionTimeout().resetApplicationTimeout().resetClientType()
+				.resetSessionManagement().resetClientManagement().resetClientCookies().resetDomainCookies().resetFormUrlAsStruct();// MUST
 		adminSync.broadcast(attributes, config);
 	}
 

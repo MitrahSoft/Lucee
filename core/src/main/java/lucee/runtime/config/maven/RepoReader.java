@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 
-import org.osgi.framework.Version;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -75,7 +74,8 @@ public final class RepoReader extends DefaultHandler {
 		// Use HTTPDownloader with DEBUG logging for Maven repo metadata lookups
 		Reader r = null;
 		try {
-			r = IOUtil.getReader( HTTPDownloader.get( url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE ), (Charset) null );
+			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
+					(Charset) null);
 			init(new InputSource(r));
 		}
 		catch (IOException ioe) {

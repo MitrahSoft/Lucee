@@ -78,9 +78,14 @@ import lucee.runtime.util.DBUtilImpl;
 public final class QoQ {
 	final static private Collection.Key paramKey = new KeyImpl("?");
 	private static int qoqParallelism;
+	private boolean caseSensitive;
 
 	static {
 		qoqParallelism = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.parallelism", "50"), 50);
+	}
+
+	public void setCaseSensitive(boolean caseSensitive) {
+		this.caseSensitive = caseSensitive;
 	}
 
 	/**
@@ -730,6 +735,8 @@ public final class QoQ {
 				return executeMinus(pc, sql, source, op2, row);
 			case Operation.OPERATION2_PLUS:
 				return executePlus(pc, sql, source, op2, row);
+			case Operation.OPERATION2_CONCAT:
+				return executeConcat(pc, sql, source, op2, row);
 			case Operation.OPERATION2_DIVIDE:
 				return executeDivide(pc, sql, source, op2, row);
 			case Operation.OPERATION2_MULTIPLY:
@@ -896,7 +903,7 @@ public final class QoQ {
 				if (op.equals("sign")) return Double.valueOf(MathUtil.sgn(Caster.toDoubleValue(value)));
 				if (op.equals("sin")) return Double.valueOf(Math.sin(Caster.toDoubleValue(value)));
 				if (op.equals("soundex")) return StringUtil.soundex(Caster.toString(value));
-				if (op.equals("sin")) return Double.valueOf(Math.sqrt(Caster.toDoubleValue(value)));
+				if (op.equals("sqrt")) return Double.valueOf(Math.sqrt(Caster.toDoubleValue(value)));
 				if (op.equals("sum")) {
 					// If there are no non-null values, return empty
 					if (aggregateValues.length == 0) {
@@ -983,6 +990,8 @@ public final class QoQ {
 
 		if (op.equals("in")) return executeIn(pc, sql, source, opn, row, false);
 		if (op.equals("not_in")) return executeIn(pc, sql, source, opn, row, true);
+
+		if (op.equals("concat")) return executeConcat(pc, sql, source, operators, row);
 
 		if (op.equals("coalesce")) return executeCoalesce(pc, sql, source, operators, row);
 
@@ -1229,7 +1238,12 @@ public final class QoQ {
 	 */
 	private int executeCompare(PageContext pc, SQL sql, QueryImpl source, Operation2 op, int row) throws PageException {
 		// print.e(op.getLeft().getClass().getName());
-		return OpUtil.compare(pc, executeExp(pc, sql, source, op.getLeft(), row), executeExp(pc, sql, source, op.getRight(), row));
+		Object left = executeExp(pc, sql, source, op.getLeft(), row);
+		Object right = executeExp(pc, sql, source, op.getRight(), row);
+		if (caseSensitive && left instanceof String && right instanceof String) {
+			return ((String) left).compareTo((String) right);
+		}
+		return OpUtil.compare(pc, left, right);
 	}
 
 	private Object executeMod(PageContext pc, SQL sql, QueryImpl source, Operation2 expression, int row) throws PageException {
@@ -1265,7 +1279,15 @@ public final class QoQ {
 		Object left = executeExp(pc, sql, source, operators[0], row);
 
 		for (int i = 1; i < operators.length; i++) {
-			if (OpUtil.compare(pc, left, executeExp(pc, sql, source, operators[i], row)) == 0) return isNot ? Boolean.FALSE : Boolean.TRUE;
+			Object right = executeExp(pc, sql, source, operators[i], row);
+			int cmp;
+			if (caseSensitive && left instanceof String && right instanceof String) {
+				cmp = ((String) left).compareTo((String) right);
+			}
+			else {
+				cmp = OpUtil.compare(pc, left, right);
+			}
+			if (cmp == 0) return isNot ? Boolean.FALSE : Boolean.TRUE;
 		}
 		return isNot ? Boolean.TRUE : Boolean.FALSE;
 	}
@@ -1435,6 +1457,20 @@ public final class QoQ {
 		}
 	}
 
+	private Object executeConcat(PageContext pc, SQL sql, QueryImpl source, Operation2 expression, int row) throws PageException {
+		Object left = executeExp(pc, sql, source, expression.getLeft(), row);
+		Object right = executeExp(pc, sql, source, expression.getRight(), row);
+		return Caster.toString(left) + Caster.toString(right);
+	}
+
+	private Object executeConcat(PageContext pc, SQL sql, QueryImpl source, Expression[] operands, int row) throws PageException {
+		StringBuilder sb = new StringBuilder();
+		for (Expression operand : operands) {
+			sb.append(Caster.toString(executeExp(pc, sql, source, operand, row)));
+		}
+		return sb.toString();
+	}
+
 	/**
 	 *
 	 * execute a between operation
@@ -1458,13 +1494,14 @@ public final class QoQ {
 
 	private Object executeLike(PageContext pc, SQL sql, QueryImpl source, Operation3 expression, int row) throws PageException {
 		return LikeCompare.like(sql, Caster.toString(executeExp(pc, sql, source, expression.getExp(), row)),
-				Caster.toString(executeExp(pc, sql, source, expression.getLeft(), row)), Caster.toString(executeExp(pc, sql, source, expression.getRight(), row))) ? Boolean.TRUE
+				Caster.toString(executeExp(pc, sql, source, expression.getLeft(), row)),
+				Caster.toString(executeExp(pc, sql, source, expression.getRight(), row)), caseSensitive) ? Boolean.TRUE
 						: Boolean.FALSE;
 	}
 
 	private boolean executeLike(PageContext pc, SQL sql, QueryImpl source, Operation2 expression, int row) throws PageException {
 		return LikeCompare.like(sql, Caster.toString(executeExp(pc, sql, source, expression.getLeft(), row)),
-				Caster.toString(executeExp(pc, sql, source, expression.getRight(), row)));
+				Caster.toString(executeExp(pc, sql, source, expression.getRight(), row)), caseSensitive);
 	}
 
 	/**

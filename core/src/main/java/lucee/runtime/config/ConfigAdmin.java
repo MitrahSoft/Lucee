@@ -3739,7 +3739,14 @@ public final class ConfigAdmin {
 		}
 	}
 
-	public void mvnChangeVersionTo(Version version, Password password, Identification id) throws PageException {
+	public static lucee.runtime.config.maven.Version toVersion(String version, final lucee.runtime.config.maven.Version defaultValue) {
+		// remove extension if there is any
+		final int rIndex = version.lastIndexOf(".lco");
+		if (rIndex != -1) version = version.substring(0, rIndex);
+		return lucee.runtime.config.maven.Version.parseVersion(version, defaultValue);
+	}
+
+	public void mvnChangeVersionTo(lucee.runtime.config.maven.Version version, Password password, Identification id) throws PageException {
 		checkWriteAccess();
 		ConfigServerImpl cs = (ConfigServerImpl) ConfigUtil.getConfigServer(config, password);
 
@@ -3754,10 +3761,10 @@ public final class ConfigAdmin {
 
 			if (!localPath.isFile()) {
 				localPath = null;
-				Version v;
+				lucee.runtime.config.maven.Version v;
 				final File[] patches = patchDir.listFiles(new ExtensionFilter(new String[] { ".lco" }));
 				for (final File patch: patches) {
-					v = CFMLEngineFactory.toVersion(patch.getName(), null);
+					v = toVersion(patch.getName(), null);
 					// not a valid file get deleted
 					if (v == null) {
 						patch.delete();
@@ -3767,7 +3774,7 @@ public final class ConfigAdmin {
 							localPath = patch;
 						}
 						// delete newer files
-						else if (OSGiUtil.isNewerThan(v, version)) {
+						else if (lucee.runtime.config.maven.Version.compare(v, version) > 0) {
 							patch.delete();
 						}
 					}
@@ -3835,7 +3842,7 @@ public final class ConfigAdmin {
 		return newLucee;
 	}
 
-	private File mvnDownloadCore(CFMLEngineFactory factory, Version version, Identification id) throws IOException, PageException {
+	private File mvnDownloadCore(CFMLEngineFactory factory, lucee.runtime.config.maven.Version version, Identification id) throws IOException, PageException {
 		// local resource
 		final File patchDir = factory.getPatchDirectory();
 		final File newLucee = new File(patchDir, version + (".lco"));

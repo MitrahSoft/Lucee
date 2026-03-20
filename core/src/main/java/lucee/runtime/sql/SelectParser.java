@@ -664,8 +664,13 @@ public final class SelectParser {
 
 		while (!raw.isLast()) {
 
+			// Concat Operation (||)
+			if (raw.forwardIfCurrent("||")) {
+				raw.removeSpace();
+				expr = new Operation2(expr, modOp(raw), Operation.OPERATION2_CONCAT);
+			}
 			// Plus Operation
-			if (raw.forwardIfCurrent('+')) {
+			else if (raw.forwardIfCurrent('+')) {
 				raw.removeSpace();
 				expr = new Operation2(expr, modOp(raw), Operation.OPERATION2_PLUS);
 			}
