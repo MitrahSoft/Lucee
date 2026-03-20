@@ -21,7 +21,6 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.SerializableObject;
-import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.tree.TreeNode;
 import lucee.runtime.config.maven.MavenUpdateProvider;
@@ -30,55 +29,8 @@ import lucee.runtime.config.maven.Version;
 import lucee.runtime.mvn.POMReader.Dependency;
 import lucee.runtime.op.Caster;
 import lucee.runtime.thread.ThreadUtil;
-import lucee.runtime.type.util.ListUtil;
 
 public final class POM {
-
-	public static final List<Repository> REPOSITORIES = new ArrayList<>();
-
-	public static final MavenUpdateProvider.Repository REPOSITORY_MAVEN_CENTRAL = MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASE;
-
-	public static final MavenUpdateProvider.Repository REPOSITORY_SONATYPE = new MavenUpdateProvider.Repository("Sonatype",
-			"https://oss.sonatype.org/content/repositories/releases/", Repository.TIMEOUT_15MINUTES, Repository.TIMEOUT_NEVER);
-
-	public static final MavenUpdateProvider.Repository REPOSITORY_JCENTER = new MavenUpdateProvider.Repository("JCenter", "https://jcenter.bintray.com/", Repository.TIMEOUT_1HOUR,
-			Repository.TIMEOUT_NEVER);
-
-	public static final MavenUpdateProvider.Repository REPOSITORY_GOOGLE = new MavenUpdateProvider.Repository("Google Maven", "https://maven.google.com/", Repository.TIMEOUT_1HOUR,
-			Repository.TIMEOUT_NEVER);
-
-	// only apache specific stuff
-	public static final MavenUpdateProvider.Repository REPOSITORY_APACHE = new MavenUpdateProvider.Repository("Apache Repository",
-			"https://repository.apache.org/content/repositories/releases/", Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
-
-	// only spring specific stuff
-	public static final MavenUpdateProvider.Repository REPOSITORY_SPRING = new MavenUpdateProvider.Repository("Spring Repository", "https://repo.spring.io/release/",
-			Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER);
-
-	static {
-		String strRep = SystemUtil.getSystemPropOrEnvVar("lucee.maven.default.repositories", null);
-		if (!StringUtil.isEmpty(strRep, true)) {
-
-			for (String strURL: ListUtil.listToStringArray(strRep, ',')) {
-
-				if (!StringUtil.isEmpty(strURL, true)) {
-					strURL = strURL.trim();
-					REPOSITORIES.add(new MavenUpdateProvider.Repository(strURL, strURL, Repository.TIMEOUT_1HOUR, Repository.TIMEOUT_NEVER));
-				}
-			}
-		}
-
-		REPOSITORIES.add(REPOSITORY_MAVEN_CENTRAL);
-		REPOSITORIES.add(REPOSITORY_SONATYPE);
-		// REPOSITORIES.add(REPOSITORY_JCENTER);
-		// REPOSITORIES.add(REPOSITORY_APACHE);
-		// REPOSITORIES.add(REPOSITORY_GOOGLE);
-		// REPOSITORIES.add(REPOSITORY_SPRING);
-		// REPOSITORIES.add(REPOSITORY_ALIYUN);
-
-		// set default repository
-
-	}
 
 	public static final int CONNECTION_TIMEOUT = 5000;
 	public static final int READ_TIMEOUT_HEAD = 5000;
@@ -174,12 +126,7 @@ public final class POM {
 		if (groupId == null) throw new IllegalArgumentException("groupId cannot be null");
 		if (artifactId == null) throw new IllegalArgumentException("artifactId cannot be null");
 
-		if (repositories == null) {
-			this.initRepositories = new ArrayList<>();
-			for (Repository r: REPOSITORIES) {
-				this.initRepositories.add(r);
-			}
-		}
+		if (repositories == null) this.initRepositories = MavenUpdateProvider.getRepositories(null);
 		else this.initRepositories = repositories;
 
 		if (version == null) {

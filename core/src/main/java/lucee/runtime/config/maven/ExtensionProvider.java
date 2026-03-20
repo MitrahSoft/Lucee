@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +30,7 @@ import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
+import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.http.HTTPDownloader;
@@ -114,55 +117,39 @@ public class ExtensionProvider {
 
 	}
 
-	private Repository[] repoSnapshots;
-	private Repository[] repoReleases;
-	// private Repository[] repoMixedX;
 	private String group;
-	private List<Repository> repos;
+	private Collection<Repository> repos;
 
-	public ExtensionProvider(Repository[] repoSnapshots, Repository[] repoReleases, String group) {
-		this.repoSnapshots = repoSnapshots;
-		this.repoReleases = repoReleases;
-		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases);
+	public ExtensionProvider(String group, Repository... repositories) {
+		this.repos = Arrays.asList(repositories);
 		this.group = group;
 	}
 
 	public ExtensionProvider(Config config, String group) {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
-		this.repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
-		this.repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
-		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases/* , repoMixed */);
+		Repository[] repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORIES_SNAPSHOTS : cp.getMavenSnapshotRepository();
+		Repository[] repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORIES_RELEASES : cp.getMavenRepository();
+		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, MavenUpdateProvider.DEFAULT_REPOSITORIES_ALL);
 		this.group = group;
 	}
 
 	public ExtensionProvider(Config config) {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
-		this.repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_SNAPSHOTS : cp.getMavenSnapshotRepository();
-		this.repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASES : cp.getMavenRepository();
-		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases/* , repoMixed */);
+		Repository[] repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORIES_SNAPSHOTS : cp.getMavenSnapshotRepository();
+		Repository[] repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORIES_RELEASES : cp.getMavenRepository();
+		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, MavenUpdateProvider.DEFAULT_REPOSITORIES_ALL);
 		this.group = MavenUpdateProvider.DEFAULT_GROUP;
 	}
 
 	private ExtensionProvider disableCache() {
 		// snap
-		List<Repository> snap = new ArrayList<>();
-		for (Repository r: repoSnapshots) {
-			snap.add(new Repository(r.label, r.url, Repository.TIMEOUT_ZERO, Repository.TIMEOUT_ZERO, r.cacheDirectory));
-		}
-		// releases
-		List<Repository> releases = new ArrayList<>();
-		for (Repository r: repoReleases) {
-			releases.add(new Repository(r.label, r.url, Repository.TIMEOUT_ZERO, Repository.TIMEOUT_ZERO, r.cacheDirectory));
+		List<Repository> list = new ArrayList<>();
+		for (Repository r: this.repos) {
+			list.add(new Repository(r.label, r.url, r.type, Repository.TIMEOUT_ZERO, Repository.TIMEOUT_ZERO, r.cacheDirectory));
 		}
 
 		// TODO Auto-generated method stub
-		return new ExtensionProvider(
-
-				snap.toArray(new Repository[snap.size()]),
-
-				releases.toArray(new Repository[releases.size()]),
-
-				group
+		return new ExtensionProvider(group, list.toArray(new Repository[list.size()])
 
 		);
 	}
@@ -359,7 +346,7 @@ public class ExtensionProvider {
 	}
 
 	public List<Version> list(String artifact) throws IOException, GeneralSecurityException, SAXException, InterruptedException {
-		MavenUpdateProvider mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
+		MavenUpdateProvider mup = new MavenUpdateProvider(this.repos, this.group, artifact);
 		return mup.list();
 	}
 
@@ -385,7 +372,7 @@ public class ExtensionProvider {
 
 	public Map<String, Object> detail(String artifact, Version version) throws PageException, IOException, GeneralSecurityException, SAXException {
 		MavenUpdateProvider mup;
-		mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
+		mup = new MavenUpdateProvider(this.repos, this.group, artifact);
 		Map<String, Object> detail = mup.detail(version, EXTENSION_EXTENSION, false);
 
 		if (detail != null) return detail;
@@ -418,7 +405,7 @@ public class ExtensionProvider {
 	public Map<String, Object> detail(String artifact, Version version, Map<String, Object> defaultValue) {
 		MavenUpdateProvider mup;
 		Map<String, Object> detail = null;
-		mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
+		mup = new MavenUpdateProvider(this.repos, this.group, artifact);
 		try {
 			detail = mup.detail(version, EXTENSION_EXTENSION, false);
 			if (detail != null) return detail;
@@ -530,7 +517,7 @@ public class ExtensionProvider {
 		outer: for (String artifact: artifactsList) {
 
 			// if (artifact.indexOf("extension") == -1) continue;
-			mup = new MavenUpdateProvider(this.repoSnapshots, this.repoReleases, this.group, artifact);
+			mup = new MavenUpdateProvider(this.repos, this.group, artifact);
 			versions = mup.list();
 			if (!ArrayUtil.isEmpty(versions)) {
 				artifacts = null;
@@ -561,12 +548,25 @@ public class ExtensionProvider {
 
 	public static void main(String[] args) throws Exception {
 		// TODO remove
-		ExtensionProvider ep = new ExtensionProvider(new Repository[] {},
-				new Repository[] { new Repository("Maven Release Repository", "https://cdn.lucee.org/", Repository.TIMEOUT_5SECONDS, Repository.TIMEOUT_5SECONDS) }, "org.lucee");
-		ep = new ExtensionProvider(null);
-		aprint.e(ep.list("ec2-extension"));
-		aprint.e(ep.detail("ec2-extension", Version.parseVersion("1.0.0.5-SNAPSHOT")));
-		// org.lucee:ec2-extension:
+		ExtensionProvider ep = new ExtensionProvider("org.lucee", new Repository[] {
+				new Repository("Maven Release Repository", "https://cdn.lucee.org/", MavenUpdateProvider.TYPE_ALL, Repository.TIMEOUT_5SECONDS, Repository.TIMEOUT_5SECONDS) });
+
+		ep = new ExtensionProvider("org.lucee", MavenUpdateProvider.REPOSITORY_MAVEN_CENTRAL_RELEASES);
+
+		aprint.e(ep.list("yaml-extension"));
+		aprint.e(ep.detail("yaml-extension", Version.parseVersion("2.5.2-BETA")));
+
+		if (true) return;
+
+		Resource localDirectory = SystemUtil.getTempDirectory().getRealResource("mvvvn");
+
+		ResourceUtil.deleteContent(localDirectory, null);
+		POM pom = POM.getInstance(localDirectory, "org.lucee", "redis-extension", ("4.0.1.1-SNAPSHOT"), null);
+		aprint.e(pom.getArtifact("lex"));
+
+		aprint.e(ep.list("redis-extension"));
+		aprint.e(ep.detail("redis-extension", Version.parseVersion("4.0.1.1-SNAPSHOT")));
+		// org.lucee:yaml-extension:2.5.2.SNAPSHOT
 
 		if (true) return;
 

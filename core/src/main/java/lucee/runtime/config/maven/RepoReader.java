@@ -51,7 +51,7 @@ public final class RepoReader extends DefaultHandler {
 	private Map<String, Map<String, Object>> artifacts = new HashMap<>();
 	private String base;
 
-	RepoReader(String repo, String group, String artifact, Version version) {
+	public RepoReader(String repo, String group, String artifact, Version version) {
 		this.repo = repo;
 		this.group = group;
 		this.artifact = artifact;
