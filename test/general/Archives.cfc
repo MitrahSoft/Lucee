@@ -23,6 +23,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 		_buildHybridPhysicalFirst();
 		_buildMissingPhysical();
 		_buildMissingArchive();
+		_buildCorruptArchive();
 	}
 
 	function afterAll() {
@@ -73,8 +74,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 
 		describe( "Hybrid physical + archive with primary=archive", function() {
 
-			it( title="should prefer archive over physical when primary is archive", skip=true, body=function() {
-				// LDEV-6172: initPhysical() overrides physicalFirst before archive init
+			it( title="should prefer archive over physical when primary is archive", body=function() {
 				var result = _internalRequest(
 					template: "#_uri()#/hybrid/index.cfm",
 					urls: { scene: "archive" }
@@ -126,6 +126,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 					template: "#_uri()#/missingPhysical/index.cfm"
 				);
 				expect( result.fileContent.trim() ).toBe( "hello-from-archive" );
+			});
+
+		});
+
+		describe( "Graceful fallback when archive is corrupt", function() {
+
+			it( "should fall back to physical when archive is not a valid LAR", function() {
+				var result = _internalRequest(
+					template: "#_uri()#/corruptArchive/index.cfm"
+				);
+				expect( result.fileContent.trim() ).toBe( "from-physical" );
 			});
 
 		});
@@ -242,6 +253,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 		// reuse the mapping.lar which has hello.cfm
 		var physDir = variables.testDir & "does-not-exist/";
 		// intentionally do NOT create physDir
+	}
+
+	private function _buildCorruptArchive() {
+		var corruptLar = variables.testDir & "corrupt.lar";
+		var physDir = variables.testDir & "corruptArchive-physical/";
+
+		// write garbage bytes — not a valid JAR/ZIP
+		fileWrite( corruptLar, repeatString( "NOT A VALID LAR FILE", 100 ) );
+
+		directoryCreate( physDir, true, true );
+		fileWrite( physDir & "hello.cfm", "<cfset writeOutput( 'from-physical' )>" );
 	}
 
 	private function _buildMissingArchive() {
