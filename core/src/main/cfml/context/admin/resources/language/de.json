@@ -646,6 +646,8 @@
 			"archivehead": "Archiv",
 			"archiveheaddescription": "Name der Archivdatei (ra oder ras)  (Absolut oder relativ zum Webroot).",
 			"archivemissing": "Bitte geben Sie einen Wert für den Archivnamen an. (Zeile ",
+			"archivePath": "Archiv-Dateiname",
+			"archivePathDesc": "Dateiname für die Archivdatei (.lar).",
 			"archivesecure": "Secured",
 			"archivetitle": "Archiv erstellen",
 			"compiledesc": "Kompilieren Sie alle cfm und cfc-Dateien innerhalb des Mappings",
