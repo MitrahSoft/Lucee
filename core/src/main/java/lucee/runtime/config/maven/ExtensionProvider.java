@@ -368,7 +368,7 @@ public class ExtensionProvider {
 		Version lastRel = null;
 
 		for (Version v: list(artifact)) {
-			if (!v.toString().toUpperCase().endsWith("-SNAPSHOT")) {
+			if (!v.is(Version.SNAPSHOT)) {
 				if (lastRel == null || Version.compare(lastRel, v) < 0) {
 					lastRel = v;
 				}
@@ -564,6 +564,11 @@ public class ExtensionProvider {
 		ExtensionProvider ep = new ExtensionProvider(new Repository[] {},
 				new Repository[] { new Repository("Maven Release Repository", "https://cdn.lucee.org/", Repository.TIMEOUT_5SECONDS, Repository.TIMEOUT_5SECONDS) }, "org.lucee");
 		ep = new ExtensionProvider(null);
+		aprint.e(ep.list("ec2-extension"));
+		aprint.e(ep.detail("ec2-extension", Version.parseVersion("1.0.0.5-SNAPSHOT")));
+		// org.lucee:ec2-extension:
+
+		if (true) return;
 
 		long start = System.currentTimeMillis();
 		// org.lucee:h2-jdbc-extension:2.1.214.0001L

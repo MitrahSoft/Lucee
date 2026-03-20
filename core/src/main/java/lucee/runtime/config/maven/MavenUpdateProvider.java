@@ -188,7 +188,7 @@ public final class MavenUpdateProvider {
 		Version version;
 		for (int i = list.size() - 1; i >= 0; i--) {
 			version = list.get(i);
-			boolean isSnapshot = version.getQualifier() != null && version.getQualifier().endsWith("-SNAPSHOT");
+			boolean isSnapshot = version.is(Version.SNAPSHOT);
 			if ((type == TYPE_SNAPSHOT && isSnapshot) || (type == TYPE_RELEASE && !isSnapshot)) {
 				return version;
 			}
@@ -289,7 +289,7 @@ public final class MavenUpdateProvider {
 		// SNAPSHOT - snapshot have a more complicated structure, ebcause there can be udaptes/multiple
 		// versions
 
-		boolean isSnap = version.getQualifier().endsWith("-SNAPSHOT");
+		boolean isSnap = version.is(Version.SNAPSHOT);
 		Repository[] repos = isSnap ? repoSnapshots : repoReleases;
 
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";
