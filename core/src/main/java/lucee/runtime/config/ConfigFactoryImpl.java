@@ -1072,7 +1072,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			}
 		}
 		// temp directory should be always accessible, even when access is local
-		reses.add(config.getTempDirectory());
+		Resource tempDir = config.getTempDirectory();
+		if (!reses.contains(tempDir)) reses.add(tempDir);
 		return reses.toArray(new Resource[reses.size()]);
 	}
 
