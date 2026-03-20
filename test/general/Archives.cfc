@@ -255,6 +255,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 		// intentionally do NOT create physDir
 	}
 
+	private function _buildCorruptArchive() {
+		var corruptLar = variables.testDir & "corrupt.lar";
+		var physDir = variables.testDir & "corruptArchive-physical/";
+
+		// write garbage bytes — not a valid JAR/ZIP
+		fileWrite( corruptLar, repeatString( "NOT A VALID LAR FILE", 100 ) );
+
+		directoryCreate( physDir, true, true );
+		fileWrite( physDir & "hello.cfm", "<cfset writeOutput( 'from-physical' )>" );
+	}
+
 	private function _buildMissingArchive() {
 		// archive path points to a non-existent .lar, physical is valid
 		var physDir = variables.testDir & "missingArchive-physical/";
