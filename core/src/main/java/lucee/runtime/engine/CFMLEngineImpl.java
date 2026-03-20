@@ -47,9 +47,12 @@ import java.util.TimeZone;
 import javax.script.ScriptEngineFactory;
 
 import org.apache.felix.framework.Felix;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.Version;
+import org.osgi.framework.wiring.FrameworkWiring;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
@@ -367,7 +370,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				LogST._do(f, logName, timeRange);
 			}
 		}
-
 		// happen when Lucee is loaded directly
 		if (bundleCollection == null) {
 			try {
@@ -399,7 +401,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				}
 
 				config.put(Constants.FRAMEWORK_BOOTDELEGATION, "lucee.*");
-
 				Felix felix = factory.getFelix(factory.getResourceRoot(), config);
 
 				bundleCollection = new BundleCollection(felix, felix, null);
@@ -410,6 +411,30 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			}
 		}
 		this.info = new InfoImpl(bundleCollection == null ? null : bundleCollection.core);
+
+		// remove older or newer lucee-core bundles to avoid conflicts
+		{
+			BundleContext context = bundleCollection.getBundleContext();
+			List<Bundle> staleCoreBundles = null;
+			for (Bundle b: context.getBundles()) {
+				if ("lucee.core".equals(b.getSymbolicName()) && !b.getVersion().equals(info.getVersion())) {
+					LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Found stale core bundle [" + b.getSymbolicName() + ":" + b.getVersion()
+							+ "], uninstalling to avoid conflicts with current version [" + info.getVersion() + "]");
+					try {
+						b.uninstall();
+						if (staleCoreBundles == null) staleCoreBundles = new ArrayList<>();
+						staleCoreBundles.add(b);
+					}
+					catch (BundleException ignored) {}
+				}
+			}
+
+			if (staleCoreBundles != null && !staleCoreBundles.isEmpty()) {
+				FrameworkWiring fw = context.getBundle(0).adapt(FrameworkWiring.class);
+				fw.refreshBundles(staleCoreBundles);
+			}
+		}
+
 		Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader()); // MUST better location for this
 
 		UpdateInfo updateInfo;
