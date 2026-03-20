@@ -62,8 +62,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 
 		describe( "Application.cfc this.customTagPaths with archive", function() {
 
-			it( title="should invoke a custom tag from a LAR via this.customTagPaths", skip=true, body=function() {
-				// LDEV-6173: custom tag resolution does not consult archive
+			it( title="should invoke a custom tag from a LAR via this.customTagPaths", body=function() {
 				var result = _internalRequest(
 					template: "#_uri()#/customTagPaths/index.cfm"
 				);
@@ -187,7 +186,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="archive,mapping" {
 		var virtual = "/archivesTest-customtag";
 
 		directoryCreate( srcDir, true, true );
-		fileWrite( srcDir & "cf_greeting.cfm", '<cfif thisTag.executionMode eq "start"><cfset caller.ctResult = "customtag-from-archive"></cfif>' );
+		fileWrite( srcDir & "greeting.cfm", '<cfif thisTag.executionMode eq "start"><cfset caller.ctResult = "customtag-from-archive"></cfif>' );
 
 		admin action="updateCustomTag" type="web" password="#variables.adminPassword#"
 			virtual="#virtual#" physical="#srcDir#" archive="" primary="physical";
