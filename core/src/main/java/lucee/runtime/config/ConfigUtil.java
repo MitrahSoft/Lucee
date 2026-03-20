@@ -1632,7 +1632,7 @@ public final class ConfigUtil {
 		if (config instanceof ConfigServerImpl) return (ConfigServerImpl) config;
 		if (config instanceof ConfigWebImpl) return ((ConfigWebImpl) config).getConfigServerImpl();
 		// MUST remove
-		throw new RuntimeException("getConfigServerImpl: " + config.getClass().getName());
+		throw new RuntimeException("getConfigServerImpl: " + (config == null ? "null" : config.getClass().getName()));
 	}
 
 	public static ConfigServerImpl getConfigServerImpl(PageContext pc) {
@@ -1664,6 +1664,9 @@ public final class ConfigUtil {
 		catch (Exception e) {
 			// engine not registered yet = still starting up
 		}
-		return ConfigUtil.getConfigServerImpl(ThreadLocalPageContext.getConfig()).getMavenDownloadPolicyStartup();
+		Config config = ThreadLocalPageContext.getConfig();
+		if (config == null) return ConfigPro.MAVEN_DOWNLOAD_POLICY_IGNORE;
+
+		return ConfigUtil.getConfigServerImpl(config).getMavenDownloadPolicyStartup();
 	}
 }
