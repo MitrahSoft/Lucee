@@ -654,6 +654,8 @@
       "archiveheaddescription": "Name of the archive file (ra or ras), (absolute or relative to the webroot)",
       "archivemissing": "Please enter a value for the archive name (row ",
       "archivesecure": "Secured",
+      "archivePath": "Archive Filename",
+      "archivePathDesc": "Filename for the archive (.lar) file.",
       "archivetitle": "create archive",
       "compiledesc": "Compile all cfm and cfc files inside the mapping",
       "compilestoponerror": "Stop on error",
