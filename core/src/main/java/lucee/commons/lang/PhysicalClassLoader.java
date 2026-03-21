@@ -139,8 +139,7 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		}
 		catch (IOException e) {}
 
-		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
-		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
+		if (LogUtil.does(Log.LEVEL_TRACE)) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
 				+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
 
 		return clone;
