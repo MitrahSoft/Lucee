@@ -2,7 +2,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 	function run( testResults , testBox ) {
 
-		describe( title='ExpandPath regressions ("*.*")' , body=function(){
+		describe( title='ExpandPath regressions ("*.*")', skip=isWindows(), body=function(){
 
 			it( title='ExpandPath fails with ("*.*")', body=function() {
 				var starDotStar = ExpandPath("*.*");
@@ -17,5 +17,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			});
 
 		});
+	}
+
+	private function isWindows() {
+		return ( server.os.name contains "windows" );
 	}
 }

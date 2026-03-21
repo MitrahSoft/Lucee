@@ -4,5 +4,8 @@
         "loader/**",
         "temp/**"
     ],
-    "cfml.engine.name": "lucee"
+    "cfml.engine.name": "lucee",
+    "files.watcherExclude": {
+        "temp/**": true
+    }
 }

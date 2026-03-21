@@ -18,8 +18,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 						chr(13),"CR","all"),
 					" ",".","all"
 				);
-				// test file is LF
-				expect( text ).toBe( "LFLFLine1LFLine2LFLine3LF" );
+				// build expected result based on actual file line endings
+				var expected = buildExpectedWhitespaceResult();
+				expect( text ).toBe( expected );
 			});
 		});
 
@@ -66,6 +67,26 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 	private function isWindows(){
 		return (server.os.name contains "windows");
+	}
+
+	private string function buildExpectedWhitespaceResult(){
+		// StringUtil.suppressWhiteSpace() normalizes all \r and \n to \n (LF only)
+		// see lucee.commons.lang.StringUtil:713
+		// however, the line ending after the opening tag itself is output before
+		// the tag processes the body content, so it preserves the file's line ending style
+		var filePath = expandPath( createURI('processingDirective') & "/cfprocessingdirective_whitespace.cfm" );
+		var fileContent = fileRead( filePath );
+
+		// determine the file's line ending style (depends on OS and git autocrlf settings)
+		var firstLineEnding = "LF";
+		if ( fileContent contains chr(13) & chr(10) ) {
+			firstLineEnding = "CRLF";
+		}
+
+		// after whitespace suppression we expect:
+		// - first line ending (after opening tag) preserves file's line ending style
+		// - all subsequent line endings are normalized to LF by StringUtil.suppressWhiteSpace()
+		return firstLineEnding & "LF" & "Line1" & "LF" & "Line2" & "LF" & "Line3" & "LF";
 	}
 
 }
