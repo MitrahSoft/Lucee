@@ -48,6 +48,7 @@ public class PhysicalClassLoaderFactory {
 	private static RC rc = new RC();
 
 	public static PhysicalClassLoader getPhysicalClassLoader(Config c, Resource directory, boolean reload) throws IOException {
+		boolean doesTrace = LogUtil.does(Log.LEVEL_TRACE);
 		String key = HashUtil.create64BitHashAsString(directory.getAbsolutePath());
 
 		CachedLoader cached = reload ? null : classLoaders.get(key);
@@ -60,10 +61,10 @@ public class PhysicalClassLoaderFactory {
 						CachedLoader existing = classLoaders.get(key);
 						if (existing != null) PhysicalClassLoader.flush(existing.get(), c, false);
 					}
-					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
-							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					PhysicalClassLoader pcl = new PhysicalClassLoader(c, new ArrayList<Resource>(), directory, SystemUtil.getCombinedClassLoader(), null, false);
 					classLoaders.put(key, new CachedLoader(pcl));
+					if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
+							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					return pcl;
 				}
 			}
@@ -72,14 +73,15 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
-			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
-					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 			classLoaders.put(key, new CachedLoader(flushed));
+			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
+					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 		}
 		return cached.get();
 	}
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, JavaSettings js, boolean reload, ClassLoader parent) throws IOException {
+		boolean doesTrace = LogUtil.does(Log.LEVEL_TRACE);
 		String key = js == null ? "orphan" : ((JavaSettingsImpl) js).id();
 		if (parent != null) {
 			if (parent instanceof PhysicalClassLoader) key += "_" + ((PhysicalClassLoader) parent).id;
@@ -104,10 +106,10 @@ public class PhysicalClassLoaderFactory {
 						resources = toSortedList(((JavaSettingsImpl) js).getAllResources());
 					}
 					Resource dir = storeResourceMeta(c, key, js, resources);
-					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
-							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					PhysicalClassLoader pcl = new PhysicalClassLoader(c, resources, dir, parent != null ? parent : SystemUtil.getCombinedClassLoader(), null, true);
 					classLoaders.put(key, new CachedLoader(pcl));
+					if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
+							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					return pcl;
 				}
 			}
@@ -116,14 +118,15 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
-			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
-					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 			classLoaders.put(key, new CachedLoader(flushed));
+			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
+					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 		}
 		return cached.get();
 	}
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, BundleClassLoader bcl, boolean reload) throws IOException {
+		boolean doesTrace = LogUtil.does(Log.LEVEL_TRACE);
 		String key = HashUtil.create64BitHashAsString(bcl + "");
 
 		CachedLoader cached = reload ? null : classLoaders.get(key);
@@ -138,10 +141,10 @@ public class PhysicalClassLoaderFactory {
 					}
 					Resource dir = c.getClassDirectory().getRealResource("RPC/" + key);
 					if (!dir.exists()) ResourceUtil.createDirectoryEL(dir, true);
-					LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
-							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					PhysicalClassLoader pcl = new PhysicalClassLoader(c, new ArrayList<Resource>(), dir, SystemUtil.getCombinedClassLoader(), bcl, true);
 					classLoaders.put(key, new CachedLoader(pcl));
+					if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
+							"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 					return pcl;
 				}
 			}
@@ -150,9 +153,9 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
-			LogUtil.log(Log.LEVEL_INFO, "physical-classloader",
-					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 			classLoaders.put(key, new CachedLoader(flushed));
+			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
+					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 		}
 		return cached.get();
 	}
@@ -162,12 +165,13 @@ public class PhysicalClassLoaderFactory {
 	 * called periodically by the Lucee Controller thread.
 	 */
 	public static void clean(Config config) {
+		boolean doesTrace = LogUtil.does(Log.LEVEL_TRACE);
 		int sizeBefore = classLoaders.size();
-		LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader",
+		if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
 				"clean called, checking " + sizeBefore + " PhysicalClassLoaders for idle timeout (>" + (IDLE_TIMEOUT_MS / 1000) + "s), min size threshold: " + IDLE_MINSIZE);
 
 		if (sizeBefore <= IDLE_MINSIZE) {
-			LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader", "clean skipped, size " + sizeBefore + " is within min size threshold " + IDLE_MINSIZE);
+			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader", "clean skipped, size " + sizeBefore + " is within min size threshold " + IDLE_MINSIZE);
 			return;
 		}
 
@@ -178,8 +182,6 @@ public class PhysicalClassLoaderFactory {
 				if (classLoaders.remove(entry.getKey(), cached)) {
 					PhysicalClassLoader.flush(cached.loader, config, false);
 					evicted++;
-					LogUtil.log(Log.LEVEL_INFO, "physical-classloader", "evicted idle PhysicalClassLoader with key [" + entry.getKey() + "], idle for >" + (IDLE_TIMEOUT_MS / 1000)
-							+ "s" + ", remaining: " + classLoaders.size());
 				}
 			}
 		}
@@ -188,7 +190,7 @@ public class PhysicalClassLoaderFactory {
 			System.gc();
 		}
 
-		LogUtil.log(Log.LEVEL_DEBUG, "physical-classloader",
+		if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
 				"clean finished, evicted " + evicted + " of " + sizeBefore + " PhysicalClassLoaders, remaining: " + classLoaders.size());
 	}
 
