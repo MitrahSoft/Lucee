@@ -159,7 +159,7 @@ jobs:
     - name: Extract version number
       id: extract-version
       run: |
-        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | tr -d '[:space:]')
         echo "VERSION=$VERSION" >> $GITHUB_ENV
     - name: Build Lucee with Maven
       env:
