@@ -10,6 +10,7 @@ import org.osgi.framework.Version;
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.StringUtil;
 import lucee.runtime.config.Config;
+import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.maven.ExtensionProvider;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.mvn.MavenUtil.GAVSO;
@@ -57,14 +58,7 @@ public final class ExtensionDefintion {
 
 	public GAVSO getGAVSO(Config config) {
 		if (gavso != null) return gavso;
-		ExtensionProvider ep = new ExtensionProvider(config);
-		try {
-			gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
-			return gavso;
-		}
-		catch (PageException e) {}
-
-		return null;
+		return gavso = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), true, gavso);
 	}
 
 	public ExtensionDefintion setGAVSO(GAVSO gavso) {
@@ -82,13 +76,13 @@ public final class ExtensionDefintion {
 	public String getArtifactId() {
 		if (gavso != null) return gavso.a;
 
-		if (!StringUtil.isEmpty(getId())) {
-			ExtensionProvider ep = new ExtensionProvider(config);
-			try {
-				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
-				return gavso.g;
+		if (getId() != null) {
+			// TODO only check once
+			GAVSO tmp = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), true, gavso);
+			if (tmp != null) {
+				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
+				return tmp.a;
 			}
-			catch (PageException e) {}
 		}
 
 		return null;
@@ -98,14 +92,13 @@ public final class ExtensionDefintion {
 		if (gavso != null) return gavso.g;
 
 		if (getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider(config);
-			try {
-				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
-				return gavso.g;
+			// TODO only check once
+			GAVSO tmp = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), true, gavso);
+			if (tmp != null) {
+				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
+				return tmp.g;
 			}
-			catch (PageException e) {}
 		}
-
 		return null;
 	}
 

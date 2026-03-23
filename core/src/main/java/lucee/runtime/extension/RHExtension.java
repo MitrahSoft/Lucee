@@ -1462,15 +1462,25 @@ public final class RHExtension implements Serializable {
 		if (gavso != null && gavso.g != null) {
 			return gavso.g;
 		}
+
+		// from metadata
 		String g = getMetadata().getGroupId();
-		if (StringUtil.isEmpty(g, true) && getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider(config);
-			try {
-				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+		if (!StringUtil.isEmpty(g, true)) {
+			String a = getMetadata().getArtifactId();
+			if (!StringUtil.isEmpty(a, true)) {
+				gavso = new GAVSO(g, a, getVersion());
+			}
+			return g;
+		}
+
+		if (getId() != null) {
+			GAVSO tmp = ExtensionProvider.toGAVSO(null, getId(), true, null);
+			if (tmp != null) {
+				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
 				return gavso.g;
 			}
-			catch (PageException e) {}
 		}
+
 		return g;
 	}
 
@@ -1478,15 +1488,25 @@ public final class RHExtension implements Serializable {
 		if (gavso != null && gavso.a != null) {
 			return gavso.a;
 		}
+
+		// from metadata
 		String a = getMetadata().getArtifactId();
-		if (StringUtil.isEmpty(a, true) && getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider(config);
-			try {
-				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+		if (!StringUtil.isEmpty(a, true)) {
+			String g = getMetadata().getGroupId();
+			if (!StringUtil.isEmpty(g, true)) {
+				gavso = new GAVSO(g, a, getVersion());
+			}
+			return a;
+		}
+
+		if (getId() != null) {
+			GAVSO tmp = ExtensionProvider.toGAVSO(null, getId(), true, null);
+			if (tmp != null) {
+				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
 				return gavso.a;
 			}
-			catch (PageException e) {}
 		}
+
 		return a;
 	}
 

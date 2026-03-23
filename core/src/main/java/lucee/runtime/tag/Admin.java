@@ -137,7 +137,6 @@ import lucee.runtime.ext.tag.DynamicAttributes;
 import lucee.runtime.ext.tag.TagImpl;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.RHExtension;
-import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.functions.query.QuerySort;
 import lucee.runtime.gateway.GatewayEngineImpl;
 import lucee.runtime.gateway.GatewayEntry;
@@ -658,9 +657,8 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("getMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetMappings();
 		else if (check("getRestMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetRestMappings();
 		else if (check("getRestSettings", ACCESS_FREE) && check2(ACCESS_READ)) doGetRestSettings();
-		else if ((check("getRHExtensionProviders", ACCESS_FREE) || check("getExtensionProviders", ACCESS_FREE)) && check2(ACCESS_READ)) doGetRHExtensionProviders();
-		else if ((check("getExtensionGroups", ACCESS_FREE)) && check2(ACCESS_READ)) doGetExtensionGroups();
-
+		else if (check("getExtensionGroups", ACCESS_FREE) && check2(ACCESS_READ)) doGetExtensionGroups();
+		else if (check("getExtensionProviders", ACCESS_FREE) && check2(ACCESS_READ)) doGetExtensionGroups();
 		else if (check("getCustomTagMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetCustomTagMappings();
 		else if (check("getComponentMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetComponentMappings();
 		else if (check("getCfxTags", ACCESS_FREE) && check2(ACCESS_READ)) doGetCFXTags();
@@ -2160,20 +2158,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			return;
 		}
 		throw new ApplicationException("there is no mapping with virtual [" + virtual + "]");
-	}
-
-	private void doGetRHExtensionProviders() throws PageException {
-		RHExtensionProvider[] providers = config.getRHExtensionProviders();
-		lucee.runtime.type.Query qry = new QueryImpl(new Key[] { KeyConstants._url, KeyConstants._readonly }, providers.length, "query");
-
-		RHExtensionProvider provider;
-		for (int i = 0; i < providers.length; i++) {
-			provider = providers[i];
-			int row = i + 1;
-			qry.setAt(KeyConstants._url, row, provider.getURL().toExternalForm());
-			qry.setAt(KeyConstants._readonly, row, provider.isReadonly());
-		}
-		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
 	}
 
 	private void doGetExtensionGroups() throws PageException {

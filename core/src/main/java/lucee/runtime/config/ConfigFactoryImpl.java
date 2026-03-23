@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
@@ -99,7 +98,6 @@ import lucee.runtime.engine.ThreadQueueImpl;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.ExpressionException;
 import lucee.runtime.exp.PageException;
-import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.functions.other.CreateUUID;
 import lucee.runtime.gateway.GatewayEngineImpl;
 import lucee.runtime.monitor.ActionMonitor;
@@ -1295,44 +1293,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			ExceptionUtil.rethrowIfNecessary(th);
 			th.printStackTrace();
 		}
-	}
-
-	public static RHExtensionProvider[] loadExtensionProviders(ConfigServerImpl config, Struct root) {
-		Map<RHExtensionProvider, String> providers = new LinkedHashMap<RHExtensionProvider, String>();
-		try {
-			// providers
-			Array xmlProviders = ConfigUtil.getAsArray("extensionProviders", root);
-			String strProvider;
-
-			for (int i = 0; i < Constants.RH_EXTENSION_PROVIDERS.length; i++) {
-				providers.put(Constants.RH_EXTENSION_PROVIDERS[i], "");
-			}
-			if (xmlProviders != null) {
-				Iterator<?> it = xmlProviders.valueIterator();
-				String url;
-				while (it.hasNext()) {
-					url = Caster.toString(it.next(), null);
-					if (StringUtil.isEmpty(url, true)) continue;
-
-					try {
-						providers.put(new RHExtensionProvider(url.trim(), false), "");
-					}
-					catch (MalformedURLException e) {
-						LogUtil.logGlobal(ThreadLocalPageContext.getConfig(config), ConfigFactoryImpl.class.getName(), e);
-					}
-					catch (Throwable t) {
-						ExceptionUtil.rethrowIfNecessary(t);
-						log(config, t);
-					}
-				}
-			}
-
-		}
-		catch (Throwable t) {
-			ExceptionUtil.rethrowIfNecessary(t);
-			log(config, t);
-		}
-		return providers.keySet().toArray(new RHExtensionProvider[providers.size()]);
 	}
 
 	/**

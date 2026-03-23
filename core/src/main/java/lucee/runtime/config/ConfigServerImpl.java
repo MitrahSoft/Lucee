@@ -5573,29 +5573,6 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	}
 
 	@Override
-	public RHExtensionProvider[] getRHExtensionProviders() {
-		if (rhextensionProviders == null) {
-			synchronized (SystemUtil.createToken("config", "getRHExtensionProviders")) {
-				if (rhextensionProviders == null) {
-					rhextensionProviders = ConfigFactoryImpl.loadExtensionProviders(this, root);
-				}
-			}
-		}
-		return rhextensionProviders;
-	}
-
-	public ConfigServerImpl resetRHExtensionProviders() {
-		if (rhextensionProviders != null) {
-			synchronized (SystemUtil.createToken("config", "getRHExtensionProviders")) {
-				if (rhextensionProviders != null) {
-					rhextensionProviders = null;
-				}
-			}
-		}
-		return this;
-	}
-
-	@Override
 	public List<String> getExtensionProvidersGroupIds() {
 		if (extensionProviders == null) {
 			synchronized (SystemUtil.createToken("config", "extensionProviders")) {

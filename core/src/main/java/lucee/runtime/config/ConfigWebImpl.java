@@ -82,7 +82,6 @@ import lucee.runtime.extension.Extension;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.ExtensionProvider;
 import lucee.runtime.extension.RHExtension;
-import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.gateway.GatewayEngine;
 import lucee.runtime.listener.ApplicationListener;
 import lucee.runtime.listener.JavaSettings;
@@ -919,11 +918,6 @@ public final class ConfigWebImpl implements ConfigWebPro {
 	@Override
 	public ExtensionProvider[] getExtensionProviders() {
 		return cs.getExtensionProviders();
-	}
-
-	@Override
-	public RHExtensionProvider[] getRHExtensionProviders() {
-		return cs.getRHExtensionProviders();
 	}
 
 	@Override

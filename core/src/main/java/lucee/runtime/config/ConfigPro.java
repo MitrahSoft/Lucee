@@ -36,7 +36,6 @@ import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.RHExtension;
-import lucee.runtime.extension.RHExtensionProvider;
 import lucee.runtime.listener.JavaSettings;
 import lucee.runtime.orm.ORMConfiguration;
 import lucee.runtime.orm.ORMEngine;
@@ -277,8 +276,6 @@ public interface ConfigPro extends Config {
 	public Resource getLibraryDirectory();
 
 	public Resource getClassesDirectory();
-
-	public RHExtensionProvider[] getRHExtensionProviders();
 
 	public List<String> getExtensionProvidersGroupIds();
 
