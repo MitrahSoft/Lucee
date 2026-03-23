@@ -5601,6 +5601,10 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "extensionProviders")) {
 				if (extensionProviders == null) {
 					extensionProviders = metaExtensionProviders.list(this, root);
+
+					// Remove legacy URL-based providers (pre-7.2 REST endpoints)
+					extensionProviders.removeIf(p -> p.startsWith("http://") || p.startsWith("https://"));
+
 					if (extensionProviders.size() == 0) {
 						extensionProviders.add("org.lucee");
 					}
