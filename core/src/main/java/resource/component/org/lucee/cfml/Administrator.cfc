@@ -920,7 +920,7 @@ component {
 	* @hint removes the extension provider for current context.
 	* @groupId maven groupId for the extension provider
 	*/
-	public void function removeExtensionProvider( required string url ){
+	public void function removeExtensionProvider( required string groupId ){
 		cfadmin(
 			action="removeExtensionGroups",
 			type=variables.type,

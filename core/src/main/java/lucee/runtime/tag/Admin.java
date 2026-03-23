@@ -765,7 +765,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("removecomponentmapping", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveComponentMapping();
 		else if (check("removecfx", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveCFX();
 		else if (check("removeExtension", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtension();
-		else if (check("removeExtension", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtension();
 		else if (check("removeExtensionGroups", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtensionGroups();
 
 		else if (check("removeGatewayEntry", ACCESS_NOT_WHEN_SERVER) && check2(ACCESS_WRITE)) doRemoveGatewayEntry();
@@ -4405,7 +4404,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		String id = getString("id", null);
 		String groupId = getString("groupId", null);
 		String artifactId = getString("artifactId", null);
-		String version = getString("admin", "updateExtension", "version");
+		// String version = getString("admin", "removeExtension", "version");
 		ExtensionDefintion ed;
 
 		if (StringUtil.isEmpty(groupId, true) && StringUtil.isEmpty(artifactId, true) && StringUtil.isEmpty(id, true)) {
@@ -4413,7 +4412,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		}
 
 		if (!StringUtil.isEmpty(id, true)) {
-			ed = new ExtensionDefintion(id, version);
+			ed = new ExtensionDefintion(id);
 		}
 		else {
 			ed = new ExtensionDefintion();
@@ -4421,7 +4420,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 		// GAV
 		if (!StringUtil.isEmpty(groupId, true) && !StringUtil.isEmpty(artifactId, true)) {
-			ed.setGAVSO(new GAVSO(groupId, artifactId, version));
+			ed.setGAVSO(new GAVSO(groupId, artifactId, null));
 		}
 
 		admin.removeRHExtension(ed, config.getLog("deploy"));

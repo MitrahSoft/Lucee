@@ -533,21 +533,21 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 				it(title="checking getExtensionProviders()", body=function( currentSpec ) {
 					var getExtensionsProvider = adminWeb.getExtensionProviders();
 					assertEquals(isArray(getExtensionsProvider) ,true);
-					assertEquals(arrayFindAllNoCase(getExtensionsProvider,"org.lucee") > 0 ,true);
+					assertEquals(arrayFindNoCase(getExtensionsProvider,"org.lucee") > 0 ,true);
 				});
 
 				it(title="checking updateExtensionProvider()", body=function( currentSpec ) {
 					adminWeb.updateExtensionProvider('rasia.ch');
 					var getExtensionsProvider = adminWeb.getExtensionProviders();
 					assertEquals(isArray(getExtensionsProvider) ,true);
-					assertEquals(arrayFindAllNoCase(getExtensionsProvider,"rasia.ch") > 0 ,true);
+					assertEquals(arrayFindNoCase(getExtensionsProvider,"rasia.ch") > 0 ,true);
 				});
 
 				it(title="checking removeExtensionProvider()", body=function( currentSpec ) {
 					adminWeb.removeExtensionProvider('rasia.ch');
 					var getExtensionsProvider = adminWeb.getExtensionProviders();
 					assertEquals(isArray(getExtensionsProvider) ,true);
-					assertEquals(arrayFindAllNoCase(getExtensionsProvider,"rasia.ch") > 0 ,false);
+					assertEquals(arrayFindNoCase(getExtensionsProvider,"rasia.ch") > 0 ,false);
 				});
 			});
 

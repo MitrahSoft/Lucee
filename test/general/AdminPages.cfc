@@ -69,7 +69,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase"	{
                     urls : { testUrls: true },
                     cookies: variables.cookies
                 );
-                
+                systemOutput(_adminUrls,true,true);
                 expect( _adminUrls.status ).toBe( 200, "Status Code" );
                 //expect(_adminUrls.fileContent).toBeJson();
                 expect( isJson( _adminUrls.fileContent ) ).toBeTrue();
