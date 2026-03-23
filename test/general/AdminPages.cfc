@@ -62,21 +62,15 @@ component extends="org.lucee.cfml.test.LuceeTestCase"	{
             });
 
             it( title="Fetch and test admin pages", body=function(){
-                //systemOutput("------------- get admin urls", true);
-                // adminPage = "server.cfm";
                 local._adminUrls = _internalRequest(
                     template: adminRoot & adminPage,
                     urls : { testUrls: true },
                     cookies: variables.cookies
                 );
-                systemOutput(_adminUrls,true,true);
                 expect( _adminUrls.status ).toBe( 200, "Status Code" );
-                //expect(_adminUrls.fileContent).toBeJson();
                 expect( isJson( _adminUrls.fileContent ) ).toBeTrue();
                 local.adminUrls = deserializeJson( _adminUrls.fileContent );
                 expect( adminUrls ).toBeArray();
-                // systemOutput( adminUrls, true );
-                // systemOutput( "", true );
                 loop array="#adminUrls#" item="local.testUrl" {
                     checkUrl( adminRoot, local.testUrl, 200 );
                 }
