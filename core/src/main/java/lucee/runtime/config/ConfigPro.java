@@ -280,6 +280,8 @@ public interface ConfigPro extends Config {
 
 	public RHExtensionProvider[] getRHExtensionProviders();
 
+	public List<String> getExtensionProvidersGroupIds();
+
 	public DebugEntry[] getDebugEntries();
 
 	public DebugEntry getDebugEntry(String ip, DebugEntry defaultValue);

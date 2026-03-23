@@ -47,7 +47,7 @@
 		<cfparam name="err" default="#struct(message:"",detail:"")#">
 		<cfinclude template="ext.functions.cfm">
 		<cfadmin 
-			action="getRHExtensions"
+			action="getExtensions"
 			type="#adminType#"
 			password="#password#"
 			returnVariable="extensions"><!--- #session["password"&url.adminType]# --->
@@ -57,10 +57,9 @@
 				type="#adminType#"
 				password="#password#"
 				returnVariable="providers">
-		
+			
 			<cfset request.adminType=url.adminType>
-			<cfset external=getAllExternalData()>
-
+			<cfset external=getLuceeExtensions(getExtensionGroups())>
 			<cfset extUpdates = []>
 			<cfsavecontent variable="ext" trim="true">
 				<cfloop query="extensions">
@@ -87,39 +86,6 @@
 			</cfsavecontent>
 		</cfif>
 
-	<!--- Promotion  disabled for the moment
-		<cfset existingExtensions={}>
-		<cfloop query="#extensions#">
-			<cfset existingExtensions[extensions.id]=extensions.id>
-		</cfloop>
-		<cfset promotion={level:0}>
-		
-		<cfset request.adminType=url.adminType>
-		<cfinclude template="extension.functions.cfm">
-		<cfset data=loadAllProvidersData(50000,false)>
-						
-		<cfloop collection="#data#" item="provider" index="providerURL">
-			<cfif not isSimpleValue(provider)>
-				<cfset qry=provider.listApplications>
-				<cfloop query="#provider.listApplications#">
-					<cfset uid=qry.id>
-					<cfif	(qry.type EQ request.admintype or  qry.type EQ "all") and
-							!structKeyExists(existingExtensions,uid) and
-							isDefined('qry.promotionLevel') and 
-							isNumeric(qry.promotionLevel) and
-							qry.promotionLevel GT promotion.level>
-						<cfset promotion.txt=qry.promotionText>
-						<cfset promotion.uri="server.cfm?action=extension.applications&action2=detail&uid=#uid#">
-						<cfset promotion.uid=uid>
-						<cfset promotion.level=qry.promotionLevel>
-						<cfset promotion.label=qry.label>
-						<cfset promotion.price=qry.price>
-						<cfif len(qry.image)><cfset promotion.img=getDumpNail(qry.image,230,100)><cfelse><cfset promotion.img=""></cfif>
-					</cfif>
-				</cfloop>
-			</cfif>
-		</cfloop>
---->
 
 
 

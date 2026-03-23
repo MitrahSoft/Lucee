@@ -63,6 +63,15 @@ public final class VersionRange implements Serializable {
 		return sb.toString();
 	}
 
+	public String toVersionNumberIfPossible() {
+		if (vrs.size() != 1) return toString();
+
+		VR vr = vrs.get(0);
+		if (vr.from != null && vr.to != null) return toString();
+		if (vr.from == null) return vr.to.toString();
+		return vr.from.toString();
+	}
+
 	private static class VR implements Serializable {
 
 		private static final long serialVersionUID = 2004939785062801700L;

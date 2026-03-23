@@ -588,7 +588,7 @@ public final class RHExtension implements Serializable {
 		Resource mdf = getMetaDataFile(config, hash);
 		if (!metadataFilesChecked.contains(mdf.getAbsolutePath()) && !mdf.isFile()) {
 			Struct data = new StructImpl(Struct.TYPE_LINKED);
-			_populate(data, metadata);
+			_populate(data, null, metadata);
 			try {
 				write(config, metadata, hash);
 			}
@@ -1292,7 +1292,7 @@ public final class RHExtension implements Serializable {
 			return;
 		}
 
-		_populate(el, getMetadata());
+		_populate(el, this, null);
 	}
 
 	private static String toStringForAttr(String str) {
@@ -1340,35 +1340,40 @@ public final class RHExtension implements Serializable {
 
 	private static Query createQuery() throws DatabaseException {
 		return new QueryImpl(new Key[] { KeyConstants._id, KeyConstants._version, KeyConstants._name, KeyConstants._groupId, KeyConstants._artifactId, KeyConstants._symbolicName,
-				KeyConstants._type, KeyConstants._description, KeyConstants._image, KeyConstants._releaseType, KeyConstants._trial, KeyConstants._categories,
-				KeyConstants._startBundles, KeyConstants._bundles, KeyConstants._flds, KeyConstants._tlds, KeyConstants._tags, KeyConstants._functions, KeyConstants._contexts,
-				KeyConstants._webcontexts, KeyConstants._config, KeyConstants._applications, KeyConstants._components, KeyConstants._plugins, KeyConstants._eventGateways,
-				KeyConstants._archives }, 0, "Extensions");
+				KeyConstants._type, KeyConstants._buildDate, KeyConstants._description, KeyConstants._image, KeyConstants._releaseType, KeyConstants._trial,
+				KeyConstants._categories, KeyConstants._startBundles, KeyConstants._bundles, KeyConstants._flds, KeyConstants._tlds, KeyConstants._tags, KeyConstants._functions,
+				KeyConstants._contexts, KeyConstants._webcontexts, KeyConstants._config, KeyConstants._applications, KeyConstants._components, KeyConstants._plugins,
+				KeyConstants._eventGateways, KeyConstants._archives }, 0, "Extensions");
 	}
 
 	public Struct toStruct() {
-		return (Struct) _populate(new StructImpl(), getMetadata());
+		return (Struct) _populate(new StructImpl(), this, null);
 	}
 
 	private void populate(Query qry) {
-		_populate(new CurrentRow(qry, qry.addRow(), true), getMetadata());
+		_populate(new CurrentRow(qry, qry.addRow(), true), this, null);
 	}
 
-	private static Collection _populate(Collection coll, ExtensionMetadata md) {
-
+	private static Collection _populate(Collection coll, RHExtension extMayNull, ExtensionMetadata md) {
+		if (md == null) {
+			if (extMayNull == null) new IllegalArgumentException("you need to provide an extension or metadata");
+			md = extMayNull.getMetadata();
+		}
 		coll.setEL(KeyConstants._id, md._getId());
 		coll.setEL(KeyConstants._name, md.getName());
-		coll.setEL(KeyConstants._groupId, md.getGroupId());
-		coll.setEL(KeyConstants._artifactId, md.getArtifactId());
+		coll.setEL(KeyConstants._groupId, extMayNull != null ? extMayNull.getGroupId() : md.getGroupId());
+		coll.setEL(KeyConstants._artifactId, extMayNull != null ? extMayNull.getArtifactId() : md.getArtifactId());
 		coll.setEL(KeyConstants._name, md.getName());
 		coll.setEL(KeyConstants._symbolicName, md.getSymbolicName());
 		coll.setEL(KeyConstants._image, md.getImage());
 		coll.setEL(KeyConstants._type, md.getType());
 		coll.setEL(KeyConstants._description, StringUtil.emptyIfNull(md.getDescription()));
+		DateTime bd = md.getBuiltDate();
+		if (bd != null) coll.setEL(KeyConstants._buildDate, Caster.toString(bd, null));
 
 		// core version
 		VersionRange minCoreVersion = md.getMinCoreVersion();
-		if (minCoreVersion != null) coll.setEL("luceeCoreVersion", toStringForAttr(minCoreVersion.toString()));
+		if (minCoreVersion != null) coll.setEL("luceeCoreVersion", toStringForAttr(minCoreVersion.toVersionNumberIfPossible()));
 		else coll.removeEL(KeyImpl.init("luceeCoreVersion"));
 
 		// loader version
@@ -1814,7 +1819,6 @@ public final class RHExtension implements Serializable {
 					e.printStackTrace();
 				}
 			}
-
 		}
 		return StringUtil.isEmpty(ed.getId(), true) ? null : ed;
 	}

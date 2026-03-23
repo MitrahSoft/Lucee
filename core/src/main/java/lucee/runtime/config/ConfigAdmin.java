@@ -4355,51 +4355,41 @@ public final class ConfigAdmin {
 		root.setEL("extensionEnabled", enabled);
 	}
 
-	public void updateRHExtensionProvider(String strUrl) throws MalformedURLException, PageException {
-		updateExtensionProvider(strUrl);
-	}
-
-	public void updateExtensionProvider(String strUrl) throws MalformedURLException, PageException {
+	public void updateExtensionGroups(String groupId) throws PageException {
 		Array children = ConfigUtil.getAsArray("extensionProviders", root);
-		strUrl = strUrl.trim();
-
-		URL _url = HTTPUtil.toURL(strUrl, HTTPUtil.ENCODED_NO);
-		strUrl = _url.toExternalForm();
+		groupId = groupId.trim();
 
 		// Update
-		String url;
+		String g;
 		for (int i = 1; i <= children.size(); i++) {
-			url = Caster.toString(children.get(i, null), null);
-			if (url == null) continue;
+			g = Caster.toString(children.get(i, null), null);
+			if (g == null) continue;
 
-			if (url.trim().equalsIgnoreCase(strUrl)) {
+			if (g.trim().equalsIgnoreCase(groupId)) {
 				return;
 			}
 		}
 
 		// Insert
-		children.prepend(strUrl);
+		children.prepend(groupId);
 	}
 
-	public void removeExtensionProvider(String strUrl) {
+	public void removeExtensionGroups(String groupId) {
 		Array children = ConfigUtil.getAsArray("extensionProviders", root);
 		Key[] keys = children.keys();
-		strUrl = strUrl.trim();
-		String url;
+		groupId = groupId.trim();
+		String g;
+
 		for (int i = keys.length - 1; i >= 0; i--) {
 			Key key = keys[i];
-			url = Caster.toString(children.get(key, null), null);
-			if (url == null) continue;
+			g = Caster.toString(children.get(key, null), null);
+			if (g == null) continue;
 
-			if (url.trim().equalsIgnoreCase(strUrl)) {
+			if (g.trim().equalsIgnoreCase(groupId)) {
 				children.removeEL(key);
 				return;
 			}
 		}
-	}
-
-	public void removeRHExtensionProvider(String strUrl) {
-		removeExtensionProvider(strUrl);
 	}
 
 	public void resetORMSetting() throws SecurityException {
@@ -5155,14 +5145,33 @@ public final class ConfigAdmin {
 		}
 	}
 
+	protected static void _removeRHExtensions(ConfigPro config, RHExtension rhext, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension, Log log)
+			throws PageException {
+		try {
+			ConfigAdmin admin = new ConfigAdmin(config, null, true);
+			synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
+				admin.unSyncRemoveExtension(config, rhext, replacementRH, filter, deleteExtension, log);
+			}
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
+	}
+
 	public void removeRHExtension(ExtensionDefintion ed, Log log) throws PageException {
 		checkWriteAccess();
+
 		if (ed == null) return;
 
 		ResetFilter filter = new ResetFilter();
 		try {
-			_removeRHExtension(config, ed.toRHExtension(config), null, filter, true, log);
-
+			RHExtension ext = ed.toRHExtension(config);
+			synchronized (SystemUtil.createToken("updateExtension", ext.getId())) {
+				unSyncRemoveExtension(config, ext, null, filter, true, log);
+			}
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
 		}
 		finally {
 			try {
@@ -5173,11 +5182,6 @@ public final class ConfigAdmin {
 			}
 		}
 	}
-
-	/*
-	 * public void removeExtension(String provider, String id) throws PageException {
-	 * removeRHExtension(id); }
-	 */
 
 	/**
 	 * removes an installed extension from the system
@@ -5467,6 +5471,25 @@ public final class ConfigAdmin {
 				rhe.delete(this.config, log);
 			}
 
+			{
+				Array children = ConfigUtil.getAsArray("extensions", root);
+				Struct el;
+				// remove record in json
+				for (int key: children.intKeys()) {
+					try {
+						el = Caster.toStruct(children.get(key, null), null);
+						if (el == null) continue;
+
+						if (rhe.same(el)) {
+							children.removeEL(key);
+							break;
+						}
+					}
+					catch (Exception e) {
+						throw Caster.toPageException(e);
+					}
+				}
+			}
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);

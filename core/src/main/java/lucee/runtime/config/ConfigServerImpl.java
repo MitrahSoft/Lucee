@@ -546,6 +546,12 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			.description("mailserver to use for sending mails.");
 	private Server[] mailServers;
 
+	private static Prop<String> metaExtensionProviders = Prop.str(Prop.TYPE_LIST).keys("extensionProviders").systemPropEnvVar("lucee.extensionProviders")
+			.description("Maven groupIds used to discover Lucee extensions. "
+					+ "Lucee scans each groupId for artifacts whose artifactId ends with '-extension' (e.g. 'yaml-extension'). " + "Defaults to 'org.lucee'. "
+					+ "Example: [\"org.lucee\", \"com.rasia\"]");
+	private List<String> extensionProviders;
+
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaReturnFormat = Prop.integer().keys("returnFormat").defaultValue(UDF.RETURN_FORMAT_WDDX).choices(
 			new Choice<Integer>(UDF.RETURN_FORMAT_WDDX, "wddx").description("Web Distributed Data eXchange (WDDX) format. This is the legacy default for CFML remote calls."),
@@ -5583,6 +5589,32 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			synchronized (SystemUtil.createToken("config", "getRHExtensionProviders")) {
 				if (rhextensionProviders != null) {
 					rhextensionProviders = null;
+				}
+			}
+		}
+		return this;
+	}
+
+	@Override
+	public List<String> getExtensionProvidersGroupIds() {
+		if (extensionProviders == null) {
+			synchronized (SystemUtil.createToken("config", "extensionProviders")) {
+				if (extensionProviders == null) {
+					extensionProviders = metaExtensionProviders.list(this, root);
+					if (extensionProviders.size() == 0) {
+						extensionProviders.add("org.lucee");
+					}
+				}
+			}
+		}
+		return extensionProviders;
+	}
+
+	public ConfigServerImpl resetExtensionProviderGroupIds() {
+		if (extensionProviders != null) {
+			synchronized (SystemUtil.createToken("config", "extensionProviders")) {
+				if (extensionProviders != null) {
+					extensionProviders = null;
 				}
 			}
 		}

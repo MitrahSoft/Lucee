@@ -20,7 +20,6 @@ package lucee.runtime.tag;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.cert.X509Certificate;
 import java.sql.Connection;
@@ -151,6 +150,7 @@ import lucee.runtime.listener.JavaSettingsImpl;
 import lucee.runtime.monitor.IntervallMonitor;
 import lucee.runtime.monitor.Monitor;
 import lucee.runtime.monitor.RequestMonitor;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.net.http.CertificateInstaller;
 import lucee.runtime.net.http.ReqRspUtil;
 // import lucee.runtime.net.mail.SMTPVerifier; // removed with mail functionality
@@ -659,6 +659,7 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("getRestMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetRestMappings();
 		else if (check("getRestSettings", ACCESS_FREE) && check2(ACCESS_READ)) doGetRestSettings();
 		else if ((check("getRHExtensionProviders", ACCESS_FREE) || check("getExtensionProviders", ACCESS_FREE)) && check2(ACCESS_READ)) doGetRHExtensionProviders();
+		else if ((check("getExtensionGroups", ACCESS_FREE)) && check2(ACCESS_READ)) doGetExtensionGroups();
 
 		else if (check("getCustomTagMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetCustomTagMappings();
 		else if (check("getComponentMappings", ACCESS_FREE) && check2(ACCESS_READ)) doGetComponentMappings();
@@ -729,22 +730,16 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("updateerror", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateError();
 		else if (check("updateregex", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateRegex();
 		else if (check("updateCustomTagSetting", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateCustomTagSetting();
-		// else if(check("updateExtension", ACCESS_FREE) && check2(ACCESS_WRITE))
-		// doUpdateExtension();
-		else if ((check("updateRHExtension", ACCESS_FREE) || check("updateExtension", ACCESS_FREE)) && check2(ACCESS_WRITE)) doUpdateRHExtension(true);
-		else if ((check("removeRHExtension", ACCESS_FREE) || check("removeExtension", ACCESS_FREE)) && check2(ACCESS_WRITE)) doRemoveRHExtension();
-		else if (check("updateExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateExtensionProvider();
-		else if ((check("updateRHExtensionProvider", ACCESS_FREE) || check("updateExtensionProvider", ACCESS_FREE)) && check2(ACCESS_WRITE)) doUpdateRHExtensionProvider();
+		else if ((check("updateRHExtension", ACCESS_FREE)) && check2(ACCESS_WRITE)) doUpdateRHExtension(true);
+		else if ((check("updateExtension", ACCESS_FREE)) && check2(ACCESS_WRITE)) doUpdateExtension(true);
+		else if ((check("removeRHExtension", ACCESS_FREE)) && check2(ACCESS_WRITE)) doRemoveRHExtension();
+		else if (check("updateExtensionGroups", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateExtensionGroups();
 		else if (check("updateExtensionInfo", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateExtensionInfo();
 		else if (check("updateGatewayEntry", ACCESS_NOT_WHEN_SERVER) && check2(ACCESS_WRITE)) doUpdateGatewayEntry();
-		// else if(check("updateLogSettings", ACCESS_FREE) && check2(ACCESS_WRITE ))
-		// doUpdateUpdateLogSettings();
 		else if (check("updateMonitor", ACCESS_NOT_WHEN_WEB) && check2(ACCESS_WRITE)) doUpdateMonitor();
 		else if (check("updateCacheHandler", ACCESS_NOT_WHEN_WEB) && check2(ACCESS_WRITE)) doUpdateCacheHandler();
 		else if (check("updateORMEngine", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateORMEngine();
 		else if (check("updateExecutionLog", ACCESS_FREE) && check2(ACCESS_WRITE)) doUpdateExecutionLog();
-
-		// else if(check("removeproxy", ACCESS_NOT_WHEN_SERVER )) doRemoveProxy();
 		else if (check("removeMonitor", ACCESS_NOT_WHEN_WEB) && check2(ACCESS_WRITE)) doRemoveMonitor();
 		else if (check("removeCacheHandler", ACCESS_NOT_WHEN_WEB) && check2(ACCESS_WRITE)) doRemoveCacheHandler();
 		else if (check("removeORMEngine", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveORMEngine();
@@ -770,8 +765,9 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		else if (check("removecomponentmapping", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveComponentMapping();
 		else if (check("removecfx", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveCFX();
 		else if (check("removeExtension", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtension();
-		else if (check("removeExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtensionProvider();
-		else if (check("removeRHExtensionProvider", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveRHExtensionProvider();
+		else if (check("removeExtension", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtension();
+		else if (check("removeExtensionGroups", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveExtensionGroups();
+
 		else if (check("removeGatewayEntry", ACCESS_NOT_WHEN_SERVER) && check2(ACCESS_WRITE)) doRemoveGatewayEntry();
 		else if (check("removeDebugEntry", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveDebugEntry();
 		else if (check("removeCacheDefaultConnection", ACCESS_FREE) && check2(ACCESS_WRITE)) doRemoveCacheDefaultConnection();
@@ -1929,19 +1925,6 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		adminSync.broadcast(attributes, config);
 	}
 
-	private void doRemoveExtension() throws PageException {
-
-		// TODO make it indentpend of the ID
-		String id = getString("admin", "removeRHExtensions", "id");
-		if (!Decision.isUUId(id)) throw new ApplicationException("Invalid id [" + id + "], id must be a UUID");
-		ExtensionDefintion ed = new ExtensionDefintion(id);
-
-		admin.removeRHExtension(ed, config.getLog("deploy"));
-		store();
-		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
-
-	}
-
 	/**
 	 * @throws PageException
 	 * 
@@ -2192,6 +2175,14 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 			qry.setAt(KeyConstants._readonly, row, provider.isReadonly());
 		}
 		pageContext.setVariable(getString("admin", action, "returnVariable"), qry);
+	}
+
+	private void doGetExtensionGroups() throws PageException {
+		Array arr = new ArrayImpl();
+		for (String provider: config.getExtensionProvidersGroupIds()) {
+			arr.appendEL(provider);
+		}
+		pageContext.setVariable(getString("admin", action, "returnVariable"), arr);
 	}
 
 	private void doGetMappings() throws PageException {
@@ -4372,6 +4363,73 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		adminSync.broadcast(attributes, config);
 	}
 
+	private void doUpdateExtension(boolean throwOnError) throws PageException {
+
+		// ID
+		String id = getString("id", null);
+		String groupId = getString("groupId", null);
+		String artifactId = getString("artifactId", null);
+		String version = getString("admin", "updateExtension", "version");
+		ExtensionDefintion ed;
+
+		if (StringUtil.isEmpty(groupId, true) && StringUtil.isEmpty(artifactId, true) && StringUtil.isEmpty(id, true)) {
+			throw new ApplicationException("you need to define an id or groupId and artifactId");
+		}
+
+		if (!StringUtil.isEmpty(id, true)) {
+			ed = new ExtensionDefintion(id, version);
+		}
+		else {
+			ed = new ExtensionDefintion();
+		}
+
+		// GAV
+		if (!StringUtil.isEmpty(groupId, true) && !StringUtil.isEmpty(artifactId, true)) {
+			ed.setGAVSO(new GAVSO(groupId, artifactId, version));
+		}
+
+		ResetFilter filter = new ResetFilter();
+		try {
+			DeployHandler.deployExtension(config, ed, filter, config == null ? null : ThreadLocalPageContext.getLog(pageContext, "application"), true, true, throwOnError,
+					new RefBooleanImpl());
+		}
+		finally {
+			filter.resetThrowPageException(config);
+		}
+
+	}
+
+	private void doRemoveExtension() throws PageException {
+
+		// ID
+		String id = getString("id", null);
+		String groupId = getString("groupId", null);
+		String artifactId = getString("artifactId", null);
+		String version = getString("admin", "updateExtension", "version");
+		ExtensionDefintion ed;
+
+		if (StringUtil.isEmpty(groupId, true) && StringUtil.isEmpty(artifactId, true) && StringUtil.isEmpty(id, true)) {
+			throw new ApplicationException("you need to define an id or groupId and artifactId");
+		}
+
+		if (!StringUtil.isEmpty(id, true)) {
+			ed = new ExtensionDefintion(id, version);
+		}
+		else {
+			ed = new ExtensionDefintion();
+		}
+
+		// GAV
+		if (!StringUtil.isEmpty(groupId, true) && !StringUtil.isEmpty(artifactId, true)) {
+			ed.setGAVSO(new GAVSO(groupId, artifactId, version));
+		}
+
+		admin.removeRHExtension(ed, config.getLog("deploy"));
+		store();
+		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
+
+	}
+
 	private void doUpdateRHExtension(boolean throwOnError) throws PageException {
 
 		// ID
@@ -4451,38 +4509,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 		ConfigUtil.getConfigServerImpl(config).resetExtensionDefinitions().resetRHExtensions();
 	}
 
-	/*
-	 * private void doUpdateExtension() throws PageException {
-	 * 
-	 * admin.updateExtension(pageContext, new ExtensionImpl(getStruct("config", null),
-	 * getString("admin", "UpdateExtensions", "id"), getString("admin", "UpdateExtensions", "provider"),
-	 * getString("admin", "UpdateExtensions", "version"),
-	 * 
-	 * getString("admin", "UpdateExtensions", "name"), getString("label", ""), getString("description",
-	 * ""), getString("category", ""), getString("image", ""), getString("author", ""),
-	 * getString("codename", ""), getString("video", ""), getString("support", ""),
-	 * getString("documentation", ""), getString("forum", ""), getString("mailinglist", ""),
-	 * getString("network", ""), getDateTime("created", null), getString("admin", "UpdateExtensions",
-	 * "_type")));
-	 * 
-	 * store(); // adminSync.broadcast(attributes, config); }
-	 */
-
-	private void doUpdateExtensionProvider() throws PageException, MalformedURLException {
-		admin.updateExtensionProvider(getString("admin", "UpdateExtensionProvider", "url"));
+	private void doUpdateExtensionGroups() throws PageException {
+		admin.updateExtensionGroups(getString("admin", "updateExtensionGroups", "groupid"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetRHExtensionProviders();
-	}
-
-	private void doUpdateRHExtensionProvider() throws PageException {
-		try {
-			admin.updateRHExtensionProvider(getString("admin", "UpdateRHExtensionProvider", "url"));
-		}
-		catch (MalformedURLException e) {
-			throw Caster.toPageException(e);
-		}
-		store();
-		ConfigUtil.getConfigServerImpl(config).resetRHExtensionProviders();
+		ConfigUtil.getConfigServerImpl(config).resetExtensionProviderGroupIds();
 	}
 
 	private void doUpdateExtensionInfo() throws PageException {
@@ -4501,16 +4531,10 @@ public final class Admin extends TagImpl implements DynamicAttributes {
 
 	}
 
-	private void doRemoveExtensionProvider() throws PageException {
-		admin.removeExtensionProvider(getString("admin", "RemoveExtensionProvider", "url"));
+	private void doRemoveExtensionGroups() throws PageException {
+		admin.removeExtensionGroups(getString("admin", "removeExtensionGroups", "groupId"));
 		store();
-		ConfigUtil.getConfigServerImpl(config).resetRHExtensionProviders();
-	}
-
-	private void doRemoveRHExtensionProvider() throws PageException {
-		admin.removeRHExtensionProvider(getString("admin", "RemoveRHExtensionProvider", "url"));
-		store();
-		ConfigUtil.getConfigServerImpl(config).resetRHExtensionProviders();
+		ConfigUtil.getConfigServerImpl(config).resetExtensionProviderGroupIds();
 	}
 
 	/**

@@ -2152,4 +2152,9 @@ public final class ConfigWebImpl implements ConfigWebPro {
 	public boolean getDapBreakpoint() {
 		return cs.getDapBreakpoint();
 	}
+
+	@Override
+	public List<String> getExtensionProvidersGroupIds() {
+		return cs.getExtensionProvidersGroupIds();
+	}
 }
