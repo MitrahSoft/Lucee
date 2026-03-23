@@ -532,20 +532,22 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 			describe( title="test-extension providers functions", body=function() {
 				it(title="checking getExtensionProviders()", body=function( currentSpec ) {
 					var getExtensionsProvider = adminWeb.getExtensionProviders();
-					assertEquals(isquery(getExtensionsProvider) ,true);
-					assertEquals(listSort( structKeyList(getExtensionsProvider),'textnocase'),'readonly,url');
+					assertEquals(isArray(getExtensionsProvider) ,true);
+					assertEquals(arrayFindAllNoCase(getExtensionsProvider,"org.lucee") > 0 ,true);
 				});
 
 				it(title="checking updateExtensionProvider()", body=function( currentSpec ) {
-					adminWeb.updateExtensionProvider('http://www.myhost.com');
+					adminWeb.updateExtensionProvider('rasia.ch');
 					var getExtensionsProvider = adminWeb.getExtensionProviders();
-					assertEquals((isquery(getExtensionsProvider) && FindNocase( 'http://www.myhost.com',valueList(getExtensionsProvider.url)) GT 0) ,true);
+					assertEquals(isArray(getExtensionsProvider) ,true);
+					assertEquals(arrayFindAllNoCase(getExtensionsProvider,"rasia.ch") > 0 ,true);
 				});
 
 				it(title="checking removeExtensionProvider()", body=function( currentSpec ) {
-					adminWeb.removeExtensionProvider('http://www.myhost.com');
+					adminWeb.removeExtensionProvider('rasia.ch');
 					var getExtensionsProvider = adminWeb.getExtensionProviders();
-					assertEquals((isquery(getExtensionsProvider) && FindNocase( 'http://www.myhost.com',valueList(getExtensionsProvider.url)) EQ 0) ,true);
+					assertEquals(isArray(getExtensionsProvider) ,true);
+					assertEquals(arrayFindAllNoCase(getExtensionsProvider,"rasia.ch") > 0 ,false);
 				});
 			});
 

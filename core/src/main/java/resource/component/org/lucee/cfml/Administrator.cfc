@@ -834,7 +834,7 @@ component {
 		}
 		else {
 			admin
-				action="updateRHExtension"
+				action="updateExtension"
 				type=variables.type
 				password=variables.password
 				source=arguments.id;
@@ -847,7 +847,7 @@ component {
 	*/
 	public void function removeExtension( required string id  ){
 		admin
-			action="removeRHExtension"
+			action="removeExtension"
 			type="#variables.type#"
 			password="#variables.password#"
 			id="#arguments.id#";
@@ -859,7 +859,7 @@ component {
 	*/
 	public query function getServerExtensions(){
 		admin
-			action="getRHServerExtensions"
+			action="getServerExtensions"
 			type="#variables.type#"
 			password="#variables.password#"
 			returnVariable="local.rtn";
@@ -895,9 +895,9 @@ component {
 	/**
 	* @hint returns the list of extension providers for current context.
 	*/
-	public query function getExtensionProviders(){
+	public array function getExtensionProviders() {
 		admin
-			action="getRHExtensionProviders"
+			action="getExtensionGroups"
 			type="#variables.type#"
 			password="#variables.password#"
 			returnVariable="local.providers";
@@ -905,41 +905,27 @@ component {
 	}
 
 	/**
-	* @hint verifies whether it is an extension provider or not
-	* @url URL to the Extension Provider (Example: http://www.myhost.com)
-	*/
-	public void function verifyExtensionProvider( required string url ){
-		admin
-			action="verifyExtensionProvider"
-			type="#variables.type#"
-			password="#variables.password#"
-			url="#arguments.url#";
-	}
-
-	/**
 	* @hint updates extension provider for current context.
-	* @url URL to the Extension Provider (Example: http://www.myhost.com)
+	* @groupId maven groupId for the extension provider
 	*/
-	public void function updateExtensionProvider( required string url ){
-		admin
-			action="updateRHExtensionProvider"
-			type="#variables.type#"
-			password="#variables.password#"
-
-			url="#trim(arguments.url)#";
+	public void function updateExtensionProvider( required string groupId ){
+		cfadmin(
+			action="updateExtensionGroups",
+			type=variables.type,
+			password=variables.password,
+			groupId=trim(arguments.groupId));
 	}
 
 	/**
 	* @hint removes the extension provider for current context.
-	* @url URL to the Extension Provider (Example: http://www.myhost.com)
+	* @groupId maven groupId for the extension provider
 	*/
 	public void function removeExtensionProvider( required string url ){
-		admin
-			action="removeRHExtensionProvider"
-			type="#variables.type#"
-			password="#variables.password#"
-
-			url="#trim(arguments.url)#";
+		cfadmin(
+			action="removeExtensionGroups",
+			type=variables.type,
+			password=variables.password,
+			groupId=trim(arguments.groupId));
 	}
 
 	/**
