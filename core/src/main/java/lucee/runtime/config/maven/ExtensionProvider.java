@@ -227,7 +227,7 @@ public class ExtensionProvider {
 	public static GAVSO toGAVSO(ConfigPro config, String uuid, boolean investigate, GAVSO defaultValue) {
 		GAVSO gavso = toGAVSOSimple(uuid, null);
 		if (gavso != null) return gavso;
-
+		config = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 		if (investigate) {
 			for (String groupId: config.getExtensionProvidersGroupIds()) {
 				try {

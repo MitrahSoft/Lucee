@@ -1474,7 +1474,7 @@ public final class RHExtension implements Serializable {
 		}
 
 		if (getId() != null) {
-			GAVSO tmp = ExtensionProvider.toGAVSO(null, getId(), true, null);
+			GAVSO tmp = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), true, null);
 			if (tmp != null) {
 				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
 				return gavso.g;
