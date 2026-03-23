@@ -5605,7 +5605,8 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 					// Remove legacy URL-based providers (pre-7.2 REST endpoints)
 					extensionProviders.removeIf(p -> p.startsWith("http://") || p.startsWith("https://"));
 
-					if (extensionProviders.size() == 0) {
+					// "org.lucee" always needs to exist
+					if (extensionProviders.size() == 0 || !extensionProviders.contains("org.lucee")) {
 						extensionProviders.add("org.lucee");
 					}
 				}
