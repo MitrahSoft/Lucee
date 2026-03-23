@@ -1,13 +1,19 @@
-<cfset current.label = "Lucee " & server.lucee.version & " - " & current.label>
-<cfset error.message="">
-<cfset error.detail="">
-<cfparam name="form.mainAction" default="none">
-<!--- load asynchron all extension providers  --->
-<cfif isNull(application[request.admintype].preloadedExtensionProviders)><cfset application[request.admintype].preloadedExtensionProviders=false></cfif>
-<cfif !application[request.admintype].preloadedExtensionProviders>
-	<cfinclude template="ext.functions.cfm">
-	<cfset application[request.admintype].preloadedExtensionProviders=true>
-</cfif>
+<cfscript>
+	current.label = "Lucee " & server.lucee.version & " - " & current.label;
+	error.message="";
+	error.detail="";
+	if(isNull(form.mainAction)) form.mainAction="none";
+
+	// load asynchron all extension providers 
+	/*if(isNull(application.preloadedExtensionProviders)) application.preloadedExtensionProviders=false;
+	if(!application.preloadedExtensionProviders) {
+		thread name="preloadedExtensionProviders#createUniqueID()#" {
+			include "ext.functions.cfm";
+			external=getLuceeExtensions(getExtensionGroups());
+		}
+		application.preloadedExtensionProviders=true;
+	}*/
+</cfscript>
 
 <cftry>
 	<cfswitch expression="#form.mainAction#">
