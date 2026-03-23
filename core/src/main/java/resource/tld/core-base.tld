@@ -11257,6 +11257,7 @@ dWord: creates a value of 0 (zero)</description>
 			<default>keyword</default>
 			<required>false</required>
 			<rtexprvalue>true</rtexprvalue>
+			<introduced>7.0.0.221</introduced>
 		<description>Specifies the search algorithm to use when querying this collection. Options:
 - `keyword`: Traditional term-based search using Lucene (default)
 - `vector`: Pure semantic search using vector embeddings
@@ -11270,6 +11271,7 @@ When set to `keyword`, the `embedding` attribute is ignored. Vector and hybrid m
 			<alias>embeddingService</alias>
 			<required>false</required>
 			<rtexprvalue>true</rtexprvalue>
+			<introduced>7.0.0.218</introduced>
 		<description>Specifies the embedding service to use for creating vector representations of documents,
 enabling semantic search capabilities. Default is "TF-IDF" if not specified.
 This attribute is ignored when `mode="keyword"`. Valid options:
@@ -11284,6 +11286,7 @@ This attribute is ignored when `mode="keyword"`. Valid options:
 			<required>false</required>
 			<default>0.5</default>
 			<rtexprvalue>true</rtexprvalue>
+			<introduced>7.0.0.221</introduced>
 			<description>When `mode="hybrid"`, this value controls the balance between keyword and vector search components. Value range is 0.0 to 1.0, where:
 - 0.5: Equal weight given to both keyword and vector search (default)
 - Values greater than 0.5: Greater emphasis on vector search (semantic matching)
