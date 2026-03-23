@@ -111,6 +111,9 @@ component extends="org.lucee.cfml.test.LuceeTestCase"	{
 
             it( title="check admin updates notification (JSON)", body=function(){
                 local.content = checkUrl( adminRoot, "update.cfm?adminType=server&json=true", 200 );
+                systemOutput("---#local.content#---",1,1);
+                
+                
                 expect( isJson( local.content ) ).toBeTrue( "Response should be JSON" );
                 local.data = deserializeJson( local.content );
                 local.TAB = chr( 9 );
