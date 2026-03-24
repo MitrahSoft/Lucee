@@ -73,7 +73,7 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
-			classLoaders.put(key, new CachedLoader(flushed));
+			classLoaders.put(key, cached = new CachedLoader(flushed));
 			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
 					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 		}
@@ -118,7 +118,7 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
-			classLoaders.put(key, new CachedLoader(flushed));
+			classLoaders.put(key, cached = new CachedLoader(flushed));
 			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
 					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 		}
@@ -153,7 +153,7 @@ public class PhysicalClassLoaderFactory {
 		// at this point we know we had an existing one
 		PhysicalClassLoader flushed = PhysicalClassLoader.flushIfNecessary(cached.get(), c);
 		if (flushed != null) {
-			classLoaders.put(key, new CachedLoader(flushed));
+			classLoaders.put(key, cached = new CachedLoader(flushed));
 			if (doesTrace) LogUtil.log(Log.LEVEL_TRACE, "physical-classloader",
 					"set new PhysicalClassLoader with key [" + key + "], there are now [" + classLoaders.size() + "] PhysicalClassLoaders loaded.");
 		}
