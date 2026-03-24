@@ -66,7 +66,7 @@ public final class LuceeExtension extends BIF {
 
 				// local resource
 				if (download) {
-					Resource local = ep.getResource((ConfigPro) pc.getConfig(), artifactId, version);
+					Resource local = ep.getLEXResource((ConfigPro) pc.getConfig(), artifactId, version);
 					sct.set(KeyConstants._local, local.getAbsolutePath());
 
 					RHExtension ext = RHExtension.getInstance(pc.getConfig(), local, pc.getConfig().getLog("application"));

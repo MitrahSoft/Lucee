@@ -51,12 +51,9 @@
 			type="#adminType#"
 			password="#password#"
 			returnVariable="extensions"><!--- #session["password"&url.adminType]# --->
+		
 		<cfif extensions.recordcount GT 0>
-			<cfadmin 
-				action="getRHExtensionProviders"
-				type="#adminType#"
-				password="#password#"
-				returnVariable="providers">
+			
 			
 			<cfset request.adminType=url.adminType>
 			<cfset external=getLuceeExtensions(getExtensionGroups())>
@@ -71,8 +68,7 @@
 						updateVersion = updateAvailable( sct, external );
 						if ( updateVersion eq "false" )
 							continue;
-						uid = extensions.id;
-						link = "?action=ext.applications&action2=detail&id=#uid#";
+						link = "?action=ext.applications&action2=detail&id=#extensions.id#&groupId=#extensions.groupId#&artifactId=#extensions.artifactId#";
 						arrayAppend( extUpdates, {
 							"name": extensions.name,
 							"current": sct.version,
@@ -86,12 +82,8 @@
 			</cfsavecontent>
 		</cfif>
 
-
-
-
 		<cfsavecontent variable="content" trim="true">
 			<cfoutput>
-				
 				<!--- Core --->
 				<cfif adminType == "server" and hasUpdate>
 					<div class="error">
@@ -110,19 +102,6 @@
 					</a>
 				</div>
 				</cfif>
-				
-				<!--- Promotion<div class="normal"></div> disabled for the moment
-				<cfif promotion.level GT 0>
-					
-					<h3><a href="#promotion.uri#">#promotion.label#</a></h3>
-					<cfif len(promotion.img)>
-						<img src="#promotion.img#"  /><br>
-					</cfif>
-					<span class="comment">#promotion.txt#</span>
-					
-				</cfif>
-				 --->
-				
 			</cfoutput>
 		</cfsavecontent>
 		<cfset session[id].content=content>
@@ -130,29 +109,23 @@
 	<cfelse>
 		<cfset content=session[id].content>
 	</cfif>
-
-	<cfif url.json>
-		<cfset result = {
-			"currentVersion": server.lucee.version,
-			"hasUpdate": adminType == "server" && ( hasUpdate ?: false ),
-			"availableVersion": available ?: "",
-			"extensionUpdates": extUpdates ?: []
-		}>
-		<cfsetting showdebugoutput="false">
-		<cfcontent reset="yes" type="application/json">
-		<cfoutput>#serializeJson( result )#</cfoutput>
-		<cfabort>
-	</cfif>
-
+<cfscript>
+if(url.json?:false) {
+	result = {
+		"currentVersion": server.lucee.version,
+		"hasUpdate": adminType == "server" && ( hasUpdate ?: false ),
+		"availableVersion": available ?: "",
+		"extensionUpdates": extUpdates ?: []
+	};
+	cfsetting(showdebugoutput=false);
+	cfcontent(reset=true, type="application/json");
+	echo(serializeJson( result ));
+	abort;
+}
+</cfscript>
 	<cfoutput>#content#</cfoutput>
-	
 	<cfcatch>
-		<cfoutput>
-			<!--- <div class="error">
-				Failed to retrieve update information<br>
-				<span class="comment">#cfcatch.message# #cfcatch.detail#</span>
-			</div> --->
-		</cfoutput>
+		<cfset systemOutput(cfcatch,true)>
 	</cfcatch>
 </cftry>
 <cfabort>

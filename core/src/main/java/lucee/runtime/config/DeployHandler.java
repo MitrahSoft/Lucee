@@ -391,7 +391,7 @@ public final class DeployHandler {
 			}
 			if (version == null) return null;
 
-			return ep.getResource(config, gav.a, version);
+			return ep.getLEXResource(config, gav.a, version);
 		}
 		catch (Exception e) {
 			if (throwOnError) throw Caster.toPageException(e);

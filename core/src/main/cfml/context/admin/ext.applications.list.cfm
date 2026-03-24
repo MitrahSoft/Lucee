@@ -273,7 +273,11 @@ Latest version: #latest.v#</cfif>"><cfif hasUpdates>
 										</cfif>
 									</div>
 									<cfset listnotinstalled = listnotinstalled+1>
-									<b title="#versionStr[key].name#">#cut(versionStr[key].name,30)#</b><br />
+									<cfset name=versionStr[key].name>
+									<cfif isEmpty(name)>
+										<cfset name=versionStr[key].artifactId>
+									</cfif>
+									<b title="#versionStr[key].name#">#cut(name,30)#</b><br />
 									<!------>
 									#versionStr[key].groupId?:""#
 								</a>
