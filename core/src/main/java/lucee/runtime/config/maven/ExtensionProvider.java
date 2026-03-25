@@ -86,6 +86,7 @@ public class ExtensionProvider {
 		uuidMapping.put("D4EDFDBD-A9A3-E9AF-597322D767E0C949", "oracle-jdbc-extension");
 		uuidMapping.put("671B01B8-B3B3-42B9-AC055A356BED5281", "postgresql-jdbc-extension");
 		uuidMapping.put("337A9955-C0FA-848F-0B3F0AEBA155CA9B", "teradata-jdbc-extension");
+		uuidMapping.put("FA79A831-7D30-4D8A-B7F300DECEB00001", "debugger-extension");
 		uuidMapping.put("D46B46A9-A0E3-44E1-D972A04AC3A8DC10", "chart-extension");
 		uuidMapping.put("A03F4335-BDEF-44DE-946FB16C47802F96", "json-extension");
 		uuidMapping.put("D6700FE4-E168-4512-9B95E1AE7784A3A5", "kinesis-extension");
