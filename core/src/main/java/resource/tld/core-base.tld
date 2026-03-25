@@ -11626,7 +11626,7 @@ Permits searching collections by title or displaying a separate title from the k
 		</attribute>
 		<attribute>
 		    <type>number</type>
-		    <introduced>7.0.3.29</introduced>
+		    <introduced>7.0.3.30</introduced>
 		    <name>contextPassages</name>
 		    <required>false</required>
 		    <default>0</default>
@@ -11639,7 +11639,7 @@ Permits searching collections by title or displaying a separate title from the k
 		
 		<attribute>
 		    <type>number</type>
-		    <introduced>7.0.3.29</introduced>
+		    <introduced>7.0.3.30</introduced>
 		    <name>contextPassageLength</name>
 		    <required>false</required>
 		    <default>150</default>
@@ -11651,7 +11651,7 @@ Permits searching collections by title or displaying a separate title from the k
 		
 		<attribute>
 		    <type>number</type>
-		    <introduced>7.0.3.29</introduced>
+		    <introduced>7.0.3.30</introduced>
 		    <name>contextBytes</name>
 		    <required>false</required>
 		    <default>1000</default>
@@ -11663,7 +11663,7 @@ Permits searching collections by title or displaying a separate title from the k
 		
 		<attribute>
 		    <type>string</type>
-		    <introduced>7.0.3.29</introduced>
+		    <introduced>7.0.3.30</introduced>
 		    <name>contextHighlightBegin</name>
 		    <required>false</required>
 		    <rtexprvalue>true</rtexprvalue>
@@ -11674,7 +11674,7 @@ Permits searching collections by title or displaying a separate title from the k
 		
 		<attribute>
 		    <type>string</type>
-		    <introduced>7.0.3.29</introduced>
+		    <introduced>7.0.3.30</introduced>
 		    <name>contextHighlightEnd</name>
 		    <required>false</required>
 		    <rtexprvalue>true</rtexprvalue>
