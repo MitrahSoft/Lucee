@@ -180,7 +180,7 @@ public final class MappingImpl implements Mapping {
 				if (physical == null && strPhysical != null) {
 					ServletContext cs = (config instanceof ConfigWeb) ? ((ConfigWeb) config).getServletContext() : null;
 					physical = ConfigUtil.getResource(cs, strPhysical, config.getConfigDir(), FileUtil.TYPE_DIR, config, checkPhysicalFromWebroot, false);
-					if (archive == null) this.physicalFirst = true;
+					if (strArchive == null) this.physicalFirst = true;
 					else if (physical == null) this.physicalFirst = false;
 				}
 			}
@@ -207,8 +207,8 @@ public final class MappingImpl implements Mapping {
 						tmp = null;
 					}
 
-					if (tmp == null) this.physicalFirst = true;
-					else if (physical == null) this.physicalFirst = false;
+					if (tmp == null && strPhysical != null) this.physicalFirst = true;
+					else if (strPhysical == null) this.physicalFirst = false;
 					archive = tmp;
 				}
 			}

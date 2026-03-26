@@ -644,6 +644,8 @@
 			"archivehead": "Archivo",
 			"archiveheaddescription": "Nombre del archivo de archivo (absoluto o relativo al directorio raíz del sitio web)",
 			"archivemissing": "Por favor ingresa un valor para el nombre de archivo (fila ",
+			"archivePath": "Nombre del archivo",
+			"archivePathDesc": "Nombre del archivo (.lar).",
 			"archivesecure": "Seguro",
 			"archivetitle": "crear archivo",
 			"compiledesc": "Compilar todos los archivos cfm y cfc dentro del mapeo",

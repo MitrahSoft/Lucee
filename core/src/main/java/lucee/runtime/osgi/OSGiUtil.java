@@ -197,8 +197,8 @@ public final class OSGiUtil {
 			Bundle existing = loadBundleFromLocal(context, bf.getSymbolicName(), bf.getVersion(), null, false, null);
 			if (existing != null) return existing;
 		}
-
-		return _loadBundle(context, bundle.getAbsolutePath(), bundle.getInputStream(), true);
+		BundleFile bf = BundleFile.getInstance(bundle);
+		return _loadBundle(context, bf.getSymbolicName() + ":" + bf.getVersionAsString(), bundle.getInputStream(), true);
 	}
 
 	/**
