@@ -333,7 +333,7 @@ public final class Search extends TagImpl {
 
 		SearchCollection collection;
 		long time = System.currentTimeMillis();
-		AddionalAttrs.setAddionalAttrs(contextBytes, contextPassages, contextHighlightBegin, contextHighlightEnd);
+		AddionalAttrs.setAddionalAttrs(contextBytes, contextPassages, contextPassageLength, contextHighlightBegin, contextHighlightEnd);
 		try {
 			for (int i = 0; i < collections.length; i++) {
 				collection = collections[i];
