@@ -63,6 +63,7 @@ public class ExtensionProvider {
 		uuidMapping.put("DF28D0A4-6748-44B9-A2FDC12E4E2E4D38", "axis-extension");
 		uuidMapping.put("8D7FB0DF-08BB-1589-FE3975678F07DB17", "compress-extension");
 		uuidMapping.put("0F6E1F35-32A0-4B8C-B5A4BBA87EE621A8", "couchbase-extension");
+		uuidMapping.put("17AB52DE-B300-A94B-E058FC978BE4542D", "crypto-extension");
 		uuidMapping.put("1E12B23C-5B38-4764-8FF41B7FD9428468", "distrokid-extension");
 		uuidMapping.put("D46D49C3-EB85-8D97-30BEC2F38561E985", "documentation-extension");
 		uuidMapping.put("261114AC-7372-4CA8-BA7090895E01682D", "ec2-extension");
@@ -88,6 +89,7 @@ public class ExtensionProvider {
 		uuidMapping.put("337A9955-C0FA-848F-0B3F0AEBA155CA9B", "teradata-jdbc-extension");
 		uuidMapping.put("D46B46A9-A0E3-44E1-D972A04AC3A8DC10", "chart-extension");
 		uuidMapping.put("A03F4335-BDEF-44DE-946FB16C47802F96", "json-extension");
+		uuidMapping.put("7FA79F92-0018-47F5-8C80E6C608C573BE", "jsonata-extension");
 		uuidMapping.put("D6700FE4-E168-4512-9B95E1AE7784A3A5", "kinesis-extension");
 		uuidMapping.put("EAF0AAF1-E068-4BA7-B72FF3D8E730696C", "lsp-extension");
 		uuidMapping.put("1C9A7C34-2555-4AAA-92FBB7FC7111140C", "loganalyzer-extension");
