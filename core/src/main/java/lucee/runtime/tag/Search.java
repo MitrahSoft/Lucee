@@ -30,7 +30,7 @@ import lucee.runtime.op.Decision;
 import lucee.runtime.search.AddionalAttrs;
 import lucee.runtime.search.SearchCollection;
 import lucee.runtime.search.SearchData;
-import lucee.runtime.search.SearchDataPro;
+
 import lucee.runtime.search.SearchEngine;
 import lucee.runtime.search.SearchException;
 import lucee.runtime.search.SuggestionItem;
@@ -311,23 +311,13 @@ public final class Search extends TagImpl {
 		String[] types = new String[] { v, v, v, d, d, v, v, v, v, v, v, v, v, d, d, v, v, v };
 		SearchData data = pageContext.getConfig().getSearchEngine(pageContext).createSearchData(suggestions);
 
-		// pass additional attributes to the search engine via SearchDataPro
-		if (data instanceof SearchDataPro) {
-			SearchDataPro sdp = (SearchDataPro) data;
-			sdp.setAddionalAttribute( "contextBytes", contextBytes );
-			sdp.setAddionalAttribute( "contextPassages", contextPassages );
-			sdp.setAddionalAttribute( "contextPassageLength", contextPassageLength );
-			sdp.setAddionalAttribute( "contextHighlightBegin", contextHighlightBegin );
-			sdp.setAddionalAttribute( "contextHighlightEnd", contextHighlightEnd );
-		}
-
 		SuggestionItem item = null;// this is already here to make sure the classloader load this sinstance
 
 		lucee.runtime.type.Query qry = new QueryImpl(cols, types, 0, "query");
 
 		SearchCollection collection;
 		long time = System.currentTimeMillis();
-		AddionalAttrs.setAddionalAttrs(contextBytes, contextPassages, contextHighlightBegin, contextHighlightEnd);
+		AddionalAttrs.setAddionalAttrs(contextBytes, contextPassages, contextPassageLength, contextHighlightBegin, contextHighlightEnd);
 		try {
 			for (int i = 0; i < collections.length; i++) {
 				collection = collections[i];
