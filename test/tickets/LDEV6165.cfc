@@ -82,7 +82,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mapping,archive" {
 				expect( greeting ).toBe( "cfml-only" );
 			});
 
-			it( title="should resolve pages from a LAR archive with mixed content", skip=true, body=function() {
+			it( title="should resolve pages from a LAR archive with mixed content", body=function() {
 				var testDir = getTempDirectory() & "LDEV6165/mixed/";
 				var srcDir = testDir & "src/";
 				var larFile = testDir & "test.lar";
