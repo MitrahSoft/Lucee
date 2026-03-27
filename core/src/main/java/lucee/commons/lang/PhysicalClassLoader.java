@@ -124,24 +124,18 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 		if (instance != null) count += instance.remove(existing);
 		count += ClazzDynamic.remove(existing);
 
-		// create log entry
-		int all = existing.allLoadedClasses.size();
-		int unique = existing.loadedClasses.size();
-		int allClassesBytes = 0;
-		for (Integer i: existing.allLoadedClasses.values()) {
-			allClassesBytes += i.intValue();
-		}
-
 		ClazzDynamic.flush(existing);
 
-		try {
-			existing.close();
+		if (LogUtil.does(Log.LEVEL_TRACE)) {
+			int all = existing.allLoadedClasses.size();
+			int unique = existing.loadedClasses.size();
+			int allClassesBytes = 0;
+			for (Integer i: existing.allLoadedClasses.values()) {
+				allClassesBytes += i.intValue();
+			}
+			LogUtil.log(Log.LEVEL_TRACE, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
+					+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
 		}
-		catch (IOException e) {}
-
-		int level = (pagesCleared > 0 || count > 0) ? Log.LEVEL_INFO : Log.LEVEL_DEBUG;
-		LogUtil.log(level, "physical-classloader", "flush physical classloader [" + existing.getDirectory() + "] (classes: " + all + "/" + unique + ", "
-				+ StringUtil.byteFormat(allClassesBytes) + ", pages cleared: " + pagesCleared + ", dynamic invoker: " + count + ")");
 
 		return clone;
 	}
