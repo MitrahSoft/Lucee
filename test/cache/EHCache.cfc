@@ -33,6 +33,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="cache,ehCache" {
 	}
 
 	public void function testClassExist() {
+		createObject('java','org.lucee.extension.cache.eh.EHCache','ehcache.extension');
 		createObject('java','org.lucee.extension.cache.eh.EHCache','org.lucee.ehcache.extension');
 	}
 
