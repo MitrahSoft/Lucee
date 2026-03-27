@@ -87,7 +87,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="mapping,archive" {
 				var testDir = getTempDirectory() & "LDEV6165/mixed/";
 				var srcDir = testDir & "src/";
 				var larFile = testDir & "test.lar";
-				var virtual=variables.testVirtualPrefix&"CFMLOnly";
+				var virtual=variables.testVirtualPrefix&"Mixed";
 				
 				// cleanup from previous runs
 				if ( directoryExists( testDir ) ) directoryDelete( testDir, true );
