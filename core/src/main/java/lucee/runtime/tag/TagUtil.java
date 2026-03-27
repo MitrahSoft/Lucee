@@ -73,10 +73,13 @@ public class TagUtil {
 	public static final short UPPER_CASE = 1;
 	public static final short LOWER_CASE = 2;
 
-	// private static final String "invalid call of the function ["+tlt.getName()+", you can not mix
-	// named on regular arguments]" = "invalid argument for
-	// function, only named arguments are allowed like struct(name:\"value\",name2:\"value2\")";
+	// used by compiled cfml code
+	public static void setAttributeCollection(final PageContext pc, final Object tag, final MissingAttribute[] missingAttrs, final Struct _attrs, final int attrType)
+			throws PageException {
+		setAttributeCollection(pc, (Tag) tag, missingAttrs, _attrs, attrType);
+	}
 
+	// used by compiled cfml code
 	public static void setAttributeCollection(final PageContext pc, final Tag tag, final MissingAttribute[] missingAttrs, final Struct _attrs, final int attrType)
 			throws PageException {
 

@@ -122,8 +122,7 @@ public class JavaProxyFactory {
 	private static final org.objectweb.asm.commons.Method GET_INSTANCE = new org.objectweb.asm.commons.Method("getInstance", CFML_ENGINE, new Type[] {});
 	private static final org.objectweb.asm.commons.Method GET_THREAD_CONFIG = new org.objectweb.asm.commons.Method("getThreadConfig", Types.CONFIG, new Type[] {});
 	private static final org.objectweb.asm.commons.Method GET_THREAD_PAGECONTEXT = new org.objectweb.asm.commons.Method("getThreadPageContext", Types.PAGE_CONTEXT, new Type[] {});
-	private static final org.objectweb.asm.commons.Method CREATE_PAGECONTEXT = new org.objectweb.asm.commons.Method("createPageContext", Types.PAGE_CONTEXT, new Type[] {
-			Types.FILE, Types.STRING, Types.STRING, Types.STRING, Types.COOKIE_ARRAY, Types.MAP, Types.MAP, Types.MAP, Types.OUTPUTSTREAM, Types.LONG_VALUE, Types.BOOLEAN_VALUE });
+	private static final org.objectweb.asm.commons.Method CREATE_PAGECONTEXT = new org.objectweb.asm.commons.Method("createPageContext", Types.PAGE_CONTEXT, new Type[] {});
 
 	private static final org.objectweb.asm.commons.Method GET_JAVA_PROXY_UTIL = new org.objectweb.asm.commons.Method("getJavaProxyUtil", Types.OBJECT, // FUTURE change to JavaProxy
 			new Type[] {});
@@ -307,23 +306,8 @@ public class JavaProxyFactory {
 					adapter.loadThis();
 					adapter.invokeConstructor(Types.OBJECT, SUPER_CONSTRUCTOR);
 
-					// PageContext pc=CFMLEngineFactory.getInstance().createPageContext((File)null,
-					// "getThreadPageContext:boolean", (String)null, (String)null, (Cookie[])null, (Map)null, (Map)null,
-					// (Map)null, (OutputStream)null, -1L, true);
-					adapter.invokeStatic(CFML_ENGINE_FACTORY, GET_INSTANCE);
-					adapter.visitInsn(Opcodes.ACONST_NULL); // File
-					adapter.push("getThreadPageContext:boolean"); // String
-					adapter.visitInsn(Opcodes.ACONST_NULL); // String
-					adapter.visitInsn(Opcodes.ACONST_NULL); // String
-					adapter.visitInsn(Opcodes.ACONST_NULL); // Cookie[]
-					adapter.visitInsn(Opcodes.ACONST_NULL); // Map
-					adapter.visitInsn(Opcodes.ACONST_NULL); // Map
-					adapter.visitInsn(Opcodes.ACONST_NULL); // Map
-					adapter.visitInsn(Opcodes.ACONST_NULL); // OutputStream
-					adapter.push(-1L); // long
-					adapter.push(true); // boolean
-
-					adapter.invokeInterface(CFML_ENGINE, CREATE_PAGECONTEXT);
+					// PageContextUtil.createPageContext();
+					adapter.invokeStatic(Types.PAGE_CONTEXT_UTIL, CREATE_PAGECONTEXT);
 					adapter.visitVarInsn(Opcodes.ASTORE, 1); // Store the PageContext in a local variable (index 1)
 
 					// this.config = pc.getConfig();

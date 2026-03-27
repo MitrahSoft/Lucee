@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -222,8 +223,7 @@ public class PageContextUtil {
 	public static TimeSpan remainingTime(PageContext pc, boolean throwWhenAlreadyTimeout) throws RequestTimeoutException {
 		long ms = pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime());
 		if (ms > 0) {
-			if (ms < 5) {
-			}
+			if (ms < 5) {}
 			else if (ms < 10) ms = ms - 1;
 			else if (ms < 50) ms = ms - 5;
 			else if (ms < 200) ms = ms - 10;
@@ -291,5 +291,18 @@ public class PageContextUtil {
 	public static boolean show(PageContext pc) {
 		if (pc != null) return ((PageContextImpl) pc).show();
 		return false;
+	}
+
+	public static PageContext createPageContext() throws PageException {
+		try {
+			return CFMLEngineFactory.getInstance().createPageContext(null, "getThreadPageContext:boolean", null, null, null, null, null, null, null, -1L, true);
+		}
+		catch (ServletException e) {
+			throw Caster.toPageException(e);
+		}
+	}
+
+	public static void popBody(PageContext pc) {
+		pc.popBody();
 	}
 }
