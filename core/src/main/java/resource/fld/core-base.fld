@@ -7979,7 +7979,11 @@ The following things are considered to be empty:
 		<member-name>int</member-name>
 		<class>lucee.runtime.functions.math.Int</class>
 		<keywords>number</keywords>
-		<description>Calculates the closest integer that is smaller than number.</description>
+		<description>
+			Returns the largest integer less than or equal to the given number (floor). 
+			For negative numbers, this rounds away from zero (e.g., int(-1.7) returns -2). 
+			The result is not limited to a 32-bit integer range and can handle large values such as epoch timestamps.
+		</description>
 		<argument>
 			<name>number</name>
 			<type>number</type>
