@@ -126,11 +126,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 		ClazzDynamic.flush(existing);
 
-		try {
-			existing.close();
-		}
-		catch (IOException e) {}
-
 		if (LogUtil.does(Log.LEVEL_TRACE)) {
 			int all = existing.allLoadedClasses.size();
 			int unique = existing.loadedClasses.size();
