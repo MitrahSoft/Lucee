@@ -438,8 +438,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 						file = new File(f, relResource).getCanonicalFile();
 					}
 				}
-				catch (URISyntaxException e) {
-				}
+				catch (URISyntaxException e) {}
 			}
 			if (file == null || ((dir && !file.isDirectory()) || (!dir && !file.isFile()))) {
 				throw new IOException("could not find the " + subject + " (" + desc + "), please set the enviroment variable [" + envVarName + "] that points to it.");
@@ -479,8 +478,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			}
 			jos.closeEntry();
 		}
-		catch (Exception ex) {
-		}
+		catch (Exception ex) {}
 	}
 
 	private static void addDirectoryToJar(JarOutputStream jos, File folder, String parentEntryName, FilenameFilter filter) throws IOException {
@@ -542,13 +540,15 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			}
 			else if (Util.isNewerThan(MIN_VERSION, specificVersion)) {
 				log(org.apache.felix.resolver.Logger.LOG_ERROR,
-						"Lucee version requested [" + specificVersion + "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader requires at least version ["
+						"Lucee version requested [" + specificVersion
+								+ "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader requires at least version ["
 								+ MIN_VERSION + "].");
 				specificVersion = null;
 			}
 			else if (Util.isNewerThan(specificVersion, MAX_VERSION)) {
 				log(org.apache.felix.resolver.Logger.LOG_ERROR,
-						"Lucee version requested [" + specificVersion + "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader only supports versions up to ["
+						"Lucee version requested [" + specificVersion
+								+ "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader only supports versions up to ["
 								+ MAX_VERSION + "].");
 				specificVersion = null;
 			}
@@ -675,7 +675,21 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 				setEngine(engine);
 			}
 			else {
-				bundleCollection = BundleLoader.loadBundles(this, getFelixCacheDirectory(), getBundleDirectory(), lucee, bundleCollection);
+				try {
+					bundleCollection = BundleLoader.loadBundles(this, getFelixCacheRootDirectory(), getBundleDirectory(), lucee, bundleCollection);
+				}
+				catch (BundleException be) {
+					// PATHC for LDEV-6144: stale felix cache (bundle registered at old path after rename, e.g. from
+					// LDEV-6145).
+					// Clear the cache and retry once with a fresh Felix instance.
+					if (be.getMessage() != null && be.getMessage().contains("not unique")) {
+						log(org.apache.felix.resolver.Logger.LOG_WARNING, "Felix cache is stale (bundle name conflict: " + be.getMessage() + "), clearing cache and retrying");
+						Util.deleteContent(getFelixCacheDirectory(), null);
+						bundleCollection = BundleLoader.loadBundles(this, getFelixCacheRootDirectory(), getBundleDirectory(), lucee, null);
+					}
+					else throw be;
+				}
+
 				// bundle=loadBundle(lucee);
 				log(org.apache.felix.resolver.Logger.LOG_DEBUG, "Loaded bundle: [" + bundleCollection.core.getSymbolicName() + "]");
 				setEngine(getEngine(bundleCollection));
@@ -822,10 +836,10 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		catch (BundleException be) {
 			// this could be cause by an invalid felix cache, so we simply delete it and try again
 			if (!isNew && "Error creating bundle cache.".equals(be.getMessage())) {
-				Util.deleteContent(cacheRootDir, null);
+				Util.deleteContent(new File(cacheRootDir, "felix-cache"), null);
 
 			}
-
+			else throw be;
 		}
 
 		return felix;
@@ -869,7 +883,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 
 	private CFMLEngine _getCore(File rc) throws IOException, BundleException, ClassNotFoundException, SecurityException, NoSuchMethodException, IllegalArgumentException,
 			IllegalAccessException, InvocationTargetException {
-		bundleCollection = BundleLoader.loadBundles(this, getFelixCacheDirectory(), getBundleDirectory(), rc, bundleCollection);
+		bundleCollection = BundleLoader.loadBundles(this, getFelixCacheRootDirectory(), getBundleDirectory(), rc, bundleCollection);
 		return getEngine(bundleCollection);
 
 	}
@@ -930,7 +944,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		final Version v = null;
 		try {
 
-			bundleCollection = BundleLoader.loadBundles(this, getFelixCacheDirectory(), getBundleDirectory(), newLucee, bundleCollection);
+			bundleCollection = BundleLoader.loadBundles(this, getFelixCacheRootDirectory(), getBundleDirectory(), newLucee, bundleCollection);
 			final CFMLEngine e = getEngine(bundleCollection);
 			if (e == null) throw new IOException("Failed to load engine");
 			version = e.getInfo().getVersion();
@@ -951,8 +965,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			try {
 				newLucee.delete();
 			}
-			catch (final Exception ee) {
-			}
+			catch (final Exception ee) {}
 			log(e);
 			e.printStackTrace();
 			return false;
@@ -1479,11 +1492,22 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		return bd;
 	}
 
-	public File getFelixCacheDirectory() throws IOException {
+	/**
+	 * Returns the root resource directory to use as Felix's cache parent. Felix automatically creates a
+	 * "felix-cache" subdirectory inside whatever path is provided here, so passing getResourceRoot()
+	 * results in "felix-cache" being created there directly. Do NOT return new File(getResourceRoot(),
+	 * "felix-cache") — that would produce a nested "felix-cache/felix-cache" directory.
+	 *
+	 * @return the parent directory for Felix's cache
+	 * @throws IOException
+	 */
+	public File getFelixCacheRootDirectory() throws IOException {
 		return getResourceRoot();
-		// File bd = new File(getResourceRoot(),"felix-cache");
-		// if(!bd.exists())bd.mkdirs();
-		// return bd;
+	}
+
+	// this is not necessarly correct, becuae this can be customized, but is never done
+	public File getFelixCacheDirectory() throws IOException {
+		return new File(getResourceRoot(), "felix-cache");
 	}
 
 	/**
