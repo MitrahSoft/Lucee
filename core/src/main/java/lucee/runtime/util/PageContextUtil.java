@@ -314,14 +314,13 @@ public final class PageContextUtil {
 		throw new ApplicationException("unable to load inline component [" + inlineName + "] from [" + realPath + "]");
 	}
 
-	/**
-	 * used by compiled code
-	 * 
-	 * @throws RuntimeException
-	 * @throws ServletException
-	 */
-	public static PageContext createPageContext() throws ServletException {
-		return CFMLEngineFactory.getInstance().createPageContext(null, "getThreadPageContext:boolean", null, null, null, null, null, null, null, -1L, true);
+	public static PageContext createPageContext() throws PageException {
+		try {
+			return CFMLEngineFactory.getInstance().createPageContext(null, "getThreadPageContext:boolean", null, null, null, null, null, null, null, -1L, true);
+		}
+		catch (ServletException e) {
+			throw Caster.toPageException(e);
+		}
 	}
 
 	public static void popBody(PageContext pc) {
