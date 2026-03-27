@@ -878,7 +878,8 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			// this could be cause by an invalid felix cache, so we simply delete it and try again
 			if (!isNew && "Error creating bundle cache.".equals(be.getMessage())) {
 				Util.deleteContent(new File(felixCacheRootdir, "felix-cache"), null);
-
+				felix = new Felix(config);
+				felix.start();
 			}
 
 		}
