@@ -7538,6 +7538,23 @@ Default list delimiter: comma character.</description>
 			<type>string</type>
 		</return>
 	</function>
+	<!-- GetTransactionIsolation -->
+	<function>
+		<name>getTransactionIsolation</name>
+		<class>lucee.runtime.functions.query.GetTransactionIsolation</class>
+		<introduced>7.1.0.70</introduced>
+		<keywords>query,datasource,transaction</keywords>
+		<description>Returns the isolation level of the current transaction as a string. If a datasource is provided and no explicit isolation is set, returns the datasource's default isolation level.</description>
+		<argument>
+			<name>datasource</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Datasource name. When provided and no explicit isolation is set on the transaction, returns the datasource's default isolation level.</description>
+		</argument>
+		<return>
+			<type>string</type>
+		</return>
+	</function>
 	<!-- getVariable -->
 	<function>
 		<name>getVariable</name>
@@ -7991,7 +8008,11 @@ The following things are considered to be empty:
 		<member-name>int</member-name>
 		<class>lucee.runtime.functions.math.Int</class>
 		<keywords>number</keywords>
-		<description>Calculates the closest integer that is smaller than number.</description>
+		<description>
+			Returns the largest integer less than or equal to the given number (floor). 
+			For negative numbers, this rounds away from zero (e.g., int(-1.7) returns -2). 
+			The result is not limited to a 32-bit integer range and can handle large values such as epoch timestamps.
+		</description>
 		<argument>
 			<name>number</name>
 			<type>number</type>

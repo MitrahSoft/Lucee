@@ -32,6 +32,7 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -2110,20 +2111,49 @@ public final class OSGiUtil {
 		private Bundle bundle;
 		private VersionDefinition versionDef;
 
+		private static Map<String, Data> mappings = new HashMap<>();
+		static {
+			mappings.put("ehcache.extension", new Data("org.lucee.ehcache.extension", "2.10.0.38-SNAPSHOT"));
+			mappings.put("mongodb.extension", new Data("org.lucee.mongodb.extension", "3.12.13.9-SNAPSHOT"));
+			mappings.put("chart.extension", new Data("org.lucee.chart.extension", "2.0.0.1-SNAPSHOT"));
+			mappings.put("compress.extension", new Data("org.lucee.compress.extension", "2.0.0.1-SNAPSHOT"));
+			mappings.put("lucee.image.extension", new Data("org.lucee.image.extension", "2.0.0.29-SNAPSHOT"));
+			mappings.put("pdf.extension", new Data("org.lucee.pdf.extension", "1.2.0.11-SNAPSHOT"));
+			mappings.put("s3.extension", new Data("org.lucee.s3.extension", "2.0.2.19-SNAPSHOT"));
+
+		}
+
+		private static class Data {
+
+			private String newBundleName;
+			private Version minVersion;
+
+			public Data(String newBundleName, String minVersion) {
+				this.newBundleName = newBundleName;
+				this.minVersion = OSGiUtil.toVersion(minVersion, null);
+			}
+
+		}
+
 		public BundleDefinition(String name) {
-			this.name = name;
+			this(name, (Version) null);
 		}
 
 		public BundleDefinition(String name, String version) throws BundleException {
-			this.name = name;
-			if (name == null) throw new IllegalArgumentException("Bundle Symbolic Name should not be null");
-			if (!StringUtil.isEmpty(version, true)) setVersion(VersionDefinition.EQ, version);
+			this(name, !StringUtil.isEmpty(version, true) ? OSGiUtil.toVersion(version) : null);
 		}
 
 		public BundleDefinition(String name, Version version) {
-			this.name = name;
 			if (name == null) throw new IllegalArgumentException("Bundle Symbolic Name should not be null");
-			if (version != null) setVersion(VersionDefinition.EQ, version);
+			// translate old mappings to new mappings FUTURE remove
+			Data data = mappings.get(name);
+			if (data != null && (version == null || OSGiUtil.compare(data.minVersion, version) <= 0)) {
+				name = data.newBundleName;
+			}
+			if (version != null) {
+				setVersion(VersionDefinition.EQ, version);
+			}
+			this.name = name;
 		}
 
 		public BundleDefinition(Bundle bundle) {

@@ -382,6 +382,10 @@ public final class DatasourceManagerImpl implements DataSourceManager {
 		return autoCommit;
 	}
 
+	public int getIsolation() {
+		return isolation;
+	}
+
 	@Override
 	public void remove(DataSource datasource) {
 		config.removeDatasourceConnectionPool(datasource);
