@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -226,8 +227,7 @@ public final class PageContextUtil {
 	public static TimeSpan remainingTime(PageContext pc, boolean throwWhenAlreadyTimeout) throws RequestTimeoutException {
 		long ms = pc.getRequestTimeout() - (System.currentTimeMillis() - pc.getStartTime());
 		if (ms > 0) {
-			if (ms < 5) {
-			}
+			if (ms < 5) {}
 			else if (ms < 10) ms = ms - 1;
 			else if (ms < 50) ms = ms - 5;
 			else if (ms < 200) ms = ms - 10;
@@ -312,5 +312,19 @@ public final class PageContextUtil {
 			}
 		}
 		throw new ApplicationException("unable to load inline component [" + inlineName + "] from [" + realPath + "]");
+	}
+
+	/**
+	 * used by compiled code
+	 * 
+	 * @throws RuntimeException
+	 * @throws ServletException
+	 */
+	public static PageContext createPageContext() throws ServletException {
+		return CFMLEngineFactory.getInstance().createPageContext(null, "getThreadPageContext:boolean", null, null, null, null, null, null, null, -1L, true);
+	}
+
+	public static void popBody(PageContext pc) {
+		pc.popBody();
 	}
 }

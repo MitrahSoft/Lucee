@@ -203,7 +203,7 @@ public final class PageImpl extends BodyBase implements Page {
 	// boolean getOutput()
 	private static final Method GET_OUTPUT = new Method("getOutput", Types.BOOLEAN_VALUE, new Type[] {});
 
-	private static final Method PUSH_BODY = new Method("pushBody", Types.BODY_CONTENT, new Type[] {});
+	private static final Method PUSH_BODY = new Method("pushBody", Types.OBJECT, new Type[] { Types.PAGE_CONTEXT });
 
 	/*
 	 * / boolean setSilent() private static final Method SET_SILENT = new Method( "setSilent",
@@ -228,8 +228,8 @@ public final class PageImpl extends BodyBase implements Page {
 					Types.STRING, Types.BOOLEAN_VALUE, Types.BOOLEAN_VALUE, Types.INT_VALUE, Types.BOOLEAN_VALUE, Types.STRUCT_IMPL });
 	private static final Method SET_EL = new Method("setEL", Types.OBJECT, new Type[] { Types.COLLECTION_KEY, Types.OBJECT });
 	public static final Method UNDEFINED_SCOPE = new Method("us", Types.UNDEFINED, new Type[] {});
-	private static final Method FLUSH_AND_POP = new Method("flushAndPop", Types.VOID, new Type[] { Types.PAGE_CONTEXT, Types.BODY_CONTENT });
-	private static final Method CLEAR_AND_POP = new Method("clearAndPop", Types.VOID, new Type[] { Types.PAGE_CONTEXT, Types.BODY_CONTENT });
+	private static final Method FLUSH_AND_POP = new Method("flushAndPop", Types.VOID, new Type[] { Types.PAGE_CONTEXT, Types.OBJECT });
+	private static final Method CLEAR_AND_POP = new Method("clearAndPop", Types.VOID, new Type[] { Types.PAGE_CONTEXT, Types.OBJECT });
 	public static final byte CF = (byte) 207;
 	public static final byte _33 = (byte) 51;
 	// private static final boolean ADD_C33 = false;
@@ -539,15 +539,13 @@ public final class PageImpl extends BodyBase implements Page {
 		DecisionIntVisitor div;
 		// Function[] functions = extractFunctions(constr.getUDFProperties());
 		// less/equal than 10 functions
-		if (isInterface()) {
-		}
+		if (isInterface()) {}
 		else if (functions.length <= 10) {
 			adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, UDF_CALL, null, new Type[] { Types.THROWABLE }, cw);
 			BytecodeContext bc = new BytecodeContext(config, optionalPS, constr, this, keys, cw, className, adapter, UDF_CALL, writeLog(), suppressWSbeforeArg, output, returnValue,
 					sourceCode.getSourceOffset());
 
-			if (functions.length == 0) {
-			}
+			if (functions.length == 0) {}
 			else if (functions.length == 1) {
 				bc.visitLine(functions[0].getStart());
 				functions[0].getBody().writeOut(bc);
@@ -618,8 +616,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 		// udfDefaultValue
 		// less/equal than 10 functions
-		if (isInterface()) {
-		}
+		if (isInterface()) {}
 		else if (functions.length <= 10) {
 			adapter = new GeneratorAdapter(Opcodes.ACC_PUBLIC + Opcodes.ACC_FINAL, UDF_DEFAULT_VALUE, null, new Type[] { Types.PAGE_EXCEPTION }, cw);
 			if (functions.length > 0) writeUdfDefaultValueInner(new BytecodeContext(config, optionalPS, constr, this, keys, cw, className, adapter, UDF_DEFAULT_VALUE, writeLog(),
@@ -1055,10 +1052,10 @@ public final class PageImpl extends BodyBase implements Page {
 		ASMConstants.NULL(adapter);
 		adapter.storeLocal(oldData);
 
-		// push body
-		int localBC = adapter.newLocal(Types.BODY_CONTENT);
+		// BodyContentUtil.pushBody(pc);
+		final int localBC = adapter.newLocal(Types.OBJECT);
 		adapter.loadArg(0);
-		adapter.invokeVirtual(Types.PAGE_CONTEXT, PUSH_BODY);
+		adapter.invokeStatic(Types.BC_UTIL, PUSH_BODY);
 		adapter.storeLocal(localBC);
 
 		// int oldCheckArgs= pc.undefinedScope().setMode(Undefined.MODE_NO_LOCAL_AND_ARGUMENTS);
@@ -1105,7 +1102,7 @@ public final class PageImpl extends BodyBase implements Page {
 		// BodyContentUtil.flushAndPop(pc,bc);
 		adapter.loadArg(0);
 		adapter.loadLocal(localBC);
-		adapter.invokeStatic(Types.BODY_CONTENT_UTIL, FLUSH_AND_POP);
+		adapter.invokeStatic(Types.BC_UTIL, FLUSH_AND_POP);
 
 		// throw Caster.toPageException(t);
 		adapter.loadLocal(t);
@@ -1115,7 +1112,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 		adapter.loadArg(0);
 		adapter.loadLocal(localBC);
-		adapter.invokeStatic(Types.BODY_CONTENT_UTIL, FLUSH_AND_POP);// TODO why does the body constuctor call clear and it works?
+		adapter.invokeStatic(Types.BC_UTIL, FLUSH_AND_POP);// TODO why does the body constuctor call clear and it works?
 
 		adapter.returnValue();
 		adapter.visitLabel(methodEnd);
@@ -1140,7 +1137,7 @@ public final class PageImpl extends BodyBase implements Page {
 	}
 
 	private int pushBody(BytecodeContext bc, final GeneratorAdapter adapter, boolean store) {
-		int localBC = store ? adapter.newLocal(Types.BODY_CONTENT) : 0;
+		int localBC = store ? adapter.newLocal(Types.OBJECT) : 0;
 		ConditionVisitor cv = new ConditionVisitor();
 		cv.visitBefore();
 		cv.visitWhenBeforeExpr();
@@ -1152,7 +1149,8 @@ public final class PageImpl extends BodyBase implements Page {
 
 		cv.visitOtherviseBeforeBody();
 		adapter.loadArg(0);
-		adapter.invokeVirtual(Types.PAGE_CONTEXT, PUSH_BODY);
+		adapter.invokeStatic(Types.BC_UTIL, PUSH_BODY);
+
 		cv.visitOtherviseAfterBody();
 		cv.visitAfter(bc);
 		if (store) adapter.storeLocal(localBC);
@@ -1241,7 +1239,7 @@ public final class PageImpl extends BodyBase implements Page {
 			// BodyContentUtil.flushAndPop(pc,bc);
 			adapter.loadArg(0);
 			adapter.loadLocal(localBC);
-			adapter.invokeStatic(Types.BODY_CONTENT_UTIL, FLUSH_AND_POP);
+			adapter.invokeStatic(Types.BC_UTIL, FLUSH_AND_POP);
 
 			// throw Caster.toPageException(t);
 			adapter.loadLocal(t);
@@ -1251,7 +1249,7 @@ public final class PageImpl extends BodyBase implements Page {
 
 			adapter.loadArg(0);
 			adapter.loadLocal(localBC);
-			adapter.invokeStatic(Types.BODY_CONTENT_UTIL, CLEAR_AND_POP);
+			adapter.invokeStatic(Types.BC_UTIL, CLEAR_AND_POP);
 		}
 		else {
 			bc.visitLine(component.getStart());
