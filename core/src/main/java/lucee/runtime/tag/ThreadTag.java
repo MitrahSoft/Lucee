@@ -42,7 +42,6 @@ import lucee.runtime.op.Caster;
 import lucee.runtime.spooler.ExecutionPlan;
 import lucee.runtime.spooler.ExecutionPlanImpl;
 import lucee.runtime.spooler.SpoolerEngineImpl;
-import lucee.runtime.tag.Throw;
 import lucee.runtime.thread.ChildSpoolerTask;
 import lucee.runtime.thread.ChildThread;
 import lucee.runtime.thread.ChildThreadImpl;
@@ -152,10 +151,9 @@ public final class ThreadTag extends BodyTagImpl implements DynamicAttributes {
 	 * @param throwonerror value to set
 	 **/
 	public void setThrowonerror(boolean throwonerror) throws ApplicationException {
-		if (this.action != ACTION_JOIN && throwonerror) throw new ApplicationException("Attribute [throwonerror] is only supported for action [join]"); 
+		if (this.action != ACTION_JOIN && throwonerror) throw new ApplicationException("Attribute [throwonerror] is only supported for action [join]");
 		this.throwonerror = throwonerror;
 	}
-
 
 	private Collection.Key name(boolean create) {
 		if (name == null && create) name = KeyImpl.init("thread" + RandomUtil.createRandomStringLC(5));
@@ -432,7 +430,8 @@ public final class ThreadTag extends BodyTagImpl implements DynamicAttributes {
 		else names = ListUtil.listToList(name.getLowerString(), ',', true);
 		ChildThread ct;
 		Threads ts;
-		long start = System.currentTimeMillis(), _timeout = timeout > 0 ? timeout : -1;
+		long start = timeout > 0 ? System.currentTimeMillis() : 0;
+		long remining = 0;
 
 		Iterator<String> it = names.iterator();
 		String n;
@@ -440,30 +439,34 @@ public final class ThreadTag extends BodyTagImpl implements DynamicAttributes {
 		while (it.hasNext()) {
 			n = it.next();
 			if (StringUtil.isEmpty(n, true)) continue;
-			// PageContextImpl mpc=(PageContextImpl)getMainPageContext(pc);
 			ts = ThreadTag.getThreadScope(pc, KeyImpl.init(n));// , ThreadTag.LEVEL_CURRENT + ThreadTag.LEVEL_KIDS
+
 			if (ts == null) {
 				if (all == null) all = ThreadTag.getTagNames(ThreadTag.getAllNoneAncestorThreads(pc));
 
-				throw new ApplicationException("There is no thread running with the name [" + n + "], " + "only the following threads existing [" + ListUtil.listToListEL(all, ", ")
-						+ "] ->" + ListUtil.toList(all, ", "));
+				throw new ApplicationException("There is no thread running with the name [" + n + "], ",
+						"The existing threads are [" + ListUtil.listToListEL(all, ", ") + "] ->" + ListUtil.toList(all, ", "));
 			}
 			ct = ts.getChildThread();
 
+			if (timeout > 0) {
+				// do we already have reached the timeout?
+				remining = (start + timeout) - System.currentTimeMillis();
+				if (remining <= 0) {
+					break;
+				}
+
+			}
+
 			if (ct.isAlive()) {
 				try {
-					if (_timeout != -1) ct.join(_timeout);
+					if (remining > 0) ct.join(remining);
 					else ct.join();
 				}
-				catch (InterruptedException e) {
-				}
+				catch (InterruptedException e) {}
 			}
-			if (throwonerror && threadError == null && ts.containsKey(KeyConstants._error) ){
-				threadError = lucee.runtime.tag.Throw.toPageException(ts.get(KeyConstants._error), null );
-			}
-			if (_timeout != -1) {
-				_timeout = _timeout - (System.currentTimeMillis() - start);
-				if (_timeout < 1) break;
+			if (throwonerror && threadError == null && ts.containsKey(KeyConstants._error)) {
+				threadError = lucee.runtime.tag.Throw.toPageException(ts.get(KeyConstants._error), null);
 			}
 		}
 		if (throwonerror && threadError != null) throw threadError;
