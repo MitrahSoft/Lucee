@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -27,7 +26,6 @@ import lucee.runtime.op.Caster;
 import lucee.runtime.text.xml.XMLUtil;
 import lucee.runtime.type.util.ListUtil;
 import lucee.transformer.library.function.FunctionLibEntityResolver;
-import lucee.transformer.library.function.FunctionLibException;
 
 public final class MetadataReader extends DefaultHandler {
 
@@ -48,53 +46,49 @@ public final class MetadataReader extends DefaultHandler {
 		this.artifact = artifact;
 	}
 
-	/*
-	 * public List<Version> read(String extensionFilter) throws IOException, GeneralSecurityException,
-	 * SAXException { if (StringUtil.isEmpty(extensionFilter, true)) return read(); // cache read
-	 * List<Version> versionsFromCache = readFromCache(extensionFilter); if (versionsFromCache != null)
-	 * { return versionsFromCache; }
-	 * 
-	 * List<Version> versions = new ArrayList<>(); URL url; int count = 2; for (Version v: read()) {
-	 * 
-	 * url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/" + v + "/" +
-	 * artifact + "-" + v + "." + extensionFilter);
-	 * 
-	 * HTTPResponse rsp = HTTPEngine4Impl.head(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT,
-	 * true, null, null, null, null); if (rsp != null) { int sc = rsp.getStatusCode(); if (sc >= 200 &&
-	 * sc < 300) { versions.add(v); } } // if at least count have no lex, we assume there is none if
-	 * (--count == 0) break; } storeToCache(versions, extensionFilter); return versions; }
-	 */
+	public List<Version> read() throws IOException, SAXException {
+		Log log = LogUtil.getLog(null, "maven", "application");
 
-	public List<Version> read() throws IOException, GeneralSecurityException, SAXException {
-		// cache read
+		if (LogUtil.doesDebug(log)) {
+			log.debug("maven", "reading metadata for " + group + ":" + artifact + " (timeout: " + repository.timeoutList + ")");
+		}
+
+		// 1. Check local cache first
 		List<Version> versionsFromCache = readFromCache("");
 		if (versionsFromCache != null) {
+			if (LogUtil.doesDebug(log)) {
+				log.debug("maven", "metadata for " + group + ":" + artifact + " loaded from cache");
+			}
 			return versionsFromCache;
+		}
+
+		if (LogUtil.doesInfo(log)) {
+			log.info("maven", "fetching new metadata for " + group + ":" + artifact + " from repository");
 		}
 
 		this.versions = new ArrayList<>();
 
-		// Updated URL with correct parameter names and no classifier filter
+		// Updated URL with correct path structure
 		URL url = new URL(repository.url + group.replace('.', '/') + '/' + artifact + "/maven-metadata.xml");
 
-		// Use HTTPDownloader with DEBUG logging for Maven metadata lookups
 		Reader r = null;
 		try {
-			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
+			// Use HTTPDownloader for the actual network call
+			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false, Log.LEVEL_TRACE),
 					(Charset) null);
 			init(new InputSource(r));
 		}
 		catch (IOException ioe) {
-			// 404 or other errors - return empty list
+			// If the file is missing (404) or server is down, we cache the empty result to prevent hammering
 			storeToCache(versions, "");
 			return versions;
 		}
 		finally {
 			IOUtil.close(r);
 		}
+
 		storeToCache(versions, "");
 		return versions;
-
 	}
 
 	private void storeToCache(List<Version> versions, String appendix) {
@@ -145,15 +139,6 @@ public final class MetadataReader extends DefaultHandler {
 		return null;
 	}
 
-	/**
-	 * Generelle Initialisierungsmetode der Konstruktoren.
-	 * 
-	 * @param saxParser String Klassenpfad zum Sax Parser.
-	 * @param is InputStream auf die TLD.
-	 * @throws SAXException
-	 * @throws IOException
-	 * @throws FunctionLibException
-	 */
 	private void init(InputSource is) throws SAXException, IOException {
 		xmlReader = XMLUtil.createXMLReader();
 		xmlReader.setContentHandler(this);

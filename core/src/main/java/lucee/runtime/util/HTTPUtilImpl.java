@@ -41,8 +41,7 @@ public final class HTTPUtilImpl implements lucee.runtime.util.HTTPUtil {
 
 	private static lucee.runtime.util.HTTPUtil instance = new HTTPUtilImpl();
 
-	private HTTPUtilImpl() {
-	}
+	private HTTPUtilImpl() {}
 
 	public static lucee.runtime.util.HTTPUtil getInstance() {
 		return instance;
@@ -71,7 +70,7 @@ public final class HTTPUtilImpl implements lucee.runtime.util.HTTPUtil {
 			String proxypassword, Header[] headers) throws IOException {
 		try {
 			return HTTPEngine4Impl.delete(url, username, password, timeout, true, charset, useragent, ProxyDataImpl.getInstance(proxyserver, proxyport, proxyuser, proxypassword),
-					headers);
+					headers, false);
 		}
 		catch (GeneralSecurityException e) {
 			throw ExceptionUtil.toIOException(e);
@@ -99,7 +98,7 @@ public final class HTTPUtilImpl implements lucee.runtime.util.HTTPUtil {
 			String proxypassword, Header[] headers) throws IOException {
 		try {
 			return HTTPEngine4Impl.head(url, username, password, timeout, true, charset, useragent, ProxyDataImpl.getInstance(proxyserver, proxyport, proxyuser, proxypassword),
-					headers);
+					headers, false);
 		}
 		catch (GeneralSecurityException e) {
 			throw ExceptionUtil.toIOException(e);
@@ -116,7 +115,7 @@ public final class HTTPUtilImpl implements lucee.runtime.util.HTTPUtil {
 			String proxypassword, Header[] headers) throws IOException {
 		try {
 			return HTTPEngine4Impl.get(url, username, password, timeout, true, charset, useragent, ProxyDataImpl.getInstance(proxyserver, proxyport, proxyuser, proxypassword),
-					headers);
+					headers, false);
 		}
 		catch (GeneralSecurityException e) {
 			throw ExceptionUtil.toIOException(e);
@@ -134,7 +133,7 @@ public final class HTTPUtilImpl implements lucee.runtime.util.HTTPUtil {
 			String proxyuser, String proxypassword, Header[] headers, Object body) throws IOException {
 		try {
 			return HTTPEngine4Impl.put(url, username, password, timeout, true, mimetype, charset, useragent,
-					ProxyDataImpl.getInstance(proxyserver, proxyport, proxyuser, proxypassword), headers, body);
+					ProxyDataImpl.getInstance(proxyserver, proxyport, proxyuser, proxypassword), headers, body, false);
 		}
 		catch (GeneralSecurityException e) {
 			throw ExceptionUtil.toIOException(e);

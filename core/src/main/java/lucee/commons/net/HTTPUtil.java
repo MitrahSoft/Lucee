@@ -577,10 +577,14 @@ public final class HTTPUtil {
 	 * @throws GeneralSecurityException
 	 */
 	public static long length(URL url) throws IOException, GeneralSecurityException {
-		HTTPResponse http = HTTPEngine4Impl.head(url, null, null, -1, true, null, Constants.NAME, null, null);
-		long len = http.getContentLength();
-		HTTPEngine.closeEL(http);
-		return len;
+		HTTPResponse http = null;
+		try {
+			http = HTTPEngine4Impl.head(url, null, null, -1, true, null, Constants.NAME, null, null, true);
+			return http.getContentLength();
+		}
+		finally {
+			HTTPEngine.closeEL(http);
+		}
 	}
 
 	/*

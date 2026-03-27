@@ -339,6 +339,7 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				LogST._do(f, logName, timeRange);
 			}
 		}
+
 		// happen when Lucee is loaded directly
 		if (bundleCollection == null) {
 			try {
@@ -739,18 +740,23 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			String index = IOUtil.toString(is, CharsetUtil.UTF8);
 			// log.info("extract-extension", "the following extensions are bundled with the lucee.jar [" + index
 			// + "]");
-
 			String[] names = lucee.runtime.type.util.ListUtil.listToStringArray(index, ';');
-			Resource available = null, temp;
+
+			Resource temp;
 			Resource availableDir = cs.getExtensionAvailableDir();
-			RHExtension rhe;
 			RHExtension rhExisting;
 			for (String name: names) {
 				if (StringUtil.isEmpty(name, true)) continue;
 				name = name.trim();
 
-				ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
-				rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
+				Resource availableFile = availableDir.getRealResource(name);
+				if (availableFile.isFile()) {
+					rhExisting = RHExtension.getInstance(cs, availableFile, log);
+				}
+				else {
+					ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
+					rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
+				}
 
 				// does it already exist much by name?
 				if (rhExisting != null) {

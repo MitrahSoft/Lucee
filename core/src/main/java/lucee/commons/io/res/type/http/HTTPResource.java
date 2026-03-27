@@ -65,27 +65,41 @@ public final class HTTPResource extends ReadOnlyResourceSupport {
 			// TODO Support for proxy
 			ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
 
-			http = HTTPEngine4Impl.get(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null);
+			http = HTTPEngine4Impl.get(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null, true);
 		}
 		return http;
 	}
 
 	private int getStatusCode() throws IOException, GeneralSecurityException {
-		if (http == null) {
-			URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
-			ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
-			return HTTPEngine4Impl.head(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null).getStatusCode();
+		HTTPResponse rsp = null;
+		try {
+			if (http == null) {
+				URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
+				ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
+				rsp = HTTPEngine4Impl.head(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null, true);
+				return rsp.getStatusCode();
+			}
+			return http.getStatusCode();
 		}
-		return http.getStatusCode();
+		finally {
+			HTTPEngine.closeEL(rsp);
+		}
 	}
 
 	public ContentType getContentType() throws IOException, GeneralSecurityException {
-		if (http == null) {
-			URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
-			ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
-			return HTTPEngine4Impl.head(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null).getContentType();
+		HTTPResponse rsp = null;
+		try {
+			if (http == null) {
+				URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
+				ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
+				rsp = HTTPEngine4Impl.head(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null, true);
+				return rsp.getContentType();
+			}
+			return http.getContentType();
 		}
-		return http.getContentType();
+		finally {
+			HTTPEngine.closeEL(rsp);
+		}
 	}
 
 	@Override

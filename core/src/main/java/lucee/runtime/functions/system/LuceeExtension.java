@@ -32,7 +32,7 @@ public final class LuceeExtension extends BIF {
 		try {
 			// list extensions
 			if (args.length < 2) {
-				ExtensionProvider ep = new ExtensionProvider(pc.getConfig(), args.length == 0 ? MavenUpdateProvider.DEFAULT_GROUP : Caster.toString(args[0]).trim());
+				ExtensionProvider ep = ExtensionProvider.getInstance(pc.getConfig(), args.length == 0 ? MavenUpdateProvider.DEFAULT_GROUP : Caster.toString(args[0]).trim());
 				Array arr = new ArrayImpl();
 				for (String artifact: ep.list()) {
 					arr.appendEL(artifact);
@@ -41,7 +41,7 @@ public final class LuceeExtension extends BIF {
 			}
 			// list versions of an extension
 			else if (args.length == 2) {
-				ExtensionProvider ep = new ExtensionProvider(pc.getConfig(), Caster.toString(args[0]).trim());
+				ExtensionProvider ep = ExtensionProvider.getInstance(pc.getConfig(), Caster.toString(args[0]).trim());
 				Array arr = new ArrayImpl();
 				for (Version version: ep.list(Caster.toString(args[1]).trim())) {
 					arr.appendEL(version.toString());
@@ -50,7 +50,7 @@ public final class LuceeExtension extends BIF {
 			}
 			// detail to a specific extension
 			else if (args.length == 3 || args.length == 4) {
-				ExtensionProvider ep = new ExtensionProvider(pc.getConfig(), Caster.toString(args[0]).trim());
+				ExtensionProvider ep = ExtensionProvider.getInstance(pc.getConfig(), Caster.toString(args[0]).trim());
 				String artifactId = Caster.toString(args[1]).trim();
 				Version version = Version.parseVersion(Caster.toString(args[2]).trim());
 

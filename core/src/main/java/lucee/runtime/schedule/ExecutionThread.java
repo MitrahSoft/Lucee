@@ -120,7 +120,7 @@ class ExecutionThread extends ParentThreasRefThread {
 		// execute
 		if (LogUtil.doesInfo(log)) log.info(logName, "calling URL ->[" + url + "]");
 		try {
-			rsp = HTTPEngine4Impl.get(new URL(url), user, pass, task.getTimeout(), true, charset, null, proxy, headers.toArray(new Header[headers.size()]));
+			rsp = HTTPEngine4Impl.get(new URL(url), user, pass, task.getTimeout(), true, charset, null, proxy, headers.toArray(new Header[headers.size()]), true);
 			if (rsp != null) {
 				int sc = rsp.getStatusCode();
 
@@ -146,6 +146,9 @@ class ExecutionThread extends ParentThreasRefThread {
 				LogUtil.logGlobal(config, "scheduler", ee);
 			}
 			hasError = true;
+		}
+		finally {
+			HTTPEngine.closeEL(rsp);
 		}
 
 		// write file

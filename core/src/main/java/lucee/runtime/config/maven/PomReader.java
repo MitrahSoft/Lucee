@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
@@ -35,12 +34,12 @@ public final class PomReader extends DefaultHandler {
 		this.url = url;
 	}
 
-	public Map<String, Object> read() throws IOException, GeneralSecurityException, SAXException {
+	public Map<String, Object> read() throws IOException, SAXException {
 
 		// Use HTTPDownloader with DEBUG logging for Maven POM reads
 		Reader r = null;
 		try {
-			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
+			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false, Log.LEVEL_TRACE),
 					(Charset) null);
 			init(new InputSource(r));
 		}

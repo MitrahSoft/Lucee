@@ -5526,33 +5526,38 @@ public final class ConfigAdmin {
 	public void verifyExtensionProvider(String strUrl) throws PageException {
 		HTTPResponse method = null;
 		try {
-			URL url = HTTPUtil.toURL(strUrl + "?wsdl", HTTPUtil.ENCODED_AUTO);
-			method = HTTPEngine4Impl.get(url, null, null, 2000, true, null, null, null, null);
+			try {
+				URL url = HTTPUtil.toURL(strUrl + "?wsdl", HTTPUtil.ENCODED_AUTO);
+				method = HTTPEngine4Impl.get(url, null, null, 2000, true, null, null, null, null, true);
+			}
+			catch (MalformedURLException e) {
+				ApplicationException ae = new ApplicationException("Url definition [" + strUrl + "] is invalid");
+				ExceptionUtil.initCauseEL(ae, e);
+				throw ae;
+			}
+			catch (IOException e) {
+				ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
+				ExceptionUtil.initCauseEL(ae, e);
+				throw ae;
+			}
+			catch (GeneralSecurityException e) {
+				ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
+				ExceptionUtil.initCauseEL(ae, e);
+			}
+
+			if (method.getStatusCode() != 200) {
+				int code = method.getStatusCode();
+				String text = method.getStatusText();
+				String msg = code + " " + text;
+				throw new HTTPException(msg, null, code, text, method.getURL());
+			}
+			// Object o =
+			CreateObject.doWebService(null, strUrl + "?wsdl");
 		}
-		catch (MalformedURLException e) {
-			ApplicationException ae = new ApplicationException("Url definition [" + strUrl + "] is invalid");
-			ExceptionUtil.initCauseEL(ae, e);
-			throw ae;
-		}
-		catch (IOException e) {
-			ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
-			ExceptionUtil.initCauseEL(ae, e);
-			throw ae;
-		}
-		catch (GeneralSecurityException e) {
-			ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
-			ExceptionUtil.initCauseEL(ae, e);
+		finally {
+			HTTPEngine.closeEL(method);
 		}
 
-		if (method.getStatusCode() != 200) {
-			int code = method.getStatusCode();
-			String text = method.getStatusText();
-			String msg = code + " " + text;
-			throw new HTTPException(msg, null, code, text, method.getURL());
-		}
-		// Object o =
-		CreateObject.doWebService(null, strUrl + "?wsdl");
-		HTTPEngine.closeEL(method);
 	}
 
 	public void updateTLD(Resource resTld) throws IOException {

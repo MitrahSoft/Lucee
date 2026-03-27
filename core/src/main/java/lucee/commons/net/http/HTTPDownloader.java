@@ -3,17 +3,28 @@ package lucee.commons.net.http;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.StatusLine;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpContext;
 
 import lucee.commons.io.IOUtil;
@@ -22,8 +33,9 @@ import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
+import lucee.commons.lang.Pair;
+import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
-import lucee.commons.net.http.httpclient.HTTPResponse4Impl;
 import lucee.runtime.config.Config;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.net.proxy.ProxyData;
@@ -46,28 +58,47 @@ public final class HTTPDownloader {
 		// Utility class, prevent instantiation
 	}
 
-	private static volatile CloseableHttpClient SHARED_CLIENT;
+	// private static volatile CloseableHttpClient SHARED_CLIENT;
+	private static volatile CloseableHttpClient SHARED_CLIENT_POOLING;
+	private static HttpClientConnectionManager SHARED_CLIENT_POOLING_CM;
 	private static final Object CLIENT_LOCK = new Object();
 
 	public static void releaseSharedClient() {
 		synchronized (CLIENT_LOCK) {
-			if (SHARED_CLIENT != null) {
-				IOUtil.closeEL(SHARED_CLIENT);
-				SHARED_CLIENT = null;
+			if (SHARED_CLIENT_POOLING != null) {
+				IOUtil.closeEL(SHARED_CLIENT_POOLING);
+				SHARED_CLIENT_POOLING = null;
 			}
 		}
 	}
 
-	private static CloseableHttpClient getSharedClient() throws GeneralSecurityException, IOException {
-		if (SHARED_CLIENT == null) {
-			synchronized (CLIENT_LOCK) {
-				if (SHARED_CLIENT == null) {
-					HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
-					SHARED_CLIENT = builder.build();
+	public static CloseableHttpClient getHttpClient(boolean pooling) throws GeneralSecurityException, IOException {
+		if (pooling) {
+			if (SHARED_CLIENT_POOLING == null) {
+				synchronized (CLIENT_LOCK) {
+					if (SHARED_CLIENT_POOLING == null) {
+						Pair<HttpClientBuilder, HttpClientConnectionManager> pair = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
+						SHARED_CLIENT_POOLING_CM = pair.getValue();
+						SHARED_CLIENT_POOLING = pair.getName().build();
+					}
 				}
 			}
+
+			// Stats are useful for debugging pool exhaustion, but noisy for Info level
+			if (SHARED_CLIENT_POOLING_CM instanceof PoolingHttpClientConnectionManager) {
+				PoolingHttpClientConnectionManager cm = (PoolingHttpClientConnectionManager) SHARED_CLIENT_POOLING_CM;
+				org.apache.http.pool.PoolStats stats = cm.getTotalStats();
+
+				LogUtil.log(Log.LEVEL_DEBUG, "http", "Pool Stats -> " + "Max: " + stats.getMax() + ", Leased: " + stats.getLeased() + ", Pending: " + stats.getPending()
+						+ ", Available: " + stats.getAvailable());
+
+			}
+			return SHARED_CLIENT_POOLING;
 		}
-		return SHARED_CLIENT;
+
+		// Always return a fresh, unshared client for non-pooling requests to ensure thread safety
+		HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(false, null, null, "true").getName();
+		return builder.build();
 	}
 
 	/**
@@ -141,7 +172,7 @@ public final class HTTPDownloader {
 	 * @throws GeneralSecurityException if SSL/TLS fails
 	 */
 	public static InputStream get(URL url) throws IOException, GeneralSecurityException {
-		return get(url, null, null, DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT, null);
+		return get(url, null, null, DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT, null, true, Log.LEVEL_DEBUG);
 	}
 
 	/**
@@ -155,7 +186,7 @@ public final class HTTPDownloader {
 	 * @throws GeneralSecurityException if SSL/TLS fails
 	 */
 	public static InputStream get(URL url, long connectTimeout, long readTimeout) throws IOException, GeneralSecurityException {
-		return get(url, null, null, connectTimeout, readTimeout, null);
+		return get(url, null, null, connectTimeout, readTimeout, null, true, Log.LEVEL_DEBUG);
 	}
 
 	/**
@@ -170,7 +201,7 @@ public final class HTTPDownloader {
 	 * @throws GeneralSecurityException if SSL/TLS fails
 	 */
 	public static InputStream get(URL url, long connectTimeout, long readTimeout, String userAgent) throws IOException, GeneralSecurityException {
-		return get(url, null, null, connectTimeout, readTimeout, userAgent);
+		return get(url, null, null, connectTimeout, readTimeout, userAgent, true, Log.LEVEL_DEBUG);
 	}
 
 	/**
@@ -187,7 +218,11 @@ public final class HTTPDownloader {
 	 * @throws GeneralSecurityException if SSL/TLS fails
 	 */
 	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent) throws IOException, GeneralSecurityException {
-		return get(url, username, password, connectTimeout, readTimeout, userAgent, Log.LEVEL_DEBUG);
+		return get(url, username, password, connectTimeout, readTimeout, userAgent, true, Log.LEVEL_DEBUG);
+	}
+
+	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, boolean pooling) throws IOException {
+		return get(url, username, password, connectTimeout, readTimeout, userAgent, pooling, Log.LEVEL_DEBUG);
 	}
 
 	/**
@@ -205,46 +240,86 @@ public final class HTTPDownloader {
 	 * @throws IOException if download fails
 	 * @throws GeneralSecurityException if SSL/TLS fails
 	 */
-	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, int logLevel)
-			throws IOException, GeneralSecurityException {
+	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, boolean pooling, int logLevel)
+			throws IOException {
 
-		long start = System.currentTimeMillis();
-
+		CloseableHttpResponse response = null;
 		try {
-			// Create HTTP GET request
 			HttpGet request = new HttpGet(url.toString());
 			request.setHeader("User-Agent", userAgent != null ? userAgent : DEFAULT_USER_AGENT);
 
-			// Apply timeouts per-request (not per-client)
-			request.setConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).setConnectionRequestTimeout(2000) // fast-fail if pool exhausted
-					.setConnectTimeout((int) connectTimeout).setSocketTimeout((int) readTimeout).build());
+			// 1. DYNAMIC TIMEOUTS: Set on the request, not the builder/client
+			request.setConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).setConnectionRequestTimeout(2000).setConnectTimeout((int) connectTimeout)
+					.setSocketTimeout((int) readTimeout).build());
 
-			// Handle proxy and credentials
-			ProxyData proxy = getProxyData(url.getHost());
-			HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
-			HttpHost httpHost = new HttpHost(url.getHost(), url.getPort());
-			HttpContext context = HTTPEngine4Impl.setCredentials(builder, httpHost, username, password, false);
-			HTTPEngine4Impl.setProxy(url.getHost(), builder, request, proxy);
-			if (context == null) context = new HttpClientContext();
+			// 2. DYNAMIC AUTH/PROXY: Use a local Context
+			HttpClientContext context = HttpClientContext.create();
 
-			// Use shared client — not cc.client.execute() anymore
-			HTTPResponse rsp = new HTTPResponse4Impl(url, context, request, getSharedClient().execute(request, context));
-
-			int statusCode = rsp.getStatusCode();
-			if (statusCode < 200 || statusCode >= 300) {
-				throw new IOException("Failed to download from [" + url + "], status code: " + statusCode);
+			// Handle Credentials locally in the context (no builder needed!)
+			if (!StringUtil.isEmpty(username, true)) {
+				CredentialsProvider credsProvider = new BasicCredentialsProvider();
+				credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
+				context.setCredentialsProvider(credsProvider);
 			}
 
-			long duration = System.currentTimeMillis() - start;
-			LogUtil.log(logLevel, "download", "Downloaded from [" + url + "] in " + duration + "ms");
+			// Handle Proxy locally in the context (no builder needed!)
+			ProxyData proxy = getProxyData(url.getHost());
+			if (ProxyDataImpl.isValid(proxy, url.getHost())) {
+				HttpHost proxyHost = new HttpHost(proxy.getServer(), proxy.getPort());
+				request.setConfig(RequestConfig.copy(request.getConfig()).setProxy(proxyHost).build());
+			}
 
-			return rsp.getContentAsStream();
-		}
-		catch (IOException | GeneralSecurityException e) {
-			throw e;
+			// 3. EXECUTE: Use the immutable Shared Client
+			// This is where the 3s speed comes from.
+			response = getHttpClient(pooling).execute(request, context);
+
+			int statusCode = response.getStatusLine().getStatusCode();
+			if (statusCode < 200 || statusCode >= 300) {
+				// Must close response if we throw an exception here!
+				IOUtil.closeEL(response);
+				throw new IOException("Failed download: " + statusCode);
+			}
+
+			HttpEntity e = response.getEntity();
+			if (e == null) {
+				IOUtil.closeEL(response);
+				return null;
+			}
+
+			// 4. WRAP: The connection is now "Leased" until the user closes this stream
+			return new HTTPDownloaderInputStream(response, e.getContent());
 		}
 		catch (Exception e) {
-			throw new IOException("Failed to download from [" + url + "]: " + e.getMessage(), e);
+			IOUtil.closeEL(response); // Safety first
+			throw new IOException("Download failed [" + url + "]: " + e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * HEAD request returning a decoupled response object. This ensures the connection is returned to
+	 * the pool immediately.
+	 */
+	public static HTTPDownloaderHeadResponse head(URL url, long connectTimeout, long readTimeout, boolean pooling, int logLevel) {
+		long start = System.currentTimeMillis();
+		HttpHead request = new HttpHead(url.toString());
+		request.setHeader("User-Agent", DEFAULT_USER_AGENT);
+		request.setConfig(buildRequestConfig(connectTimeout, readTimeout));
+
+		CloseableHttpResponse response = null;
+		try {
+			response = getHttpClient(pooling).execute(request);
+
+			long duration = System.currentTimeMillis() - start;
+			int code = response.getStatusLine().getStatusCode();
+			LogUtil.log(logLevel, "download", "HEAD [" + url + "] status: " + code + " in " + duration + "ms");
+			return new HTTPDownloaderHeadResponse(response);
+		}
+		catch (Exception e) {
+			LogUtil.log(Log.LEVEL_ERROR, "download", e);
+			return null;
+		}
+		finally {
+			IOUtil.closeEL(response);
 		}
 	}
 
@@ -258,31 +333,34 @@ public final class HTTPDownloader {
 	 *            visibility)
 	 * @return HTTPResponse object, or null if request fails
 	 */
-	public static HTTPResponse head(URL url, long connectTimeout, long readTimeout, int logLevel) {
+	public static StatusLine head(URL url, long connectTimeout, long readTimeout, int logLevel) {
 		long start = System.currentTimeMillis();
-
 		try {
-			// Get configured HttpClientBuilder (with connection pooling, true = use pooling)
-			HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
+			CloseableHttpClient client = getHttpClient(true);
 
-			// Create HTTP HEAD request
 			HttpHead request = new HttpHead(url.toString());
 			request.setHeader("User-Agent", DEFAULT_USER_AGENT);
 
-			// Setup client with proxy, credentials, and timeouts
-			ClientContext cc = buildHttpClient(url, null, null, connectTimeout, readTimeout, builder, request);
+			// 2. Set timeouts directly on the request
+			request.setConfig(RequestConfig.custom().setConnectTimeout((int) connectTimeout).setSocketTimeout((int) readTimeout).setConnectionRequestTimeout(2000).build());
 
-			HTTPResponse rsp = new HTTPResponse4Impl(url, cc.context, request, cc.client.execute(request, cc.context));
+			// 3. Use try-with-resources (or try-finally) to ensure IMMEDIATE release
+			try (CloseableHttpResponse response = client.execute(request)) {
+				long duration = System.currentTimeMillis() - start;
+				LogUtil.log(logLevel, "download", "HEAD [" + url + "] " + response.getStatusLine().getStatusCode() + " in " + duration + "ms");
 
-			long duration = System.currentTimeMillis() - start;
-			LogUtil.log(logLevel, "download", "HEAD request to [" + url + "] returned status code: " + rsp.getStatusCode() + " in " + duration + "ms");
-
-			return rsp;
+				// Return only the data, NOT the response object
+				return response.getStatusLine();
+			}
+			catch (Exception e) {
+				LogUtil.log(Log.LEVEL_ERROR, "download", e);
+				return null;
+			}
 		}
 		catch (Exception e) {
-			LogUtil.log(Log.LEVEL_ERROR, "download", e);
 			return null;
 		}
+		// Connection is automatically returned to pool here!
 	}
 
 	/**
@@ -292,7 +370,7 @@ public final class HTTPDownloader {
 	 * @return true if URL exists (200-299 status code), false otherwise
 	 */
 	public static boolean exists(URL url) {
-		return exists(url, DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT);
+		return exists(url, DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT, true);
 	}
 
 	/**
@@ -303,33 +381,12 @@ public final class HTTPDownloader {
 	 * @param readTimeout Read timeout in milliseconds
 	 * @return true if URL exists (200-299 status code), false otherwise
 	 */
-	public static boolean exists(URL url, long connectTimeout, long readTimeout) {
-		try {
-			// Get configured HttpClientBuilder (with connection pooling, true = use pooling)
-			HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(true, null, null, "true");
+	public static boolean exists(URL url, long connectTimeout, long readTimeout, boolean pooling) {
+		HTTPDownloaderHeadResponse response = head(url, connectTimeout, readTimeout, pooling, Log.LEVEL_DEBUG);
+		if (response == null) return false;
 
-			// Create HTTP HEAD request
-			HttpHead request = new HttpHead(url.toString());
-			request.setHeader("User-Agent", DEFAULT_USER_AGENT);
-
-			// Setup client with proxy, credentials, and timeouts
-			ClientContext cc = buildHttpClient(url, null, null, connectTimeout, readTimeout, builder, request);
-
-			HTTPResponse rsp = new HTTPResponse4Impl(url, cc.context, request, cc.client.execute(request, cc.context));
-
-			int statusCode = rsp.getStatusCode();
-			boolean exists = statusCode >= 200 && statusCode < 300;
-
-			if (!exists) {
-				LogUtil.log(Log.LEVEL_DEBUG, "download", "HEAD request to [" + url + "] returned status code: " + statusCode);
-			}
-
-			return exists;
-		}
-		catch (Exception e) {
-			LogUtil.log(Log.LEVEL_ERROR, "download", e);
-			return false;
-		}
+		int statusCode = response.getStatusLine().getStatusCode();
+		return statusCode >= 200 && statusCode < 300;
 	}
 
 	/**
@@ -375,7 +432,7 @@ public final class HTTPDownloader {
 		Resource temp = null;
 
 		try {
-			is = get(url, null, null, connectTimeout, readTimeout, userAgent);
+			is = get(url, null, null, connectTimeout, readTimeout, userAgent, true, Log.LEVEL_DEBUG);
 
 			// Download to temp file first (atomic write)
 			temp = SystemUtil.getTempFile("download", false);
@@ -396,6 +453,108 @@ public final class HTTPDownloader {
 			if (temp != null && temp.exists()) {
 				temp.delete();
 			}
+		}
+	}
+
+	public static class HTTPDownloaderHeadResponse {
+
+		private StatusLine sl;
+		private Header[] headers;
+
+		public HTTPDownloaderHeadResponse(CloseableHttpResponse response) {
+			headers = response.getAllHeaders();
+			sl = response.getStatusLine();
+
+		}
+
+		public StatusLine getStatusLine() {
+			return sl;
+		}
+
+		public Header[] getAllHeaders() {
+			return headers;
+		}
+
+	}
+
+	private static class HTTPDownloaderInputStream extends InputStream {
+
+		private CloseableHttpResponse rsp;
+		private InputStream is;
+
+		public HTTPDownloaderInputStream(CloseableHttpResponse rsp, InputStream is) {
+			this.rsp = rsp;
+			this.is = is;
+		}
+
+		@Override
+		public int read(byte[] b) throws IOException {
+			return is.read(b);
+		}
+
+		@Override
+		public int read(byte[] b, int off, int len) throws IOException {
+			return is.read(b, off, len);
+		}
+
+		@Override
+		public byte[] readAllBytes() throws IOException {
+			return is.readAllBytes();
+		}
+
+		@Override
+		public byte[] readNBytes(int len) throws IOException {
+			return is.readNBytes(len);
+		}
+
+		@Override
+		public int readNBytes(byte[] b, int off, int len) throws IOException {
+			return is.readNBytes(b, off, len);
+		}
+
+		@Override
+		public long skip(long n) throws IOException {
+			return is.skip(n);
+		}
+
+		@Override
+		public int available() throws IOException {
+			return is.available();
+		}
+
+		@Override
+		public void close() throws IOException {
+			try {
+				is.close();
+			}
+			finally {
+				rsp.close();
+			}
+		}
+
+		@Override
+		public synchronized void mark(int readlimit) {
+			is.mark(readlimit);
+		}
+
+		@Override
+		public synchronized void reset() throws IOException {
+			is.reset();
+		}
+
+		@Override
+		public boolean markSupported() {
+			return is.markSupported();
+		}
+
+		@Override
+		public long transferTo(OutputStream out) throws IOException {
+			return is.transferTo(out);
+		}
+
+		@Override
+		public int read() throws IOException {
+			return is.read();
 		}
 	}
 }

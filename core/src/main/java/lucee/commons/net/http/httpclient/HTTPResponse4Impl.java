@@ -18,6 +18,7 @@
  **/
 package lucee.commons.net.http.httpclient;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -41,7 +42,7 @@ import lucee.commons.net.http.Header;
 import lucee.runtime.type.Array;
 import lucee.runtime.type.ArrayImpl;
 
-public final class HTTPResponse4Impl extends HTTPResponseSupport implements HTTPResponse {
+public final class HTTPResponse4Impl extends HTTPResponseSupport implements HTTPResponse, Closeable {
 
 	HttpResponse rsp;
 	HttpUriRequest req;
@@ -94,7 +95,7 @@ public final class HTTPResponse4Impl extends HTTPResponseSupport implements HTTP
 	}
 
 	public Array getLocations() {
-		if (context instanceof HttpClientContext){
+		if (context instanceof HttpClientContext) {
 			try {
 				List<URI> locations = ((HttpClientContext) context).getRedirectLocations();
 				if (locations != null) {
@@ -160,8 +161,7 @@ public final class HTTPResponse4Impl extends HTTPResponseSupport implements HTTP
 		try {
 			_url = new URL(start.getProtocol(), start.getHost(), start.getPort(), path);
 		}
-		catch (MalformedURLException e) {
-		}
+		catch (MalformedURLException e) {}
 
 		return _url;
 	}
@@ -197,9 +197,11 @@ public final class HTTPResponse4Impl extends HTTPResponseSupport implements HTTP
 		return trg;
 	}
 
-	public void close() {
-		/*
-		 * if(rsp instanceof CloseableHttpResponse) { ((CloseableHttpResponse)rsp).close(); }
-		 */
+	@Override
+	public void close() throws IOException {
+		if (rsp instanceof Closeable) {
+			((Closeable) rsp).close();
+		}
+
 	}
 }

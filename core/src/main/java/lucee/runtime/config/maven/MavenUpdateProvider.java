@@ -21,6 +21,7 @@ import java.util.Stack;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.http.StatusLine;
 import org.xml.sax.SAXException;
 
 import lucee.commons.digest.HashUtil;
@@ -34,8 +35,7 @@ import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.HTTPDownloader;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.Header;
+import lucee.commons.net.http.HTTPDownloader.HTTPDownloaderHeadResponse;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
@@ -225,41 +225,53 @@ public final class MavenUpdateProvider {
 	}
 
 	public static List<Version> list(Collection<Repository> repos, String group, String artifact) throws IOException, GeneralSecurityException, SAXException, InterruptedException {
+		Log log = LogUtil.getLog(null, "maven", "application");
 		try {
 			Set<Version> versions = Collections.synchronizedSet(new HashSet<>());
 			List<Thread> threads = new ArrayList<>();
 			Stack<Exception> exceptions = new Stack<>();
+
 			for (Repository repo: repos) {
 				Thread thread = ThreadUtil.getThread(() -> {
 					try {
+						if (LogUtil.doesInfo(log)) {
+							log.info("maven", "scanning metadata for " + group + ":" + artifact + " at " + repo.url);
+						}
+
 						MetadataReader mr = new MetadataReader(repo, group, artifact);
-						for (Version v: mr.read()) {
+						List<Version> readVersions = mr.read();
+						for (Version v: readVersions) {
 							versions.add(v);
+						}
+
+						if (LogUtil.doesDebug(log)) {
+							log.debug("maven", "found " + readVersions.size() + " versions at " + repo.url);
 						}
 					}
 					catch (Exception e) {
+						// Forwarded to parent thread; silent local catch
 						exceptions.add(e);
 					}
-				}, true);
+				}, false);
 				thread.start();
 				threads.add(thread);
 			}
 
-			// Join all threads
+			// Wait for all repository scans to complete
 			for (Thread thread: threads) {
 				thread.join();
 			}
 
-			// handle exceptions
-			if (exceptions.size() > 0) {
+			// Handle exceptions collected from threads
+			if (!exceptions.isEmpty()) {
 				Exception e = exceptions.pop();
 				if (e instanceof GeneralSecurityException) throw (GeneralSecurityException) e;
-				else if (e instanceof SAXException) throw (SAXException) e;
+				if (e instanceof SAXException) throw (SAXException) e;
 
 				throw ExceptionUtil.toIOException(new IOException("Failed to list available versions from Maven repositories for [" + group + ":" + artifact + "]", e));
 			}
 
-			if (versions.size() > 0) {
+			if (!versions.isEmpty()) {
 				List<Version> sortedList = new ArrayList<>(versions);
 				Collections.sort(sortedList, Version::compare);
 				return sortedList;
@@ -273,18 +285,18 @@ public final class MavenUpdateProvider {
 		}
 	}
 
-	public InputStream getCore(Version version) throws IOException, GeneralSecurityException, SAXException, PageException {
+	public InputStream getCore(Version version) throws IOException, SAXException, PageException {
 		Map<String, Object> data = detail(version, "jar", true);
 		String strURL = Caster.toString(data.get("lco"), null);
 		assertDownloadAllowed(strURL);
 		if (!StringUtil.isEmpty(strURL)) {
 			// Use HTTPDownloader with DEBUG logging for Maven operations
-			return HTTPDownloader.get(new URL(strURL), null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, Log.LEVEL_TRACE);
+			return HTTPDownloader.get(new URL(strURL), null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, false, Log.LEVEL_TRACE);
 		}
 		return getFileStreamFromZipStream(getLoader(version));
 	}
 
-	public InputStream getLoader(Version version) throws IOException, GeneralSecurityException, SAXException, PageException {
+	public InputStream getLoader(Version version) throws IOException, SAXException, PageException {
 		Map<String, Object> data = detail(version, "jar", true);
 		String strURL = Caster.toString(data.get("jar"), null);
 		if (StringUtil.isEmpty(strURL)) {
@@ -294,7 +306,7 @@ public final class MavenUpdateProvider {
 		// Use HTTPDownloader with DEBUG logging for Maven operations
 		URL url = new URL(strURL);
 		assertDownloadAllowed(strURL);
-		return HTTPDownloader.get(url, null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, Log.LEVEL_TRACE);
+		return HTTPDownloader.get(url, null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, false, Log.LEVEL_TRACE);
 	}
 
 	/*
@@ -305,8 +317,7 @@ public final class MavenUpdateProvider {
 	 * mup.detail(OSGiUtil.toVersion("6.1.0.719-SNAPSHOT")); print.e(map); }
 	 */
 
-	public Map<String, Object> detail(Version version, String requiredArtifactExtension, boolean throwException)
-			throws IOException, GeneralSecurityException, SAXException, PageException {
+	public Map<String, Object> detail(Version version, String requiredArtifactExtension, boolean throwException) throws IOException, SAXException, PageException {
 		// SNAPSHOT - snapshot have a more complicated structure, ebcause there can be udaptes/multiple
 		// versions
 
@@ -350,30 +361,32 @@ public final class MavenUpdateProvider {
 					{
 						String strURL = repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + "." + requiredArtifactExtension;
 						URL urlMain = new URL(strURL);
-						HTTPResponse rsp = HTTPDownloader.head(urlMain, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, Log.LEVEL_TRACE);
-						if (validSatusCode(rsp)) {
+						HTTPDownloaderHeadResponse rsp = HTTPDownloader.head(urlMain, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false, Log.LEVEL_TRACE);
+						if (rsp != null & validSatusCode(rsp.getStatusLine())) {
 							Map<String, Object> result = new LinkedHashMap<>();
-							Header[] headers = rsp.getAllHeaders();
-							for (Header h: headers) {
-								if ("Last-Modified".equals(h.getName())) result.put("lastModified", DateCaster.toDateAdvanced(h.getValue(), null));
-							}
 
+							org.apache.http.Header[] headers = rsp.getAllHeaders();
+							if (headers != null) {
+								for (org.apache.http.Header h: headers) {
+									if ("Last-Modified".equals(h.getName())) result.put("lastModified", DateCaster.toDateAdvanced(h.getValue(), null));
+								}
+							}
 							result.put(requiredArtifactExtension, urlMain.toExternalForm());
 
 							// optional
 							// pom
 							{
 								URL url = new URL(repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + ".pom");
-								rsp = HTTPDownloader.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, Log.LEVEL_TRACE);
-								if (validSatusCode(rsp)) {
+								rsp = HTTPDownloader.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false, Log.LEVEL_TRACE);
+								if (rsp != null & validSatusCode(rsp.getStatusLine())) {
 									result.put("pom", url.toExternalForm());
 								}
 							}
 							// lco
 							{
 								URL url = new URL(repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + ".lco");
-								rsp = HTTPDownloader.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, Log.LEVEL_TRACE);
-								if (validSatusCode(rsp)) {
+								rsp = HTTPDownloader.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false, Log.LEVEL_TRACE);
+								if (rsp != null & validSatusCode(rsp.getStatusLine())) {
 									result.put("lco", url.toExternalForm());
 								}
 							}
@@ -445,9 +458,9 @@ public final class MavenUpdateProvider {
 		return sb.toString();
 	}
 
-	private boolean validSatusCode(HTTPResponse rsp) {
-		if (rsp == null) return false;
-		return rsp.getStatusCode() >= 200 && rsp.getStatusCode() < 300;
+	private boolean validSatusCode(StatusLine sl) {
+		if (sl == null) return false;
+		return sl.getStatusCode() >= 200 && sl.getStatusCode() < 300;
 	}
 
 	public static InputStream getFileStreamFromZipStream(InputStream zipStream) throws IOException {

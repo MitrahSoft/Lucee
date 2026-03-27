@@ -56,9 +56,9 @@ public final class ExtensionDefintion {
 		return id;
 	}
 
-	public GAVSO getGAVSO(Config config) {
+	public GAVSO getGAVSO(Config config, boolean investigate) {
 		if (gavso != null) return gavso;
-		return gavso = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), true, gavso);
+		return gavso = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), investigate, gavso);
 	}
 
 	public ExtensionDefintion setGAVSO(GAVSO gavso) {
@@ -150,7 +150,7 @@ public final class ExtensionDefintion {
 		if (other instanceof ExtensionDefintion) {
 			ExtensionDefintion ed = (ExtensionDefintion) other;
 
-			if (ed.getGAVSO(config) != null && getGroupId() != null && getArtifactId() != null) {
+			if (ed.getGAVSO(config, false) != null && getGroupId() != null && getArtifactId() != null) {
 				return ed.getGroupId().equalsIgnoreCase(getGroupId()) && ed.getArtifactId().equalsIgnoreCase(getArtifactId());
 			}
 
@@ -215,8 +215,8 @@ public final class ExtensionDefintion {
 		return defaultValue;
 	}
 
-	public String getStorageName() {
-		GAVSO gav = getGAVSO(config);
+	public String getStorageName(boolean investigate) {
+		GAVSO gav = getGAVSO(config, investigate);
 
 		if (gav != null) {
 			return getStorageName(gav);

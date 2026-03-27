@@ -316,7 +316,7 @@ public final class DeployHandler {
 		try {
 			// get extension from Maven
 			GAVSO gav = getGavById(config, ed, investigate, log);
-			ExtensionProvider ep = new ExtensionProvider(config, gav.g);
+			ExtensionProvider ep = ExtensionProvider.getInstance(config, gav.g);
 
 			Version version = StringUtil.isEmpty(ed.getVersion(), true) ? null : Version.parseVersion(ed.getVersion(), null);
 			// get latest version when no version is defined
@@ -372,7 +372,7 @@ public final class DeployHandler {
 	public static Resource downloadExtensionFromMaven(ConfigPro config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
 			GAVSO gav = getGavById(config, ed, investigate, log);
-			ExtensionProvider ep = new ExtensionProvider(config, gav.g);
+			ExtensionProvider ep = ExtensionProvider.getInstance(config, gav.g);
 			Version version;
 			// get latest version when no version is defined
 			if (StringUtil.isEmpty(ed.getVersion(), true)) {

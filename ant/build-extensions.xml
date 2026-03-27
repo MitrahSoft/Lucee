@@ -51,7 +51,7 @@
 				group=gav[0].trim();
 				groupPath=group.replace('.','/');
 				artifact=gav[1].trim();
-				_id = group+"-"+artifact;
+				_id = group+"_"+artifact;
 				var names=_name.split( '-' );
 				if(names.length>1) {
 					var tmp="";
@@ -63,7 +63,8 @@
 
 				_version=gav[2].trim();
 			}
-			data += _id+"-"+_version;
+			//data += _id+"-"+_version;
+			data += "mvn_" + group + "_" + artifact + "_" + _version;
 
 			if(extArr.length>1) {
 				for (var y = 1; y < extArr.length ; y++ ) {
@@ -101,6 +102,7 @@
 			project.setProperty( "ext" + _name + "Group", group );
 			project.setProperty( "ext" + _name + "GroupPath", groupPath );
 			project.setProperty( "ext" + _name, _id );
+			project.setProperty( "ext" + _name + "Filename", "mvn_" + group + "_" + artifact + "_" + _version + ".lex");
 		}
 		project.setProperty( "reqExt.length", count + "" );
 		project.setProperty( "reqExt.ids", ids );
@@ -136,137 +138,112 @@
 	-->
 
 	<scriptdef name="toFileName" language="javascript" classpath="${nashorn_classpath}">
-		<attribute name="id" />
-		<attribute name="name" />
-		<attribute name="version" />
-		<attribute name="property" />
-		<![CDATA[
-			var id = attributes.get( "id" ).trim();
-			var name = attributes.get( "name" ).trim();
-			var version = attributes.get( "version" ).trim();
-			
-			var needle = ' ';
-			//var regex = new RegExp( needle, 'g' );
-			var repl = '-';
-		
-			// removes quotes
-			if ( name.startsWith( '"' ) && name.endsWith( '"' ) ) {
-				name = name.substring( 1, name.length() -1 ).trim();
-			}
-			if ( id.startsWith( '"' ) && id.endsWith( '"' ) ) {
-				id = id.substring( 1 , id.length() -1 ).trim();
-			}
+	    <attribute name="id" />
+	    <attribute name="name" />
+	    <attribute name="version" />
+	    <attribute name="group" />
+	    <attribute name="artifact" />
+	    <attribute name="property" />
+	    <![CDATA[
+	        var group    = attributes.get("group").trim();
+	        var artifact = attributes.get("artifact").trim();
+	        var version  = attributes.get("version").trim();
 
-			// remove brackets
-			var start, end;
-			while ( (start = name.indexOf( '(' ) ) != -1 ) {
-				end = name.indexOf( ')', start + 1 );
-				if( end == -1) 
-					break;
-				name = ( name.substring( 0, start ) + name.substring( end +1 ) ).trim();
-			}
+	        // remove surrounding quotes if present
+	        if (version.startsWith('"') && version.endsWith('"'))
+	            version = version.substring(1, version.length() - 1).trim();
 
-			// version
-			if ( version.startsWith( '"' ) && version.endsWith( '"' ) ) {
-				version = version.substring( 1, version.length() - 1 ).trim();
-			}
-
-			name=name.trim();
-			name=name.replace( " " , "-" ).toLowerCase();
-			name=name.replace( " " , "-" ); // TODO make better but not with regex some ant version will fail
-			name=name.replace( " " , "-" );
-			name=name.replace( " " , "-" );
-			name=name.replace( " " , "-" );
-			name=name.replace( " " , "-" );
-
-			project.setProperty( attributes.get( "property" ), id + "-" + version + ".lex" );
-		]]>
+	        project.setProperty(
+	            attributes.get("property"),
+	            "mvn_" + group + "_" + artifact + "_" + version + ".lex"
+	        );
+	    ]]>
 	</scriptdef>
 
 	<target name="check-cache">
 		<available file="${cache}/testbox-${testboxVersion}.zip" property="testbox.present"/>
 
-		<available file="${cache}/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex" property="mysql.present"/>
-		<available file="${cache}/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex" property="mssql.present"/>
-		<available file="${cache}/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex" property="postgre.present"/>
-		<available file="${cache}/${extS3Extension}-${extS3ExtensionVersion}.lex" property="s3.present"/>
-		<available file="${cache}/${extAdministratorExtension}-${extAdministratorExtensionVersion}.lex" property="admin.present"/>
-		<available file="${cache}/${extDocumentationExtension}-${extDocumentationExtensionVersion}.lex" property="doc.present"/>
-		<available file="${cache}/${extPdfExtension}-${extPdfExtensionVersion}.lex" property="pdf.present"/>
-		<available file="${cache}/${extImageExtension}-${extImageExtensionVersion}.lex" property="image.present"/>
-		<available file="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex" property="esapi.present"/>
-		<available file="${cache}/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex" property="scheduler.present"/>
-		<available file="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex" property="compress.present"/>
-		<available file="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" property="mail.present"/>
-		<available file="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex" property="ftp.present"/>
+		<available file="${cache}/mvn_${extMysqlJdbcExtension}_${extMysqlJdbcExtensionVersion}.lex" property="mysql.present"/>
+		<available file="${cache}/mvn_${extMssqlJdbcExtension}_${extMssqlJdbcExtensionVersion}.lex" property="mssql.present"/>
+		<available file="${cache}/mvn_${extPostgresqlJdbcExtension}_${extPostgresqlJdbcExtensionVersion}.lex" property="postgre.present"/>
+		<available file="${cache}/mvn_${extS3Extension}_${extS3ExtensionVersion}.lex" property="s3.present"/>
+		<available file="${cache}/mvn_${extAdministratorExtension}_${extAdministratorExtensionVersion}.lex" property="admin.present"/>
+		<available file="${cache}/mvn_${extDocumentationExtension}_${extDocumentationExtensionVersion}.lex" property="doc.present"/>
+		<available file="${cache}/mvn_${extPdfExtension}_${extPdfExtensionVersion}.lex" property="pdf.present"/>
+		<available file="${cache}/mvn_${extImageExtension}_${extImageExtensionVersion}.lex" property="image.present"/>
+		<available file="${cache}/mvn_${extEsapiExtension}_${extEsapiExtensionVersion}.lex" property="esapi.present"/>
+		<available file="${cache}/mvn_${extSchedulerClassicExtension}_${extSchedulerClassicExtensionVersion}.lex" property="scheduler.present"/>
+		<available file="${cache}/mvn_${extCompressExtension}_${extCompressExtensionVersion}.lex" property="compress.present"/>
+		<available file="${cache}/mvn_${extMailExtension}_${extMailExtensionVersion}.lex" property="mail.present"/>
+		<available file="${cache}/mvn_${extFtpExtension}_${extFtpExtensionVersion}.lex" property="ftp.present"/>
 	</target>
 
 	<target name="check-mysql" depends="check-cache" unless="mysql.present">
 		<get 
 			src="${extURLMaven}${extMysqlJdbcExtensionGroupPath}/${extMysqlJdbcExtensionArtifact}/${extMysqlJdbcExtensionVersion}/${extMysqlJdbcExtensionArtifact}-${extMysqlJdbcExtensionVersion}.lex" 
-			dest="${cache}/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extMysqlJdbcExtension}_${extMysqlJdbcExtensionVersion}.lex"/>
 	</target> 
 	
 	<target name="check-mssql" depends="check-cache" unless="mssql.present">
 		<get 
 			src="${extURLMaven}${extMssqlJdbcExtensionGroupPath}/${extMssqlJdbcExtensionArtifact}/${extMssqlJdbcExtensionVersion}/${extMssqlJdbcExtensionArtifact}-${extMssqlJdbcExtensionVersion}.lex" 
-			dest="${cache}/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extMssqlJdbcExtension}_${extMssqlJdbcExtensionVersion}.lex"/>
 	</target> 
 
 	<target name="check-postgre" depends="check-cache" unless="postgre.present">
 		<get 
 			src="${extURLMaven}${extPostgresqlJdbcExtensionGroupPath}/${extPostgresqlJdbcExtensionArtifact}/${extPostgresqlJdbcExtensionVersion}/${extPostgresqlJdbcExtensionArtifact}-${extPostgresqlJdbcExtensionVersion}.lex" 
-			dest="${cache}/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extPostgresqlJdbcExtension}_${extPostgresqlJdbcExtensionVersion}.lex"/>
 	</target> 
 	<target name="check-s3" depends="check-cache" unless="s3.present">
 		<get 
 			src="${extURLMaven}${extS3ExtensionGroupPath}/${extS3ExtensionArtifact}/${extS3ExtensionVersion}/${extS3ExtensionArtifact}-${extS3ExtensionVersion}.lex" 
-			dest="${cache}/${extS3Extension}-${extS3ExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extS3Extension}_${extS3ExtensionVersion}.lex"/>
 	</target>
 	<target name="check-pdf" depends="check-cache" unless="pdf.present">
 		<get 
 			src="${extURLCDN}${extPdfExtensionGroupPath}/${extPdfExtensionArtifact}/${extPdfExtensionVersion}/${extPdfExtensionArtifact}-${extPdfExtensionVersion}.lex" 
-			dest="${cache}/${extPdfExtension}-${extPdfExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extPdfExtension}_${extPdfExtensionVersion}.lex"/>
 	</target>
 	<target name="check-admin" depends="check-cache" unless="admin.present">
 		<get 
 			src="${extURLMaven}${extAdministratorExtensionGroupPath}/${extAdministratorExtensionArtifact}/${extAdministratorExtensionVersion}/${extAdministratorExtensionArtifact}-${extAdministratorExtensionVersion}.lex" 
-			dest="${cache}/${extAdministratorExtension}-${extAdministratorExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extAdministratorExtension}_${extAdministratorExtensionVersion}.lex"/>
 	</target>
 	<target name="check-doc" depends="check-cache" unless="doc.present">
 		<get 
 			src="${extURLMaven}${extDocumentationExtensionGroupPath}/${extDocumentationExtensionArtifact}/${extDocumentationExtensionVersion}/${extDocumentationExtensionArtifact}-${extDocumentationExtensionVersion}.lex" 
-			dest="${cache}/${extDocumentationExtension}-${extDocumentationExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extDocumentationExtension}_${extDocumentationExtensionVersion}.lex"/>
 	</target>
 	<target name="check-image" depends="check-cache" unless="image.present">
 		<get 
 			src="${extURLMaven}${extImageExtensionGroupPath}/${extImageExtensionArtifact}/${extImageExtensionVersion}/${extImageExtensionArtifact}-${extImageExtensionVersion}.lex" 
-			dest="${cache}/${extImageExtension}-${extImageExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extImageExtension}_${extImageExtensionVersion}.lex"/>
 	</target>
 	<target name="check-esapi" depends="check-cache" unless="esapi.present">
 		<get 
 			src="${extURLMaven}${extEsapiExtensionGroupPath}/${extEsapiExtensionArtifact}/${extEsapiExtensionVersion}/${extEsapiExtensionArtifact}-${extEsapiExtensionVersion}.lex" 
-			dest="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extEsapiExtension}_${extEsapiExtensionVersion}.lex"/>
 	</target>
 	<target name="check-scheduler" depends="check-cache" unless="scheduler.present">
 		<get 
 			src="${extURLMaven}${extSchedulerClassicExtensionGroupPath}/${extSchedulerClassicExtensionArtifact}/${extSchedulerClassicExtensionVersion}/${extSchedulerClassicExtensionArtifact}-${extSchedulerClassicExtensionVersion}.lex" 
-			dest="${cache}/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extSchedulerClassicExtension}_${extSchedulerClassicExtensionVersion}.lex"/>
 	</target>
 	<target name="check-compress" depends="check-cache" unless="compress.present">
 		<get 
 			src="${extURLCDN}${extCompressExtensionGroupPath}/${extCompressExtensionArtifact}/${extCompressExtensionVersion}/${extCompressExtensionArtifact}-${extCompressExtensionVersion}.lex" 
-			dest="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extCompressExtension}_${extCompressExtensionVersion}.lex"/>
 	</target>
 	<target name="check-mail" depends="check-cache" unless="mail.present">
 		<get 
 			src="${extURLMaven}${extMailExtensionGroupPath}/${extMailExtensionArtifact}/${extMailExtensionVersion}/${extMailExtensionArtifact}-${extMailExtensionVersion}.lex" 
-			dest="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extMailExtension}_${extMailExtensionVersion}.lex"/>
 	</target>
 	<target name="check-ftp" depends="check-cache" unless="ftp.present">
 		<get 
 			src="${extURLMaven}${extFtpExtensionGroupPath}/${extFtpExtensionArtifact}/${extFtpExtensionVersion}/${extFtpExtensionArtifact}-${extFtpExtensionVersion}.lex" 
-			dest="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex"/>
+			dest="${cache}/mvn_${extFtpExtension}_${extFtpExtensionVersion}.lex"/>
 	</target>
 
 
@@ -279,158 +256,199 @@
 		<mkdir dir="${goal}/extensions/"/>
 
 		<!-- add extension MySQL -->
-		<loadmf jar="${cache}/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex" prefix="ext_mysql."/>
-		<toFileName id="${ext_mysql.id}" name="${ext_mysql.name}" version="${ext_mysql.version}" property="ext_mysql.filename"/>
+		<loadmf jar="${cache}/${extMysqlJdbcExtensionFilename}" prefix="ext_mysql."/>
+		<toFileName id="${ext_mysql.id}" name="${ext_mysql.name}" version="${ext_mysql.version}"
+		    group="${extMysqlJdbcExtensionGroup}"
+		    artifact="${extMysqlJdbcExtensionArtifact}"
+		    property="ext_mysql.filename"/>
+		 <echo level="info">from:${cache}/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex</echo>
+		 <echo level="info">to:${goal}/extensions/</echo>
 		<copy 
-			file="${cache}/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex" 
+			file="${cache}/${extMysqlJdbcExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extMysqlJdbcExtension}-${extMysqlJdbcExtensionVersion}.lex" 
+			file="${goal}/extensions/${extMysqlJdbcExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_mysql.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_mysql.filename}</echo>
 		<echo file="${goal}/extensions/.index">${ext_mysql.filename};</echo>
 		
 
 		<!-- add extension MSSQL -->
-		<loadmf jar="${cache}/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex" prefix="ext_mssql."/>
-		<toFileName id="${ext_mssql.id}" name="${ext_mssql.name}" version="${ext_mssql.version}" property="ext_mssql.filename"/>
+		<loadmf jar="${cache}/${extMssqlJdbcExtensionFilename}" prefix="ext_mssql."/>
+		<toFileName id="${ext_mssql.id}" name="${ext_mssql.name}" version="${ext_mssql.version}"
+		    group="${extMssqlJdbcExtensionGroup}"
+		    artifact="${extMssqlJdbcExtensionArtifact}"
+		    property="ext_mssql.filename"/>
 		<copy 
-			file="${cache}/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex" 
+			file="${cache}/${extMssqlJdbcExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extMssqlJdbcExtension}-${extMssqlJdbcExtensionVersion}.lex" 
+			file="${goal}/extensions/${extMssqlJdbcExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_mssql.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_mssql.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_mssql.filename};</echo>
 		
 		<!-- add extension Postgre -->
-		<loadmf jar="${cache}/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex" prefix="ext_postgre."/>
-		<toFileName id="${ext_postgre.id}" name="${ext_postgre.name}" version="${ext_postgre.version}" property="ext_postgre.filename"/>
+		<loadmf jar="${cache}/${extPostgresqlJdbcExtensionFilename}" prefix="ext_postgre."/>
+		<toFileName id="${ext_postgre.id}" name="${ext_postgre.name}" version="${ext_postgre.version}"
+		    group="${extPostgresqlJdbcExtensionGroup}"
+		    artifact="${extPostgresqlJdbcExtensionArtifact}"
+		    property="ext_postgre.filename"/>
 		<copy 
-			file="${cache}/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex" 
+			file="${cache}/${extPostgresqlJdbcExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extPostgresqlJdbcExtension}-${extPostgresqlJdbcExtensionVersion}.lex" 
+			file="${goal}/extensions/${extPostgresqlJdbcExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_postgre.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_postgre.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_postgre.filename};</echo>
 
 		<!-- add extension S3 -->
-		<loadmf jar="${cache}/${extS3Extension}-${extS3ExtensionVersion}.lex" prefix="ext_s3."/>
-		<toFileName id="${ext_s3.id}" name="${ext_s3.name}" version="${ext_s3.version}" property="ext_s3.filename"/>
+		<loadmf jar="${cache}/${extS3ExtensionFilename}" prefix="ext_s3."/>
+		<toFileName id="${ext_s3.id}" name="${ext_s3.name}" version="${ext_s3.version}" 
+		    group="${extS3ExtensionGroup}"
+		    artifact="${extS3ExtensionArtifact}"
+		    property="ext_s3.filename"/>
 		<copy 
-			file="${cache}/${extS3Extension}-${extS3ExtensionVersion}.lex" 
+			file="${cache}/${extS3ExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extS3Extension}-${extS3ExtensionVersion}.lex" 
+			file="${goal}/extensions/${extS3ExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_s3.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_s3.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_s3.filename};</echo>
 
 		<!-- add extension PDF -->
-		<loadmf jar="${cache}/${extPdfExtension}-${extPdfExtensionVersion}.lex" prefix="ext_pdf."/>
-		<toFileName id="${ext_pdf.id}" name="${ext_pdf.name}" version="${ext_pdf.version}" property="ext_pdf.filename"/>
+		<loadmf jar="${cache}/${extPdfExtensionFilename}" prefix="ext_pdf."/>
+		<toFileName id="${ext_pdf.id}" name="${ext_pdf.name}" version="${ext_pdf.version}" 
+		    group="${extPdfExtensionGroup}"
+		    artifact="${extPdfExtensionArtifact}"
+		    property="ext_pdf.filename"/>
 		<copy 
-			file="${cache}/${extPdfExtension}-${extPdfExtensionVersion}.lex" 
+			file="${cache}/${extPdfExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extPdfExtension}-${extPdfExtensionVersion}.lex" 
+			file="${goal}/extensions/${extPdfExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_pdf.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_pdf.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_pdf.filename};</echo>
 		
 		<!-- add extension Admin -->
-		<loadmf jar="${cache}/${extAdministratorExtension}-${extAdministratorExtensionVersion}.lex" prefix="ext_admin."/>
-		<toFileName id="${ext_admin.id}" name="${ext_admin.name}" version="${ext_admin.version}" property="ext_admin.filename"/>
+		<loadmf jar="${cache}/${extAdministratorExtensionFilename}" prefix="ext_admin."/>
+		<toFileName id="${ext_admin.id}" name="${ext_admin.name}" version="${ext_admin.version}" 
+		    group="${extAdministratorExtensionGroup}"
+		    artifact="${extAdministratorExtensionArtifact}"
+		    property="ext_admin.filename"/>
 		<copy 
-			file="${cache}/${extAdministratorExtension}-${extAdministratorExtensionVersion}.lex" 
+			file="${cache}/${extAdministratorExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extAdministratorExtension}-${extAdministratorExtensionVersion}.lex" 
+			file="${goal}/extensions/${extAdministratorExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_admin.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_admin.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_admin.filename};</echo>
 		
 		<!-- add extension Doc -->
-		<loadmf jar="${cache}/${extDocumentationExtension}-${extDocumentationExtensionVersion}.lex" prefix="ext_doc."/>
-		<toFileName id="${ext_doc.id}" name="${ext_doc.name}" version="${ext_doc.version}" property="ext_doc.filename"/>
+		<loadmf jar="${cache}/${extDocumentationExtensionFilename}" prefix="ext_doc."/>
+		<toFileName id="${ext_doc.id}" name="${ext_doc.name}" version="${ext_doc.version}" 
+		    group="${extDocumentationExtensionGroup}"
+		    artifact="${extDocumentationExtensionArtifact}"
+		    property="ext_doc.filename"/>
 		<copy 
-			file="${cache}/${extDocumentationExtension}-${extDocumentationExtensionVersion}.lex" 
+			file="${cache}/${extDocumentationExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extDocumentationExtension}-${extDocumentationExtensionVersion}.lex" 
+			file="${goal}/extensions/${extDocumentationExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_doc.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_doc.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_doc.filename};</echo>
 
 		<!-- add extension Image -->
-		<loadmf jar="${cache}/${extImageExtension}-${extImageExtensionVersion}.lex" prefix="ext_image."/>
-		<toFileName id="${ext_image.id}" name="${ext_image.name}" version="${ext_image.version}" property="ext_image.filename"/>
+		<loadmf jar="${cache}/${extImageExtensionFilename}" prefix="ext_image."/>
+		<toFileName id="${ext_image.id}" name="${ext_image.name}" version="${ext_image.version}" 
+		    group="${extImageExtensionGroup}"
+		    artifact="${extImageExtensionArtifact}"
+		    property="ext_image.filename"/>
 		<copy 
-			file="${cache}/${extImageExtension}-${extImageExtensionVersion}.lex" 
+			file="${cache}/${extImageExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extImageExtension}-${extImageExtensionVersion}.lex" 
+			file="${goal}/extensions/${extImageExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_image.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_image.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_image.filename};</echo>
 
 		<!-- add extension Esapi -->
-		<loadmf jar="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex" prefix="ext_esapi."/>
-		<toFileName id="${ext_esapi.id}" name="${ext_esapi.name}" version="${ext_esapi.version}" property="ext_esapi.filename"/>
+		<loadmf jar="${cache}/${extEsapiExtensionFilename}" prefix="ext_esapi."/>
+		<toFileName id="${ext_esapi.id}" name="${ext_esapi.name}" version="${ext_esapi.version}" 
+		    group="${extEsapiExtensionGroup}"
+		    artifact="${extEsapiExtensionArtifact}"
+		    property="ext_esapi.filename"/>
 		<copy 
-			file="${cache}/${extEsapiExtension}-${extEsapiExtensionVersion}.lex" 
+			file="${cache}/${extEsapiExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extEsapiExtension}-${extEsapiExtensionVersion}.lex" 
+			file="${goal}/extensions/${extEsapiExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_esapi.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_esapi.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_esapi.filename};</echo>
 
 		<!-- add extension Scheduler -->
-		<loadmf jar="${cache}/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex" prefix="ext_scheduler."/>
-		<toFileName id="${ext_scheduler.id}" name="${ext_scheduler.name}" version="${ext_scheduler.version}" property="ext_scheduler.filename"/>
+		<loadmf jar="${cache}/${extSchedulerClassicExtensionFilename}" prefix="ext_scheduler."/>
+		<toFileName id="${ext_scheduler.id}" name="${ext_scheduler.name}" version="${ext_scheduler.version}" 
+		    group="${extSchedulerClassicExtensionGroup}"
+		    artifact="${extSchedulerClassicExtensionArtifact}"
+		    property="ext_scheduler.filename"/>
 		<copy 
-			file="${cache}/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex" 
+			file="${cache}/${extSchedulerClassicExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extSchedulerClassicExtension}-${extSchedulerClassicExtensionVersion}.lex" 
+			file="${goal}/extensions/${extSchedulerClassicExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_scheduler.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_scheduler.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_scheduler.filename};</echo>
 
 		<!-- add extension Compress -->
-		<loadmf jar="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex" prefix="ext_compress."/>
-		<toFileName id="${ext_compress.id}" name="${ext_compress.name}" version="${ext_compress.version}" property="ext_compress.filename"/>
+		<loadmf jar="${cache}/${extCompressExtensionFilename}" prefix="ext_compress."/>
+		<toFileName id="${ext_compress.id}" name="${ext_compress.name}" version="${ext_compress.version}" 
+		    group="${extCompressExtensionGroup}"
+		    artifact="${extCompressExtensionArtifact}"
+		    property="ext_compress.filename"/>
 		<copy 
-			file="${cache}/${extCompressExtension}-${extCompressExtensionVersion}.lex" 
+			file="${cache}/${extCompressExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extCompressExtension}-${extCompressExtensionVersion}.lex" 
+			file="${goal}/extensions/${extCompressExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_compress.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_compress.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_compress.filename};</echo>
 
 		<!-- add extension Mail -->
-		<loadmf jar="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" prefix="ext_mail."/>
-		<toFileName id="${ext_mail.id}" name="${ext_mail.name}" version="${ext_mail.version}" property="ext_mail.filename"/>
+		<loadmf jar="${cache}/${extMailExtensionFilename}" prefix="ext_mail."/>
+		<toFileName id="${ext_mail.id}" name="${ext_mail.name}" version="${ext_mail.version}" 
+		    group="${extMailExtensionGroup}"
+		    artifact="${extMailExtensionArtifact}"
+		    property="ext_mail.filename"/>
 		<copy 
-			file="${cache}/${extMailExtension}-${extMailExtensionVersion}.lex" 
+			file="${cache}/${extMailExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extMailExtension}-${extMailExtensionVersion}.lex" 
+			file="${goal}/extensions/${extMailExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_mail.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_mail.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_mail.filename};</echo>
 
 		<!-- add extension FTP -->
-		<loadmf jar="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex" prefix="ext_ftp."/>
-		<toFileName id="${ext_ftp.id}" name="${ext_ftp.name}" version="${ext_ftp.version}" property="ext_ftp.filename"/>
+		<loadmf jar="${cache}/${extFtpExtensionFilename}" prefix="ext_ftp."/>
+		<toFileName id="${ext_ftp.id}" name="${ext_ftp.name}" version="${ext_ftp.version}" 
+		    group="${extFtpExtensionGroup}"
+		    artifact="${extFtpExtensionArtifact}"
+		    property="ext_ftp.filename"/>
 		<copy 
-			file="${cache}/${extFtpExtension}-${extFtpExtensionVersion}.lex" 
+			file="${cache}/${extFtpExtensionFilename}" 
 			todir="${goal}/extensions/"/>
 		<move 
-			file="${goal}/extensions/${extFtpExtension}-${extFtpExtensionVersion}.lex" 
+			file="${goal}/extensions/${extFtpExtensionFilename}" 
 			tofile="${goal}/extensions/${ext_ftp.filename}"/>
 		<echo level="info">add:${goal}/extensions/${ext_ftp.filename}</echo>
 		<echo file="${goal}/extensions/.index" append="true">${ext_ftp.filename};</echo>
@@ -461,13 +479,28 @@
 			var copy = project.createTask( "copy" );
 			var echo = project.createTask( "echo" );
 
-			// echo.setMessage( "copying Extensions to : " + targetDir );
-			// echo.perform();	
+			echo.setMessage( "copying Extensions to : " + targetDir );
+			echo.perform();	
+
+			// --- Debug: List files in source directory ---
+			var sourceFolder = new java.io.File(sourceDir);
+			var files = sourceFolder.list();
+			if (files != null) {
+			    project.log("--- Listing Source Directory: " + sourceDir + " ---");
+			    for (var i = 0; i < files.length; i++) {
+			        project.log("File found in cache: " + files[i]);
+			    }
+			    project.log("---------------------------------------------------");
+			} else {
+			    project.log("--- Source Directory is Empty or Invalid: " + sourceDir + " ---");
+			}
+
+
 
 			for (var e in extensions){
 				var extFile = extensions[e].split(";").join("-") + ".lex";
-				// echo.setMessage( "copy Extension: " + sourceDir + "/" + extFile );
-				// echo.perform();	
+				echo.setMessage( "copy Extension: " + sourceDir + "/" + extFile );
+				echo.perform();	
 				copy.setFile( new java.io.File( sourceDir + "/" + extFile ) );
 				copy.setTofile( new java.io.File( targetDir + "/" + extFile ) );
 				copy.perform();

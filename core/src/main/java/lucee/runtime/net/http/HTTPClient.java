@@ -174,7 +174,7 @@ public final class HTTPClient implements Objects, Iteratorable {
 			InputStream is = null;
 			HTTPResponse rsp = null;
 			try {
-				rsp = HTTPEngine4Impl.get(metaURL, username, password, 5000, false, "UTF-8", createUserAgent(pc), proxyData, null);
+				rsp = HTTPEngine4Impl.get(metaURL, username, password, 5000, false, "UTF-8", createUserAgent(pc), proxyData, null, true);
 				MimeType mt = getMimeType(rsp, null);
 				int format = MimeType.toFormat(mt, -1);
 				if (format == -1) throw new ApplicationException("cannot convert response with mime type [" + mt + "] to a CFML Object");
@@ -300,7 +300,7 @@ public final class HTTPClient implements Objects, Iteratorable {
 		InputStream is = null;
 		try {
 			// call remote cfc
-			rsp = HTTPEngine4Impl.post(url, username, password, -1, false, "UTF-8", createUserAgent(pc), proxyData, HTTPEngine.toHeaders(headers), formfields);
+			rsp = HTTPEngine4Impl.post(url, username, password, -1, false, "UTF-8", createUserAgent(pc), proxyData, HTTPEngine.toHeaders(headers), formfields, true);
 
 			// read result
 			Header[] rspHeaders = rsp.getAllHeaders();

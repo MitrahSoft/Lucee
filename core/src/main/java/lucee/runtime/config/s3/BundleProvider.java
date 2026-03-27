@@ -50,6 +50,7 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.loader.engine.CFMLEngine;
@@ -97,8 +98,7 @@ public final class BundleProvider extends DefaultHandler {
 			DEFAULT_PROVIDER_DETAIL_MVN = new URL("https://repo1.maven.org/maven2/");
 
 		}
-		catch (Exception e) {
-		}
+		catch (Exception e) {}
 
 	}
 
@@ -109,8 +109,7 @@ public final class BundleProvider extends DefaultHandler {
 				try {
 					defaultProviderList = new URL(str.trim());
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 			if (defaultProviderList == null) defaultProviderList = DEFAULT_PROVIDER_LIST;
 		}
@@ -124,8 +123,7 @@ public final class BundleProvider extends DefaultHandler {
 				try {
 					defaultProviderDetail = new URL[] { new URL(str.trim()) };
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 			if (defaultProviderDetail == null) defaultProviderDetail = DEFAULT_PROVIDER_DETAILS;
 		}
@@ -139,8 +137,7 @@ public final class BundleProvider extends DefaultHandler {
 				try {
 					defaultProviderDetailMvn = new URL(str.trim());
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 			if (defaultProviderDetailMvn == null) defaultProviderDetailMvn = DEFAULT_PROVIDER_DETAIL_MVN;
 		}
@@ -303,15 +300,20 @@ public final class BundleProvider extends DefaultHandler {
 		URL url = getBundleAsURL(bd, true);
 
 		if (url != null) {
-			HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-			if (rsp != null) {
-				int sc = rsp.getStatusCode();
-				if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + url + "], status code [" + sc + "]");
+			HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null, true);
+			try {
+				if (rsp != null) {
+					int sc = rsp.getStatusCode();
+					if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + url + "], status code [" + sc + "]");
+				}
+				else {
+					throw new IOException("unable to invoke [" + url + "], no response.");
+				}
+				return rsp.getContentAsStream();
 			}
-			else {
-				throw new IOException("unable to invoke [" + url + "], no response.");
+			finally {
+				HTTPEngine.closeEL(rsp);
 			}
-			return rsp.getContentAsStream();
 		}
 		throw new IOException("no bundle found for bundle [" + bd + "]");
 
@@ -462,22 +464,27 @@ public final class BundleProvider extends DefaultHandler {
 
 					do {
 						if (url == null) url = isTruncated ? new URL(this.url.toExternalForm() + "?marker=" + this.lastKey) : this.url;
-						HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, BundleProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
-						if (rsp != null) {
-							int sc = rsp.getStatusCode();
-							if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + url + "], status code [" + sc + "]");
-						}
-						else {
-							throw new IOException("unable to invoke [" + url + "], no response.");
-						}
-
-						Reader r = null;
+						HTTPResponse rsp = HTTPEngine4Impl.get(url, null, null, BundleProvider.CONNECTION_TIMEOUT, true, null, null, null, null, true);
 						try {
-							init(new InputSource(r = IOUtil.getReader(rsp.getContentAsStream(), (Charset) null)));
+							if (rsp != null) {
+								int sc = rsp.getStatusCode();
+								if (sc < 200 || sc >= 300) throw new IOException("unable to invoke [" + url + "], status code [" + sc + "]");
+							}
+							else {
+								throw new IOException("unable to invoke [" + url + "], no response.");
+							}
+
+							Reader r = null;
+							try {
+								init(new InputSource(r = IOUtil.getReader(rsp.getContentAsStream(), (Charset) null)));
+							}
+							finally {
+								url = null;
+								IOUtil.close(r);
+							}
 						}
 						finally {
-							url = null;
-							IOUtil.close(r);
+							HTTPEngine.closeEL(rsp);
 						}
 
 					}
@@ -576,7 +583,7 @@ public final class BundleProvider extends DefaultHandler {
 	}
 
 	public static URL validate(URL url, URL defaultValue) {
-		if (HTTPDownloader.exists(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_HEAD_READ_TIMEOUT)) {
+		if (HTTPDownloader.exists(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_HEAD_READ_TIMEOUT, true)) {
 			return url;
 		}
 		return defaultValue;
@@ -830,9 +837,10 @@ public final class BundleProvider extends DefaultHandler {
 			synchronized (SystemUtil.createToken("BundleProvider", key)) {
 				latests.get(key);
 				if (version == null) {
+					HTTPResponse rsp = null;
 					try {
 						URL metadata = new URL(base, info.groupId.replace('.', '/') + "/" + info.artifactId + "/maven-metadata.xml");
-						HTTPResponse rsp = HTTPEngine4Impl.get(metadata, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null);
+						rsp = HTTPEngine4Impl.get(metadata, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, true, null, null, null, null, true);
 
 						if (rsp != null) {
 							int sc = rsp.getStatusCode();
@@ -857,6 +865,9 @@ public final class BundleProvider extends DefaultHandler {
 					}
 					catch (Exception e) {
 						LogUtil.log(Log.LEVEL_DEBUG, "OSGi", ExceptionUtil.getStacktrace(e, true));
+					}
+					finally {
+						HTTPEngine.closeEL(rsp);
 					}
 				}
 			}

@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
@@ -32,7 +33,6 @@ import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
-import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.http.HTTPDownloader;
 import lucee.runtime.config.Config;
@@ -62,6 +62,7 @@ public class ExtensionProvider {
 
 	// mapping for extensions on org.lucee
 	private static final Map<String, GAVSO> uuidMapping = new HashMap<>();
+	private static final Set<String> uuidNoSet = new HashSet<>();
 	static {
 		uuidMapping.put("CED6227E-0F49-6367-A68D21AACA6B07E8", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "administrator-extension", null));
 		uuidMapping.put("6E2CB28F-98FB-4B51-B6BE6C64ADF35473", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "ajax-extension", null));
@@ -120,13 +121,20 @@ public class ExtensionProvider {
 		uuidMapping.put("337A9955-C0FA-848F-0B3F0AEBA155CA9B", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "teradata-jdbc-extension", null));
 		uuidMapping.put("058215B3-5544-4392-A187A1649EB5CA90", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "websocket-client-extension", null));
 		uuidMapping.put("3F9DFF32-B555-449D-B0EB5DB723044045", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "websocket-extension", null));
+		uuidMapping.put("FA79A831-7D30-4D8A-B7F300DECEB00001", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "debugger-extension", null));
+		uuidMapping.put("A71D636B-D668-4D93-886F9A5D34A9343D", new GAVSO(MavenUpdateProvider.DEFAULT_GROUP, "yaml-extension", null));
 
+		// uuidMapping.clear(); // for testing
 	}
 
 	private String group;
 	private Collection<Repository> repos;
 
-	public ExtensionProvider(String group, Repository... repositories) {
+	private boolean hasExtracted;
+
+	private static Map<String, ExtensionProvider> instances = new ConcurrentHashMap<>();
+
+	private ExtensionProvider(Config config, String group, Repository... repositories) {
 		this.repos = Arrays.asList(repositories);
 		this.group = group;
 	}
@@ -140,15 +148,30 @@ public class ExtensionProvider {
 		return rtn;
 	}
 
-	public ExtensionProvider(Config config, String group) {
+	private ExtensionProvider(Config config, String group) {
 		ConfigPro cp = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 		Repository[] repoSnapshots = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORIES_SNAPSHOTS : cp.getMavenSnapshotRepository();
 		Repository[] repoReleases = cp == null ? MavenUpdateProvider.DEFAULT_REPOSITORIES_RELEASES : cp.getMavenRepository();
 		this.repos = MavenUpdateProvider.merge(repoSnapshots, repoReleases, MavenUpdateProvider.DEFAULT_REPOSITORIES_ALL);
 		this.group = group;
+
 	}
 
-	private ExtensionProvider disableCache() {
+	public static ExtensionProvider getInstance(Config config, String groupId) {
+		ExtensionProvider instance = instances.get(groupId);
+		if (instance == null) {
+			synchronized (SystemUtil.createToken("ExtensionProvider", groupId)) {
+				instance = instances.get(groupId);
+				if (instance == null) {
+					instance = new ExtensionProvider(config, groupId);
+					instances.put(groupId, instance);
+				}
+			}
+		}
+		return instance;
+	}
+
+	private ExtensionProvider disableCache(Config config) {
 		// snap
 		List<Repository> list = new ArrayList<>();
 		for (Repository r: this.repos) {
@@ -156,21 +179,8 @@ public class ExtensionProvider {
 		}
 
 		// TODO Auto-generated method stub
-		return new ExtensionProvider(group, list.toArray(new Repository[list.size()])
-
-		);
+		return new ExtensionProvider(config, group, list.toArray(new Repository[list.size()]));
 	}
-
-	/*
-	 * private Set<String> listAllProjectsOld() throws IOException, InterruptedException {
-	 * HtmlDirectoryScraper scraper = new HtmlDirectoryScraper(); String strURL; Set<String> subfolders
-	 * = new HashSet<>(), tmp;
-	 * 
-	 * for (Repository r: repos) { strURL = (r.url.endsWith("/") ? r.url : (r.url + "/")) +
-	 * group.replace('.', '/') + "/"; tmp = readFromCache(r); if (tmp == null) { tmp = new HashSet<>();
-	 * print.e("-->" + strURL); scraper.getSubfolderLinks(strURL, tmp); } copy(tmp, subfolders);
-	 * storeToCache(r, tmp); } return subfolders; }
-	 */
 
 	private Set<String> listAllProjects() throws InterruptedException, IOException {
 		Set<String> subfolders = new HashSet<>();
@@ -229,20 +239,24 @@ public class ExtensionProvider {
 	}
 
 	public static GAVSO toGAVSO(ConfigPro config, String uuid, boolean investigate, GAVSO defaultValue) {
+
 		GAVSO gavso = toGAVSOSimple(uuid, null);
 		if (gavso != null) return gavso;
-		config = (ConfigPro) ThreadLocalPageContext.getConfig(config);
+		if (uuidNoSet.contains(uuid)) return defaultValue;
+
 		if (investigate) {
+			config = (ConfigPro) ThreadLocalPageContext.getConfig(config);
 			for (String groupId: config.getExtensionProvidersGroupIds()) {
 				try {
-					ExtensionProvider ep = new ExtensionProvider(config, groupId);
-					String artifactId = ep.extractArtifactByUUID(config, uuid);
-					if (!StringUtil.isEmpty(artifactId)) {
-						return new GAVSO(groupId, artifactId, null);
-					}
+					ExtensionProvider ep = ExtensionProvider.getInstance(config, groupId);
+					ep.extractUUIDs(config);
 				}
 				catch (Exception e) {}
 			}
+			// try again
+			gavso = toGAVSOSimple(uuid, null);
+			if (gavso != null) return gavso;
+			uuidNoSet.add(uuid);
 		}
 		return defaultValue;
 	}
@@ -353,7 +367,8 @@ public class ExtensionProvider {
 
 	public List<Version> list(String artifact) throws IOException, GeneralSecurityException, SAXException, InterruptedException {
 		MavenUpdateProvider mup = new MavenUpdateProvider(this.repos, this.group, artifact);
-		return mup.list();
+		List<Version> list = mup.list();
+		return list;
 	}
 
 	public Version last(String artifact) throws IOException, GeneralSecurityException, SAXException, InterruptedException {
@@ -376,7 +391,7 @@ public class ExtensionProvider {
 		return lastRel != null ? lastRel : last;
 	}
 
-	public Map<String, Object> detail(String artifact, Version version) throws PageException, IOException, GeneralSecurityException, SAXException {
+	public Map<String, Object> detail(String artifact, Version version) throws PageException, IOException, SAXException {
 		MavenUpdateProvider mup;
 		mup = new MavenUpdateProvider(this.repos, this.group, artifact);
 		Map<String, Object> detail = mup.detail(version, EXTENSION_EXTENSION, false);
@@ -458,15 +473,6 @@ public class ExtensionProvider {
 		throw new ApplicationException("there is no [" + EXTENSION_EXTENSION + "] artifact for [" + this.group + ":" + artifact + ":" + version + "]");
 	}
 
-	/*
-	 * private InputStream getX(String artifact, Version version, InputStream defaultValue) {
-	 * 
-	 * Map<String, Object> detail = detail(artifact, version, null); if (detail != null) { URL url =
-	 * HTTPUtil.toURL(Caster.toString(detail.get(EXTENSION_EXTENSION), null), Http.ENCODED_NO, null); if
-	 * (url != null) { try { return HTTPDownloader.get(url, DOWNLOAD_CONNECT_TIMEOUT,
-	 * DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT); } catch (Exception e) {} } } return defaultValue; }
-	 */
-
 	/**
 	 * Extracts the UUID from a JAR file's manifest
 	 * 
@@ -537,59 +543,94 @@ public class ExtensionProvider {
 		return false;
 	}
 
-	private String extractArtifactByUUID(Config config, String uuid) throws IOException, InterruptedException, GeneralSecurityException, SAXException, PageException {
-		List<String> artifactsList = list();
-		Log log = LogUtil.getLog(config, "mvn", "application");
+	private void extractUUIDs(Config config) throws IOException, InterruptedException, GeneralSecurityException, SAXException, PageException {
 
-		// BY POM
-		Map<String, Version> lasts = new HashMap<>();
-		for (String artifact: artifactsList) {
-			Version last = last(artifact);
-			lasts.put(artifact, last);
+		if (!hasExtracted) {
+			synchronized (SystemUtil.createToken("ExtensionProvider", "extract" + group)) {
+				if (!hasExtracted) {
+					List<String> artifactsList = list();
+					Log log = LogUtil.getLog(config, "mvn", "application");
 
-			if (last != null && !has(getGroup(), artifact)) {
-				Resource res = getPOMResource((ConfigPro) config, artifact, last, null);
-				if (res != null) {
-					String _uuid = extractUUIDFromPOM(res, log);
-					if (_uuid != null) {
-						uuidMapping.put(_uuid.toUpperCase(), new GAVSO(getGroup(), artifact, null));
-						if (uuid.equalsIgnoreCase(_uuid)) {
-							return artifact;
-						}
-						continue;
+					List<Thread> threads = new ArrayList<>();
+					Stack<Exception> exceptions = new Stack<>();
+
+					for (String artifact: artifactsList) {
+						Thread thread = ThreadUtil.getThread(() -> {
+							try {
+								if (!has(group, artifact)) {
+									if (LogUtil.doesInfo(log)) {
+										log.info("extension-provider", "extracting UUID for " + group + ":" + artifact);
+									}
+
+									// Determine the last version
+									Version last = last(artifact);
+									if (last != null) {
+
+										boolean hasUUID = false;
+										// Check if we already have it or need to extract from POM
+										Resource res = getPOMResource((ConfigPro) config, artifact, last, null);
+										if (res != null) {
+											String _uuid = extractUUIDFromPOM(res, log);
+											if (_uuid != null) {
+												uuidMapping.put(_uuid.toUpperCase(), new GAVSO(getGroup(), artifact, null));
+												if (LogUtil.doesDebug(log)) {
+													log.debug("extension-provider", "found UUID [" + _uuid + "] via POM for " + artifact);
+												}
+												hasUUID = true;
+											}
+										}
+
+										if (!hasUUID) {
+											res = getLEXResource((ConfigPro) config, artifact, last, null);
+											if (res != null) {
+												// Now use the separate method to extract UUID
+												String _uuid = extractUUIDFromJar(res, log);
+												if (_uuid != null) {
+													uuidMapping.put(_uuid.toUpperCase(), new GAVSO(getGroup(), artifact, null));
+													if (LogUtil.doesDebug(log)) {
+														log.debug("extension-provider", "found UUID [" + _uuid + "] via LEX for " + artifact);
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+							catch (Exception e) {
+								exceptions.push(e);
+							}
+
+						}, false);
+
+						thread.start();
+						threads.add(thread);
 					}
+
+					// 2. Wait for all extractions to finish
+					for (Thread t: threads) {
+						t.join();
+					}
+
+					// 3. Handle Exceptions (Re-throw the first significant one found)
+					if (!exceptions.isEmpty()) {
+						Exception e = exceptions.pop();
+						if (e instanceof PageException) throw (PageException) e;
+						if (e instanceof SAXException) throw (SAXException) e;
+						if (e instanceof GeneralSecurityException) throw (GeneralSecurityException) e;
+						throw ExceptionUtil.toIOException(e);
+					}
+					hasExtracted = true;
 				}
 			}
 		}
-
-		for (String artifact: artifactsList) {
-			Version last = lasts.get(artifact);
-			if (last != null && !has(getGroup(), artifact)) {
-				// reading the jar file
-				Resource res = getLEXResource((ConfigPro) config, artifact, last, null);
-				if (res != null) {
-					// Now use the separate method to extract UUID
-					String _uuid = extractUUIDFromJar(res, log);
-					if (_uuid != null) {
-						uuidMapping.put(_uuid.toUpperCase(), new GAVSO(getGroup(), artifact, null));
-						if (uuid.equalsIgnoreCase(_uuid)) {
-							return artifact;
-						}
-						continue;
-					}
-				}
-
-			}
-		}
-		throw new ApplicationException("cannot find the maven artifact for the id [" + uuid + "]");
 	}
 
 	public static void main(String[] args) throws Exception {
 		// TODO remove
-		ExtensionProvider ep = new ExtensionProvider("org.lucee", new Repository[] {
+		ExtensionProvider ep = new ExtensionProvider(null, "org.lucee", new Repository[] {
 				new Repository("Maven Release Repository", "https://cdn.lucee.org/", MavenUpdateProvider.TYPE_ALL, Repository.TIMEOUT_5SECONDS, Repository.TIMEOUT_5SECONDS) });
 
-		ep = new ExtensionProvider("org.lucee", MavenUpdateProvider.REPOSITORY_MAVEN_CENTRAL_RELEASES);
+		ep = new ExtensionProvider(null, "org.lucee", MavenUpdateProvider.REPOSITORY_MAVEN_CENTRAL_RELEASES);
 
 		aprint.e(ep.list("yaml-extension"));
 		aprint.e(ep.detail("yaml-extension", Version.parseVersion("2.5.2-BETA")));

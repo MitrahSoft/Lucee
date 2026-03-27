@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -59,7 +58,7 @@ public final class RepoReader extends DefaultHandler {
 		this.key = repo + ":" + group + ":" + artifact + ":" + version;
 	}
 
-	public Map<String, Object> read(String requiredArtifactExtension) throws IOException, GeneralSecurityException, SAXException {
+	public Map<String, Object> read(String requiredArtifactExtension) throws IOException, SAXException {
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";
 		else requiredArtifactExtension = requiredArtifactExtension.toLowerCase();
 
@@ -74,7 +73,7 @@ public final class RepoReader extends DefaultHandler {
 		// Use HTTPDownloader with DEBUG logging for Maven repo metadata lookups
 		Reader r = null;
 		try {
-			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE),
+			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false, Log.LEVEL_TRACE),
 					(Charset) null);
 			init(new InputSource(r));
 		}

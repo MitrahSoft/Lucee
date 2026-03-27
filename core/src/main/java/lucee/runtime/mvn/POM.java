@@ -472,7 +472,7 @@ public final class POM {
 			try {
 				url = new URL(r.getUrl() + scriptName);
 
-				if (HTTPDownloader.exists(url, CONNECTION_TIMEOUT, READ_TIMEOUT_HEAD)) {
+				if (HTTPDownloader.exists(url, CONNECTION_TIMEOUT, READ_TIMEOUT_HEAD, false)) {
 					return url;
 				}
 

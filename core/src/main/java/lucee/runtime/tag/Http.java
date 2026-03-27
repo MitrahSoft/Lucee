@@ -730,7 +730,7 @@ public final class Http extends BodyTagImpl {
 		long start = System.nanoTime();
 		boolean safeToMemory = !StringUtil.isEmpty(result, true);
 
-		HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(this.usePool, this.clientCert, this.clientCertPassword, this.redirect);
+		HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(this.usePool, this.clientCert, this.clientCertPassword, this.redirect).getName();
 
 		// cookies
 		BasicCookieStore cookieStore = new BasicCookieStore();

@@ -64,6 +64,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.ClientContext;
 import org.apache.http.client.protocol.HttpClientContext;
@@ -99,8 +100,10 @@ import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.lang.ExceptionUtil;
+import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.Entity;
+import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPEngine;
 import lucee.commons.net.http.HTTPResponse;
 import lucee.commons.net.http.httpclient.entity.ByteArrayHttpEntity;
@@ -117,9 +120,7 @@ import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
-import lucee.runtime.tag.Http;
 import lucee.runtime.type.dt.TimeSpan;
-import lucee.runtime.type.dt.TimeSpanImpl;
 import lucee.runtime.type.util.CollectionUtil;
 
 public final class HTTPEngine4Impl {
@@ -128,10 +129,10 @@ public final class HTTPEngine4Impl {
 	private static Map<String, PoolingHttpClientConnectionManager> connectionManagers = new ConcurrentHashMap<>();
 	private static boolean cannotAccess = false;
 
-	public static final int POOL_MAX_CONN = 500;
-	public static final int POOL_MAX_CONN_PER_ROUTE = 50;
+	public static final int POOL_MAX_CONN = 1000;
+	public static final int POOL_MAX_CONN_PER_ROUTE = 100;
 	public static final int POOL_CONN_TTL_MS = 15000;
-	public static final int POOL_CONN_INACTIVITY_DURATION = 300;
+	public static final int POOL_CONN_INACTIVITY_DURATION = 2000;
 	private static final long SHUTDOWN_CHECK_MAX_AGE = 10000;
 
 	/**
@@ -151,9 +152,9 @@ public final class HTTPEngine4Impl {
 	 * @throws GeneralSecurityException
 	 */
 	public static HTTPResponse get(URL url, String username, String password, long timeout, boolean redirect, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers) throws IOException, GeneralSecurityException {
+			lucee.commons.net.http.Header[] headers, boolean pooling) throws IOException, GeneralSecurityException {
 		HttpGet get = new HttpGet(url.toExternalForm());
-		return invoke(url, get, username, password, timeout, redirect, charset, useragent, proxy, headers, null, false);
+		return invoke(url, get, username, password, timeout, redirect, charset, useragent, proxy, headers, null, pooling);
 	}
 
 	/**
@@ -172,24 +173,19 @@ public final class HTTPEngine4Impl {
 	 * @throws IOException
 	 * @throws GeneralSecurityException
 	 */
-	public static HTTPResponse post(URL url, String username, String password, long timeout, boolean redirect, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers) throws IOException, GeneralSecurityException {
-		HttpPost post = new HttpPost(url.toExternalForm());
-		return invoke(url, post, username, password, timeout, redirect, charset, useragent, proxy, headers, null, false);
-	}
 
 	public static HTTPResponse post(URL url, String username, String password, long timeout, boolean redirect, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers, Map<String, String> formfields) throws IOException, GeneralSecurityException {
+			lucee.commons.net.http.Header[] headers, Map<String, String> formfields, boolean pooling) throws IOException, GeneralSecurityException {
 		HttpPost post = new HttpPost(url.toExternalForm());
 
-		return invoke(url, post, username, password, timeout, redirect, charset, useragent, proxy, headers, formfields, false);
+		return invoke(url, post, username, password, timeout, redirect, charset, useragent, proxy, headers, formfields, pooling);
 	}
 
 	public static HTTPResponse post(URL url, String username, String password, long timeout, boolean redirect, String mimetype, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers, Map<String, String> formfields, Object body) throws IOException, GeneralSecurityException {
+			lucee.commons.net.http.Header[] headers, Map<String, String> formfields, Object body, boolean pooling) throws IOException, GeneralSecurityException {
 		HttpPost post = new HttpPost(url.toExternalForm());
 		setBody(post, body, mimetype, charset);
-		return invoke(url, post, username, password, timeout, redirect, charset, useragent, proxy, headers, formfields, false);
+		return invoke(url, post, username, password, timeout, redirect, charset, useragent, proxy, headers, formfields, pooling);
 	}
 
 	/**
@@ -211,10 +207,10 @@ public final class HTTPEngine4Impl {
 	 * @throws GeneralSecurityException
 	 */
 	public static HTTPResponse put(URL url, String username, String password, long timeout, boolean redirect, String mimetype, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers, Object body) throws IOException, GeneralSecurityException {
+			lucee.commons.net.http.Header[] headers, Object body, boolean pooling) throws IOException, GeneralSecurityException {
 		HttpPut put = new HttpPut(url.toExternalForm());
 		setBody(put, body, mimetype, charset);
-		return invoke(url, put, username, password, timeout, redirect, charset, useragent, proxy, headers, null, false);
+		return invoke(url, put, username, password, timeout, redirect, charset, useragent, proxy, headers, null, pooling);
 
 	}
 
@@ -235,9 +231,9 @@ public final class HTTPEngine4Impl {
 	 * @throws GeneralSecurityException
 	 */
 	public static HTTPResponse delete(URL url, String username, String password, long timeout, boolean redirect, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers) throws IOException, GeneralSecurityException {
+			lucee.commons.net.http.Header[] headers, boolean pooling) throws IOException, GeneralSecurityException {
 		HttpDelete delete = new HttpDelete(url.toExternalForm());
-		return invoke(url, delete, username, password, timeout, redirect, charset, useragent, proxy, headers, null, false);
+		return invoke(url, delete, username, password, timeout, redirect, charset, useragent, proxy, headers, null, pooling);
 	}
 
 	/**
@@ -257,9 +253,9 @@ public final class HTTPEngine4Impl {
 	 * @throws GeneralSecurityException
 	 */
 	public static HTTPResponse head(URL url, String username, String password, long timeout, boolean redirect, String charset, String useragent, ProxyData proxy,
-			lucee.commons.net.http.Header[] headers) throws IOException, GeneralSecurityException {
+			lucee.commons.net.http.Header[] headers, boolean pooling) throws IOException, GeneralSecurityException {
 		HttpHead head = new HttpHead(url.toExternalForm());
-		return invoke(url, head, username, password, timeout, redirect, charset, useragent, proxy, headers, null, false);
+		return invoke(url, head, username, password, timeout, redirect, charset, useragent, proxy, headers, null, pooling);
 	}
 
 	public static lucee.commons.net.http.Header header(String name, String value) {
@@ -272,42 +268,62 @@ public final class HTTPEngine4Impl {
 		return new HeaderImpl(header.getName(), header.getValue());
 	}
 
-	public static HttpClientBuilder getHttpClientBuilder(boolean pooling, String clientCert, String clientCertPassword, String redirect)
+	public static Pair<HttpClientBuilder, HttpClientConnectionManager> getHttpClientBuilder(boolean pooling, String clientCert, String clientCertPassword, String redirect)
 			throws GeneralSecurityException, IOException {
+
 		String key = clientCert + ":" + clientCertPassword;
 		Registry<ConnectionSocketFactory> reg = StringUtil.isEmpty(clientCert, true) ? createRegistry() : createRegistry(clientCert, clientCertPassword);
 
+		// NON-POOLING PATH (Simple, short-lived client)
 		if (!pooling) {
 			HttpClientBuilder builder = HttpClients.custom();
+			// Basic manager does not pool; it opens/closes a new socket per request
 			HttpClientConnectionManager cm = new BasicHttpClientConnectionManager(new DefaultHttpClientConnectionOperatorImpl(reg), null);
 			builder.setConnectionManager(cm).setConnectionManagerShared(false).setRedirectStrategy(new LaxRedirectStrategy());
+
 			if (!Caster.toBooleanValue(redirect, true)) builder.disableRedirectHandling();
-			return builder;
+			return new Pair(builder, cm);
 		}
 
+		// POOLING PATH (High-concurrency shared manager)
 		PoolingHttpClientConnectionManager cm = connectionManagers.get(key);
+
+		// Double-checked locking using your thread-safe Token utility
 		if (cm == null || isShutDown(cm, true)) {
 			synchronized (SystemUtil.createToken("PoolingHttpClientConnectionManager", key)) {
 				cm = connectionManagers.get(key);
 				if (cm == null || isShutDown(cm, true)) {
 					cm = new PoolingHttpClientConnectionManager(new DefaultHttpClientConnectionOperatorImpl(reg), null, POOL_CONN_TTL_MS, TimeUnit.MILLISECONDS);
-					cm.setDefaultMaxPerRoute(POOL_MAX_CONN_PER_ROUTE);
-					cm.setMaxTotal(POOL_MAX_CONN);
+
+					// Configure Pool Limits
+					cm.setDefaultMaxPerRoute(POOL_MAX_CONN_PER_ROUTE); // Limits threads per host
+					cm.setMaxTotal(POOL_MAX_CONN); // Global limit for this manager
+
+					// CRITICAL FOR MULTI-THREADING:
+					// Check if a pooled connection is still alive if it's been idle for > 2s.
+					// This prevents "Connection Reset" errors when a thread grabs an old socket.
+					cm.setValidateAfterInactivity(POOL_CONN_INACTIVITY_DURATION);
+
 					cm.setDefaultSocketConfig(SocketConfig.copy(SocketConfig.DEFAULT).setTcpNoDelay(true).setSoReuseAddress(true).setSoLinger(0).build());
-					// cm.setValidateAfterInactivity(POOL_CONN_INACTIVITY_DURATION);
+
 					connectionManagers.put(key, cm);
 				}
 			}
 		}
+
+		// BUILDER CONFIGURATION
 		HttpClientBuilder builder = HttpClients.custom();
-		builder.setConnectionManager(cm).setConnectionManagerShared(true).setConnectionTimeToLive(POOL_CONN_TTL_MS, TimeUnit.MILLISECONDS)
+		builder.setConnectionManager(cm)
+				// Setting this to 'true' ensures that client.close() doesn't kill the whole pool
+				.setConnectionManagerShared(true).setConnectionTimeToLive(POOL_CONN_TTL_MS, TimeUnit.MILLISECONDS)
 				.setConnectionReuseStrategy(new DefaultClientConnectionReuseStrategy())
 				.setRedirectStrategy("lax".equalsIgnoreCase(redirect) ? new LaxRedirectStrategy() : new DefaultRedirectStrategy())
-				.setRetryHandler(new NoHttpResponseExceptionHttpRequestRetryHandler());
+				.setRetryHandler(new NoHttpResponseExceptionHttpRequestRetryHandler())
+				// Safety net: background threads that reap dead/stale connections
+				.evictIdleConnections(30, TimeUnit.SECONDS).evictExpiredConnections();
 
 		if (!Caster.toBooleanValue(redirect, true)) builder.disableRedirectHandling();
-
-		return builder;
+		return new Pair(builder, cm);
 	}
 
 	public static void setTimeout(HttpClientBuilder builder, TimeSpan timeout) {
@@ -396,24 +412,54 @@ public final class HTTPEngine4Impl {
 
 	private static HTTPResponse invoke(URL url, HttpUriRequest request, String username, String password, long timeout, boolean redirect, String charset, String useragent,
 			ProxyData proxy, lucee.commons.net.http.Header[] headers, Map<String, String> formfields, boolean pooling) throws IOException, GeneralSecurityException {
-		CloseableHttpClient client;
-		proxy = ProxyDataImpl.validate(proxy, url.getHost());
 
-		HttpClientBuilder builder = getHttpClientBuilder(pooling, null, null, String.valueOf(redirect));
+		// 1. USE A SINGLETON CLIENT - DO NOT CALL builder.build() here!
+		CloseableHttpClient client = HTTPDownloader.getHttpClient(pooling);
 
-		HttpHost hh = new HttpHost(url.getHost(), url.getPort());
+		// 2. Setup Per-Request Config (Redirects and Timeouts)
+		int ms = (timeout > 0) ? (int) timeout : 0;
+		RequestConfig requestConfig = RequestConfig.custom().setSocketTimeout(ms).setConnectTimeout(ms).setConnectionRequestTimeout(5000).setCookieSpec(CookieSpecs.STANDARD)
+				.setRedirectsEnabled(redirect).build();
+
+		if (request instanceof HttpRequestBase) {
+			((HttpRequestBase) request).setConfig(requestConfig);
+		}
+
+		// 3. Use a fresh Context for Credentials/Proxy (Thread-safe)
+		HttpClientContext context = HttpClientContext.create();
+
+		// Set Headers/Body/UserAgent
 		setHeader(request, headers);
 		if (CollectionUtil.isEmpty(formfields)) setContentType(request, charset);
 		setFormFields(request, formfields, charset);
 		setUserAgent(request, useragent);
-		// Always call setTimeout to ensure RequestConfig is set properly (includes LDEV-2321 cookie spec
-		// fix)
-		Http.setTimeout(builder, timeout > 0 ? TimeSpanImpl.fromMillis(timeout) : null);
-		HttpContext context = setCredentials(builder, hh, username, password, false);
-		setProxy(url.getHost(), builder, request, proxy);
-		client = builder.build();
-		if (context == null) context = new HttpClientContext();
 
+		// 4. Handle Auth/Proxy via Context instead of Builder
+		// This avoids mutating shared builder state across threads
+		if (!StringUtil.isEmpty(username, true)) {
+			CredentialsProvider credsProvider = new BasicCredentialsProvider();
+			credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
+			context.setCredentialsProvider(credsProvider);
+		}
+
+		proxy = ProxyDataImpl.validate(proxy, url.getHost());
+		if (ProxyDataImpl.isValid(proxy, url.getHost())) {
+			HttpHost proxyHost = new HttpHost(proxy.getServer(), proxy.getPort());
+
+			// Check if it's a base request that supports configuration
+			if (request instanceof org.apache.http.client.methods.HttpRequestBase) {
+				org.apache.http.client.methods.HttpRequestBase baseRequest = (org.apache.http.client.methods.HttpRequestBase) request;
+
+				// Build the new config with the proxy included
+				RequestConfig newConfig = RequestConfig.copy(requestConfig).setProxy(proxyHost).build();
+
+				baseRequest.setConfig(newConfig);
+			}
+
+		}
+
+		// 5. Execute!
+		// This will be fast (3s) because the client and pool are already "warm"
 		return new HTTPResponse4Impl(url, context, request, client.execute(request, context));
 	}
 
