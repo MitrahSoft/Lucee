@@ -148,7 +148,7 @@ public class BundleLoader {
 			engFac.log(LoggerImpl.LOG_DEBUG, "started bundles in " + (tmp - start) + "ms");
 			start = tmp;
 
-			return new BundleCollection(felix, bundle, bundles, extractFelixCacheRootdir(config));
+			return new BundleCollection(felix, bundle, bundles);
 		}
 		catch (BundleException be) {
 			// PATCH for LDEV-6144: stale felix cache (bundle registered at old path after rename, e.g. from

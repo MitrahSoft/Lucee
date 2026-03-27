@@ -32,7 +32,7 @@ public class BundleCollection {
 	public final Felix felix;
 	private File felixCacheParentDirectory;
 
-	public BundleCollection(final Felix felix, final Bundle master, final List<Bundle> slaves, File felixCacheParentDirectory) {
+	public BundleCollection(final Felix felix, final Bundle master, final List<Bundle> slaves) {
 		this.felix = felix;
 		this.core = master;
 		this.slaves = new ArrayList<Bundle>();
@@ -51,9 +51,5 @@ public class BundleCollection {
 
 	public BundleContext getBundleContext() {
 		return felix.getBundleContext();
-	}
-
-	public File getFelixCacheDirectory() {
-		return new File(felixCacheParentDirectory, "felix-cache");
 	}
 }
