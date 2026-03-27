@@ -149,11 +149,6 @@ public final class PhysicalClassLoader extends URLClassLoader implements Extenda
 
 		ClazzDynamic.flush(existing);
 
-		try {
-			existing.close();
-		}
-		catch (IOException e) {}
-
 		return clone;
 	}
 
