@@ -19,6 +19,7 @@
 package lucee.runtime.component;
 
 import jakarta.servlet.jsp.tagext.BodyContent;
+import lucee.print;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.filter.DirectoryResourceFilter;
@@ -228,8 +229,6 @@ public final class ComponentLoader {
 		final String path = (rawPath.indexOf("./") == -1 && !rawPath.endsWith(ext)) ? rawPath.replace('.', '/') : rawPath;
 		boolean isRealPath = !StringUtil.startsWith(path, '/');
 
-		// PageSource currPS = pc.getCurrentPageSource();
-		// Page currP=currPS.loadPage(pc,false);
 		PageSource ps = null;
 		CIPage page = null;
 
@@ -317,6 +316,9 @@ public final class ComponentLoader {
 		if (searchLocal != null && searchLocal && isRealPath) {
 			// check realpath
 			PageSource[] arr = ((PageContextImpl) pc).getRelativePageSources(pathWithCFC);
+			print.e("1------");
+			print.e(arr);
+
 			page = toCIPage(PageSourceImpl.loadPage(pc, arr, null));
 			if (page != null) {
 				if (doCache) config.putCachedPageSource(localCacheName, page.getPageSource());
@@ -345,6 +347,9 @@ public final class ComponentLoader {
 					// search from local first
 					if (searchLocal) {
 						arr = ((PageContextImpl) pc).getRelativePageSources(impDef.getPackageAsPath() + pathWithCFC);
+						print.e("2------");
+						print.e(arr);
+
 						page = toCIPage(PageSourceImpl.loadPage(pc, arr, null));
 						if (page != null) {
 							if (doCache) config.putCachedPageSource("import:" + impDef.getPackageAsPath() + pathWithCFC, page.getPageSource());
@@ -352,6 +357,8 @@ public final class ComponentLoader {
 									: load(pc, page, trim(path.replace('/', '.')), sub, isRealPath, returnType, isExtendedComponent, executeConstr, validate);
 						}
 					}
+					print.e("3------");
+					print.e(((PageContextImpl) pc).getPageSources("/" + impDef.getPackageAsPath() + pathWithCFC));
 
 					// search mappings and webroot
 					page = toCIPage(PageSourceImpl.loadPage(pc, ((PageContextImpl) pc).getPageSources("/" + impDef.getPackageAsPath() + pathWithCFC), null));
@@ -370,6 +377,8 @@ public final class ComponentLoader {
 							for (int y = 0; y < mappings.length; y++) {
 								m = mappings[y];
 								ps = m.getPageSource(impDef.getPackageAsPath() + pathWithCFC);
+								print.e("4------");
+								print.e(ps);
 								page = toCIPage(ps.loadPageThrowTemplateException(pc, false, (Page) null));
 								if (page != null) {
 									if (doCache && z > 0) config.putCachedPageSource("import:" + impDef.getPackageAsPath() + pathWithCFC, page.getPageSource());

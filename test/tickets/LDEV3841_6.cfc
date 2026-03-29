@@ -1,0 +1,48 @@
+component extends="org.lucee.cfml.test.LuceeTestCase" {
+
+	function beforeAll(){
+		cfapplication(action='update', cgiReadOnly="true");
+	}
+
+	function afterAll(){
+		cfapplication(action='update', cgiReadOnly="true");
+	}
+
+	function run( testResults, testBox ) {
+
+		describe("Testcase for LDEV-3841 - cfapplication / cgiReadOnly", function() {
+			it( title="cfapplication cgiReadOnly=false", body=function( currentSpec ) {
+				expect( cgiReadOnlyTest( 1 ) ).toBe( "writable:1" );
+			});
+			it( title="cfapplication without setting cgiReadOnly", body=function( currentSpec ) {
+				expect( cgiReadOnlyTest( 2 ) ).toBe( "readOnly:2" );
+			});
+			it( title="cfapplication cgiReadOnly=true", body=function( currentSpec ) {
+				expect( cgiReadOnlyTest( 3 ) ).toBe( "ReadOnly:3" );
+			});
+		});
+
+
+
+	}
+
+	private string function createURI(string calledName, boolean contract=true){
+		var base = getDirectoryFromPath( getCurrentTemplatePath() );
+		var baseURI = contract ? contractPath( base ) : "/test/#listLast(base,"\/")#";
+		return baseURI & "/" & calledName;
+	}
+
+	private string function cgiReadOnlyTest( required numeric scene ) {
+		try {
+			if (scene == 1) cfapplication(name="LDEV-3841", action='update', cgiReadOnly="false");
+			if (scene == 2) cfapplication(action='update');
+			if (scene == 3) cfapplication(action='update', cgiReadOnly="true");
+			CGI.foo = "writable:#scene#";
+			return CGI.foo;
+		}
+		catch(any e) {
+			// systemOutput(e.message, true);
+			return "readonly:#scene#";
+		}
+	}
+}
