@@ -30,17 +30,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				expect(structKeyExists(variables, "testVarAsync")).toBeTrue();
 				expect(structKeyExists(application, "testAppAsync")).toBeTrue();
 			});
-			it( title="Checking runAsnyc() to pass the request, url, form scopes to pageContext", skip=true, body=function( currentSpec ) {
-				runAsync(() => {
-					request.testReqAsync = "testReqAsync";
-					url.testURLAsync = "testURLAsync";
-					form.testFORMAsync = "testFORMAsync";
-				});
-				sleep(50);
-				expect(structKeyExists(request, "testReqAsync")).toBeTrue();
-				expect(structKeyExists(url, "testURLAsync")).toBeTrue();
-				expect(structKeyExists(form, "testFORMAsync")).toBeTrue();
-			});
+
 		}); 
 	}
 

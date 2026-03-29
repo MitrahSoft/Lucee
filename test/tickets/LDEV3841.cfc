@@ -59,6 +59,33 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				}).toThrow();
 			});
 
+			it(title = "checking via application.cfc, cgiReadOnly=false", body = function( currentSpec ) {
+				var result = _InternalRequest(
+					template : "#createURI("LDEV3841")#/cfc/index.cfm",
+					url: {
+						cgiReadonly: false
+					}
+				);
+				var _cgi = deserializeJson( result.filecontent );
+				expect( _cgi ).toHaveKey( "Readonly" );
+				expect( _cgi.readOnly ).toBe( "false" );
+			});
+
+			// only works when set in CFconfig.json
+			it(title = "checking via application.cfc, cgiReadOnly=false constructor", skip=true, body = function( currentSpec ) {
+				var result = _InternalRequest(
+					template : "#createURI("LDEV3841")#/cfc/index.cfm",
+					url: {
+						cgiReadonly: false,
+						constructor: true
+					}
+				);
+				var _cgi = deserializeJson( result.filecontent );
+				expect( _cgi ).toHaveKey( "constructor" );
+				expect( _cgi.constructor ).toBe( "true" );
+				expect( _cgi ).toHaveKey( "Readonly" );
+				expect( _cgi.readOnly ).toBe( "false" );
+			});
 		});
 	}
 
