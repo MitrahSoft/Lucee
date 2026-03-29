@@ -21,7 +21,7 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.SerializableObject;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.commons.tree.TreeNode;
 import lucee.runtime.config.maven.MavenUpdateProvider;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
@@ -472,7 +472,7 @@ public final class POM {
 			try {
 				url = new URL(r.getUrl() + scriptName);
 
-				if (HTTPDownloader.exists(url, CONNECTION_TIMEOUT, READ_TIMEOUT_HEAD, false)) {
+				if (HTTPEngine.exists(url, CONNECTION_TIMEOUT, READ_TIMEOUT_HEAD, false)) {
 					return url;
 				}
 

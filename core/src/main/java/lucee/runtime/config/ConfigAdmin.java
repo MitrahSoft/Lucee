@@ -76,10 +76,8 @@ import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.IPRange;
 import lucee.commons.net.URLEncoder;
-import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPEngine;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPEngineBasic.HTTPDownloaderHeadResponse;
 import lucee.commons.security.Credentials;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -3797,7 +3795,7 @@ public final class ConfigAdmin {
 		// copy it to local directory
 		if (newLucee.createNewFile()) {
 			try {
-				HTTPDownloader.downloadToFile(updateUrl, newLucee, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
+				HTTPEngine.downloadToFile(updateUrl, newLucee, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 
 				// when it is a loader extract the core from it
 				File tmp = CFMLEngineFactory.extractCoreIfLoader(newLucee);
@@ -5524,40 +5522,30 @@ public final class ConfigAdmin {
 	}
 
 	public void verifyExtensionProvider(String strUrl) throws PageException {
-		HTTPResponse method = null;
+		HTTPDownloaderHeadResponse rsp;
+		URL url = null;
 		try {
-			try {
-				URL url = HTTPUtil.toURL(strUrl + "?wsdl", HTTPUtil.ENCODED_AUTO);
-				method = HTTPEngine4Impl.get(url, null, null, 2000, true, null, null, null, null, true);
-			}
-			catch (MalformedURLException e) {
-				ApplicationException ae = new ApplicationException("Url definition [" + strUrl + "] is invalid");
-				ExceptionUtil.initCauseEL(ae, e);
-				throw ae;
-			}
-			catch (IOException e) {
-				ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
-				ExceptionUtil.initCauseEL(ae, e);
-				throw ae;
-			}
-			catch (GeneralSecurityException e) {
-				ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
-				ExceptionUtil.initCauseEL(ae, e);
-			}
-
-			if (method.getStatusCode() != 200) {
-				int code = method.getStatusCode();
-				String text = method.getStatusText();
-				String msg = code + " " + text;
-				throw new HTTPException(msg, null, code, text, method.getURL());
-			}
-			// Object o =
-			CreateObject.doWebService(null, strUrl + "?wsdl");
+			url = HTTPUtil.toURL(strUrl + "?wsdl", HTTPUtil.ENCODED_AUTO);
+			rsp = HTTPEngine.head(url);
 		}
-		finally {
-			HTTPEngine.closeEL(method);
+		catch (MalformedURLException e) {
+			ApplicationException ae = new ApplicationException("Url definition [" + strUrl + "] is invalid");
+			ExceptionUtil.initCauseEL(ae, e);
+			throw ae;
+		}
+		catch (IOException e) {
+			ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
+			ExceptionUtil.initCauseEL(ae, e);
+			throw ae;
 		}
 
+		if (rsp.getStatusCode() != 200) {
+			int code = rsp.getStatusCode();
+			String text = rsp.getStatusText();
+			String msg = code + " " + text;
+			throw new HTTPException(msg, null, code, text, url);
+		}
+		CreateObject.doWebService(null, strUrl + "?wsdl");
 	}
 
 	public void updateTLD(Resource resTld) throws IOException {

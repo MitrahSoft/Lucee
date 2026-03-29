@@ -42,7 +42,7 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.ParentThreasRefThread;
 import lucee.commons.lang.PhysicalClassLoaderFactory;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.CFMLFactoryImpl;
 import lucee.runtime.Mapping;
 import lucee.runtime.config.ConfigAdmin;
@@ -421,7 +421,7 @@ public final class Controler extends ParentThreasRefThread {
 					stopwatch.start();
 					// Clear unused http connections
 					try {
-						HTTPEngine4Impl.closeIdleConnections();
+						HTTPEngine.closeIdleConnections();
 					}
 					catch (Exception e) {
 						if (log != null) log.error("controler", e);

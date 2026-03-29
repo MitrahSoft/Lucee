@@ -709,8 +709,7 @@ public final class ASMUtil {
 					sb.append("type:" + props[i].getASMType() + ";");
 
 				}
-				catch (PageException e) {
-				}
+				catch (PageException e) {}
 			}
 		}
 		try {
@@ -769,8 +768,7 @@ public final class ASMUtil {
 
 	public static void pop(GeneratorAdapter adapter, Type type) {
 		if (type.equals(Types.DOUBLE_VALUE)) adapter.pop2();
-		else if (type.equals(Types.VOID)) {
-		}
+		else if (type.equals(Types.VOID)) {}
 		else adapter.pop();
 	}
 
@@ -1247,7 +1245,7 @@ public final class ASMUtil {
 						else if ("23".equals(vs) || "23.0".equals(vs)) javaBytecodeVersion = Opcodes.V23;
 						else if ("24".equals(vs) || "24.0".equals(vs)) javaBytecodeVersion = Opcodes.V24;
 						else if ("25".equals(vs) || "25.0".equals(vs)) javaBytecodeVersion = Opcodes.V25;
-						else if ("26".equals(vs) || "26.0".equals(vs)) javaBytecodeVersion = Opcodes.V26;
+						// else if ("26".equals(vs) || "26.0".equals(vs)) javaBytecodeVersion = Opcodes.V26;
 					}
 
 					// we do not use the version of the JVM by default, because this would limit the use of lucee

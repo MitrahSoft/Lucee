@@ -30,7 +30,7 @@ import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.pool.PoolStats;
 
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.CFMLFactoryImpl;
 import lucee.runtime.PageContext;
 import lucee.runtime.config.ConfigWebPro;
@@ -87,7 +87,7 @@ public final class GetSystemInfo implements Function {
 		{
 			Struct httpPoolInfo = new StructImpl();
 			int httpLeased = 0, httpAvailable = 0, httpPending = 0, httpMax = 0;
-			for (PoolingHttpClientConnectionManager cm: HTTPEngine4Impl.getConnectionManagers().values()) {
+			for (PoolingHttpClientConnectionManager cm: HTTPEngine.getConnectionManagers().values()) {
 				PoolStats totals = cm.getTotalStats();
 				httpLeased += totals.getLeased();
 				httpAvailable += totals.getAvailable();

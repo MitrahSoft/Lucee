@@ -82,8 +82,7 @@ import lucee.commons.lang.Md5;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
-import lucee.commons.net.http.HTTPDownloader;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.intergral.fusiondebug.server.FDControllerImpl;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -1317,8 +1316,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			if (cntr != null) cntr.close();
 
 			// release HTTP Pool
-			HTTPEngine4Impl.releaseConnectionManager();
-			HTTPDownloader.releaseSharedClient();
+			HTTPEngine.releaseConnectionManager();
+			HTTPEngine.releaseSharedClient();
 
 			releaseCache(getConfigServerImpl(null, false, true));
 

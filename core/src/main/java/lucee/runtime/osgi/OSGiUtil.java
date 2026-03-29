@@ -70,7 +70,7 @@ import lucee.commons.lang.ClassUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.loader.osgi.BundleCollection;
@@ -929,7 +929,7 @@ public final class OSGiUtil {
 			Resource temp = SystemUtil.getTempFile("jar", false);
 			InputStream is = null;
 			try {
-				is = HTTPDownloader.get(updateUrl, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT);
+				is = HTTPEngine.get(updateUrl, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT);
 				IOUtil.copy(is, temp, true);
 
 				// extract version and create file with correct name
@@ -937,9 +937,6 @@ public final class OSGiUtil {
 				Resource jar = jarDir.getRealResource(symbolicName + "-" + bf.getVersionAsString() + ".jar");
 				IOUtil.copy(temp, jar);
 				return jar;
-			}
-			catch (GeneralSecurityException e) {
-				throw new IOException("Failed to download the bundle [" + symbolicName + ":" + symbolicVersion + "] from [" + updateUrl + "]", e);
 			}
 			finally {
 				IOUtil.closeEL(is);
@@ -949,7 +946,7 @@ public final class OSGiUtil {
 
 		Resource jar = jarDir.getRealResource(symbolicName + "-" + symbolicVersion + ".jar");
 		try {
-			HTTPDownloader.downloadToFile(updateUrl, ResourceUtil.toFile(jar), DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
+			HTTPEngine.downloadToFile(updateUrl, ResourceUtil.toFile(jar), DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 		}
 		catch (GeneralSecurityException e) {
 			final String msg = "Download bundle failed for [" + symbolicName + "] in version [" + symbolicVersion + "] from [" + updateUrl

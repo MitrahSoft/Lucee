@@ -34,8 +34,9 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPDownloader;
-import lucee.commons.net.http.HTTPDownloader.HTTPDownloaderHeadResponse;
+import lucee.commons.net.http.HTTPEngine;
+import lucee.commons.net.http.HTTPEngineBasic.HTTPDownloaderHeadResponse;
+import lucee.commons.net.http.Header;
 import lucee.loader.engine.CFMLEngineFactory;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
@@ -291,7 +292,7 @@ public final class MavenUpdateProvider {
 		assertDownloadAllowed(strURL);
 		if (!StringUtil.isEmpty(strURL)) {
 			// Use HTTPDownloader with DEBUG logging for Maven operations
-			return HTTPDownloader.get(new URL(strURL), null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, false, Log.LEVEL_TRACE);
+			return HTTPEngine.get(new URL(strURL), null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, false);
 		}
 		return getFileStreamFromZipStream(getLoader(version));
 	}
@@ -306,7 +307,7 @@ public final class MavenUpdateProvider {
 		// Use HTTPDownloader with DEBUG logging for Maven operations
 		URL url = new URL(strURL);
 		assertDownloadAllowed(strURL);
-		return HTTPDownloader.get(url, null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, false, Log.LEVEL_TRACE);
+		return HTTPEngine.get(url, null, null, CONNECTION_TIMEOUT, READ_TIMEOUT, null, false);
 	}
 
 	/*
@@ -361,13 +362,13 @@ public final class MavenUpdateProvider {
 					{
 						String strURL = repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + "." + requiredArtifactExtension;
 						URL urlMain = new URL(strURL);
-						HTTPDownloaderHeadResponse rsp = HTTPDownloader.head(urlMain, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false, Log.LEVEL_TRACE);
-						if (rsp != null & validSatusCode(rsp.getStatusLine())) {
+						HTTPDownloaderHeadResponse rsp = HTTPEngine.head(urlMain, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false);
+						if (rsp != null & validSatusCode(rsp.getStatusCode())) {
 							Map<String, Object> result = new LinkedHashMap<>();
 
-							org.apache.http.Header[] headers = rsp.getAllHeaders();
+							Header[] headers = rsp.getAllHeaders();
 							if (headers != null) {
-								for (org.apache.http.Header h: headers) {
+								for (Header h: headers) {
 									if ("Last-Modified".equals(h.getName())) result.put("lastModified", DateCaster.toDateAdvanced(h.getValue(), null));
 								}
 							}
@@ -377,16 +378,16 @@ public final class MavenUpdateProvider {
 							// pom
 							{
 								URL url = new URL(repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + ".pom");
-								rsp = HTTPDownloader.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false, Log.LEVEL_TRACE);
-								if (rsp != null & validSatusCode(rsp.getStatusLine())) {
+								rsp = HTTPEngine.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false);
+								if (rsp != null & validSatusCode(rsp.getStatusCode())) {
 									result.put("pom", url.toExternalForm());
 								}
 							}
 							// lco
 							{
 								URL url = new URL(repo.url + g + "/" + a + "/" + v + "/" + a + "-" + v + ".lco");
-								rsp = HTTPDownloader.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false, Log.LEVEL_TRACE);
-								if (rsp != null & validSatusCode(rsp.getStatusLine())) {
+								rsp = HTTPEngine.head(url, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT, false);
+								if (rsp != null & validSatusCode(rsp.getStatusCode())) {
 									result.put("lco", url.toExternalForm());
 								}
 							}
@@ -461,6 +462,10 @@ public final class MavenUpdateProvider {
 	private boolean validSatusCode(StatusLine sl) {
 		if (sl == null) return false;
 		return sl.getStatusCode() >= 200 && sl.getStatusCode() < 300;
+	}
+
+	private boolean validSatusCode(int code) {
+		return code >= 200 && code < 300;
 	}
 
 	public static InputStream getFileStreamFromZipStream(InputStream zipStream) throws IOException {

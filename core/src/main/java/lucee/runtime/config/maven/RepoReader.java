@@ -23,9 +23,8 @@ import org.xml.sax.helpers.DefaultHandler;
 import lucee.commons.date.DateTimeUtil;
 import lucee.commons.date.TimeZoneConstants;
 import lucee.commons.io.IOUtil;
-import lucee.commons.io.log.Log;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.op.Caster;
 import lucee.runtime.text.xml.XMLUtil;
 import lucee.runtime.type.dt.DateTime;
@@ -73,8 +72,7 @@ public final class RepoReader extends DefaultHandler {
 		// Use HTTPDownloader with DEBUG logging for Maven repo metadata lookups
 		Reader r = null;
 		try {
-			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false, Log.LEVEL_TRACE),
-					(Charset) null);
+			r = IOUtil.getReader(HTTPEngine.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false), (Charset) null);
 			init(new InputSource(r));
 		}
 		catch (IOException ioe) {

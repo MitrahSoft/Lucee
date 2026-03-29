@@ -34,7 +34,7 @@ import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.util.ResourceUtil;
 import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.net.HTTPUtil;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
@@ -409,7 +409,7 @@ public class ExtensionProvider {
 		}
 	}
 
-	public Resource getPOMResource(ConfigPro config, String artifact, Version version) throws IOException, PageException, GeneralSecurityException, SAXException {
+	public Resource getPOMResource(ConfigPro config, String artifact, Version version) throws IOException, PageException, SAXException {
 		return getResource(config, artifact, "pom", version);
 	}
 
@@ -422,11 +422,11 @@ public class ExtensionProvider {
 		}
 	}
 
-	public Resource getLEXResource(ConfigPro config, String artifact, Version version) throws IOException, PageException, GeneralSecurityException, SAXException {
+	public Resource getLEXResource(ConfigPro config, String artifact, Version version) throws IOException, PageException, SAXException {
 		return getResource(config, artifact, "lex", version);
 	}
 
-	private Resource getResource(ConfigPro config, String artifact, String ext, Version version) throws IOException, PageException, GeneralSecurityException, SAXException {
+	private Resource getResource(ConfigPro config, String artifact, String ext, Version version) throws IOException, PageException, SAXException {
 		Log log = LogUtil.getLog(config, "mvn", "application");
 		Resource local;
 		try {
@@ -462,12 +462,12 @@ public class ExtensionProvider {
 		return defaultValue;
 	}
 
-	private InputStream get(String artifact, Version version) throws PageException, IOException, GeneralSecurityException, SAXException {
+	private InputStream get(String artifact, Version version) throws PageException, IOException, SAXException {
 		Map<String, Object> detail = detail(artifact, version);
 		if (detail != null) {
 			URL url = HTTPUtil.toURL(Caster.toString(detail.get(EXTENSION_EXTENSION), null), Http.ENCODED_NO, null);
 			if (url != null) {
-				return HTTPDownloader.get(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
+				return HTTPEngine.get(url, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 			}
 		}
 		throw new ApplicationException("there is no [" + EXTENSION_EXTENSION + "] artifact for [" + this.group + ":" + artifact + ":" + version + "]");

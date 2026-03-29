@@ -20,7 +20,7 @@ import lucee.commons.io.IOUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.Resource;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
 import lucee.runtime.op.Caster;
 import lucee.runtime.text.xml.XMLUtil;
@@ -74,8 +74,7 @@ public final class MetadataReader extends DefaultHandler {
 		Reader r = null;
 		try {
 			// Use HTTPDownloader for the actual network call
-			r = IOUtil.getReader(HTTPDownloader.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false, Log.LEVEL_TRACE),
-					(Charset) null);
+			r = IOUtil.getReader(HTTPEngine.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, false), (Charset) null);
 			init(new InputSource(r));
 		}
 		catch (IOException ioe) {

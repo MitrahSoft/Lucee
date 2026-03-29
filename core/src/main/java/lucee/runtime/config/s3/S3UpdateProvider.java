@@ -26,11 +26,10 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
-import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.config.maven.MavenUpdateProvider;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.date.DateCaster;
@@ -135,8 +134,7 @@ public final class S3UpdateProvider extends DefaultHandler {
 				if (art != null) {
 					try {
 						// Use HTTPDownloader with DEBUG logging for S3 downloads
-						return HTTPDownloader.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, true,
-								Log.LEVEL_TRACE);
+						return HTTPEngine.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, true);
 					}
 					catch (IOException ioe) {
 						// Try JAR fallback
@@ -145,8 +143,8 @@ public final class S3UpdateProvider extends DefaultHandler {
 
 				art = e.getJAR();
 				if (art != null) {
-					return MavenUpdateProvider.getFileStreamFromZipStream(HTTPDownloader.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT,
-							MavenUpdateProvider.CONNECTION_TIMEOUT, null, true, Log.LEVEL_TRACE));
+					return MavenUpdateProvider.getFileStreamFromZipStream(
+							HTTPEngine.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, true));
 				}
 			}
 		}
@@ -165,8 +163,7 @@ public final class S3UpdateProvider extends DefaultHandler {
 			// Use HTTPDownloader with DEBUG logging for S3 update provider list reads
 			Reader r = null;
 			try {
-				r = IOUtil.getReader(HTTPDownloader.get(url, null, null, S3UpdateProvider.CONNECTION_TIMEOUT, S3UpdateProvider.CONNECTION_TIMEOUT, null, true, Log.LEVEL_TRACE),
-						(Charset) null);
+				r = IOUtil.getReader(HTTPEngine.get(url, null, null, S3UpdateProvider.CONNECTION_TIMEOUT, S3UpdateProvider.CONNECTION_TIMEOUT, null, true), (Charset) null);
 				init(new InputSource(r));
 			}
 			finally {
