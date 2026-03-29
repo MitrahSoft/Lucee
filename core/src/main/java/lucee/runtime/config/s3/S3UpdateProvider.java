@@ -134,7 +134,7 @@ public final class S3UpdateProvider extends DefaultHandler {
 				if (art != null) {
 					try {
 						// Use HTTPDownloader with DEBUG logging for S3 downloads
-						return HTTPEngine.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, true);
+						return HTTPEngine.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, null, true);
 					}
 					catch (IOException ioe) {
 						// Try JAR fallback
@@ -144,7 +144,7 @@ public final class S3UpdateProvider extends DefaultHandler {
 				art = e.getJAR();
 				if (art != null) {
 					return MavenUpdateProvider.getFileStreamFromZipStream(
-							HTTPEngine.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, true));
+							HTTPEngine.get(art.getURL(), null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.CONNECTION_TIMEOUT, null, null, true));
 				}
 			}
 		}
@@ -163,7 +163,7 @@ public final class S3UpdateProvider extends DefaultHandler {
 			// Use HTTPDownloader with DEBUG logging for S3 update provider list reads
 			Reader r = null;
 			try {
-				r = IOUtil.getReader(HTTPEngine.get(url, null, null, S3UpdateProvider.CONNECTION_TIMEOUT, S3UpdateProvider.CONNECTION_TIMEOUT, null, true), (Charset) null);
+				r = IOUtil.getReader(HTTPEngine.get(url, null, null, S3UpdateProvider.CONNECTION_TIMEOUT, S3UpdateProvider.CONNECTION_TIMEOUT, null, null, true), (Charset) null);
 				init(new InputSource(r));
 			}
 			finally {

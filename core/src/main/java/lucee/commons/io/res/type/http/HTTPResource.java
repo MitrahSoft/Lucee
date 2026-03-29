@@ -115,7 +115,7 @@ public final class HTTPResource extends ReadOnlyResourceSupport {
 
 	private HTTPDownloaderHeadResponse getMeta() throws IOException {
 		if (meta == null) {
-			meta = HTTPEngine.head(getURL(), data.username, data.password, HTTPEngine.DEFAULT_CONNECT_TIMEOUT, _getTimeout(), null, true);
+			meta = HTTPEngine.head(getURL(), data.username, data.password, HTTPEngine.DEFAULT_CONNECT_TIMEOUT, _getTimeout(), null, null);
 		}
 		return meta;
 	}

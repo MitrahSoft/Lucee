@@ -72,24 +72,36 @@ public final class HTTPEngine extends HTTPEngineBasic {
 
 	}
 
-	public static HTTPDownloaderHeadResponse head(URL url) throws IOException {
-		return head(url, DEFAULT_CONNECT_TIMEOUT, -1, true);
-	}
-
 	public static HTTPDownloaderHeadResponse head(URL url, long connectTimeout, long readTimeout, boolean pooling) throws IOException {
-		return head(url, null, null, connectTimeout, readTimeout, DEFAULT_USER_AGENT, pooling);
+		return head(url, null, null, connectTimeout, readTimeout, DEFAULT_USER_AGENT, null, pooling);
 	}
 
-	public static HTTPDownloaderHeadResponse head(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, boolean pooling)
+	public static HTTPDownloaderHeadResponse head(URL url) throws IOException {
+		return head(url, null, null, DEFAULT_CONNECT_TIMEOUT, -1, null, null, true);
+	}
+
+	public static HTTPDownloaderHeadResponse head(URL url, long connectTimeout, long readTimeout) throws IOException {
+		return head(url, null, null, connectTimeout, readTimeout, null, null, true);
+	}
+
+	public static HTTPDownloaderHeadResponse head(URL url, long connectTimeout, long readTimeout, String userAgent) throws IOException {
+		return head(url, null, null, connectTimeout, readTimeout, userAgent, null, true);
+	}
+
+	public static HTTPDownloaderHeadResponse head(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent) throws IOException {
+		return head(url, username, password, connectTimeout, readTimeout, userAgent, null, true);
+	}
+
+	public static HTTPDownloaderHeadResponse head(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, ProxyData proxy)
 			throws IOException {
-		return head(url, username, password, connectTimeout, readTimeout, null, userAgent, null, null, pooling);
+		return head(url, username, password, connectTimeout, readTimeout, userAgent, proxy, true);
 	}
 
-	public static HTTPDownloaderHeadResponse head(URL url, String username, String password, long connectTimeout, long readTimeout, String charset, String userAgent,
-			ProxyData proxy, lucee.commons.net.http.Header[] headers, boolean pooling) throws IOException {
+	public static HTTPDownloaderHeadResponse head(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, ProxyData proxy,
+			boolean pooling) throws IOException {
 		HTTPResponse response = null;
 		try {
-			response = head(url, username, password, DEFAULT_CONNECT_REQUEST_TIMEOUT, connectTimeout, readTimeout, true, charset, userAgent, proxy, headers, pooling);
+			response = head(url, username, password, DEFAULT_CONNECT_REQUEST_TIMEOUT, connectTimeout, readTimeout, true, null, userAgent, proxy, null, pooling);
 			return new HTTPDownloaderHeadResponse(response);
 		}
 		finally {
@@ -119,8 +131,8 @@ public final class HTTPEngine extends HTTPEngineBasic {
 		return get(url, username, password, connectTimeout, readTimeout, userAgent, null, true);
 	}
 
-	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, boolean pooling) throws IOException {
-		return get(url, username, password, connectTimeout, readTimeout, userAgent, null, pooling);
+	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, ProxyData proxy) throws IOException {
+		return get(url, username, password, connectTimeout, readTimeout, userAgent, proxy, true);
 	}
 
 	public static InputStream get(URL url, String username, String password, long connectTimeout, long readTimeout, String userAgent, ProxyData proxy, boolean pooling)
@@ -222,7 +234,7 @@ public final class HTTPEngine extends HTTPEngineBasic {
 		Resource temp = null;
 
 		try {
-			is = get(url, null, null, connectTimeout, readTimeout, userAgent, true);
+			is = get(url, null, null, connectTimeout, readTimeout, userAgent, null, true);
 
 			// Download to temp file first (atomic write)
 			temp = SystemUtil.getTempFile("download", false);
