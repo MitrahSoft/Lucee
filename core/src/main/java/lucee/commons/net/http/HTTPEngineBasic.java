@@ -59,8 +59,15 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpOptions;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpTrace;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
@@ -526,9 +533,27 @@ public abstract class HTTPEngineBasic {
 
 		}
 
-		// 5. Execute!
 		// This will be fast (3s) because the client and pool are already "warm"
-		return new HTTPResponse4Impl(url, context, client, request, client.execute(request, context), pooling);
+		try {
+			return new HTTPResponse4Impl(url, context, client, request, client.execute(request, context), pooling);
+		}
+		catch (IOException cause) {
+			IOException ioe = new IOException("failed with [" + toMethodName(request) + "] request to URL [" + url + "]");
+			ExceptionUtil.initCauseEL(ioe, cause);
+			throw ioe;
+		}
+	}
+
+	private static String toMethodName(HttpUriRequest request) {
+		if (request instanceof HttpGet) return "GET";
+		if (request instanceof HttpPost) return "POST";
+		if (request instanceof HttpHead) return "HEAD";
+		if (request instanceof HttpPut) return "PUT";
+		if (request instanceof HttpDelete) return "DELETE";
+		if (request instanceof HttpPatch) return "PATCH";
+		if (request instanceof HttpOptions) return "OPTIONS";
+		if (request instanceof HttpTrace) return "TRACE";
+		return request.getClass().getName();
 	}
 
 	private static void setFormFields(HttpUriRequest request, Map<String, String> formfields, String charset) throws IOException {
