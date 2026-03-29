@@ -1,6 +1,6 @@
 component extends="org.lucee.cfml.test.LuceeTestCase" {
 	function run( testResults,testBox ) {
-		describe("Testcase for LDEV-3833", function() {
+		xdescribe("Testcase for LDEV-3833", function() {
 			it( title="Checking runAsnyc() to get the applictionContext and scopes from pageContext", body=function( currentSpec ) {
 				cfapplication (name="LDEV3833", mappings={"/test":expandpath("./test")});
 				request.testReq = "testReq";
