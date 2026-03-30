@@ -122,8 +122,11 @@ import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
 import lucee.runtime.op.Caster;
 import lucee.runtime.op.Decision;
+import lucee.runtime.type.Struct;
+import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.dt.TimeSpan;
 import lucee.runtime.type.util.CollectionUtil;
+import lucee.runtime.type.util.KeyConstants;
 
 public abstract class HTTPEngineBasic {
 
@@ -208,11 +211,12 @@ public abstract class HTTPEngineBasic {
 
 			// Stats are useful for debugging pool exhaustion, but noisy for Info level
 			if (SHARED_CLIENT_POOLING_CM instanceof PoolingHttpClientConnectionManager) {
-				PoolingHttpClientConnectionManager cm = (PoolingHttpClientConnectionManager) SHARED_CLIENT_POOLING_CM;
-				org.apache.http.pool.PoolStats stats = cm.getTotalStats();
-
-				LogUtil.log(Log.LEVEL_DEBUG, "http", "Pool Stats -> " + "Max: " + stats.getMax() + ", Leased: " + stats.getLeased() + ", Pending: " + stats.getPending()
-						+ ", Available: " + stats.getAvailable());
+				if (LogUtil.does(Log.LEVEL_DEBUG)) {
+					PoolingHttpClientConnectionManager cm = (PoolingHttpClientConnectionManager) SHARED_CLIENT_POOLING_CM;
+					org.apache.http.pool.PoolStats stats = cm.getTotalStats();
+					LogUtil.log(Log.LEVEL_DEBUG, "http", "Pool Stats -> " + "Max: " + stats.getMax() + ", Leased: " + stats.getLeased() + ", Pending: " + stats.getPending()
+							+ ", Available: " + stats.getAvailable());
+				}
 
 			}
 			return SHARED_CLIENT_POOLING;
@@ -227,6 +231,30 @@ public abstract class HTTPEngineBasic {
 			throw ExceptionUtil.toIOException(e);
 		}
 		return builder.build();
+	}
+
+	public static Struct getMetaData() throws IOException {
+		getHttpClient(true); // neded to create objects
+		PoolingHttpClientConnectionManager cm = (PoolingHttpClientConnectionManager) SHARED_CLIENT_POOLING_CM;
+		org.apache.http.pool.PoolStats stats = cm.getTotalStats();
+		Struct sct = new StructImpl();
+
+		// status
+		Struct status = new StructImpl();
+		sct.setEL(KeyConstants._status, status);
+		status.setEL(KeyConstants._max, stats.getMax());
+		status.setEL("leased", stats.getLeased());
+		status.setEL("pending", stats.getPending());
+		status.setEL("available", stats.getAvailable());
+
+		// config
+		Struct config = new StructImpl();
+		sct.setEL(KeyConstants._config, config);
+		config.setEL("defaultMaxPerRoute", cm.getDefaultMaxPerRoute());
+		config.setEL("maxTotal", cm.getMaxTotal());
+		config.setEL("validateAfterInactivity", cm.getValidateAfterInactivity());
+
+		return sct;
 	}
 
 	/**

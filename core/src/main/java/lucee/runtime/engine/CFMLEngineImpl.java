@@ -748,16 +748,19 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				if (StringUtil.isEmpty(name, true)) continue;
 				name = name.trim();
 
-				ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
-				rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
-				/*
-				 * Resource availableFile = availableDir.getRealResource(name); if (availableFile.isFile()) {
-				 * rhExisting = RHExtension.getInstance(cs, availableFile, log); } else { ExtensionDefintion ed =
-				 * ExtensionDefintion.toExtensionDefinitionFromStorageName(name); rhExisting =
-				 * RHExtension.getInstance(cs, ed, false, null, log); }
-				 * 
-				 * // does it already exist much by name? if (rhExisting != null) { continue; }
-				 */
+				Resource availableFile = availableDir.getRealResource(name);
+				if (availableFile.isFile()) {
+					rhExisting = RHExtension.getInstance(cs, availableFile, log);
+				}
+				else {
+					ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
+					rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
+				}
+
+				// does it already exist much by name?
+				if (rhExisting != null) {
+					continue;
+				}
 
 				log.info("extract-extension", "Extract the extension [" + name + "] from the lucee.jar to the local extension folder [" + availableDir + "]");
 
