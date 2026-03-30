@@ -164,7 +164,7 @@ public class ExtensionProvider {
 				instance = instances.get(groupId);
 				if (instance == null) {
 					instance = new ExtensionProvider(config, groupId);
-					instances.put(groupId, instance);
+					// instances.put(groupId, instance);
 				}
 			}
 		}
