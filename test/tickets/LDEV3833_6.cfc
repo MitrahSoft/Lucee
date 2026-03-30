@@ -2,9 +2,27 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 	function run( testResults,testBox ) {
 		describe("Testcase for LDEV-3833", function() {
 			it( title="Checking runAsnyc() to get the applictionContext and scopes from pageContext", body=function( currentSpec ) {
-				cfapplication (name="LDEV3833", mappings={"/test":expandpath("./test")});
-				systemOutput(expandpath("./test"),1,1);
+				
+				mappings=getPageContext().getConfig().getMappings();
+
+				systemOutput("---- mappings -----",1,1);
+				loop array=mappings item="mapping" {
+					systemOutput(mapping.getVirtual()&" -> "&mapping.getPhysical(),1,1);
+				}
 				systemOutput(getApplicationSettings(),1,1);
+				
+				
+				
+				cfapplication (name="LDEV3833", mappings={"/test":expandpath("./test")});
+				
+				systemOutput("---- mappings -----",1,1);
+				loop array=mappings item="mapping" {
+					systemOutput(mapping.getVirtual()&" -> "&mapping.getPhysical(),1,1);
+				}
+				systemOutput(getApplicationSettings(),1,1);
+				
+				
+				systemOutput(expandpath("./test"),1,1);
 				/*request.testReq = "testReq";
 				application.testApp = "testApp";
 				url.testURL = "testURL";
