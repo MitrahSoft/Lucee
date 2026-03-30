@@ -5,8 +5,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				
 				systemOutput("xxxxxxxxxxxx",1,1);
 				systemOutput(expandpath("./test"),1,1);
-				systemOutput(directoryExists (expandpath("./test")),1,1);
-				if(!directoryExists (expandpath("./test"))) directoryCreate(expandpath("./test"));
+				systemOutput(getCurrentTemplatePath(),1,1);
 				
 				cfapplication (name="LDEV3833", mappings={"/test":expandpath("./test")});
 				
