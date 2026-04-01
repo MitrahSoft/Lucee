@@ -323,7 +323,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private FunctionLib coreFLDs;
 	private LinkedHashMapMaxSize<Long, String> previousNonces = new LinkedHashMapMaxSize<Long, String>(100);
 	private Map<Key, String> placeHolderdata;
-	private boolean insidePlaceHolder;
+	private AtomicBoolean insidePlaceHolder = new AtomicBoolean(false);
 	//////////////////////////
 	//////////////////////////
 
@@ -545,6 +545,12 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	private static Prop<Server> metaMailServers = Prop.custom(ServerFactory.getInstance(), Prop.TYPE_LIST).keys("mailServers").access(SecurityManager.TYPE_MAIL)
 			.description("mailserver to use for sending mails.");
 	private Server[] mailServers;
+
+	private static Prop<String> metaExtensionProviders = Prop.str(Prop.TYPE_LIST).keys("extensionProviders").systemPropEnvVar("lucee.extensionProviders")
+			.description("Maven groupIds used to discover Lucee extensions. "
+					+ "Lucee scans each groupId for artifacts whose artifactId ends with '-extension' (e.g. 'yaml-extension'). " + "Defaults to 'org.lucee'. "
+					+ "Example: [\"org.lucee\", \"com.rasia\"]");
+	private List<String> extensionProviders;
 
 	@SuppressWarnings("unchecked")
 	private static Prop<Integer> metaReturnFormat = Prop.integer().keys("returnFormat").defaultValue(UDF.RETURN_FORMAT_WDDX).choices(
@@ -910,14 +916,14 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	// "lucee.mvn.repo.snapshots"
 
 	@SuppressWarnings("unchecked")
-	private static Prop<Repository> metaMavenSnapshotRepository = Prop.custom(RepositoryFactory.getInstance(), Prop.TYPE_LIST).keys("snapshotRepository").parent("maven")
-			.systemPropEnvVar("lucee.mvn.repo.snapshots").description(
+	private static Prop<Repository> metaMavenSnapshotRepository = Prop.custom(RepositoryFactory.getInstance(MavenUpdateProvider.TYPE_SNAPSHOT), Prop.TYPE_LIST)
+			.keys("snapshotRepository").parent("maven").systemPropEnvVar("lucee.mvn.repo.snapshots").description(
 					"Specifies the remote repositories used for 'Snapshot' versions of Lucee artifacts. " + "This allows the engine to pull pre-release core updates (.lco) or "
 							+ "experimental extension versions (.lex) for testing and development. Defaults to the Sonatype Snapshot repository.");
 	private Repository[] mavenSnapshotRepository;
 	@SuppressWarnings("unchecked")
-	private static Prop<Repository> metaMavenRepository = Prop.custom(RepositoryFactory.getInstance(), Prop.TYPE_LIST).keys("repository", "releaseRepository").parent("maven")
-			.systemPropEnvVar("lucee.mvn.repo.releases")
+	private static Prop<Repository> metaMavenRepository = Prop.custom(RepositoryFactory.getInstance(MavenUpdateProvider.TYPE_RELEASE), Prop.TYPE_LIST)
+			.keys("repository", "releaseRepository").parent("maven").systemPropEnvVar("lucee.mvn.repo.releases")
 			.description("Specifies the remote repositories used to resolve stable Lucee artifacts. " + "This includes the Lucee Core (.lco files), the Lucee Loader (.jar), "
 					+ "Lucee Extensions (.lex), and standard third-party Java libraries. By default, this points to Maven Central, ensuring the engine can "
 					+ "autonomously download necessary components to maintain its modular core.");
@@ -1324,10 +1330,11 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 	Map<Key, String> getPlaceHolderData() {
 		if (this.placeHolderdata == null) {
+			if (insidePlaceHolder.get()) return new HashMap<>();
 			synchronized (SystemUtil.createToken("configweb", "placeHolderdata")) {
 				if (this.placeHolderdata == null) {
-					if (insidePlaceHolder) return new HashMap<>();
-					insidePlaceHolder = true;
+					if (insidePlaceHolder.get()) return new HashMap<>();
+					insidePlaceHolder.set(true);
 					try {
 						Map<Key, String> data = new HashMap<>();
 						data.put(KeyImpl.init("lucee-config"), getConfigDir().getAbsolutePath());
@@ -1353,7 +1360,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						this.placeHolderdata = Collections.unmodifiableMap(data);
 					}
 					finally {
-						insidePlaceHolder = false;
+						insidePlaceHolder.set(false);
 					}
 				}
 			}
@@ -5566,22 +5573,30 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 	}
 
 	@Override
-	public RHExtensionProvider[] getRHExtensionProviders() {
-		if (rhextensionProviders == null) {
-			synchronized (SystemUtil.createToken("config", "getRHExtensionProviders")) {
-				if (rhextensionProviders == null) {
-					rhextensionProviders = ConfigFactoryImpl.loadExtensionProviders(this, root);
+	public List<String> getExtensionProvidersGroupIds() {
+		if (extensionProviders == null) {
+			synchronized (SystemUtil.createToken("config", "extensionProviders")) {
+				if (extensionProviders == null) {
+					extensionProviders = metaExtensionProviders.list(this, root);
+
+					// Remove legacy URL-based providers (pre-7.2 REST endpoints)
+					extensionProviders.removeIf(p -> p.startsWith("http://") || p.startsWith("https://"));
+
+					// "org.lucee" always needs to exist
+					if (extensionProviders.size() == 0 || !extensionProviders.contains("org.lucee")) {
+						extensionProviders.add("org.lucee");
+					}
 				}
 			}
 		}
-		return rhextensionProviders;
+		return extensionProviders;
 	}
 
-	public ConfigServerImpl resetRHExtensionProviders() {
-		if (rhextensionProviders != null) {
-			synchronized (SystemUtil.createToken("config", "getRHExtensionProviders")) {
-				if (rhextensionProviders != null) {
-					rhextensionProviders = null;
+	public ConfigServerImpl resetExtensionProviderGroupIds() {
+		if (extensionProviders != null) {
+			synchronized (SystemUtil.createToken("config", "extensionProviders")) {
+				if (extensionProviders != null) {
+					extensionProviders = null;
 				}
 			}
 		}
@@ -7609,6 +7624,11 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 
 	public Map<String, LoggerAndSourceData> getLoggers() {
 		if (loggers == null) {
+
+			if (insideLoggers.get()) {
+				return new HashMap<String, LoggerAndSourceData>(); // avoid cycle loop
+			}
+
 			synchronized (SystemUtil.createToken("config", "loggers")) {
 				if (loggers == null) {
 					if (root == null || insideLoggers.get()) {
@@ -7677,7 +7697,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 			las = LogFactory.createLogger(this, name, Log.LEVEL_ERROR, appender, null, layout, null, true, true);
 
 			String id = LoggerAndSourceData.id(name.toLowerCase(), appender, null, layout, null, Log.LEVEL_ERROR, true);
-			LoggerAndSourceData existing = loggers.get(name.toLowerCase());
+			LoggerAndSourceData existing = loggers != null ? loggers.get(name.toLowerCase()) : null;
 			if (existing != null) {
 				if (existing.id().equals(id)) {
 					return existing;
@@ -9032,7 +9052,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						mavenRepository = tmp.toArray(new Repository[tmp.size()]);
 					}
 					else {
-						mavenRepository = MavenUpdateProvider.DEFAULT_REPOSITORY_RELEASES;
+						mavenRepository = MavenUpdateProvider.DEFAULT_REPOSITORIES_RELEASES;
 					}
 				}
 			}
@@ -9060,7 +9080,7 @@ public final class ConfigServerImpl implements ConfigServer, ConfigPro {
 						mavenSnapshotRepository = tmp.toArray(new Repository[tmp.size()]);
 					}
 					else {
-						mavenSnapshotRepository = MavenUpdateProvider.DEFAULT_REPOSITORY_SNAPSHOTS;
+						mavenSnapshotRepository = MavenUpdateProvider.DEFAULT_REPOSITORIES_SNAPSHOTS;
 					}
 				}
 			}

@@ -47,9 +47,12 @@ import java.util.TimeZone;
 import javax.script.ScriptEngineFactory;
 
 import org.apache.felix.framework.Felix;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.Version;
+import org.osgi.framework.wiring.FrameworkWiring;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
@@ -79,7 +82,7 @@ import lucee.commons.lang.Md5;
 import lucee.commons.lang.Pair;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.intergral.fusiondebug.server.FDControllerImpl;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -367,7 +370,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				}
 
 				config.put(Constants.FRAMEWORK_BOOTDELEGATION, "lucee.*");
-
 				Felix felix = factory.getFelix(factory.getResourceRoot(), config);
 
 				bundleCollection = new BundleCollection(felix, felix, null);
@@ -378,6 +380,30 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			}
 		}
 		this.info = new InfoImpl(bundleCollection == null ? null : bundleCollection.core);
+
+		// remove older or newer lucee-core bundles to avoid conflicts
+		{
+			BundleContext context = bundleCollection.getBundleContext();
+			List<Bundle> staleCoreBundles = null;
+			for (Bundle b: context.getBundles()) {
+				if ("lucee.core".equals(b.getSymbolicName()) && !b.getVersion().equals(info.getVersion())) {
+					LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Found stale core bundle [" + b.getSymbolicName() + ":" + b.getVersion()
+							+ "], uninstalling to avoid conflicts with current version [" + info.getVersion() + "]");
+					try {
+						b.uninstall();
+						if (staleCoreBundles == null) staleCoreBundles = new ArrayList<>();
+						staleCoreBundles.add(b);
+					}
+					catch (BundleException ignored) {}
+				}
+			}
+
+			if (staleCoreBundles != null && !staleCoreBundles.isEmpty()) {
+				FrameworkWiring fw = context.getBundle(0).adapt(FrameworkWiring.class);
+				fw.refreshBundles(staleCoreBundles);
+			}
+		}
+
 		Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader()); // MUST better location for this
 
 		UpdateInfo updateInfo;
@@ -713,18 +739,23 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			String index = IOUtil.toString(is, CharsetUtil.UTF8);
 			// log.info("extract-extension", "the following extensions are bundled with the lucee.jar [" + index
 			// + "]");
-
 			String[] names = lucee.runtime.type.util.ListUtil.listToStringArray(index, ';');
-			Resource available = null, temp;
+
+			Resource temp;
 			Resource availableDir = cs.getExtensionAvailableDir();
-			RHExtension rhe;
 			RHExtension rhExisting;
 			for (String name: names) {
 				if (StringUtil.isEmpty(name, true)) continue;
 				name = name.trim();
 
-				ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
-				rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
+				Resource availableFile = availableDir.getRealResource(name);
+				if (availableFile.isFile()) {
+					rhExisting = RHExtension.getInstance(cs, availableFile, log);
+				}
+				else {
+					ExtensionDefintion ed = ExtensionDefintion.toExtensionDefinitionFromStorageName(name);
+					rhExisting = RHExtension.getInstance(cs, ed, false, null, log);
+				}
 
 				// does it already exist much by name?
 				if (rhExisting != null) {
@@ -1285,7 +1316,8 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			if (cntr != null) cntr.close();
 
 			// release HTTP Pool
-			HTTPEngine4Impl.releaseConnectionManager();
+			HTTPEngine.releaseConnectionManager();
+			HTTPEngine.releaseSharedClient();
 
 			releaseCache(getConfigServerImpl(null, false, true));
 

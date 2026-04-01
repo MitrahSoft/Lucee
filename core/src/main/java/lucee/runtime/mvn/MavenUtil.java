@@ -45,6 +45,10 @@ import lucee.commons.net.HTTPUtil;
 import lucee.runtime.config.Config;
 import lucee.runtime.config.ConfigPro;
 import lucee.runtime.config.ConfigUtil;
+import lucee.runtime.config.maven.MavenUpdateProvider;
+import lucee.runtime.config.maven.MavenUpdateProvider.Repository;
+import lucee.runtime.config.maven.RepoReader;
+import lucee.runtime.config.maven.Version;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.mvn.POMReader.Dependency;
@@ -149,11 +153,15 @@ public final class MavenUtil {
 			for (POMReader.Repository rep: rawRepositories) {
 				Repository r = new Repository(
 
-						resolvePlaceholders(current, rep.id, properties),
-
 						resolvePlaceholders(current, rep.name, properties),
 
-						resolvePlaceholders(current, rep.url, properties)
+						resolvePlaceholders(current, rep.url, properties),
+
+						MavenUpdateProvider.TYPE_ALL,
+
+						Repository.TIMEOUT_1HOUR,
+
+						Repository.TIMEOUT_NEVER
 
 				);
 				repositories.put(r.getUrl(), r);
@@ -599,12 +607,22 @@ public final class MavenUtil {
 						//////// if (log != null) log.info("maven", "download [" + url + "]");
 						URL url;
 						CloseableHttpClient httpClient;
+						Version version = Version.parseVersion(pom.getVersion());
+						boolean isSnap = version.is(Version.SNAPSHOT);
 						for (Repository r: sort(repositories)) {
+							if (!r.handle(version)) continue;
 							url = null;
 							httpClient = null;
 
 							try {
-								url = new URL(r.getUrl() + scriptName);
+								if (isSnap) {
+									RepoReader repoReader = new RepoReader(r.url, pom.getGroupId(), pom.getArtifactId(), version);
+									Map<String, Object> result = repoReader.read(type);
+									String strUrl = Caster.toString(result.get(type));
+									if (!StringUtil.isEmpty(strUrl)) url = new URL(strUrl);
+								}
+
+								if (url == null) url = new URL(r.getUrl() + scriptName);
 								httpClient = HttpClients.createDefault();
 
 								HttpGet request = new HttpGet(url.toExternalForm());
@@ -628,6 +646,7 @@ public final class MavenUtil {
 										finally {
 											IOUtil.closeEL(is);
 											HTTPUtil.validateDownload(url, response, tmp, pom.getChecksum(), true, ex);
+											res.getParentResource().mkdirs();
 											tmp.moveTo(res);
 										}
 										deleteLastUpdated(res);
@@ -669,7 +688,7 @@ public final class MavenUtil {
 					}
 					createLastUpdated(res, info);
 					throw new IOException("Failed to download Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] " + "(type: " + type
-							+ ") after trying all " + repositories.size() + " configured repositories. "
+							+ ") after checking all " + repositories.size() + " configured repositories. "
 							+ "Verify the artifact coordinates are correct and the repositories are accessible.");
 				}
 			}
@@ -684,6 +703,7 @@ public final class MavenUtil {
 
 	private static void createLastUpdated(Resource res, StringBuilder info) throws IOException {
 		Resource lastUpdated = res.getParentResource().getRealResource(res.getName() + ".lastUpdated");
+		lastUpdated.getParentResource().mkdirs();
 		// print.e(lastUpdated);
 		// print.e(info);
 		IOUtil.write(lastUpdated, info.toString(), CharsetUtil.UTF8, false);

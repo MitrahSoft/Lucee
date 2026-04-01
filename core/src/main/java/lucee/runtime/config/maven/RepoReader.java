@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -15,7 +14,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 
-import org.osgi.framework.Version;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -25,9 +23,8 @@ import org.xml.sax.helpers.DefaultHandler;
 import lucee.commons.date.DateTimeUtil;
 import lucee.commons.date.TimeZoneConstants;
 import lucee.commons.io.IOUtil;
-import lucee.commons.io.log.Log;
 import lucee.commons.lang.StringUtil;
-import lucee.commons.net.http.HTTPDownloader;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.runtime.op.Caster;
 import lucee.runtime.text.xml.XMLUtil;
 import lucee.runtime.type.dt.DateTime;
@@ -52,7 +49,7 @@ public final class RepoReader extends DefaultHandler {
 	private Map<String, Map<String, Object>> artifacts = new HashMap<>();
 	private String base;
 
-	RepoReader(String repo, String group, String artifact, Version version) {
+	public RepoReader(String repo, String group, String artifact, Version version) {
 		this.repo = repo;
 		this.group = group;
 		this.artifact = artifact;
@@ -60,7 +57,7 @@ public final class RepoReader extends DefaultHandler {
 		this.key = repo + ":" + group + ":" + artifact + ":" + version;
 	}
 
-	public Map<String, Object> read(String requiredArtifactExtension) throws IOException, GeneralSecurityException, SAXException {
+	public Map<String, Object> read(String requiredArtifactExtension) throws IOException, SAXException {
 		if (requiredArtifactExtension == null) requiredArtifactExtension = "jar";
 		else requiredArtifactExtension = requiredArtifactExtension.toLowerCase();
 
@@ -75,7 +72,7 @@ public final class RepoReader extends DefaultHandler {
 		// Use HTTPDownloader with DEBUG logging for Maven repo metadata lookups
 		Reader r = null;
 		try {
-			r = IOUtil.getReader( HTTPDownloader.get( url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, Log.LEVEL_TRACE ), (Charset) null );
+			r = IOUtil.getReader(HTTPEngine.get(url, null, null, MavenUpdateProvider.CONNECTION_TIMEOUT, MavenUpdateProvider.READ_TIMEOUT, null, null, false), (Charset) null);
 			init(new InputSource(r));
 		}
 		catch (IOException ioe) {

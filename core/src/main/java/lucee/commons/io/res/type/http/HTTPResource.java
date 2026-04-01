@@ -20,25 +20,21 @@ package lucee.commons.io.res.type.http;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.GeneralSecurityException;
 
-import lucee.commons.io.IOUtil;
-import lucee.commons.io.log.LogUtil;
 import lucee.commons.io.res.ContentType;
 import lucee.commons.io.res.Resource;
 import lucee.commons.io.res.ResourceProvider;
 import lucee.commons.io.res.util.ReadOnlyResourceSupport;
 import lucee.commons.io.res.util.ResourceUtil;
-import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.net.http.HTTPEngine;
+import lucee.commons.net.http.HTTPEngineBasic.HTTPDownloaderHeadResponse;
 import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.Header;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.httpclient.HTTPResponse4Impl.HTTPEngineInputStream;
 import lucee.runtime.net.proxy.ProxyData;
 import lucee.runtime.net.proxy.ProxyDataImpl;
-import lucee.runtime.op.Caster;
 
 public final class HTTPResource extends ReadOnlyResourceSupport {
 
@@ -47,6 +43,7 @@ public final class HTTPResource extends ReadOnlyResourceSupport {
 	private final String path;
 	private final String name;
 	private HTTPResponse http;
+	private HTTPDownloaderHeadResponse meta;
 
 	public HTTPResource(HTTPResourceProvider provider, HTTPConnectionData data) {
 		this.provider = provider;
@@ -58,34 +55,29 @@ public final class HTTPResource extends ReadOnlyResourceSupport {
 
 	}
 
-	private HTTPResponse getHTTPResponse(boolean create) throws IOException, GeneralSecurityException {
-		if (create || http == null) {
-			// URL url = HTTPUtil.toURL("http://"+data.host+":"+data.port+"/"+data.path);
-			URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
-			// TODO Support for proxy
-			ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
-
-			http = HTTPEngine4Impl.get(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null);
-		}
-		return http;
+	private URL getURL() throws MalformedURLException {
+		return new URL(provider.getProtocol(), data.host, data.port, data.path);
 	}
 
-	private int getStatusCode() throws IOException, GeneralSecurityException {
-		if (http == null) {
-			URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
-			ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
-			return HTTPEngine4Impl.head(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null).getStatusCode();
-		}
-		return http.getStatusCode();
+	private int getStatusCode() throws IOException {
+		return getMeta().getStatusCode();
 	}
 
-	public ContentType getContentType() throws IOException, GeneralSecurityException {
-		if (http == null) {
-			URL url = new URL(provider.getProtocol(), data.host, data.port, data.path);
-			ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
-			return HTTPEngine4Impl.head(url, data.username, data.password, _getTimeout(), true, null, data.userAgent, pd, null).getContentType();
+	public ContentType getContentType() throws IOException {
+		HTTPResponse rsp = null;
+		try {
+			if (http == null) {
+				URL url = getURL();
+				ProxyData pd = ProxyDataImpl.isValid(data.proxyData, url.getHost()) ? data.proxyData : ProxyDataImpl.NO_PROXY;
+				rsp = HTTPEngine.head(url, data.username, data.password, HTTPEngine.DEFAULT_CONNECT_REQUEST_TIMEOUT, HTTPEngine.DEFAULT_CONNECT_TIMEOUT, _getTimeout(), true, null,
+						data.userAgent, pd, null, true);
+				return rsp.getContentType();
+			}
+			return http.getContentType();
 		}
-		return http.getContentType();
+		finally {
+			HTTPEngine.closeEL(rsp);
+		}
 	}
 
 	@Override
@@ -101,41 +93,31 @@ public final class HTTPResource extends ReadOnlyResourceSupport {
 	}
 
 	public int statusCode() {
-		HTTPResponse rsp = null;
 		try {
 			provider.read(this);
-			return (rsp = getHTTPResponse(false)).getStatusCode();
+			return getMeta().getStatusCode();
 		}
 		catch (Exception e) {
 			return 0;
-		}
-		finally {
-			HTTPEngine.closeEL(rsp);
 		}
 	}
 
 	@Override
 	public InputStream getInputStream() throws IOException {
-		// ResourceUtil.checkGetInputStreamOK(this);
-		// provider.lock(this);
 		provider.read(this);
-		HTTPResponse method;
-		try {
-			method = getHTTPResponse(true);
+
+		InputStream is = HTTPEngine.get(getURL(), data.username, data.password, HTTPEngine.DEFAULT_CONNECT_TIMEOUT, _getTimeout(), data.userAgent);
+		if (is instanceof HTTPEngineInputStream) {
+			meta = ((HTTPEngineInputStream) is).getHTTPDownloaderHeadResponse();
 		}
-		catch (GeneralSecurityException e) {
-			throw ExceptionUtil.toIOException(e);
+		return is;
+	}
+
+	private HTTPDownloaderHeadResponse getMeta() throws IOException {
+		if (meta == null) {
+			meta = HTTPEngine.head(getURL(), data.username, data.password, HTTPEngine.DEFAULT_CONNECT_TIMEOUT, _getTimeout(), null, null);
 		}
-		try {
-			int code = method.getStatusCode();
-			if (code >= 200 && code <= 299) return IOUtil.toBufferedInputStream(method.getContentAsStream());
-			else {
-				throw new IOException("HTTP request [" + getParentResource().toString() + " returned [" + code + "]");
-			}
-		}
-		finally {
-			HTTPEngine.closeEL(method);
-		}
+		return meta;
 	}
 
 	@Override
@@ -198,34 +180,25 @@ public final class HTTPResource extends ReadOnlyResourceSupport {
 
 	@Override
 	public long lastModified() {
-		int last = 0;
-		HTTPResponse rsp = null;
 		try {
-			Header cl = (rsp = getHTTPResponse(false)).getLastHeaderIgnoreCase("last-modified");
-			if (cl != null && exists()) last = Caster.toIntValue(cl.getValue(), 0);
+			if (!exists()) return 0;
+			return getMeta().getLastModified();
 		}
 		catch (Exception e) {
-			LogUtil.warn("http", e);
+			return 0L;
 		}
-		finally {
-			HTTPEngine.closeEL(rsp);
-		}
-		return last;
 	}
 
 	@Override
 	public long length() {
-		HTTPResponse rsp = null;
 		try {
 			if (!exists()) return 0;
-			return (rsp = getHTTPResponse(false)).getContentLength();
+			return getMeta().getContentLength();
 		}
 		catch (Exception e) {
-			return 0;
+			return 0L;
 		}
-		finally {
-			HTTPEngine.closeEL(rsp);
-		}
+
 	}
 
 	@Override

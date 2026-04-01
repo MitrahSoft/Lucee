@@ -46,13 +46,13 @@ public class RHExtensionCollection {
 	}
 
 	public synchronized Entry get(ExtensionDefintion ed) {
-		String name = ed.getStorageName();
+		String name = ed.getStorageName(false);
 		Entry entry = getByName(name);
 		if (entry != null) return entry;
 
 		// get match by gav (unlikely that this happen in the future)
 		if (!name.startsWith("mvn_")) {
-			GAVSO gav = ed.getGAVSO(ThreadLocalPageContext.getConfig());
+			GAVSO gav = ed.getGAVSO(ThreadLocalPageContext.getConfig(), true);
 			if (gav != null) {
 				entry = getByName(ExtensionDefintion.getStorageName(gav));
 				if (entry != null) {

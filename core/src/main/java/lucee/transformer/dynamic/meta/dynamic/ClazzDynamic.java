@@ -72,17 +72,19 @@ public final class ClazzDynamic extends Clazz {
 			synchronized (clazz) {
 				cd = classes.get(clazz);
 				if (cd == null) {
-					if (LogUtil.doesTrace(log)) log.trace("dynamic", "extract metadata from [" + clazz.getName() + "]");
-					try {
-						Map<String, FunctionMember> members = getFunctionMembers(clazz, log);
-						if (members == null) cd = new ClazzReflection(clazz, log);
-						else cd = new ClazzDynamic(members, clazz, log);
+					synchronized (classes) {
+						if (LogUtil.doesTrace(log)) log.trace("dynamic", "extract metadata from [" + clazz.getName() + "]");
+						try {
+							Map<String, FunctionMember> members = getFunctionMembers(clazz, log);
+							if (members == null) cd = new ClazzReflection(clazz, log);
+							else cd = new ClazzDynamic(members, clazz, log);
+						}
+						catch (IOException ioe) {
+							if (log != null) log.error("dynamic", ioe);
+							cd = new ClazzReflection(clazz, log);
+						}
+						classes.put(clazz, cd);
 					}
-					catch (IOException ioe) {
-						if (log != null) log.error("dynamic", ioe);
-						cd = new ClazzReflection(clazz, log);
-					}
-					classes.put(clazz, cd);
 				}
 			}
 		}
@@ -137,7 +139,6 @@ public final class ClazzDynamic extends Clazz {
 				}
 			}
 		}
-
 		return count;
 	}
 
@@ -225,7 +226,7 @@ public final class ClazzDynamic extends Clazz {
 		outer: for (FunctionMember fm: methods) {
 			if (/* fm.isPublic() && */ (nameCaseSensitive ? methodName.equals(fm.getName()) : methodName.equalsIgnoreCase(fm.getName()))) {
 				Type[] args = ((FunctionMemberDynamic) fm).getArgumentTypes();
-				if (types.length == types.length) {
+				if (types.length == args.length) {
 					for (int i = 0; i < args.length; i++) {
 						if (!types[i].equals(args[i])) continue outer;
 					}
@@ -691,5 +692,19 @@ public final class ClazzDynamic extends Clazz {
 			IOUtil.close(ois);
 		}
 		return o;
+	}
+
+	public static void flush(ClassLoader cl) {
+		if (cl == null) return;
+
+		synchronized (classes) {
+			Iterator<Class> it = classes.keySet().iterator();
+			while (it.hasNext()) {
+				Class clazz = it.next();
+				if (clazz.getClassLoader() == cl) {
+					it.remove();
+				}
+			}
+		}
 	}
 }

@@ -188,7 +188,7 @@ public final class DatasourceManagerImpl implements DataSourceManager {
 	}
 
 	private void releaseConnection(PageContext pc, DatasourceConnection dc, boolean ignoreRequestExclusive) {
-		if (!dc.isManaged() && autoCommit && (ignoreRequestExclusive || !dc.getDatasource().isRequestExclusive())) {
+		if (!dc.isManaged() && (ignoreRequestExclusive || !dc.getDatasource().isRequestExclusive())) {
 			// Always return connection to pool - don't close directly on timeout
 			// Closing directly (IOUtil.closeEL) breaks pool accounting - pool thinks
 			// connection is still borrowed when it's actually closed, causing phantom connections
@@ -380,6 +380,10 @@ public final class DatasourceManagerImpl implements DataSourceManager {
 	@Override
 	public boolean isAutoCommit() {
 		return autoCommit;
+	}
+
+	public int getIsolation() {
+		return isolation;
 	}
 
 	@Override

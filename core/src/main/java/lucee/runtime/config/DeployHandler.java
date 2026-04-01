@@ -19,15 +19,11 @@
 package lucee.runtime.config;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.osgi.framework.Version;
-
-import lucee.commons.io.IOUtil;
 import lucee.commons.io.SystemUtil;
 import lucee.commons.io.log.Log;
 import lucee.commons.io.log.LogUtil;
@@ -39,34 +35,24 @@ import lucee.commons.lang.ExceptionUtil;
 import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.types.RefBoolean;
 import lucee.commons.lang.types.RefBooleanImpl;
-import lucee.commons.net.HTTPUtil;
-import lucee.commons.net.http.HTTPEngine;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.Header;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
-import lucee.commons.net.http.httpclient.HeaderImpl;
 import lucee.runtime.config.ConfigAdmin.AlreadyInstalledExtension;
 import lucee.runtime.config.maven.ExtensionProvider;
+import lucee.runtime.config.maven.Version;
 import lucee.runtime.engine.CFMLEngineImpl;
 import lucee.runtime.engine.ThreadQueue;
 import lucee.runtime.exp.ApplicationException;
 import lucee.runtime.exp.PageException;
 import lucee.runtime.extension.ExtensionDefintion;
 import lucee.runtime.extension.RHExtension;
-import lucee.runtime.extension.RHExtensionProvider;
-import lucee.runtime.functions.conversion.DeserializeJSON;
+import lucee.runtime.mvn.MavenUtil.GAVSO;
 import lucee.runtime.net.http.ReqRspUtil;
 import lucee.runtime.op.Caster;
-import lucee.runtime.osgi.OSGiUtil;
-import lucee.runtime.type.Struct;
 import lucee.runtime.type.util.ArrayUtil;
-import lucee.runtime.type.util.KeyConstants;
 import lucee.runtime.type.util.ListUtil;
 
 public final class DeployHandler {
 
 	private static final ResourceFilter ALL_EXT = new ExtensionResourceFilter(new String[] { ".lex", ".lar", ".lco", ".json" });
-	private static final boolean USE_MAVEN_EXTENSION_PROVIDER = true;
 
 	/**
 	 * deploys all files found
@@ -329,33 +315,23 @@ public final class DeployHandler {
 	private static Version getLatestVersionFor(ConfigPro config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
 			// get extension from Maven
-			ExtensionProvider ep = new ExtensionProvider(config);
+			GAVSO gav = getGavById(config, ed, investigate, log);
+			ExtensionProvider ep = ExtensionProvider.getInstance(config, gav.g);
 
-			String artifact = ed.getArtifactId();
-
-			// translate UUID to artifact
-			if (StringUtil.isEmpty(artifact, true)) {
-				artifact = ep.toArtifact(ed.getId(), investigate);
-				if (LogUtil.doesDebug(log) && artifact != null) {
-					log.debug("main", "resolved extension id [" + ed.getId() + "] to artifact [" + artifact + "]");
-				}
-			}
-			if (artifact == null) return null;
-
-			Version version = StringUtil.isEmpty(ed.getVersion(), true) ? null : OSGiUtil.toVersion(ed.getVersion(), null);
+			Version version = StringUtil.isEmpty(ed.getVersion(), true) ? null : Version.parseVersion(ed.getVersion(), null);
 			// get latest version when no version is defined
 			if (version == null) {
 				// find out the last version still needs some investigated effort, maybe we will improve on that in
 				// the future.
-				version = ep.last(artifact);
+				version = ep.last(gav.a);
 				if (LogUtil.doesDebug(log) && version != null) {
-					log.debug("main", "got latest version[" + version + "] for artifact [" + artifact + "]");
+					log.debug("main", "got latest version[" + version + "] for artifact [" + gav.a + "]");
 				}
 				return version;
 			}
 
 			if (LogUtil.doesDebug(log)) {
-				log.debug("main", "use defined [" + version + "] for artifact [" + artifact + "]");
+				log.debug("main", "use defined [" + version + "] for artifact [" + gav.a + "]");
 			}
 			return version;
 		}
@@ -368,101 +344,54 @@ public final class DeployHandler {
 		}
 	}
 
-	public static Version getLatestVersionFor(ConfigPro config, ExtensionDefintion ed, Log log, boolean throwOnError) throws ApplicationException {
-		if (USE_MAVEN_EXTENSION_PROVIDER) {
-			try {
-				Version version = getLatestVersionFor(config, ed, false, false, log);
+	public static Version getLatestVersionFor(ConfigPro config, ExtensionDefintion ed, Log log, boolean throwOnError) throws PageException {
+		return getLatestVersionFor(config, ed, false, false, log);
 
-				if (version != null) return version;
-			}
-			catch (PageException e) {
-				// should not happen
-				log.error("main", e);
-			}
+	}
+
+	private static GAVSO getGavById(ConfigPro config, ExtensionDefintion ed, boolean investigate, Log log) throws ApplicationException {
+		String groupId = ed.getGroupId();
+		String artifactId = ed.getArtifactId();
+
+		if (!StringUtil.isEmpty(groupId, true) && !StringUtil.isEmpty(artifactId, true)) {
+			return new GAVSO(groupId, artifactId, null);
 		}
 
-		RHExtensionProvider[] providers = config.getRHExtensionProviders();
-
-		String content;
-		Identification id = config.getIdentification();
-		String apiKey = id == null ? null : id.getApiKey();
-		String coreVersion = ConfigUtil.getCFMLEngine(config).getInfo().getVersion().toString();
-		for (int i = 0; i < providers.length; i++) {
-			HTTPResponse rsp = null;
-			try {
-
-				URL url = providers[i].getURL();
-				StringBuilder qs = new StringBuilder();
-				qs.append("?withLogo=false");
-				if (ed.getVersion() != null) qs.append("&version=").append(ed.getVersion());
-				else qs.append("&coreVersion=").append(coreVersion);
-				if (apiKey != null) qs.append("&ioid=").append(apiKey);
-
-				url = new URL(url, "/rest/extension/provider/info/" + ed.getId() + qs);
-				if (log != null) log.info("extension", "Check for a newer version at [" + url + "]");
-				rsp = HTTPEngine4Impl.get(url, null, null, 5000, false, "UTF-8", "", null, new Header[] { new HeaderImpl("accept", "application/json") });
-
-				if (rsp.getStatusCode() != 200) continue;
-
-				content = rsp.getContentAsString();
-				Struct sct = Caster.toStruct(DeserializeJSON.call(null, content));
-				Version remoteVersion = OSGiUtil.toVersion(Caster.toString(sct.get(KeyConstants._version)), null);
-
-				// the local version is as good as the remote
-				if (remoteVersion != null) {
-					if (log != null) log.debug("main", "got latest version[" + remoteVersion + "] for  [" + ed + "]");
-
-					return remoteVersion;
-				}
+		// translate UUID to artifact
+		GAVSO gav = ExtensionProvider.toGAVSO(config, ed.getId(), investigate, null);
+		if (gav != null) {
+			if (LogUtil.doesDebug(log) && artifactId != null) {
+				log.debug("main", "resolved extension id [" + ed.getId() + "] to maven endpoint [" + gav.g + ":" + gav.a + "]");
 			}
-			catch (Exception e) {
-				if (log != null) log.error("extension", e);
-			}
-			finally {
-				HTTPEngine.closeEL(rsp);
-			}
+			return gav;
 		}
-		if (throwOnError) {
-			throw new ApplicationException("no information found for [" + ed + "]");
-		}
-		return null;
+
+		throw new ApplicationException("could not link the exension with the id [" + ed.getId() + "] to any maven endpoint.");
 	}
 
 	public static Resource downloadExtensionFromMaven(ConfigPro config, ExtensionDefintion ed, boolean investigate, boolean throwOnError, Log log) throws PageException {
 		try {
-			// get extension from Maven
-			ExtensionProvider ep = new ExtensionProvider(config);
-
-			String artifact = ed.getArtifactId();
-
-			// translate UUID to artifact
-			if (StringUtil.isEmpty(artifact, true)) {
-				artifact = ep.toArtifact(ed.getId(), investigate);
-				if (LogUtil.doesDebug(log) && artifact != null) {
-					log.debug("main", "resolved extension id [" + ed.getId() + "] to artifact [" + artifact + "]");
-				}
-			}
-			if (artifact == null) return null;
-
+			GAVSO gav = getGavById(config, ed, investigate, log);
+			ExtensionProvider ep = ExtensionProvider.getInstance(config, gav.g);
 			Version version;
 			// get latest version when no version is defined
 			if (StringUtil.isEmpty(ed.getVersion(), true)) {
 				// find out the last version still needs some investigated effort, maybe we will improve on that in
 				// the future.
-				version = ep.last(artifact);
+				version = ep.last(gav.a);
 				if (LogUtil.doesDebug(log) && version != null) {
-					log.debug("main", "get latest version[" + version + "] for artifact [" + artifact + "]");
+					log.debug("main", "get latest version[" + version + "] for artifact [" + gav.a + "]");
 				}
 			}
 			else {
-				version = OSGiUtil.toVersion(ed.getVersion(), false);
+				version = Version.parseVersion(ed.getVersion());
 				if (LogUtil.doesDebug(log) && version != null) {
-					log.debug("main", "use defined [" + version + "] for artifact [" + artifact + "]");
+					log.debug("main", "use defined [" + version + "] for artifact [" + gav.a + "]");
 				}
 			}
 			if (version == null) return null;
 
-			return ep.getResource(config, artifact, version);
+			return ep.getLEXResource(config, gav.a, version);
 		}
 		catch (Exception e) {
 			if (throwOnError) throw Caster.toPageException(e);
@@ -473,69 +402,12 @@ public final class DeployHandler {
 		}
 	}
 
-	public static Resource downloadExtension(ConfigPro config, ExtensionDefintion ed, Log log, boolean throwOnError) throws ApplicationException {
-		// get extension from Maven
-		// TODO set investigate to true and log as warning if it fallback to old behaviour
-		if (USE_MAVEN_EXTENSION_PROVIDER) {
-			try {
-				Resource res = downloadExtensionFromMaven(config, ed, false, false, log);
-				if (res != null) return res;
-			}
-			catch (PageException e) {
-				// should not happen
-				log.error("main", e);
-			}
-		}
+	public static Resource downloadExtension(ConfigPro config, ExtensionDefintion ed, Log log, boolean throwOnError) throws PageException {
+		Resource res = downloadExtensionFromMaven(config, ed, false, false, log);
+		if (res != null) return res;
 
-		// classic extension provider via Rest service
-		String coreVersion = ConfigUtil.getCFMLEngine(config).getInfo().getVersion().toString();
-		Identification id = config.getIdentification();
-		String apiKey = id == null ? null : id.getApiKey();
-		URL url;
-		RHExtensionProvider[] providers = config.getRHExtensionProviders();
-		ApplicationException exp = null;
-		for (int i = 0; i < providers.length; i++) {
-			HTTPResponse rsp = null;
-			try {
-				url = providers[i].getURL();
-				StringBuilder qs = new StringBuilder();
-				if (apiKey != null) addQueryParam(qs, "ioid", apiKey);
-				if (ed.getVersion() != null) addQueryParam(qs, "version", ed.getVersion());
-				else addQueryParam(qs, "coreVersion", coreVersion);
-
-				url = new URL(url, "/rest/extension/provider/full/" + ed.getId() + qs);
-				if (log != null) log.info("main", "Check for extension at [" + url + "]");
-				rsp = HTTPEngine4Impl.get(url, null, null, 5000, true, "UTF-8", "", null, new Header[] { new HeaderImpl("accept", "application/cfml") });
-
-				// If status code indicates success
-				if (rsp.getStatusCode() >= 200 && rsp.getStatusCode() < 300) {
-
-					// copy it locally
-					Resource res = SystemUtil.getTempDirectory().getRealResource(ed.getId() + "-" + ed.getVersion() + ".lex");
-					ResourceUtil.touch(res);
-					IOUtil.copy(rsp.getContentAsStream(), res, true);
-
-					HTTPUtil.validateDownload(url, rsp, res, null, true, null);
-
-					if (log != null) log.info("main", "Downloaded extension [" + ed + "] to [" + res + "]");
-					return res;
-
-				}
-				// we want the first
-				if (throwOnError && exp == null) exp = new ApplicationException("Failed (" + rsp.getStatusCode() + ") to load extension: [" + ed + "] from [" + url + "]");
-				if (log != null) log.warn("main", "Failed (" + rsp.getStatusCode() + ") to load extension: [" + ed + "] from [" + url + "]");
-			}
-			catch (Exception e) {
-				if (log != null) log.error("extension", e);
-			}
-			finally {
-				HTTPEngine.closeEL(rsp);
-			}
-		}
-		if (exp != null) {
-			throw exp;
-		}
-
+		if (throwOnError) throw new ApplicationException("Failed  to load extension: [" + ed + "]");
+		if (log != null) log.warn("main", "Failed to load extension: [" + ed + "] ");
 		return null;
 	}
 

@@ -129,7 +129,6 @@ public abstract class Clazz implements Serializable {
 			return ClazzDynamic.getInstance(clazz, root, log);
 		}
 		catch (Exception e) {
-			if (log != null) log.error("dynamic", e);
 			if (allowReflection()) return new ClazzReflection(clazz, log);
 			else throw new RuntimeException(e);
 		}
@@ -338,7 +337,7 @@ public abstract class Clazz implements Serializable {
 		if (args.length == 0) return defaultValue;
 
 		// cache
-		StringBuilder sb = new StringBuilder(100).append(methodName).append(';'); // append(id()).
+		StringBuilder sb = new StringBuilder(100).append(clazz.getName()).append(';').append(methodName).append(';'); // append(id()).
 		for (Object arg: args) {
 			if (arg == null) {
 				sb.append("java.lang.Object").append(';');
@@ -370,8 +369,7 @@ public abstract class Clazz implements Serializable {
 						}
 						return p.getName();
 					}
-					catch (PageException pe) {
-					}
+					catch (PageException pe) {}
 				}
 			}
 		}

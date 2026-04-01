@@ -1,4 +1,8 @@
-<cfinclude template="ext.functions.cfm">
+<cfscript>
+	include "ext.functions.cfm";
+	
+	external=getLuceeExtensions(getExtensionGroups());
+</cfscript>
 
 <cfparam name="inc" default="">
 <cfparam name="url.action2" default="list">
@@ -9,20 +13,10 @@
 <cfparam name="session.extFilter.available" default="">
 
 <cfadmin
-	action="getRHExtensionProviders"
-	type="#request.adminType#"
-	password="#session["password"&request.adminType]#"
-	returnVariable="providers">
-<cfset providerURLs=queryColumnData(providers,"url")>
-<cfset request.providers=providers>
-
-
-<cfadmin
-    action="getRHExtensions"
+    action="getExtensions"
     type="#request.adminType#"
     password="#session["password"&request.adminType]#"
     returnVariable="extensions">
-
 
 <cfparam name="error" default="#struct(message:"",detail:"")#">
 
@@ -42,27 +36,36 @@
 </cfscript>
 	<cfswitch expression="#form.mainAction#">
 		<cfcase value="#stText.Buttons.install#">
-        	<cfadmin
-			    action="updateRHExtension"
+			<cfadmin
+			    action="updateExtension"
 			    type="#request.adminType#"
 			    password="#session["password"&request.adminType]#"
-				source="#downloadFull(form.provider,form.id,form.version)#">
+				id="#form.id?:""#"
+				groupId="#form.groupId?:""#"
+				artifactId="#form.artifactId?:""#"
+				version="#form.version#">
 			<cfset application.reloadPlugins = true>
 		</cfcase>
 		<cfcase value="#stText.Buttons.upDown#">
 			<cfadmin
-			    action="updateRHExtension"
+			    action="updateExtension"
 			    type="#request.adminType#"
 			    password="#session["password"&request.adminType]#"
-				source="#downloadFull(form.provider,form.id,form.version)#">
+				id="#form.id?:""#"
+				groupId="#form.groupId?:""#"
+				artifactId="#form.artifactId?:""#"
+				version="#form.version#">
 			<cfset application.reloadPlugins = true>
 		</cfcase>
         <cfcase value="#stText.Buttons.uninstall#">
         	<cfadmin
-			    action="removeRHExtension"
+			    action="removeExtension"
 			    type="#request.adminType#"
 			    password="#session["password"&request.adminType]#"
-				id="#form.id#">
+				id="#form.id?:""#"
+				groupId="#form.groupId?:""#"
+				artifactId="#form.artifactId?:""#"
+				version="#form.versionInstalled#">
 			<cfset application.reloadPlugins = true>
 		</cfcase>
 		<cfdefaultcase>

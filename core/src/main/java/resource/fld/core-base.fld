@@ -1754,6 +1754,7 @@ The returned AST uses **neutral, language-agnostic node types** following ESTree
 	<function>
 		<name>breakpoint</name>
 		<class>lucee.runtime.functions.system.Breakpoint</class>
+		<introduced>7.1.0.45</introduced>
 		<keywords>debug,debugger</keywords>
 		<description>Programmatic breakpoint - like JavaScript's "debugger;" statement. Suspends execution when a debugger is attached, allowing inspection of variables. Returns true if breakpoint was hit, false if skipped.</description>
 		<argument>
@@ -6651,6 +6652,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>if set to true the secret is resolved right away, if set to false, it is resolved when used.</description>
@@ -6678,6 +6680,7 @@ When used, the function automatically validates that the secret exists and throw
 		</argument>
 		<argument>
 			<name>resolve</name>
+			<introduced>7.0.2.96</introduced>
 			<type>boolean</type>
 			<required>No</required>
 			<description>If set to true, all secrets are resolved immediately. If set to false (default), secrets are resolved when used.</description>
@@ -7106,7 +7109,7 @@ if this attribute is not provided all types are returned.</description>
 	<function>
 		<name>getPropertyString</name>
 		<class>lucee.runtime.functions.system.GetPropertyString</class>
-		<description>Sets the value of a property entry in a properties file.</description>
+		<description>Gets the value of a property entry from a properties file.</description>
 		<introduced>7.0.0.108</introduced>
 		<argument>
 			<name>filePath</name>
@@ -7531,6 +7534,23 @@ Use the GetBaseTemplatePath() function instead.</description>
 Default list of delimiters: space character, tab character, newline character; or their codes: "chr(32)", "chr(9)", chr(10).
 Default list delimiter: comma character.</description>
     </argument>
+		<return>
+			<type>string</type>
+		</return>
+	</function>
+	<!-- GetTransactionIsolation -->
+	<function>
+		<name>getTransactionIsolation</name>
+		<class>lucee.runtime.functions.query.GetTransactionIsolation</class>
+		<introduced>7.1.0.70</introduced>
+		<keywords>query,datasource,transaction</keywords>
+		<description>Returns the isolation level of the current transaction as a string. If a datasource is provided and no explicit isolation is set, returns the datasource's default isolation level.</description>
+		<argument>
+			<name>datasource</name>
+			<type>string</type>
+			<required>No</required>
+			<description>Datasource name. When provided and no explicit isolation is set on the transaction, returns the datasource's default isolation level.</description>
+		</argument>
 		<return>
 			<type>string</type>
 		</return>
@@ -7988,7 +8008,11 @@ The following things are considered to be empty:
 		<member-name>int</member-name>
 		<class>lucee.runtime.functions.math.Int</class>
 		<keywords>number</keywords>
-		<description>Calculates the closest integer that is smaller than number.</description>
+		<description>
+			Returns the largest integer less than or equal to the given number (floor). 
+			For negative numbers, this rounds away from zero (e.g., int(-1.7) returns -2). 
+			The result is not limited to a 32-bit integer range and can handle large values such as epoch timestamps.
+		</description>
 		<argument>
 			<name>number</name>
 			<type>number</type>
@@ -8323,6 +8347,7 @@ The following things are considered to be empty:
 	<function>
 		<name>isDebuggerEnabled</name>
 		<class>lucee.runtime.functions.decision.IsDebuggerEnabled</class>
+		<introduced>7.1.0.45</introduced>
 		<keywords>decision,debug,debugger</keywords>
 		<description>Returns true if DAP debugger support is enabled (via LUCEE_DAP_SECRET env var or lucee.dap.secret system property). Use with breakpoint() BIF.</description>
 		<return>
@@ -10822,28 +10847,52 @@ Use `LoadAISession()` to restore a serialized session.
 		</return>
 	</function>
 	
-		<!-- LuceeExtension -->
+	<!-- LuceeExtension -->
 	<function>
-		<name>LuceeExtension</name>
-		<status>hidden</status>
-		<class>lucee.runtime.functions.system.LuceeExtension</class>
-		<description>List all Lucee extensions</description>
-		<argument>
-			<name>artifact</name>
-			<alias>artifactid</alias>
-			<type>string</type>
-			<required>No</required>
-			<description></description>
-		</argument>
-		<argument>
-			<name>version</name>
-			<type>string</type>
-			<required>No</required>
-			<description></description>
-		</argument>
-		<return>
-			<type>any</type>
-		</return>
+	    <name>LuceeExtension</name>
+	    <status>hidden</status>
+	    <class>lucee.runtime.functions.system.LuceeExtension</class>
+	    <description>Lists available Lucee extensions or retrieves details for a specific one from Maven.
+	
+	The behavior depends on which arguments are provided:
+	
+	- **No arguments** → returns an array of all extension artifact IDs for the default group (`org.lucee`)
+	- **`group` only** → returns an array of artifact IDs for that Maven group
+	- **`group` + `artifact`** → returns an array of version strings for that extension
+	- **`group` + `artifact` + `version`** → returns a struct with artifact details: `lex`, `pom`, `local`, `lastModified`
+	    </description>
+	    <argument>
+	        <name>group</name>
+	        <alias>groupid</alias>
+	        <type>string</type>
+	        <required>No</required>
+	        <default>org.lucee</default>
+	        <description>Maven group ID of the extension provider.</description>
+	    </argument>
+	    <argument>
+	        <name>artifact</name>
+	        <alias>artifactid</alias>
+	        <type>string</type>
+	        <required>No</required>
+	        <description>The extension artifact ID. If omitted, all artifact IDs for the group are returned.</description>
+	    </argument>
+	    <argument>
+	        <name>version</name>
+	        <type>string</type>
+	        <required>No</required>
+	        <description>The version to retrieve details for. If omitted, all available versions for the artifact are returned.</description>
+	    </argument>
+	    <argument>
+	        <name>download</name>
+	        <type>boolean</type>
+	        <required>No</required>
+	        <default>false</default>
+	        <description>create a local copy of the extension and at path to resulting struct with the key "local".</description>
+	    </argument>
+	    <return>
+	        <type>any</type>
+	        <description>Array of strings (artifact IDs or versions) or a struct with artifact details depending on the arguments provided.</description>
+	    </return>
 	</function>
 	
 	<!-- metaphone -->
@@ -19462,6 +19511,7 @@ The following things are considered to be empty:
 	<function>
 		<name>CachedWithinFlush</name>
 		<class>lucee.runtime.functions.cache.CachedWithinFlush</class>
+		<introduced>7.1.0.11</introduced>
 		<description>Flushes a specific cached entry from the cache. Works with cached queries, functions, and HTTP results. 
 		This allows selective cache invalidation instead of clearing entire caches, enabling fine-grained cache control when underlying data changes.</description>
 		<argument>
@@ -19489,6 +19539,7 @@ The following things are considered to be empty:
 	<function>
 		<name>CachedWithinId</name>
 		<class>lucee.runtime.functions.cache.CachedWithinId</class>
+		<introduced>7.1.0.11</introduced>
 		<description>Returns the cache identifier (cache key) for a cached object. 
 		This ID can be used with `cacheRemove()` to manually flush the cache entry. 
 		Works with cached queries, functions, and HTTP results. 

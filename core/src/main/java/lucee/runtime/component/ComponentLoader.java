@@ -228,8 +228,6 @@ public final class ComponentLoader {
 		final String path = (rawPath.indexOf("./") == -1 && !rawPath.endsWith(ext)) ? rawPath.replace('.', '/') : rawPath;
 		boolean isRealPath = !StringUtil.startsWith(path, '/');
 
-		// PageSource currPS = pc.getCurrentPageSource();
-		// Page currP=currPS.loadPage(pc,false);
 		PageSource ps = null;
 		CIPage page = null;
 

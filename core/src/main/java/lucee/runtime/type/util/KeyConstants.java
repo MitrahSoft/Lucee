@@ -1801,7 +1801,6 @@ public final class KeyConstants {
 	public static final Key _INDENT = init("INDENT");
 	public static final Key _LOCALE = init("LOCALE");
 	public static final Key _SIMPLE = init("SIMPLE");
-	public static final Key _GETPROVIDERINFO = init("GETPROVIDERINFO");
 	public static final Key _SORTED = init("SORTED");
 	public static final Key _BROWSER = init("BROWSER");
 	public static final Key _alpha = init("alpha");
@@ -1918,7 +1917,6 @@ public final class KeyConstants {
 	public static final Key _onBindError = init("onBindError");
 	public static final Key _NAMEFILTER = init("NAMEFILTER");
 	public static final Key _INCLUDE = init("INCLUDE");
-	public static final Key _GETPROVIDERINFOASYNC = init("GETPROVIDERINFOASYNC");
 	public static final Key _rc = init("rc");
 	public static final Key _DATAS = init("DATAS");
 	public static final Key _NORMALCOLOR = init("NORMALCOLOR");
@@ -1944,7 +1942,6 @@ public final class KeyConstants {
 	public static final Key _TITLECREATE = init("TITLECREATE");
 	public static final Key _TDCLASS = init("TDCLASS");
 	public static final Key _COLORKEYS = init("COLORKEYS");
-	public static final Key _DOWNLOADTRIAL = init("DOWNLOADTRIAL");
 	public static final Key _ARCHIVES = init("ARCHIVES");
 	public static final Key _TMPDIR = init("TMPDIR");
 	public static final Key _CURRPACK = init("CURRPACK");
@@ -2561,6 +2558,7 @@ public final class KeyConstants {
 	public static final Key _loaderPath = init("loaderPath");
 	public static final Key _additionalinformation = init("additionalinformation");
 	public static final Key _buildnumber = init("buildnumber");
+	public static final Key _buildDate = init("buildDate");
 	public static final Key _vendor = init("vendor");
 	public static final Key _freeMemory = init("freeMemory");
 	public static final Key _maxMemory = init("maxMemory");

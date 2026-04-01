@@ -76,10 +76,8 @@ import lucee.commons.lang.StringUtil;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.IPRange;
 import lucee.commons.net.URLEncoder;
-import lucee.commons.net.http.HTTPDownloader;
 import lucee.commons.net.http.HTTPEngine;
-import lucee.commons.net.http.HTTPResponse;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
+import lucee.commons.net.http.HTTPEngineBasic.HTTPDownloaderHeadResponse;
 import lucee.commons.security.Credentials;
 import lucee.loader.engine.CFMLEngine;
 import lucee.loader.engine.CFMLEngineFactory;
@@ -3717,7 +3715,14 @@ public final class ConfigAdmin {
 		}
 	}
 
-	public void mvnChangeVersionTo(Version version, Password password, Identification id) throws PageException {
+	public static lucee.runtime.config.maven.Version toVersion(String version, final lucee.runtime.config.maven.Version defaultValue) {
+		// remove extension if there is any
+		final int rIndex = version.lastIndexOf(".lco");
+		if (rIndex != -1) version = version.substring(0, rIndex);
+		return lucee.runtime.config.maven.Version.parseVersion(version, defaultValue);
+	}
+
+	public void mvnChangeVersionTo(lucee.runtime.config.maven.Version version, Password password, Identification id) throws PageException {
 		checkWriteAccess();
 		ConfigServerImpl cs = (ConfigServerImpl) ConfigUtil.getConfigServer(config, password);
 
@@ -3732,10 +3737,10 @@ public final class ConfigAdmin {
 
 			if (!localPath.isFile()) {
 				localPath = null;
-				Version v;
+				lucee.runtime.config.maven.Version v;
 				final File[] patches = patchDir.listFiles(new ExtensionFilter(new String[] { ".lco" }));
 				for (final File patch: patches) {
-					v = CFMLEngineFactory.toVersion(patch.getName(), null);
+					v = toVersion(patch.getName(), null);
 					// not a valid file get deleted
 					if (v == null) {
 						patch.delete();
@@ -3745,7 +3750,7 @@ public final class ConfigAdmin {
 							localPath = patch;
 						}
 						// delete newer files
-						else if (OSGiUtil.isNewerThan(v, version)) {
+						else if (lucee.runtime.config.maven.Version.compare(v, version) > 0) {
 							patch.delete();
 						}
 					}
@@ -3790,7 +3795,7 @@ public final class ConfigAdmin {
 		// copy it to local directory
 		if (newLucee.createNewFile()) {
 			try {
-				HTTPDownloader.downloadToFile(updateUrl, newLucee, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
+				HTTPEngine.downloadToFile(updateUrl, newLucee, DOWNLOAD_CONNECT_TIMEOUT, DOWNLOAD_READ_TIMEOUT, DOWNLOAD_USER_AGENT);
 
 				// when it is a loader extract the core from it
 				File tmp = CFMLEngineFactory.extractCoreIfLoader(newLucee);
@@ -3813,7 +3818,7 @@ public final class ConfigAdmin {
 		return newLucee;
 	}
 
-	private File mvnDownloadCore(CFMLEngineFactory factory, Version version, Identification id) throws IOException, PageException {
+	private File mvnDownloadCore(CFMLEngineFactory factory, lucee.runtime.config.maven.Version version, Identification id) throws IOException, PageException {
 		// local resource
 		final File patchDir = factory.getPatchDirectory();
 		final File newLucee = new File(patchDir, version + (".lco"));
@@ -4348,51 +4353,41 @@ public final class ConfigAdmin {
 		root.setEL("extensionEnabled", enabled);
 	}
 
-	public void updateRHExtensionProvider(String strUrl) throws MalformedURLException, PageException {
-		updateExtensionProvider(strUrl);
-	}
-
-	public void updateExtensionProvider(String strUrl) throws MalformedURLException, PageException {
+	public void updateExtensionGroups(String groupId) throws PageException {
 		Array children = ConfigUtil.getAsArray("extensionProviders", root);
-		strUrl = strUrl.trim();
-
-		URL _url = HTTPUtil.toURL(strUrl, HTTPUtil.ENCODED_NO);
-		strUrl = _url.toExternalForm();
+		groupId = groupId.trim();
 
 		// Update
-		String url;
+		String g;
 		for (int i = 1; i <= children.size(); i++) {
-			url = Caster.toString(children.get(i, null), null);
-			if (url == null) continue;
+			g = Caster.toString(children.get(i, null), null);
+			if (g == null) continue;
 
-			if (url.trim().equalsIgnoreCase(strUrl)) {
+			if (g.trim().equalsIgnoreCase(groupId)) {
 				return;
 			}
 		}
 
 		// Insert
-		children.prepend(strUrl);
+		children.prepend(groupId);
 	}
 
-	public void removeExtensionProvider(String strUrl) {
+	public void removeExtensionGroups(String groupId) {
 		Array children = ConfigUtil.getAsArray("extensionProviders", root);
 		Key[] keys = children.keys();
-		strUrl = strUrl.trim();
-		String url;
+		groupId = groupId.trim();
+		String g;
+
 		for (int i = keys.length - 1; i >= 0; i--) {
 			Key key = keys[i];
-			url = Caster.toString(children.get(key, null), null);
-			if (url == null) continue;
+			g = Caster.toString(children.get(key, null), null);
+			if (g == null) continue;
 
-			if (url.trim().equalsIgnoreCase(strUrl)) {
+			if (g.trim().equalsIgnoreCase(groupId)) {
 				children.removeEL(key);
 				return;
 			}
 		}
-	}
-
-	public void removeRHExtensionProvider(String strUrl) {
-		removeExtensionProvider(strUrl);
 	}
 
 	public void resetORMSetting() throws SecurityException {
@@ -5148,14 +5143,33 @@ public final class ConfigAdmin {
 		}
 	}
 
+	protected static void _removeRHExtensions(ConfigPro config, RHExtension rhext, RHExtension replacementRH, ResetFilter filter, boolean deleteExtension, Log log)
+			throws PageException {
+		try {
+			ConfigAdmin admin = new ConfigAdmin(config, null, true);
+			synchronized (SystemUtil.createToken("updateExtension", rhext.getId())) {
+				admin.unSyncRemoveExtension(config, rhext, replacementRH, filter, deleteExtension, log);
+			}
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
+		}
+	}
+
 	public void removeRHExtension(ExtensionDefintion ed, Log log) throws PageException {
 		checkWriteAccess();
+
 		if (ed == null) return;
 
 		ResetFilter filter = new ResetFilter();
 		try {
-			_removeRHExtension(config, ed.toRHExtension(config), null, filter, true, log);
-
+			RHExtension ext = ed.toRHExtension(config);
+			synchronized (SystemUtil.createToken("updateExtension", ext.getId())) {
+				unSyncRemoveExtension(config, ext, null, filter, true, log);
+			}
+		}
+		catch (Exception e) {
+			throw Caster.toPageException(e);
 		}
 		finally {
 			try {
@@ -5166,11 +5180,6 @@ public final class ConfigAdmin {
 			}
 		}
 	}
-
-	/*
-	 * public void removeExtension(String provider, String id) throws PageException {
-	 * removeRHExtension(id); }
-	 */
 
 	/**
 	 * removes an installed extension from the system
@@ -5460,6 +5469,25 @@ public final class ConfigAdmin {
 				rhe.delete(this.config, log);
 			}
 
+			{
+				Array children = ConfigUtil.getAsArray("extensions", root);
+				Struct el;
+				// remove record in json
+				for (int key: children.intKeys()) {
+					try {
+						el = Caster.toStruct(children.get(key, null), null);
+						if (el == null) continue;
+
+						if (rhe.same(el)) {
+							children.removeEL(key);
+							break;
+						}
+					}
+					catch (Exception e) {
+						throw Caster.toPageException(e);
+					}
+				}
+			}
 		}
 		catch (Exception e) {
 			throw Caster.toPageException(e);
@@ -5494,10 +5522,11 @@ public final class ConfigAdmin {
 	}
 
 	public void verifyExtensionProvider(String strUrl) throws PageException {
-		HTTPResponse method = null;
+		HTTPDownloaderHeadResponse rsp;
+		URL url = null;
 		try {
-			URL url = HTTPUtil.toURL(strUrl + "?wsdl", HTTPUtil.ENCODED_AUTO);
-			method = HTTPEngine4Impl.get(url, null, null, 2000, true, null, null, null, null);
+			url = HTTPUtil.toURL(strUrl + "?wsdl", HTTPUtil.ENCODED_AUTO);
+			rsp = HTTPEngine.head(url);
 		}
 		catch (MalformedURLException e) {
 			ApplicationException ae = new ApplicationException("Url definition [" + strUrl + "] is invalid");
@@ -5509,20 +5538,14 @@ public final class ConfigAdmin {
 			ExceptionUtil.initCauseEL(ae, e);
 			throw ae;
 		}
-		catch (GeneralSecurityException e) {
-			ApplicationException ae = new ApplicationException("Can't invoke [" + strUrl + "]");
-			ExceptionUtil.initCauseEL(ae, e);
-		}
 
-		if (method.getStatusCode() != 200) {
-			int code = method.getStatusCode();
-			String text = method.getStatusText();
+		if (rsp.getStatusCode() != 200) {
+			int code = rsp.getStatusCode();
+			String text = rsp.getStatusText();
 			String msg = code + " " + text;
-			throw new HTTPException(msg, null, code, text, method.getURL());
+			throw new HTTPException(msg, null, code, text, url);
 		}
-		// Object o =
 		CreateObject.doWebService(null, strUrl + "?wsdl");
-		HTTPEngine.closeEL(method);
 	}
 
 	public void updateTLD(Resource resTld) throws IOException {

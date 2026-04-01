@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -66,7 +67,6 @@ import lucee.runtime.config.Constants;
 import lucee.runtime.config.DeployHandler;
 import lucee.runtime.config.ResetFilter;
 import lucee.runtime.config.maven.ExtensionProvider;
-import lucee.runtime.converter.ConverterException;
 import lucee.runtime.engine.ThreadLocalConfig;
 import lucee.runtime.engine.ThreadLocalPageContext;
 import lucee.runtime.exp.ApplicationException;
@@ -93,6 +93,7 @@ import lucee.runtime.type.Query;
 import lucee.runtime.type.QueryImpl;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
+import lucee.runtime.type.dt.DateTime;
 import lucee.runtime.type.query.CurrentRow;
 import lucee.runtime.type.util.ArrayUtil;
 import lucee.runtime.type.util.KeyConstants;
@@ -210,7 +211,7 @@ public final class RHExtension implements Serializable {
 				for (Entry<String, Resource> e: loadExtensionAvailableFiles(config).entrySet()) {
 					res = e.getValue();
 					hash = hash(res);
-					rhe = new RHExtension(config, e.getValue(), ExtensionDefintion.toExtensionDefinitionFromStorageName(res.getName()), hash, false).asyncInit();
+					rhe = new RHExtension(config, res, ExtensionDefintion.toExtensionDefinitionFromStorageName(res.getName()), hash, false).asyncInit();
 
 					// extension file following old pattern
 					if (!res.getName().startsWith("mvn_") && !ExtensionDefintion.startsWithUUID(res.getName())) {
@@ -307,7 +308,7 @@ public final class RHExtension implements Serializable {
 							log.debug("extension", "loading extension file [" + ext + "]");
 						}
 						RHExtension rhe = new RHExtension(config, ext, ed, hash, false).asyncInit();
-						return collection.put(hash, ed != null ? ed.getStorageName() : rhe.getStorageName(), rhe);
+						return collection.put(hash, ed != null ? ed.getStorageName(false) : rhe.getStorageName(), rhe);
 					}
 				}
 			}
@@ -346,41 +347,54 @@ public final class RHExtension implements Serializable {
 		}
 
 		// check in existing instances by filename matching gav
-		GAVSO gav = ed.getGAVSO(config);
-		if (gav != null && gav.isValid()) {
-			for (lucee.runtime.extension.RHExtensionCollection.Entry e: collection.getExtensions()) {
-				if (e.getFilename().equals(ed.getStorageName())) {
-					if (LogUtil.doesDebug(log)) {
-						log.debug("extension", "1:found matching extension for [" + ed + "] in the installed folder with name [" + e.getFilename() + "] and hash [" + e.getHash()
-								+ "]. no need to fully load it!");
-					}
-					return e.getRHExtension();
-				}
-			}
-
-			// check in available files
-			for (Entry<String, Resource> e: loadExtensionAvailableFiles(config).entrySet()) {
-				if (ed.getStorageName().equals(e.getKey())) {
-					if (LogUtil.doesDebug(log)) {
-						log.debug("extension", "2:found matching extension for [" + ed + "] in the available folder with name [" + e.getKey() + "]. no need to fully load it!");
-					}
-					return _getInstance(config, e.getValue(), ed, log).getRHExtension();
-				}
-			}
-
-		}
+		RHExtension instance = _getInstanceByGAV(config, ed, false, log);
+		if (instance != null) return instance;
 
 		// check in existing instances by filename matching id
+		instance = _getInstanceBId(config, ed, downloadIfNecessary, false, log);
+		if (instance != null) return instance;
+
+		//////////////////
+		if (doInitAvailable) {
+			initAvailable(config, log);
+			lucee.runtime.extension.RHExtensionCollection.Entry entry = collection.get(ed);
+			if (entry != null) {
+				if (LogUtil.doesDebug(log)) {
+					log.debug("extension", "7:found matching extension for [" + ed + "] by comparing by object comparsion, because we could not load by file match."
+							+ " filename is [" + entry.getRHExtension().getExtensionFile() + "], but we did look for [" + entry.getRHExtension().getStorageName() + "]");
+				}
+				return entry.getRHExtension();
+			}
+		}
+		if (downloadIfNecessary) {
+			GAVSO gav = ed.getGAVSO(config, true);
+			// check in existing instances by GAV
+			if (gav != null && gav.isValid()) {
+				return _getInstance(config, DeployHandler.downloadExtensionFromMaven((ConfigPro) config, ed, false, true, log), ed, log).getRHExtension();
+			}
+
+			return _getInstance(config, DeployHandler.downloadExtension((ConfigPro) config, ed, null, true), ed, log).getRHExtension();
+		}
+
+		throw new ApplicationException("the extension [" + ed + "] is not available locally");
+	}
+
+	private static RHExtension _getInstanceBId(Config config, ExtensionDefintion ed, boolean downloadIfNecessary, boolean b, Log log) {
 		if (!StringUtil.isEmpty(ed.getId()) && ed.getId() != null) {
 			// we have no version definition, we need to know the latest versions
 			if (downloadIfNecessary && StringUtil.isEmpty(ed.getVersion())) {
-				ed.setParam("version", DeployHandler.getLatestVersionFor((ConfigPro) config, ed, null, true).toString());
+				try {
+					ed.setParam("version", DeployHandler.getLatestVersionFor((ConfigPro) config, ed, null, true).toString());
+				}
+				catch (PageException e) {
+					return null;
+				}
 			}
 			// check in existing instances by id/version
 			if (ed.getId() != null) {
 				if (ed.getVersion() != null) {
 					for (lucee.runtime.extension.RHExtensionCollection.Entry e: collection.getExtensions()) {
-						if (ed.getStorageName().equals(e.getFilename())) {
+						if (ed.getStorageName(false).equals(e.getFilename())) {
 							if (LogUtil.doesDebug(log)) {
 								log.debug("extension", "3:found matching extension for [" + ed + "] in the installed folder with name [" + e.getFilename() + "] and hash ["
 										+ e.getHash() + "]. no need to fully load it!");
@@ -390,7 +404,7 @@ public final class RHExtension implements Serializable {
 					}
 					// check in available files
 					for (Entry<String, Resource> e: loadExtensionAvailableFiles(config).entrySet()) {
-						if (ed.getStorageName().equals(e.getKey())) {
+						if (ed.getStorageName(false).equals(e.getKey())) {
 							if (LogUtil.doesDebug(log)) {
 								log.debug("extension",
 										"4:found matching extension for [" + ed + "] in the available folder with name [" + e.getKey() + "]. no need to fully load it!");
@@ -445,35 +459,40 @@ public final class RHExtension implements Serializable {
 				}
 			}
 		}
-		//////////////////
-		if (doInitAvailable) {
-			initAvailable(config, log);
-			lucee.runtime.extension.RHExtensionCollection.Entry entry = collection.get(ed);
-			if (entry != null) {
-				if (LogUtil.doesDebug(log)) {
-					log.debug("extension", "7:found matching extension for [" + ed + "] by comparing by object comparsion, because we could not load by file match."
-							+ " filename is [" + entry.getRHExtension().getExtensionFile() + "], but we did look for [" + entry.getRHExtension().getStorageName() + "]");
+		return null;
+	}
+
+	private static RHExtension _getInstanceByGAV(Config config, ExtensionDefintion ed, boolean investigate, Log log) {
+		GAVSO gav = ed.getGAVSO(config, investigate);
+		if (gav != null && gav.isValid()) {
+			for (lucee.runtime.extension.RHExtensionCollection.Entry e: collection.getExtensions()) {
+				if (e.getFilename().equals(ed.getStorageName(investigate))) {
+					if (LogUtil.doesDebug(log)) {
+						log.debug("extension", "1:found matching extension for [" + ed + "] in the installed folder with name [" + e.getFilename() + "] and hash [" + e.getHash()
+								+ "]. no need to fully load it!");
+					}
+					return e.getRHExtension();
 				}
-				return entry.getRHExtension();
-			}
-		}
-		if (downloadIfNecessary) {
-			// check in existing instances by GAV
-			if (gav != null && gav.isValid()) {
-				return _getInstance(config, DeployHandler.downloadExtensionFromMaven((ConfigPro) config, ed, false, true, log), ed, log).getRHExtension();
 			}
 
-			return _getInstance(config, DeployHandler.downloadExtension((ConfigPro) config, ed, null, true), ed, log).getRHExtension();
+			// check in available files
+			for (Entry<String, Resource> e: loadExtensionAvailableFiles(config).entrySet()) {
+				if (ed.getStorageName(false).equals(e.getKey())) {
+					if (LogUtil.doesDebug(log)) {
+						log.debug("extension", "2:found matching extension for [" + ed + "] in the available folder with name [" + e.getKey() + "]. no need to fully load it!");
+					}
+					return _getInstance(config, e.getValue(), ed, log).getRHExtension();
+				}
+			}
 		}
-
-		throw new ApplicationException("the extension [" + ed + "] is not available locally");
+		return null;
 	}
 
 	public static RHExtension getInstalledDifferentVersion(Config config, ExtensionDefintion ed, Log log) {
 		initInstalled(config);
 
 		// by ga
-		GAVSO gav = ed.getGAVSO(config);
+		GAVSO gav = ed.getGAVSO(config, true);
 		boolean hasGAV = gav != null && gav.isValid();
 		String id = ed.getId();
 		boolean hasId = !StringUtil.isEmpty(id, true);
@@ -503,12 +522,6 @@ public final class RHExtension implements Serializable {
 		return null;
 	}
 
-	/*
-	 * private RHExtension(Config config, String id, String version) throws PageException { this.config
-	 * = config; this._id = id; this._version = version; this.extensionFile =
-	 * getExtensionInstalledFile(config, id, version, false); // softLoaded = false; }
-	 */
-
 	private RHExtension(Config config, Resource ext, ExtensionDefintion ed, String hash, boolean installed) {
 		this.config = config;
 		this.hash = hash;
@@ -522,8 +535,8 @@ public final class RHExtension implements Serializable {
 		if (ed != null) {
 			if (!StringUtil.isEmpty(ed.getId(), true)) _id = ed.getId().trim();
 			if (!StringUtil.isEmpty(ed.getVersion(), true)) _version = ed.getVersion().trim();
-			if (ed.getGAVSO(config) != null) {
-				this.gavso = ed.getGAVSO(config);
+			if (ed.getGAVSO(config, false) != null) {
+				this.gavso = ed.getGAVSO(config, false);
 			}
 		}
 	}
@@ -586,7 +599,7 @@ public final class RHExtension implements Serializable {
 		Resource mdf = getMetaDataFile(config, hash);
 		if (!metadataFilesChecked.contains(mdf.getAbsolutePath()) && !mdf.isFile()) {
 			Struct data = new StructImpl(Struct.TYPE_LINKED);
-			_populate(data, metadata);
+			_populate(data, null, metadata);
 			try {
 				write(config, metadata, hash);
 			}
@@ -615,56 +628,6 @@ public final class RHExtension implements Serializable {
 		}
 		return false;
 	}
-
-	/*
-	 * public static RHExtension installExtension(ConfigPro config, String id, String version, Resource
-	 * resource, boolean force) throws PageException, IOException {
-	 * 
-	 * // get installed res Resource res = StringUtil.isEmpty(version) ? null :
-	 * getExtensionInstalledFile(config, id, version, null); boolean installed = (res != null);
-	 * ResetFilter filter = new ResetFilter(); if (!installed) { synchronized
-	 * (SystemUtil.createToken("RHExtension", "installedFiles")) { try { if (resource != null) { return
-	 * DeployHandler.deployExtension(config, new ExtensionDefintion(id, version).setSource(config,
-	 * resource), filter, null, false, true, true, new RefBooleanImpl()); } else if
-	 * (!StringUtil.isEmpty(id)) { return DeployHandler.deployExtension(config, new
-	 * ExtensionDefintion(id, version), filter, null, false, true, true, new RefBooleanImpl()); // MUSTT
-	 * } else { throw new IOException("cannot install extension based on the given data [id:" + id +
-	 * ";version:" + version + ";resource:" + resource + "]"); } } finally { filter.reset(config);
-	 * resetExtensionInstalledFile(config, id, version); } } } // if forced we also install if it
-	 * already is else if (force) { synchronized (SystemUtil.createToken("RHExtension",
-	 * "installedFiles")) { try { return DeployHandler.deployExtension(config, res, false, true,
-	 * RHExtension.ACTION_NONE); } finally { resetExtensionInstalledFile(config, id, version); } } }
-	 * return getInstance(config, new ExtensionDefintion(id, version).setSource(config, res)); }
-	 */
-
-	/*
-	 * public static boolean isInstalledX(Config config, String id, String version) { Resource res =
-	 * getExtensionInstalledFile(config, id, version, null); return res != null; }
-	 */
-
-	/**
-	 * copy the extension resource file to the installed folder
-	 * 
-	 * @return
-	 * @throws PageException
-	 * @throws ConverterException
-	 * @throws IOException
-	 */
-
-	/*
-	 * public static void storeMetaData(Config config, String id, String version, Struct data) throws
-	 * ConverterException, IOException { storeMetaData(getMetaDataFile(config, id, version), data); }
-	 */
-
-	/*
-	 * private static void storeMetaData(Resource file, Struct data) throws ConverterException,
-	 * IOException { JSONConverter json = new JSONConverter(true, CharsetUtil.UTF8,
-	 * JSONDateFormat.PATTERN_CF, false); String str = json.serialize(null, data,
-	 * SerializationSettings.SERIALIZE_AS_ROW, true);
-	 * ResourceUtil.createParentDirectoryIfNecessary(file);
-	 * 
-	 * IOUtil.write(file, str, CharsetUtil.UTF8, false); }
-	 */
 
 	public static ExtensionMetadata read(Config config, String hash) throws IOException, ClassNotFoundException {
 		Resource mdf = getMetaDataFile(config, hash);
@@ -725,55 +688,32 @@ public final class RHExtension implements Serializable {
 		return extensionFile;
 	}
 
-	public void addToAvailable(Config config) {
-		addToAvailable(config, getExtensionFile());
-	}
-
 	public void moveToFailed(Config config) {
 		extensionFile = DeployHandler.moveToFailedFolder(config.getDeployDirectory(), getExtensionFile());
-		resetExtensionAvailableFile(config, getId(), getVersion());
+		resetExtensionAvailableFile(config, getStorageName());
 	}
 
-	private void addToAvailable(Config config, Resource ext) {
+	public void addToAvailable(Config config) {
+		Resource ext = getExtensionFile();
 		if (ext == null || ext.length() == 0 || getId() == null) return;
+
 		Log logger = ThreadLocalPageContext.getLog(config, "deploy");
+		String name = getStorageName();
 		synchronized (SystemUtil.createToken("RHExtension", "availableFiles")) {
 			Resource res = ((ConfigPro) config).getExtensionAvailableDir();
-			res = res.getRealResource(getId() + "-" + getVersion() + ".lex");
+
+			res = res.getRealResource(name);
 			if (res.length() == ext.length()) return;
 			try {
 				ResourceUtil.copy(ext, res);
-				logger.info("extension", "copy [" + getId() + ":" + getVersion() + "] to [" + res + "]");
+				logger.info("extension", "adding [" + res + "]");
 			}
-			catch (IOException e) {
-				logger.error("extension", e);
+			catch (IOException ex) {
+				logger.error("extension", ex);
 			}
-			resetExtensionAvailableFile(config, getId(), getVersion());
+			resetExtensionAvailableFile(config, name);
 		}
 	}
-
-	/*
-	 * public static Manifest getManifestFromFiles(Config config, Resource file) throws IOException {
-	 * ZipInputStream zis = new ZipInputStream(IOUtil.toBufferedInputStream(file.getInputStream()));
-	 * ZipEntry entry; Manifest manifest = null;
-	 * 
-	 * try { while ((entry = zis.getNextEntry()) != null) { if (!entry.isDirectory() &&
-	 * entry.getName().equalsIgnoreCase("META-INF/MANIFEST.MF")) { manifest = toManifest(config, zis,
-	 * false, null); } zis.closeEntry(); if (manifest != null) return manifest; } } finally {
-	 * IOUtil.close(zis); } return null;
-	 * 
-	 * }
-	 * 
-	 * 
-	 * private static void processEntry(ZipFile zip, ZipEntry entry) { try (InputStream is =
-	 * zip.getInputStream(entry)) {
-	 * 
-	 * // Process the entry (e.g., read content, extract, etc.) if (!entry.isDirectory()) { //
-	 * print.e("> " + entry.getName() + ":" + Thread.currentThread().getId()); byte[] data =
-	 * is.readAllBytes(); // print.e("< " + entry.getName() + ":" + data.length); // Perform your logic
-	 * here with `data` } } catch (IOException e) { System.err.println("Error processing entry: " +
-	 * entry.getName()); e.printStackTrace(); } }
-	 */
 
 	private static class Data {
 		public String image;
@@ -956,6 +896,11 @@ public final class RHExtension implements Serializable {
 		label += " : " + metadata._getVersion();
 		metadata.setId(StringUtil.unwrap(attr.getValue("id")), label);
 		metadata.setDescription(StringUtil.unwrap(attr.getValue("description")));
+		String str = StringUtil.unwrap(attr.getValue("Built-Date"));
+		if (!StringUtil.isEmpty(str, true)) {
+			DateTime dt = Caster.toDate(str, false, TimeZone.getDefault(), null);
+			if (dt != null) metadata.setBuiltDate(dt);
+		}
 		metadata.setTrial(Caster.toBooleanValue(StringUtil.unwrap(attr.getValue("trial")), false));
 		if (_img == null) _img = StringUtil.unwrap(attr.getValue("image"));
 		metadata.setImage(_img);
@@ -1046,18 +991,6 @@ public final class RHExtension implements Serializable {
 	}
 
 	private static Resource[] loadExtensionInstalledFiles(Config config) {
-		// if (installedFiles == null) {
-		// synchronized (SystemUtil.createToken("RHExtension", "installedFiles")) {
-		// if (installedFiles == null) {
-		// Resource dir = ((ConfigPro) config).getExtensionInstalledDir();
-		// installedFiles = new ConcurrentHashMap<>();
-		// for (Resource res: dir.listResources(new ExtensionResourceFilter("lex"))) {
-		// installedFiles.put(res.getName(), res);
-		// }
-		// }
-		// }
-		// }
-		// return installedFiles;
 		return ((ConfigPro) config).getExtensionInstalledDir().listResources(new ExtensionResourceFilter("lex"));
 	}
 
@@ -1082,8 +1015,7 @@ public final class RHExtension implements Serializable {
 		// "installedFiles", fileName);
 	}
 
-	public static void resetExtensionAvailableFile(Config config, String id, String version) {
-		String fileName = id + "-" + version + ".lex";
+	public static void resetExtensionAvailableFile(Config config, String fileName) {
 		resetExtensionFile(config, availableFiles, ((ConfigPro) config).getExtensionAvailableDir(), "availableFiles", fileName);
 	}
 
@@ -1111,20 +1043,8 @@ public final class RHExtension implements Serializable {
 			}
 		}
 	}
-	/*
-	 * public static void removeExtensionInstalledFile(Config config, String id, String version) throws
-	 * IOException { removeExtensionInstalledFile(config, toHash(id, version, "lex")); }
-	 * 
-	 * 
-	 * public static void removeExtensionInstalledFile(Config config, String fileName) throws
-	 * IOException { synchronized (SystemUtil.createToken("RHExtension", "installedFiles")) { Resource
-	 * res = ((ConfigPro) config).getExtensionInstalledDir().getRealResource(fileName); if
-	 * (res.isFile()) res.remove(true); if (installedFiles != null) { installedFiles.remove(fileName); }
-	 * } }
-	 */
 
-	public static void removeExtensionAvailableFile(Config config, String id, String version) throws IOException {
-		String fileName = id + "-" + version + ".lex";
+	public static void removeExtensionAvailableFile(Config config, String fileName) throws IOException {
 		synchronized (SystemUtil.createToken("RHExtension", "availableFiles")) {
 			Resource res = ((ConfigPro) config).getExtensionAvailableDir().getRealResource(fileName);
 			if (res.isFile()) res.remove(true);
@@ -1141,21 +1061,9 @@ public final class RHExtension implements Serializable {
 		return getId() + "-" + getVersion() + ".lex";
 	}
 
-	/*
-	 * public static Resource getMetaDataFileX(Config config, String id, String version) { String
-	 * fileName = toHash(id, version, "obj"); return
-	 * getExtensionInstalledDir(config).getRealResource(fileName); }
-	 */
-
 	public static Resource getMetaDataFile(Config config, String hash) {
 		return getExtensionInstalledDir(config).getRealResource(hash + ".obj");
 	}
-
-	/*
-	 * public static String toHash(String id, String version, String ext) { if (ext == null) ext = "mf";
-	 * return HashUtil.create64BitHashAsString(id + "-" + version + "-" +
-	 * ExtensionMetadata.serialVersionUID, Character.MAX_RADIX) + "." + ext; }
-	 */
 
 	public static Resource getExtensionInstalledDir(Config config) {
 		return ((ConfigPro) config).getExtensionInstalledDir();
@@ -1176,8 +1084,8 @@ public final class RHExtension implements Serializable {
 			if (resources != null) {
 				for (Resource r: resources) {
 					ext = getInstance(config, r, log);
-					versions = map.get(ext.getId());
-					if (versions == null) map.put(ext.getId(), versions = new ArrayList<>());
+					versions = map.get(ext.getStorageName());
+					if (versions == null) map.put(ext.getStorageName(), versions = new ArrayList<>());
 					versions.add(new Pair<RHExtension, Resource>(ext, r));
 				}
 			}
@@ -1189,9 +1097,10 @@ public final class RHExtension implements Serializable {
 						@Override
 						public int compare(Pair<RHExtension, Resource> l, Pair<RHExtension, Resource> r) {
 							try {
-								return OSGiUtil.compare(OSGiUtil.toVersion(r.getName().getVersion()), OSGiUtil.toVersion(l.getName().getVersion()));
+								return lucee.runtime.config.maven.Version.compare(lucee.runtime.config.maven.Version.parseVersion(r.getName().getVersion()),
+										lucee.runtime.config.maven.Version.parseVersion(l.getName().getVersion()));
 							}
-							catch (BundleException e) {
+							catch (IOException e) {
 								return 0;
 							}
 						}
@@ -1215,7 +1124,7 @@ public final class RHExtension implements Serializable {
 		Map<String, RHExtension> xmlExtensions = new HashMap<>();
 		for (int i = 0; i < xmlArrExtensions.length; i++) {
 			ext = xmlArrExtensions[i];
-			xmlExtensions.put(ext.getId(), ext);
+			xmlExtensions.put(ext.getStorageName(), ext);
 		}
 
 		// Extension defined in filesystem
@@ -1228,7 +1137,7 @@ public final class RHExtension implements Serializable {
 		try {
 			for (int i = 0; i < resources.length; i++) {
 				ext = getInstance(config, resources[i], log);
-				xmlExt = xmlExtensions.get(ext.getId());
+				xmlExt = xmlExtensions.get(ext.getStorageName());
 				if (xmlExt != null && (xmlExt.getVersion() + "").equals(ext.getVersion() + "")) continue;
 				rt = ext.getMetadata().getReleaseType();
 				ConfigAdmin._updateRHExtension((ConfigPro) config, RHExtension.getInstance(config, resources[i], log), filter, true, true, RHExtension.ACTION_COPY, log);
@@ -1285,7 +1194,7 @@ public final class RHExtension implements Serializable {
 			return;
 		}
 
-		_populate(el, getMetadata());
+		_populate(el, this, null);
 	}
 
 	private static String toStringForAttr(String str) {
@@ -1332,34 +1241,41 @@ public final class RHExtension implements Serializable {
 	}
 
 	private static Query createQuery() throws DatabaseException {
-		return new QueryImpl(
-				new Key[] { KeyConstants._id, KeyConstants._version, KeyConstants._name, KeyConstants._symbolicName, KeyConstants._type, KeyConstants._description,
-						KeyConstants._image, KeyConstants._releaseType, KeyConstants._trial, KeyConstants._categories, KeyConstants._startBundles, KeyConstants._bundles,
-						KeyConstants._flds, KeyConstants._tlds, KeyConstants._tags, KeyConstants._functions, KeyConstants._contexts, KeyConstants._webcontexts,
-						KeyConstants._config, KeyConstants._applications, KeyConstants._components, KeyConstants._plugins, KeyConstants._eventGateways, KeyConstants._archives },
-				0, "Extensions");
+		return new QueryImpl(new Key[] { KeyConstants._id, KeyConstants._version, KeyConstants._name, KeyConstants._groupId, KeyConstants._artifactId, KeyConstants._symbolicName,
+				KeyConstants._type, KeyConstants._buildDate, KeyConstants._description, KeyConstants._image, KeyConstants._releaseType, KeyConstants._trial,
+				KeyConstants._categories, KeyConstants._startBundles, KeyConstants._bundles, KeyConstants._flds, KeyConstants._tlds, KeyConstants._tags, KeyConstants._functions,
+				KeyConstants._contexts, KeyConstants._webcontexts, KeyConstants._config, KeyConstants._applications, KeyConstants._components, KeyConstants._plugins,
+				KeyConstants._eventGateways, KeyConstants._archives }, 0, "Extensions");
 	}
 
 	public Struct toStruct() {
-		return (Struct) _populate(new StructImpl(), getMetadata());
+		return (Struct) _populate(new StructImpl(), this, null);
 	}
 
 	private void populate(Query qry) {
-		_populate(new CurrentRow(qry, qry.addRow(), true), getMetadata());
+		_populate(new CurrentRow(qry, qry.addRow(), true), this, null);
 	}
 
-	private static Collection _populate(Collection coll, ExtensionMetadata md) {
-
+	private static Collection _populate(Collection coll, RHExtension extMayNull, ExtensionMetadata md) {
+		if (md == null) {
+			if (extMayNull == null) new IllegalArgumentException("you need to provide an extension or metadata");
+			md = extMayNull.getMetadata();
+		}
 		coll.setEL(KeyConstants._id, md._getId());
+		coll.setEL(KeyConstants._name, md.getName());
+		coll.setEL(KeyConstants._groupId, extMayNull != null ? extMayNull.getGroupId() : md.getGroupId());
+		coll.setEL(KeyConstants._artifactId, extMayNull != null ? extMayNull.getArtifactId() : md.getArtifactId());
 		coll.setEL(KeyConstants._name, md.getName());
 		coll.setEL(KeyConstants._symbolicName, md.getSymbolicName());
 		coll.setEL(KeyConstants._image, md.getImage());
 		coll.setEL(KeyConstants._type, md.getType());
 		coll.setEL(KeyConstants._description, StringUtil.emptyIfNull(md.getDescription()));
+		DateTime bd = md.getBuiltDate();
+		if (bd != null) coll.setEL(KeyConstants._buildDate, Caster.toString(bd, null));
 
 		// core version
 		VersionRange minCoreVersion = md.getMinCoreVersion();
-		if (minCoreVersion != null) coll.setEL("luceeCoreVersion", toStringForAttr(minCoreVersion.toString()));
+		if (minCoreVersion != null) coll.setEL("luceeCoreVersion", toStringForAttr(minCoreVersion.toVersionNumberIfPossible()));
 		else coll.removeEL(KeyImpl.init("luceeCoreVersion"));
 
 		// loader version
@@ -1448,15 +1364,25 @@ public final class RHExtension implements Serializable {
 		if (gavso != null && gavso.g != null) {
 			return gavso.g;
 		}
+
+		// from metadata
 		String g = getMetadata().getGroupId();
-		if (StringUtil.isEmpty(g, true) && getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider(config);
-			try {
-				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+		if (!StringUtil.isEmpty(g, true)) {
+			String a = getMetadata().getArtifactId();
+			if (!StringUtil.isEmpty(a, true)) {
+				gavso = new GAVSO(g, a, getVersion());
+			}
+			return g;
+		}
+
+		if (getId() != null) {
+			GAVSO tmp = ExtensionProvider.toGAVSO((ConfigPro) config, getId(), true, null);
+			if (tmp != null) {
+				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
 				return gavso.g;
 			}
-			catch (PageException e) {}
 		}
+
 		return g;
 	}
 
@@ -1464,15 +1390,25 @@ public final class RHExtension implements Serializable {
 		if (gavso != null && gavso.a != null) {
 			return gavso.a;
 		}
+
+		// from metadata
 		String a = getMetadata().getArtifactId();
-		if (StringUtil.isEmpty(a, true) && getId() != null) {
-			ExtensionProvider ep = new ExtensionProvider(config);
-			try {
-				gavso = new GAVSO(ep.getGroup(), ep.toArtifact(getId()), getVersion());
+		if (!StringUtil.isEmpty(a, true)) {
+			String g = getMetadata().getGroupId();
+			if (!StringUtil.isEmpty(g, true)) {
+				gavso = new GAVSO(g, a, getVersion());
+			}
+			return a;
+		}
+
+		if (getId() != null) {
+			GAVSO tmp = ExtensionProvider.toGAVSO(null, getId(), true, null);
+			if (tmp != null) {
+				gavso = new GAVSO(tmp.g, tmp.a, getVersion());
 				return gavso.a;
 			}
-			catch (PageException e) {}
 		}
+
 		return a;
 	}
 
@@ -1621,7 +1557,7 @@ public final class RHExtension implements Serializable {
 
 	public boolean equalsTo(ExtensionDefintion ed) {
 
-		if (ed.getGAVSO(config) != null && getGroupId() != null && getArtifactId() != null && getVersion() != null) {
+		if (ed.getGAVSO(config, true) != null && getGroupId() != null && getArtifactId() != null && getVersion() != null) {
 			return ed.getGroupId().equalsIgnoreCase(getGroupId()) && ed.getArtifactId().equalsIgnoreCase(getArtifactId()) && ed.getVersion().equalsIgnoreCase(getVersion());
 		}
 		if (ed.getId() == null) {
@@ -1703,7 +1639,7 @@ public final class RHExtension implements Serializable {
 	public boolean same(ExtensionDefintion other) {
 		if (other == null) return false;
 		// gav
-		GAVSO gav = other.getGAVSO(config);
+		GAVSO gav = other.getGAVSO(config, false);
 		if (gav != null) {
 			if (hasGAV()) {
 				return gav.same(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
@@ -1777,7 +1713,7 @@ public final class RHExtension implements Serializable {
 			}
 			// gradle style maven
 			else if (ed.getId() == null && (gavso = MavenUtil.toGAVSO(ss, null)) != null) {
-				ExtensionDefintion tmp = new ExtensionProvider(ThreadLocalPageContext.getConfig(), gavso.g).toExtensionDefintion(c, gavso, true, null);
+				ExtensionDefintion tmp = ExtensionProvider.getInstance(ThreadLocalPageContext.getConfig(), gavso.g).toExtensionDefintion(c, gavso, true, null);
 				if (tmp != null) ed = tmp;
 			}
 			else if (ed.getId() == null || Decision.isUUId(ed.getId())) {
@@ -1805,7 +1741,6 @@ public final class RHExtension implements Serializable {
 					e.printStackTrace();
 				}
 			}
-
 		}
 		return StringUtil.isEmpty(ed.getId(), true) ? null : ed;
 	}
@@ -1870,7 +1805,7 @@ public final class RHExtension implements Serializable {
 				}
 			}
 		}
-		if (ed.getId() == null && ed.getGAVSO(config) == null) return null;
+		if (ed.getId() == null && ed.getGAVSO(config, false) == null) return null;
 		return ed;
 
 	}
@@ -1917,7 +1852,7 @@ public final class RHExtension implements Serializable {
 				ed = edInit;
 				if (ed.getId() == null) ed.setId(getId());
 				if (ed.getVersion() == null) ed.setParam("version", getVersion());
-				if (ed.getGAVSO(config) == null) {
+				if (ed.getGAVSO(config, false) == null) {
 					ed.setGAVSO(new GAVSO(getGroupId(), getArtifactId(), getVersion()));
 				}
 			}
@@ -1985,5 +1920,4 @@ public final class RHExtension implements Serializable {
 			installed = false;
 		}
 	}
-
 }

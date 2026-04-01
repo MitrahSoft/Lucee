@@ -1,8 +1,9 @@
 <cfscript>
-	hasAccess=true;
-	external=getExternalData(providerURLs,true);
-	existing={};
+	setting requesttimeout=100000;
 
+	hasAccess=true;
+	existing={};
+	
 	function getLatestVersion(id) {
 		loop query=external {
 			if(external.id==arguments.id) {
@@ -26,6 +27,7 @@
 		type="#request.adminType#"
 		password="#session["password"&request.adminType]#"
 		returnVariable="LocalExtensions" ;
+
 </cfscript>
 <!--- if user declined the agreement, show a msg --->
 <cfif structKeyExists(session, "extremoved")>
@@ -95,7 +97,7 @@
 					latestVersion = ( isEmpty( latest.vs ) ) ? _extensions.version : latest.vs;
 					hasUpdates = toNumeric( REReplace( latestVersion, "[^\d]", "", "all" ) ) GT
 								 toNumeric( REReplace( toVersionSortable( _extensions.version ), "[^\d]", "", "all" ) );
-					link="#request.self#?action=#url.action#&action2=detail&id=#_extensions.id#";
+					link="#request.self#?action=#url.action#&action2=detail&id=#_extensions.id#&groupId=#_extensions.groupId#&artifactId=#_extensions.artifactId#";
 					img=_extensions.image;
 					if(len(img)==0) {
 						loop query="#external#"{
@@ -128,8 +130,6 @@ Latest version: #latest.v#</cfif>"><cfif hasUpdates>
 							<span class="ext-name">#cut(_extensions.name,40)#<br>
 							#_extensions.version#<br />
 							</span>
-							<span class="comment">
-							<cfif hasUpdates>#latest.v#</cfif></span>
 
 						</a>
 					</div>
@@ -164,12 +164,9 @@ Latest version: #latest.v#</cfif>"><cfif hasUpdates>
 
 	for(row=unInstalledExt.recordcount;row>=1;row--) {
 
-		rt = unInstalledExt.releaseType[row];
 		id = unInstalledExt.id[row];
 		// not for this admin type
-		if(!isnull(rt) and !isEmpty(rt) and rt != "all" and rt != request.adminType and rt != "both") {
-			queryDeleteRow(unINstalledExt,row);
-		}
+		
 		// remove if already installed
 		if(arrayFindNoCase(existingIds,id)) {
 			queryDeleteRow(unINstalledExt,row);
@@ -264,10 +261,10 @@ Latest version: #latest.v#</cfif>"><cfif hasUpdates>
 						or doFilter(session.extFilter.available,info.title?:'',false)
 					)
 					>
-							<cfset link="#request.self#?action=#url.action#&action2=detail&id=#versionStr[key].id#">
+							<cfset link="#request.self#?action=#url.action#&action2=detail&id=#versionStr[key].id#&groupId=#versionStr[key].groupId#&artifactId=#versionStr[key].artifactId#">
 							<cfset dn=getDumpNail(versionStr[key].image,130,50)>
 							<div class="extensionthumb">
-								<cfset lasProvider=(versionStr[key].provider?:"")=="local" || findNoCase("lucee.org",versionStr[key].provider) GT 0>
+								<cfset lasProvider=(versionStr[key].groupId?:"")=="org.lucee">
 								<cfif not lasProvider><cfset noneLasCounter++></cfif>
 								<a <cfif not lasProvider> style="border-color: ###(lasProvider?'9C9':'FC6')#;"</cfif> href="#link#" title="#stText.ext.viewdetails#">
 									<div class="extimg">
@@ -276,9 +273,13 @@ Latest version: #latest.v#</cfif>"><cfif hasUpdates>
 										</cfif>
 									</div>
 									<cfset listnotinstalled = listnotinstalled+1>
-									<b title="#versionStr[key].name#">#cut(versionStr[key].name,30)#</b><br />
+									<cfset name=versionStr[key].name>
+									<cfif isEmpty(name)>
+										<cfset name=versionStr[key].artifactId>
+									</cfif>
+									<b title="#versionStr[key].name#">#cut(name,30)#</b><br />
 									<!------>
-									<cfif structKeyExists(versionStr[key],"price") and versionStr[key].price GT 0>#versionStr[key].price# <cfif structKeyExists(versionStr[key],"currency")>#versionStr[key].currency#<cfelse>USD</cfif><cfelse>#stText.ext.free#</cfif>
+									#versionStr[key].groupId?:""#
 								</a>
 							</div>
 						</cfif>

@@ -79,9 +79,9 @@ import lucee.commons.lang.StringUtil;
 import lucee.commons.lang.mimetype.ContentType;
 import lucee.commons.net.HTTPUtil;
 import lucee.commons.net.URLEncoder;
+import lucee.commons.net.http.HTTPEngine;
 import lucee.commons.net.http.Header;
 import lucee.commons.net.http.httpclient.CachingGZIPInputStream;
-import lucee.commons.net.http.httpclient.HTTPEngine4Impl;
 import lucee.commons.net.http.httpclient.HTTPResponse4Impl;
 import lucee.commons.net.http.httpclient.ResourceBody;
 import lucee.runtime.PageContext;
@@ -730,7 +730,7 @@ public final class Http extends BodyTagImpl {
 		long start = System.nanoTime();
 		boolean safeToMemory = !StringUtil.isEmpty(result, true);
 
-		HttpClientBuilder builder = HTTPEngine4Impl.getHttpClientBuilder(this.usePool, this.clientCert, this.clientCertPassword, this.redirect);
+		HttpClientBuilder builder = HTTPEngine.getHttpClientBuilder(this.usePool, this.clientCert, this.clientCertPassword, this.redirect).getName();
 
 		// cookies
 		BasicCookieStore cookieStore = new BasicCookieStore();
@@ -965,7 +965,7 @@ public final class Http extends BodyTagImpl {
 				}
 				// Cookie
 				else if (type == HttpParamBean.TYPE_COOKIE) {
-					HTTPEngine4Impl.addCookie(cookieStore, host, param.getName(), param.getValueAsString(), "/", charset);
+					HTTPEngine.addCookie(cookieStore, host, param.getName(), param.getValueAsString(), "/", charset);
 				}
 				// File
 				else if (type == HttpParamBean.TYPE_FILE) {
@@ -1009,7 +1009,7 @@ public final class Http extends BodyTagImpl {
 					hasContentType = true;
 					req.addHeader("Content-type", mt + "; charset=" + cs);
 					if (eeReq == null) throw new ApplicationException("type xml is only supported for methods get, delete, post, and put");
-					HTTPEngine4Impl.setBody(eeReq, param.getValueAsString(), mt, cs);
+					HTTPEngine.setBody(eeReq, param.getValueAsString(), mt, cs);
 				}
 				// Body
 				else if (type == HttpParamBean.TYPE_BODY) {
@@ -1023,7 +1023,7 @@ public final class Http extends BodyTagImpl {
 
 					hasBody = true;
 					if (eeReq == null) throw new ApplicationException("type body is only supported for methods get, delete, post, and put");
-					HTTPEngine4Impl.setBody(eeReq, param.getValue(), mt, cs);
+					HTTPEngine.setBody(eeReq, param.getValue(), mt, cs);
 
 				}
 				else {
@@ -1112,10 +1112,10 @@ public final class Http extends BodyTagImpl {
 					if (StringUtil.isEmpty(this.workStation, true)) throw new ApplicationException("attribute workstation is required when authentication type is [NTLM]");
 					if (StringUtil.isEmpty(this.domain, true)) throw new ApplicationException("attribute domain is required when authentication type is [NTLM]");
 
-					HTTPEngine4Impl.setNTCredentials(builder, this.username, this.password, this.workStation, this.domain);
+					HTTPEngine.setNTCredentials(builder, this.username, this.password, this.workStation, this.domain);
 				}
 				else {
-					httpContext = HTTPEngine4Impl.setCredentials(builder, httpHost, this.username, this.password, preauth);
+					httpContext = HTTPEngine.setCredentials(builder, httpHost, this.username, this.password, preauth);
 				}
 			}
 
@@ -1129,7 +1129,7 @@ public final class Http extends BodyTagImpl {
 				proxy = ProxyDataImpl.validate(((PageContextImpl) pageContext).getProxyData(), host);
 
 			}
-			HTTPEngine4Impl.setProxy(host, builder, req, proxy);
+			HTTPEngine.setProxy(host, builder, req, proxy);
 
 		}
 		HTTPResponse4Impl rsp = null;
@@ -1144,11 +1144,11 @@ public final class Http extends BodyTagImpl {
 			/////////////////////////////////////////// EXECUTE
 			/////////////////////////////////////////// /////////////////////////////////////////////////
 			client = builder.build();
-			Executor4 e = new Executor4(pageContext, this, client, httpContext, req, redirect);
+			Executor4 e = new Executor4(pageContext, this, client, httpContext, req, redirect, this.usePool);
 
 			if (socketTimeout == null || socketTimeout.getMillis() <= 0) {
 				try {
-					rsp = e.execute(httpContext);
+					rsp = e.execute(client, httpContext, this.usePool);
 				}
 
 				catch (Throwable t) {
@@ -1956,11 +1956,13 @@ class Executor4 extends PageContextThread {
 	HTTPResponse4Impl response;
 	private HttpRequestBase req;
 	private HttpContext context;
+	private boolean pooling;
 
-	public Executor4(PageContext pc, Http http, CloseableHttpClient client, HttpContext context, HttpRequestBase req, String redirect) {
+	public Executor4(PageContext pc, Http http, CloseableHttpClient client, HttpContext context, HttpRequestBase req, String redirect, boolean pooling) {
 		super(pc);
 		this.http = http;
 		this.client = client;
+		this.pooling = pooling;
 		this.context = context;
 		this.redirect = redirect;
 		this.req = req;
@@ -1969,7 +1971,7 @@ class Executor4 extends PageContextThread {
 	@Override
 	public void run(PageContext pc) {
 		try {
-			response = execute(context);
+			response = execute(client, context, pooling);
 			done = true;
 		}
 		catch (Throwable t) {
@@ -1981,8 +1983,8 @@ class Executor4 extends PageContextThread {
 		}
 	}
 
-	public HTTPResponse4Impl execute(HttpContext context) throws IOException {
-		return response = new HTTPResponse4Impl(null, context, req, client.execute(req, context));
+	public HTTPResponse4Impl execute(CloseableHttpClient client, HttpContext context, boolean pooling) throws IOException {
+		return response = new HTTPResponse4Impl(null, context, client, req, client.execute(req, context), pooling);
 	}
 
 }

@@ -159,7 +159,8 @@ jobs:
     - name: Extract version number
       id: extract-version
       run: |
-        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | tr -d '[:space:]\r\n')
+        echo "VERSION: '$VERSION'"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
     - name: Build Lucee with Maven
       env:
@@ -227,21 +228,29 @@ jobs:
         GITHUB_SHA: ${{ github.sha }}
         LUCEE_DOCKER_FILES_PAT_TOKEN: ${{ secrets.LUCEE_DOCKER_FILES_PAT_TOKEN }}
         LUCEE_BUILD_FAIL_CONFIGURED_SERVICES_FATAL: true
-      #run: ant -noinput -buildfile loader/build.xml
       run: |
-        echo "-------DO_DEPLOY: ${{ env.DO_DEPLOY }} -------";
-        if [ "${{ secrets.GPG_PASSPHRASE }}" == "" ]; then
-          echo "------- Maven Test on ${{ github.event_name }} ---------";
-          mvn -B -e -f loader/pom.xml test -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
-        elif [[ "$VERSION" == *-SNAPSHOT ]]; then
-          echo "------- Maven Deploy SNAPSHOT on ${{ github.event_name }} ---------";
-          mvn -B -e -f loader/pom.xml clean deploy -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
-        elif [[ "$VERSION" == *-ALPHA ]]; then
-          echo "------- Maven Install ALPHA (no deplyment) on ${{ github.event_name }} ---------";
+        VERSION_CLEAN="${VERSION//[$'\t\r\n ']}"
+        echo "-------DO_DEPLOY: ${{ env.DO_DEPLOY }} -------"
+        echo "-------VERSION_CLEAN: '$VERSION_CLEAN' -------"
+        if [[ "$VERSION_CLEAN" == *-SNAPSHOT ]]; then
+          if [[ "${{ env.DO_DEPLOY }}" == "true" ]]; then
+            echo "------- Maven Deploy SNAPSHOT on ${{ github.event_name }} ---------"
+            mvn -B -e -f loader/pom.xml clean deploy -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
+          else
+            echo "------- Maven Test SNAPSHOT (no deploy) on ${{ github.event_name }} ---------"
+            mvn -B -e -f loader/pom.xml test -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
+          fi
+        elif [[ "$VERSION_CLEAN" == *-ALPHA ]]; then
+          echo "------- Maven Install ALPHA (no deployment) on ${{ github.event_name }} ---------"
           mvn -B -e -f loader/pom.xml clean install -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
         else
-          echo "------- Maven Deploy RELEASE on ${{ github.event_name }} -------";
-          mvn -B -e -f loader/pom.xml clean deploy --settings maven-settings.xml -DperformRelease=true -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}";
+          if [[ "${{ env.DO_DEPLOY }}" == "true" ]]; then
+            echo "------- Maven Deploy RELEASE on ${{ github.event_name }} -------"
+            mvn -B -e -f loader/pom.xml clean deploy --settings maven-settings.xml -DperformRelease=true -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
+          else
+            echo "------- Maven Test RELEASE (no deploy) on ${{ github.event_name }} ---------"
+            mvn -B -e -f loader/pom.xml test -DtestJavaVersionExec="${{ env.LUCEE_TEST_JAVA_EXEC }}"
+          fi
         fi
     - name: clean github.ref_name
       uses: mad9000/actions-find-and-replace-string@5
