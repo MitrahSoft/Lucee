@@ -19,19 +19,19 @@ component {
 	};
 
 	function onApplicationStart() {
-		writeoutput("onApplicationStart executed,");
+		writeoutput("onApplicationStart,");
 	}
 
-	function onsessionStart() {
-		writeoutput("onsessionStart executed,");
+	function onSessionStart() {
+		writeoutput("onSessionStart,");
 	}
 
-	function onrequestStart() {
-		writeoutput("onrequestStart executed,");
+	function onRequestStart() {
+		writeoutput("onRequestStart,");
 	}
 
 	function onRequestEnd() {
-		writeoutput("onRequestEnd executed");
+		writeoutput("onRequestEnd");
 	}
 
 } 
