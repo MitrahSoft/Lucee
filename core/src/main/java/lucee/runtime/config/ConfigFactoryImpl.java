@@ -108,6 +108,7 @@ import lucee.runtime.cfx.customtag.CFXTagClass;
 import lucee.runtime.cfx.customtag.JavaCFXTagClass;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.config.ConfigBase.Startup;
+import lucee.runtime.config.ConfigListener;
 import lucee.runtime.config.component.ComponentFactory;
 import lucee.runtime.config.gateway.GatewayMap;
 import lucee.runtime.converter.ConverterException;
@@ -227,6 +228,17 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		((CFMLEngineImpl) ConfigUtil.getEngine(configWeb)).onStart(configWeb, false);
 
 		((GatewayEngineImpl) configWeb.getGatewayEngine()).autoStart();
+
+		// invoke config listener if set
+		try {
+			ConfigListener listener = configServer.getConfigListener();
+			if (listener != null) listener.onLoadWebContext(configServer, configWeb);
+		}
+		catch (Throwable t) {
+			ExceptionUtil.rethrowIfNecessary(t);
+			log(configServer, t);
+		}
+
 		log(configServer, Log.LEVEL_INFO,
 				"\n===================================================================\n" + "WEB CONTEXT (" + createLabel(configServer, servletConfig) + ")\n"
 						+ "-------------------------------------------------------------------\n" + "- config:" + configDir + "\n" + "- webroot:"
