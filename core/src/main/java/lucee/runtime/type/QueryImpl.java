@@ -151,6 +151,12 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 	private Collection.Key indexName;
 	private Map<Collection.Key, Integer> indexes;// = new
 
+	// open-addressed h64 → column index map for O(1) column lookup
+	// colMapHashes and colMapIndices are always the same length (power of 2)
+	// mask is derived from hashes.length - 1, no separate field needed
+	private long[] colMapHashes;
+	private int[] colMapIndices;
+
 	static {
 		useMSSQLModern = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.datasource.mssql.modern", null), false);
 		luceeQueryResultThreshold = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.query.result.threshold", null), 0);
@@ -1203,6 +1209,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 				columnNames = newColumnNames;
 				columns = newColumns;
 				columncount--;
+				invalidateColumnMap();
 				return removed;
 			}
 			return null;
@@ -1486,6 +1493,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 		columnNames = newColumnNames;
 
 		columncount++;
+		invalidateColumnMap();
 
 		if (logUsage) enableShowQueryUsage();
 
@@ -1553,6 +1561,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 		if (index != -1) {
 			columnNames[index] = trg;
 			columns[index].setKey(trg);
+			invalidateColumnMap();
 		}
 	}
 
@@ -1565,6 +1574,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 			}
 			columnNames[index] = newColumnName;
 			columns[index].setKey(newColumnName);
+			invalidateColumnMap();
 		}
 	}
 
@@ -1729,9 +1739,44 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 		}
 	}
 
-	private int getIndexFromKey(Collection.Key key) {
+	private void buildColumnMap() {
+		int capacity = Integer.highestOneBit(Math.max(columnNames.length * 2, 4)) << 1;
+		int mask = capacity - 1;
+		long[] hashes = new long[capacity];
+		int[] indices = new int[capacity];
 		for (int i = 0; i < columnNames.length; i++) {
-			if (columnNames[i].equalsIgnoreCase(key)) return i;
+			long h = columnNames[i].hash();
+			if (h == 0) h = 1;
+			int slot = (int) (h >>> 1) & mask;
+			while (hashes[slot] != 0) {
+				slot = (slot + 1) & mask;
+			}
+			hashes[slot] = h;
+			indices[slot] = i;
+		}
+		// assign indices first — a reader that sees the new hashes must also see valid indices
+		colMapIndices = indices;
+		colMapHashes = hashes;
+	}
+
+	private void invalidateColumnMap() {
+		colMapHashes = null;
+	}
+
+	private int getIndexFromKey(Collection.Key key) {
+		long[] hashes = colMapHashes;
+		if (hashes == null) {
+			buildColumnMap();
+			hashes = colMapHashes;
+		}
+		int[] indices = colMapIndices;
+		int mask = hashes.length - 1;
+		long h = key.hash();
+		if (h == 0) h = 1;
+		int slot = (int) (h >>> 1) & mask;
+		while (hashes[slot] != 0) {
+			if (hashes[slot] == h) return indices[slot];
+			slot = (slot + 1) & mask;
 		}
 		return -1;
 	}
@@ -1834,6 +1879,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 				tmp[i].setKey(trg[i]);
 			}
 			this.columns = tmp;
+			invalidateColumnMap();
 			return;
 		}
 
@@ -1854,6 +1900,7 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 			this.columnNames[i] = trg[i];
 			this.columns[i].setKey(trg[i]);
 		}
+		invalidateColumnMap();
 	}
 
 	@Override
