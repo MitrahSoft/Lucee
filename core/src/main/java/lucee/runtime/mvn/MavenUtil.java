@@ -617,6 +617,7 @@ public final class MavenUtil {
 										finally {
 											IOUtil.closeEL(is);
 											HTTPUtil.validateDownload(url, response, tmp, pom.getChecksum(), true, ex);
+											res.getParentResource().mkdirs();
 											tmp.moveTo(res);
 										}
 										deleteLastUpdated(res);
@@ -673,6 +674,7 @@ public final class MavenUtil {
 
 	private static void createLastUpdated(Resource res, StringBuilder info) throws IOException {
 		Resource lastUpdated = res.getParentResource().getRealResource(res.getName() + ".lastUpdated");
+		lastUpdated.getParentResource().mkdirs();
 		// print.e(lastUpdated);
 		// print.e(info);
 		IOUtil.write(lastUpdated, info.toString(), CharsetUtil.UTF8, false);
