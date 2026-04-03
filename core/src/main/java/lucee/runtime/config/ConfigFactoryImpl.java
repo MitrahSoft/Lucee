@@ -45,7 +45,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.osgi.framework.Bundle;
@@ -3536,7 +3535,6 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			if (children.size() > 0) {
 				// Use a thread pool for processing
 				ExecutorService executor = ThreadUtil.createExecutorService(children.size(), true);
-				Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 				List<Future<ExtensionDefintion>> futures = new ArrayList<>();
 
 				Iterator<Object> it = children.valueIterator();
