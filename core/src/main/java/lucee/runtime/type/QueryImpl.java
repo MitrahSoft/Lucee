@@ -936,10 +936,10 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 			// must start with a letter and can be followed by
 			// letters numbers and underscores [_]. RegExp:[a-zA-Z][a-zA-Z0-9_]*",null,null,null);
 
-			if (testMap.contains(columnNames[i].getLowerString()))
+			if (testMap.contains(columnNames[i].getUpperString()))
 				throw new DatabaseException("invalid parameter for query, ambiguous/duplicate column name [" + columnNames[i] + "]",
 						"columnNames: [" + ListUtil.arrayToListTrim(_toStringKeys(columnNames), ",") + "]", null, null);
-			testMap.add(columnNames[i].getLowerString());
+			testMap.add(columnNames[i].getUpperString());
 		}
 	}
 
@@ -2063,7 +2063,11 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 
 	@Override
 	public Object getObject(int columnIndex) throws SQLException {
-		if (columnIndex > 0 && columnIndex <= columncount) return getObject(this.columnNames[columnIndex - 1].getString());
+		if (columnIndex > 0 && columnIndex <= columncount) {
+			int currentrow;
+			if ((currentrow = currRow.getOrDefault(getPid(), 0)) == 0) return null;
+			return columns[columnIndex - 1].get(currentrow, null);
+		}
 		return null;
 	}
 
@@ -3414,7 +3418,8 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 				newResult.columns = new QueryColumnImpl[tmp.length];
 				for (int i = 0; i < tmp.length; i++) {
 					newResult.columnNames[i] = tmp[i];
-					newResult.columns[i] = QueryUtil.duplicate2QueryColumnImpl(newResult, qry.getColumn(tmp[i], null), deepCopy);
+					QueryColumn srcCol = (qry instanceof QueryImpl) ? ((QueryImpl) qry).columns[i] : qry.getColumn(tmp[i], null);
+					newResult.columns[i] = QueryUtil.duplicate2QueryColumnImpl(newResult, srcCol, deepCopy);
 				}
 			}
 			newResult.currRow = new ConcurrentHashMap<Integer, Integer>();
