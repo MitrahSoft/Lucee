@@ -12,6 +12,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 	private String value;
 	public LDEV6226Helper() { this.value = "default"; }
 	public LDEV6226Helper( String value ) { this.value = value; }
+	public LDEV6226Helper( LDEV6226Helper other ) { this.value = other.getValue(); }
 	public String getValue() { return this.value; }
 	public String extractFrom( LDEV6226Helper other ) { return other.getValue(); }
 }';
@@ -22,10 +23,12 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 		if ( isNull( javac ) )
 			throw( message="JDK required - javac not available", type="application" );
 
-		javac.run(
+		var result = javac.run(
 			javaCast( "null", "" ), javaCast( "null", "" ), javaCast( "null", "" ),
 			[ "-d", variables.tempDir & "classes1", variables.tempDir & "src/LDEV6226Helper.java" ]
 		);
+		if ( result != 0 )
+			throw( message="javac compilation failed with exit code #result#", type="application" );
 		fileCopy(
 			variables.tempDir & "classes1/LDEV6226Helper.class",
 			variables.tempDir & "classes2/LDEV6226Helper.class"
@@ -37,8 +40,17 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 		var urlArray = createObject( "java", "java.lang.reflect.Array" )
 			.newInstance( createObject( "java", "java.net.URL" ).getClass(), 1 );
 		urlArray[ 1 ] = file.toURI().toURL();
+		// null parent classloader forces each instance to load its own copy of the class,
+		// giving us two Class objects with the same FQN but different identity (simulates OSGi bundle refresh)
 		return createObject( "java", "java.net.URLClassLoader" )
 			.init( urlArray, javaCast( "null", "" ) );
+	}
+
+	private function getDynamicInvokerClazz( required clazz ) {
+		var di = createObject( "java", "lucee.transformer.dynamic.DynamicInvoker" ).getExistingInstance();
+		if ( isNull( di ) )
+			throw( message="DynamicInvoker not initialised in this context", type="application" );
+		return di.toClazz( arguments.clazz );
 	}
 
 	function run( testResults, testBox ) {
@@ -87,11 +99,33 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 					// resolve method on class1 (old classloader, like persisted receiver)
 					// this failed before the fix with: "No matching method for
 					// LDEV6226Helper.extractFrom(LDEV6226Helper) found."
-					var di = createObject( "java", "lucee.transformer.dynamic.DynamicInvoker" ).getExistingInstance();
-					var clazzz = di.toClazz( class1 );
+					var clazzz = getDynamicInvokerClazz( class1 );
 					var method = clazzz.getMethod( "extractFrom", [ foreignArg ], true, true, true );
 					expect( method ).notToBeNull();
 					expect( method.getName() ).toBe( "extractFrom" );
+				}
+				finally {
+					cl1.close();
+					cl2.close();
+				}
+			});
+
+			it( "Clazz.getConstructor should resolve with cross-classloader arguments", function() {
+				var cl1 = createFileClassLoader( variables.tempDir & "classes1/" );
+				var cl2 = createFileClassLoader( variables.tempDir & "classes2/" );
+
+				try {
+					var class1 = cl1.loadClass( "LDEV6226Helper" );
+					var class2 = cl2.loadClass( "LDEV6226Helper" );
+
+					// create an instance from cl2 to use as a constructor arg
+					var foreignArg = class2.getConstructor([ createObject( "java", "java.lang.String" ).getClass() ])
+						.newInstance([ "ctor-test" ]);
+
+					// resolve constructor on class1 with a cross-classloader argument
+					var clazzz = getDynamicInvokerClazz( class1 );
+					var ctor = clazzz.getConstructor( [ foreignArg ], true, true, javaCast( "null", "" ) );
+					expect( ctor ).notToBeNull();
 				}
 				finally {
 					cl1.close();
