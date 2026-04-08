@@ -15,6 +15,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 	public LDEV6226Helper( LDEV6226Helper other ) { this.value = other.getValue(); }
 	public String getValue() { return this.value; }
 	public String extractFrom( LDEV6226Helper other ) { return other.getValue(); }
+	public String extractFrom( Object other ) { return "object:" + other.toString(); }
 }';
 
 		fileWrite( variables.tempDir & "src/LDEV6226Helper.java", javaSource );
@@ -53,17 +54,26 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 		return di.toClazz( arguments.clazz );
 	}
 
+	// helper: loads the class from both classloaders, runs the callback, closes classloaders
+	private function withCrossClassLoaders( required function callback ) {
+		var cl1 = createFileClassLoader( variables.tempDir & "classes1/" );
+		var cl2 = createFileClassLoader( variables.tempDir & "classes2/" );
+		try {
+			var class1 = cl1.loadClass( "LDEV6226Helper" );
+			var class2 = cl2.loadClass( "LDEV6226Helper" );
+			arguments.callback( class1, class2 );
+		}
+		finally {
+			cl1.close();
+			cl2.close();
+		}
+	}
+
 	function run( testResults, testBox ) {
-		describe( "LDEV-6226 - Java method resolution fails with cross-classloader arguments", function() {
+		describe( "LDEV-6226 - cross-classloader identity mismatch", function() {
 
 			it( "isAssignableFrom fails across classloaders but name-based matching works", function() {
-				var cl1 = createFileClassLoader( variables.tempDir & "classes1/" );
-				var cl2 = createFileClassLoader( variables.tempDir & "classes2/" );
-
-				try {
-					var class1 = cl1.loadClass( "LDEV6226Helper" );
-					var class2 = cl2.loadClass( "LDEV6226Helper" );
-
+				withCrossClassLoaders( function( class1, class2 ) {
 					// same name, different classloaders
 					expect( class1.getName() ).toBe( class2.getName() );
 					expect( class1.getClassLoader().toString() )
@@ -75,62 +85,70 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="java,classloader" 
 					// name-based check works
 					var Reflector = createObject( "java", "lucee.runtime.reflection.Reflector" );
 					expect( Reflector.isInstaneOf( class2, class1, false ) ).toBeTrue();
-				}
-				finally {
-					cl1.close();
-					cl2.close();
-				}
+				});
 			});
 
-			it( "Clazz.getMethod should find methods with cross-classloader arguments", function() {
-				// simulates the real scenario: receiver persisted from old classloader,
-				// argument created from new classloader after bundle refresh
-				var cl1 = createFileClassLoader( variables.tempDir & "classes1/" );
-				var cl2 = createFileClassLoader( variables.tempDir & "classes2/" );
+			it( "Clazz.getMethod resolves with cross-classloader arguments", function() {
+				withCrossClassLoaders( function( class1, class2 ) {
+					var foreignArg = class2.getConstructor([ createObject( "java", "java.lang.String" ).getClass() ])
+						.newInstance([ "test-value" ]);
 
-				try {
-					var class1 = cl1.loadClass( "LDEV6226Helper" );
-					var class2 = cl2.loadClass( "LDEV6226Helper" );
-
-					// create an argument from cl2 (fresh classloader, like after bundle refresh)
-					var ctor = class2.getConstructor([ createObject( "java", "java.lang.String" ).getClass() ]);
-					var foreignArg = ctor.newInstance([ "test-value" ]);
-
-					// resolve method on class1 (old classloader, like persisted receiver)
-					// this failed before the fix with: "No matching method for
-					// LDEV6226Helper.extractFrom(LDEV6226Helper) found."
+					// resolve method on class1 (old classloader) with arg from class2 (new classloader)
 					var clazzz = getDynamicInvokerClazz( class1 );
 					var method = clazzz.getMethod( "extractFrom", [ foreignArg ], true, true, true );
 					expect( method ).notToBeNull();
 					expect( method.getName() ).toBe( "extractFrom" );
-				}
-				finally {
-					cl1.close();
-					cl2.close();
-				}
+				});
 			});
 
-			it( "Clazz.getConstructor should resolve with cross-classloader arguments", function() {
-				var cl1 = createFileClassLoader( variables.tempDir & "classes1/" );
-				var cl2 = createFileClassLoader( variables.tempDir & "classes2/" );
+			it( "Clazz.getMethod picks the typed overload over Object for cross-classloader args", function() {
+				withCrossClassLoaders( function( class1, class2 ) {
+					var foreignArg = class2.getConstructor([ createObject( "java", "java.lang.String" ).getClass() ])
+						.newInstance([ "overload-test" ]);
 
-				try {
-					var class1 = cl1.loadClass( "LDEV6226Helper" );
-					var class2 = cl2.loadClass( "LDEV6226Helper" );
+					// with overloaded extractFrom(LDEV6226Helper) and extractFrom(Object),
+					// should resolve the more specific typed overload, not fall back to Object
+					var clazzz = getDynamicInvokerClazz( class1 );
+					var method = clazzz.getMethod( "extractFrom", [ foreignArg ], true, true, true );
+					expect( method ).notToBeNull();
 
-					// create an instance from cl2 to use as a constructor arg
+					// verify it picked the typed overload by checking param type
+					var paramTypes = method.getArgumentClasses();
+					expect( paramTypes[ 1 ].getName() ).toBe( "LDEV6226Helper",
+						"should pick extractFrom(LDEV6226Helper) not extractFrom(Object)" );
+				});
+			});
+
+			it( "Clazz.getConstructor resolves with cross-classloader arguments", function() {
+				withCrossClassLoaders( function( class1, class2 ) {
 					var foreignArg = class2.getConstructor([ createObject( "java", "java.lang.String" ).getClass() ])
 						.newInstance([ "ctor-test" ]);
 
-					// resolve constructor on class1 with a cross-classloader argument
 					var clazzz = getDynamicInvokerClazz( class1 );
 					var ctor = clazzz.getConstructor( [ foreignArg ], true, true, javaCast( "null", "" ) );
 					expect( ctor ).notToBeNull();
-				}
-				finally {
-					cl1.close();
-					cl2.close();
-				}
+				});
+			});
+
+			it( "Reflector.like matches cross-classloader types", function() {
+				withCrossClassLoaders( function( class1, class2 ) {
+					var Reflector = createObject( "java", "lucee.runtime.reflection.Reflector" );
+					expect( Reflector.like( class2, class1 ) ).toBeTrue(
+						"Reflector.like() should match same class from different classloaders"
+					);
+				});
+			});
+
+			it( "Reflector.convert handles cross-classloader types", function() {
+				withCrossClassLoaders( function( class1, class2 ) {
+					var obj = class2.getConstructor([ createObject( "java", "java.lang.String" ).getClass() ])
+						.newInstance([ "convert-test" ]);
+
+					// convert() should recognise obj as compatible with class1's type
+					var Reflector = createObject( "java", "lucee.runtime.reflection.Reflector" );
+					var result = Reflector.convert( obj, class1, javaCast( "null", "" ) );
+					expect( result ).notToBeNull();
+				});
 			});
 
 		});
