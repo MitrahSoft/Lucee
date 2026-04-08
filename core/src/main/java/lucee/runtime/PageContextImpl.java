@@ -897,8 +897,7 @@ public final class PageContextImpl extends PageContext {
 		try {
 			getOut().flush();
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 	}
 
 	@Override
@@ -2157,8 +2156,7 @@ public final class PageContextImpl extends PageContext {
 			if (value == null) removeVariable(name);
 			else setVariable(name, value);
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 	}
 
 	@Override
@@ -2445,12 +2443,11 @@ public final class PageContextImpl extends PageContext {
 				if (!Abort.isSilentAbort(pe)) {
 					forceWrite(getConfig().getDefaultDumpWriter(DumpWriter.DEFAULT_RICH).toString(this, pe.toDumpData(this, 9999, DumpUtil.toDumpProperties()), true));
 					if (errorTemplateExp != null) {
-						LogUtil.log("errortemplate", errorTemplateExp);
+						LogUtil.log(Log.LEVEL_INFO, "errortemplate", "error template failed to render, original exception is exposed directly " + errorTemplateExp.getMessage());
 					}
 				}
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 	}
 
@@ -2826,8 +2823,7 @@ public final class PageContextImpl extends PageContext {
 					releaseORM();
 					removeLastPageSource(true);
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 			PageException pe;
 			if (ExceptionUtil.isThreadDeath(t) && getTimeoutStackTrace() != null) {
@@ -2975,8 +2971,7 @@ public final class PageContextImpl extends PageContext {
 			// print.o(getOut().getClass().getName());
 			getOut().clear();
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 	}
 
 	@Override
@@ -3401,8 +3396,7 @@ public final class PageContextImpl extends PageContext {
 		try {
 			sessionScope().removeEL(KeyImpl.init(name));
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 
 	}
 
