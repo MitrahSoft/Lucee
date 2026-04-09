@@ -184,7 +184,10 @@ public final class ConfigWebHelper {
 			ClassDefinition cd = cw instanceof ConfigImpl ? ((ConfigImpl) cw).getWSHandlerClassDefinition() : null;
 			if (isEmpty(cd)) cd = cs.getWSHandlerClassDefinition();
 			try {
-				if (isEmpty(cd)) return new DummyWSHandler();
+				if (isEmpty(cd)) {
+				wsHandler = new DummyWSHandler();
+				return wsHandler;
+			}
 				Object obj = ClassUtil.newInstance(cd.getClazz());
 				if (obj instanceof WSHandler) wsHandler = (WSHandler) obj;
 				else wsHandler = new WSHandlerReflector(obj);
