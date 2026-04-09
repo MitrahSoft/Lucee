@@ -108,7 +108,6 @@ import lucee.runtime.cfx.customtag.CFXTagClass;
 import lucee.runtime.cfx.customtag.JavaCFXTagClass;
 import lucee.runtime.component.ImportDefintion;
 import lucee.runtime.config.ConfigBase.Startup;
-import lucee.runtime.config.ConfigListener;
 import lucee.runtime.config.component.ComponentFactory;
 import lucee.runtime.config.gateway.GatewayMap;
 import lucee.runtime.converter.ConverterException;
