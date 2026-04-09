@@ -1100,6 +1100,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				_attr(config, el, "tag_registry", SecurityManager.VALUE_YES), _attr(config, el, "cache", SecurityManager.VALUE_YES),
 				_attr(config, el, "gateway", SecurityManager.VALUE_YES), _attr(config, el, "orm", SecurityManager.VALUE_YES),
 				_attr2(config, el, "access_read", SecurityManager.ACCESS_PROTECTED), _attr2(config, el, "access_write", SecurityManager.ACCESS_PROTECTED));
+		Array fileAccess = ConfigUtil.getAsArray("fileAccess", el);
+		if (fileAccess.size() > 0) sm.setCustomFileAccess(_loadFileAccess(config, fileAccess));
 		return sm;
 	}
 
@@ -1115,6 +1117,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		sm.setAccess(SecurityManager.TYPE_TAG_REGISTRY, _attr(config, el, "tag_registry", SecurityManager.VALUE_YES));
 		sm.setAccess(SecurityManager.TYPE_DIRECT_JAVA_ACCESS, _attr(config, el, "direct_java_access", SecurityManager.VALUE_YES));
 		sm.setAccess(SecurityManager.TYPE_CFX_USAGE, _attr(config, el, "cfx_usage", SecurityManager.VALUE_YES));
+		Array fileAccess = ConfigUtil.getAsArray("fileAccess", el);
+		if (fileAccess.size() > 0) sm.setCustomFileAccess(_loadFileAccess(config, fileAccess));
 		return sm;
 	}
 
