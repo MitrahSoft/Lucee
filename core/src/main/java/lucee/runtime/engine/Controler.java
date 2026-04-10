@@ -514,6 +514,19 @@ public final class Controler extends ParentThreasRefThread {
 					checkStopWatch(config, stopwatch, "checkCacheFileSize");
 				}
 
+				// clear RPC
+				if (doit) {
+					stopwatch.start();
+					try {
+						checkRPC(config);
+					}
+					catch (Throwable t) {
+						ExceptionUtil.rethrowIfNecessary(t);
+						if (log != null) log.error("controler", t);
+					}
+					checkStopWatch(config, stopwatch, "checkRPC");
+				}
+
 				// clean up dynclasses
 				if (doit) {
 					stopwatch.start();
@@ -596,9 +609,12 @@ public final class Controler extends ParentThreasRefThread {
 		checkSize(config, config.getCacheDir(), config.getCacheDirSize(), new ExtensionResourceFilter(".cache"));
 	}
 
+	private void checkRPC(ConfigWeb config) {
+		checkSize(config, config.getClassDirectory().getRealResource("RPC/"), 1024 * 1024 * 1024, null);
+	}
+
 	private void checkTempDirectorySize(ConfigWeb config) {
 		checkSize(config, config.getTempDirectory(), 1024 * 1024 * 1024, null);
-
 	}
 
 	private void checkSize(ConfigWeb config, Resource dir, long maxSize, ResourceFilter filter) {
