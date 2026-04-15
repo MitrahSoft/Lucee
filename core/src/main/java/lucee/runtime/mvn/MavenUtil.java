@@ -846,6 +846,8 @@ public final class MavenUtil {
 	}
 
 	public static GAVSO toGAVSO(Object obj, GAVSO defaultValue) {
+		if (obj instanceof GAVSO) return (GAVSO) obj;
+
 		Struct el = Caster.toStruct(obj, null, false);
 		if (el != null) {
 			String g = Caster.toString(el.get(KeyConstants._groupId, null), null);
@@ -857,7 +859,6 @@ public final class MavenUtil {
 				String v = Caster.toString(el.get(KeyConstants._version, null), null);
 				if (StringUtil.isEmpty(v)) v = Caster.toString(el.get(KeyConstants._v, null), null);
 
-				if (!MavenUtil.isValidVersion(v)) return defaultValue;
 				return new GAVSO(g, a,
 
 						v,
@@ -881,7 +882,6 @@ public final class MavenUtil {
 		if (!StringUtil.isEmpty(str)) {
 			String[] arr = ListUtil.listToStringArray(str, ':');
 			if (arr.length > 1 && arr.length < 7) {
-				if (arr.length > 2 && !MavenUtil.isValidVersion(arr[2].trim())) return defaultValue;
 				return new GAVSO(
 
 						arr[0].trim(), // group
@@ -918,8 +918,6 @@ public final class MavenUtil {
 			if (StringUtil.isEmpty(v)) v = Caster.toString(el.get(KeyConstants._v, null), null);
 			if (StringUtil.isEmpty(v)) throw new ApplicationException("Missing required field: version. Ensure that the 'version' key is present and not empty.");
 
-			if (!MavenUtil.isValidVersion(v)) throw new ApplicationException("maven version [" + v + "]is invalid");
-
 			return new GAVSO(g, a, v,
 
 					Caster.toString(el.get(KeyConstants._scope, null), null),
@@ -936,7 +934,6 @@ public final class MavenUtil {
 		if (!StringUtil.isEmpty(str)) {
 			String[] arr = ListUtil.listToStringArray(str, ':');
 			if (arr.length > 1 && arr.length < 7) {
-				if (arr.length > 2 && !MavenUtil.isValidVersion(arr[2].trim())) throw new ApplicationException("maven version [" + arr[2].trim() + "]is invalid");
 				return new GAVSO(
 
 						arr[0].trim(), // group
@@ -961,19 +958,13 @@ public final class MavenUtil {
 
 	}
 
-	public static String toString(GAVSO[] gavsos) {
-		StringBuilder sb = new StringBuilder();
-		for (GAVSO g: gavsos) {
-			if (sb.length() > 0) sb.append(',');
-			sb.append(g.toString());
-		}
-		return sb.toString();
-	}
-
+	// LDEV-6250: not called — Maven does not restrict version format (see
+	// maven.apache.org/pom.html#version-order-specification).
+	// Versions like "v4-rev20260213-2.0.0" are valid. Downstream code (POM constructor, download)
+	// already handles null/bad versions.
 	public static boolean isValidVersion(String version) {
 		if (StringUtil.isEmpty(version)) return false;
 
-		// Basic version pattern
 		String versionPattern = "^(\\d+)" + // Major (required)
 				"(?:\\.(\\d+))?" + // Minor (optional)
 				"(?:\\.(\\d+))?" + // Micro (optional)
@@ -982,6 +973,15 @@ public final class MavenUtil {
 				"$";
 
 		return version.matches(versionPattern);
+	}
+
+	public static String toString(GAVSO[] gavsos) {
+		StringBuilder sb = new StringBuilder();
+		for (GAVSO g: gavsos) {
+			if (sb.length() > 0) sb.append(',');
+			sb.append(g.toString());
+		}
+		return sb.toString();
 	}
 
 	public static Resource getLocalRepository() {
