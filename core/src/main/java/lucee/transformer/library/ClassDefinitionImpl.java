@@ -277,7 +277,7 @@ public final class ClassDefinitionImpl<T> implements ClassDefinition<T>, Externa
 				return clazz = (Class<T>) config.getRPCClassLoader(false, JavaSettingsImpl.getInstance(config, getMaven())).loadClass(className);
 			}
 			catch (Exception e) {
-				ClassException ce = new ClassException("Failes to load class [" + className + "]");
+				ClassException ce = new ClassException("Failed to load class [" + className + "] from [" + maven + "]");
 				ExceptionUtil.initCauseEL(ce, e);
 				throw ce;
 			}

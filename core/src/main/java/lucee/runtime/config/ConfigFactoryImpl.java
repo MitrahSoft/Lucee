@@ -1906,9 +1906,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						if (cache == null) continue;
 						cd = getClassDefinition(config, cache, "", config.getIdentification());
 
-						// check if it is a bundle
-						if (!cd.isBundle()) {
-							log(config, Log.LEVEL_INFO, "[" + cd + "] does not have bundle info");
+						if (!cd.isBundle() && !(cd instanceof ClassDefinitionImpl && ((ClassDefinitionImpl) cd).isMaven())) {
+							log(config, Log.LEVEL_WARN, "skipping cache definition [" + cd + "], no bundle or maven coordinates");
 							continue;
 						}
 						map.put(cd.getClassName(), cd);
