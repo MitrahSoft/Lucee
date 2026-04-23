@@ -35,10 +35,11 @@
 				class="#trim(form.class)#"
 				bundleName="#isNull(form.bundleName)?"":trim(form.bundleName)#"
 				bundleVersion="#isNull(form.bundleVersion)?"":trim(form.bundleVersion)#"
+				maven="#isNull(form.maven)?"":trim(form.maven)#"
 
 
 				storage="#isDefined('form.storage') and form.storage#"
-				default="#StructKeyExists(form,'default')?form.default:""#" 
+				default="#StructKeyExists(form,'default')?form.default:""#"
 				custom="#custom#"
 				
 				remoteClients="#request.getRemoteClients()#">
@@ -126,6 +127,7 @@ Redirtect to entry --->
 					class="#trim(form.class)#"
 					bundleName="#isNull(form.bundleName)?"":trim(form.bundleName)#"
 					bundleVersion="#isNull(form.bundleVersion)?"":trim(form.bundleVersion)#"
+					maven="#isNull(form.maven)?"":trim(form.maven)#"
 
 
 					storage="#isDefined('form.storage') and form.storage#"
@@ -158,6 +160,7 @@ Redirtect to entry --->
 		<cfinputClassic type="hidden" name="class" value="#driver.getClass()#">
 		<cfif !isNull(driver.getBundleName)><cfinputClassic type="hidden" name="bundleName" value="#driver.getBundleName()#"></cfif>
 		<cfif !isNull(driver.getBundleVersion)><cfinputClassic type="hidden" name="bundleVersion" value="#driver.getBundleVersion()#"></cfif>
+		<cfif !isNull(driver.getMaven)><cfinputClassic type="hidden" name="maven" value="#driver.getMaven()#"></cfif>
 		
 		<cfinputClassic type="hidden" name="name" value="#connection.name#" >
 		<cfinputClassic type="hidden" name="_name" value="#connection.name#" >
@@ -348,10 +351,10 @@ Redirtect to entry --->
 	
 <cftry>
 <cfoutput><cfsavecontent variable="codeSample">
+<cfset newLineChar = Chr(13) & Chr(10)>
+<cfset tabChar = chr(9)>
+<cfset customTab = newLineChar & tabChar & tabChar>
 <cfif isStruct(connection.custom)>
-	<cfset newLineChar = Chr(13) & Chr(10)>
-	<cfset tabChar = chr(9)>
-	<cfset customTab = newLineChar & tabChar & tabChar>
 	<cfset connectionCustom_Aligned = serialize(connection.custom)>
 	<cfset connectionCustom_Aligned = replaceNoCase(connectionCustom_Aligned, '","', '",#customTab#"', 'ALL')>
 	<cfset connectionCustom_Aligned = replaceNoCase(connectionCustom_Aligned, '{"', '{#customTab#"', "ALL")>
@@ -359,10 +362,19 @@ Redirtect to entry --->
 <cfelse>
 	<cfset connectionCustom_Aligned = '{}'>
 </cfif>
+<cfif !isEmpty( connection.maven ?: "" )>
+	<cfset classLine = "maven: '#connection.maven#'">
+<cfelse>
+	<cfset classLine = "class: '#connection.class#'">
+	<cfif !isEmpty( connection.bundleName ?: "" )>
+		<cfset classLine &= "#newLineChar##tabChar#, bundleName: '#connection.bundleName#'">
+	</cfif>
+	<cfif !isEmpty( connection.bundleVersion ?: "" )>
+		<cfset classLine &= "#newLineChar##tabChar#, bundleVersion: '#connection.bundleVersion#'">
+	</cfif>
+</cfif>
 this.cache.connections["#connection.name#"] = {
-	  class: '#connection.class#'#isNull(connection.bundleName) || isEmpty(connection.bundleName)?"":"
-	, bundleName: '"&connection.bundleName&"'"##isNull(connection.bundleVersion) || isEmpty(connection.bundleVersion)?"":"
-	, bundleVersion: '"&connection.bundleVersion&"'"##!connection.readOnly?"":"
+	  #classLine##!connection.readOnly?"":"
 	, readOnly: "&connection.readonly#
 	, storage: #connection.storage#
 	, custom: #connectionCustom_Aligned#
