@@ -418,6 +418,7 @@ public final class RHExtension implements Serializable {
 					else if (action == ACTION_MOVE) {
 						ResourceUtil.moveTo(ext, trg, true);
 					}
+					if (this.extensionFile != null) instances.remove(this.extensionFile.getAbsolutePath());
 					this.extensionFile = trg;
 				}
 			}
