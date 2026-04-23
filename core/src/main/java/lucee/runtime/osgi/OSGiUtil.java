@@ -2622,4 +2622,9 @@ public class OSGiUtil {
 		}
 		return -1;
 	}
+
+	public static String createId(BundleClassLoader bcl) {
+		Bundle b = bcl.getBundle();
+		return b.getSymbolicName() + ":" + b.getVersion().toString();
+	}
 }

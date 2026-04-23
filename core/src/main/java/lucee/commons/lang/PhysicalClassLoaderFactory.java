@@ -30,6 +30,7 @@ import lucee.runtime.listener.JavaSettings;
 import lucee.runtime.listener.JavaSettingsImpl;
 import lucee.runtime.listener.SerializationSettings;
 import lucee.runtime.op.Caster;
+import lucee.runtime.osgi.OSGiUtil;
 import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.util.KeyConstants;
@@ -85,6 +86,7 @@ public class PhysicalClassLoaderFactory {
 		String key = js == null ? "orphan" : ((JavaSettingsImpl) js).id();
 		if (parent != null) {
 			if (parent instanceof PhysicalClassLoader) key += "_" + ((PhysicalClassLoader) parent).id;
+			else if (parent instanceof BundleClassLoader) key += "_" + OSGiUtil.createId((BundleClassLoader) parent);
 			else key += "_" + parent.hashCode();
 		}
 
@@ -127,7 +129,7 @@ public class PhysicalClassLoaderFactory {
 
 	public static PhysicalClassLoader getRPCClassLoader(Config c, BundleClassLoader bcl, boolean reload) throws IOException {
 		boolean doesTrace = LogUtil.does(Log.LEVEL_TRACE);
-		String key = HashUtil.create64BitHashAsString(bcl + "");
+		String key = HashUtil.create64BitHashAsString(OSGiUtil.createId(bcl));
 
 		CachedLoader cached = reload ? null : classLoaders.get(key);
 		if (cached == null) {
@@ -178,7 +180,7 @@ public class PhysicalClassLoaderFactory {
 		int evicted = 0;
 		for (Map.Entry<String, CachedLoader> entry: classLoaders.entrySet()) {
 			CachedLoader cached = entry.getValue();
-			if (cached.isIdle()) {
+			if (cached.isIdle() && !cached.loader.isRPC()) {
 				if (classLoaders.remove(entry.getKey(), cached)) {
 					PhysicalClassLoader.flush(cached.loader, config, false);
 					evicted++;
