@@ -2653,9 +2653,8 @@ public final class ConfigWebFactory extends ConfigFactory {
 							if (cache == null) continue;
 							cd = getClassDefinition(cache, "", config.getIdentification());
 
-							// check if it is a bundle
-							if (!cd.isBundle()) {
-								log.error("Cache", "[" + cd + "] does not have bundle info");
+							if (!cd.isBundle() && !(cd instanceof ClassDefinitionImpl && ((ClassDefinitionImpl) cd).isMaven())) {
+								log.warn("Cache", "skipping cache definition [" + cd + "], no bundle or maven coordinates");
 								continue;
 							}
 							map.put(cd.getClassName(), cd);

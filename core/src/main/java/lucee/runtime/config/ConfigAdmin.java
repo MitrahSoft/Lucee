@@ -2119,16 +2119,17 @@ public final class ConfigAdmin {
 		// throw new ExpressionException("name ["+name+"] is not allowed for a cache connection, the
 		// following names are reserved words [object,template]");
 
-		try {
-			Class clazz;
-			if (cd.getClassName() != null && cd.getClassName().endsWith(".EHCacheLite"))
-				clazz = ClassUtil.loadClass(config.getClassLoader(), "org.lucee.extension.cache.eh.EHCache");
-			else clazz = ClassUtil.loadClass(config.getClassLoader(), cd.getClassName());
+		if (!cd.isBundle()) {
+			ClassDefinition _cd = config.getCacheDefinition(cd.getClassName());
+			if (_cd != null) cd = _cd;
+		}
 
+		try {
+			Class clazz = cd.getClazz();
 			if (!Reflector.isInstaneOf(clazz, Cache.class, false)) throw new ExpressionException("class [" + clazz.getName() + "] is not of type [" + Cache.class.getName() + "]");
 		}
-		catch (ClassException e) {
-			throw new ExpressionException(e.getMessage());
+		catch (ClassException | BundleException e) {
+			throw Caster.toPageException(e);
 		}
 
 		Struct parent = _getRootElement("cache");
@@ -5020,7 +5021,7 @@ public final class ConfigAdmin {
 				while (itl.hasNext()) {
 					map = itl.next();
 					ClassDefinition cd = ClassDefinitionImpl.toClassDefinition(map, false, config.getIdentification());
-					if (cd != null && cd.isBundle()) {
+					if (cd != null && (cd.isBundle() || (cd instanceof ClassDefinitionImpl && ((ClassDefinitionImpl) cd).isMaven()))) {
 						_updateCache(cd);
 						reloadNecessary = true;
 					}
