@@ -29,11 +29,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -162,6 +164,9 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	private boolean useShadow;
 	private boolean entity;
 	boolean afterConstructor;
+
+	// keys this component's setProperty seeded — lazy-init
+	private Set<Key> ownPropertyDefaults;
 	// private Map<Key,UDF> constructorUDFs;
 	private boolean loaded;
 	private boolean hasInjectedFunctions;
@@ -2059,12 +2064,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		_udfs.put(key, udf);
 		_data.put(key, udf);
 		if (useShadow) {
-			// LDEV-3335: Don't overwrite a property default value in the scope with a same-named UDF.
-			// Property defaults are now set during initProperties() (before the body runs),
-			// but body UDFs are hoisted and registered after — so the UDF would stomp the default.
-			// The UDF remains callable via _udfs; the property value stays in scope for variables access.
+			// preserve only this component's seeded property default; inherited slots get stomped
 			Object existing = scope.get(key, null);
-			if (existing == null || existing instanceof UDF) {
+			boolean preserveOwnDefault = (existing != null) && !(existing instanceof UDF) && ownPropertyDefaults != null && ownPropertyDefaults.contains(key);
+			if (!preserveOwnDefault) {
 				scope.setEL(key, udf);
 			}
 		}
@@ -2436,7 +2439,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		top.properties.properties.put(propNameLower, propImpl);
 		if (propImpl.getDefaultAsObject() != null) {
-			scope.setEL(propImpl.getNameAsKey(), propImpl.getDefaultAsObject());
+			Key propKey = propImpl.getNameAsKey();
+			scope.setEL(propKey, propImpl.getDefaultAsObject());
+			if (ownPropertyDefaults == null) ownPropertyDefaults = new HashSet<>();
+			ownPropertyDefaults.add(propKey);
 		}
 		// Create accessor UDFs if:
 		// 1. Component has accessors enabled, OR
