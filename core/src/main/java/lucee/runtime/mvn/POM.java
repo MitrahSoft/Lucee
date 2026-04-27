@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -114,7 +115,7 @@ public final class POM {
 	private boolean isInitDependencies = false;
 	private boolean isInitDependencyManagement = false;
 	private boolean isInitXML = false;
-	public static final Map<String, POM> cache = new HashMap<>();
+	public static final Map<String, POM> cache = new ConcurrentHashMap<>();
 
 	private String packaging;
 	private String name;
@@ -146,14 +147,9 @@ public final class POM {
 			String checksum, int dependencyScope, int dependencyScopeManagement, boolean triggeerLoad, Log log) {
 		triggeerLoad = false;
 		String id = toId(localDirectory, groupId, artifactId, version, scope, optional, dependencyScope, dependencyScopeManagement);
-		POM pom = cache.get(id);
-		if (pom != null) {
-			return pom;
-		}
-
-		pom = new POM(localDirectory, repositories, groupId, artifactId, version, scope, optional, checksum, dependencyScope, dependencyScopeManagement, triggeerLoad, log);
-		cache.put(id, pom);
-		return pom;
+		final boolean load = triggeerLoad;
+		return cache.computeIfAbsent(id, k -> new POM(localDirectory, repositories, groupId, artifactId, version, scope, optional, checksum, dependencyScope,
+				dependencyScopeManagement, load, log));
 	}
 
 	private static String toId(Resource localDirectory, String groupId, String artifactId, String version, String scope, String optional, int dependencyScope,
@@ -187,7 +183,6 @@ public final class POM {
 		this.dependencyScope = dependencyScope;
 		this.log = log;
 		if (triggeerLoad) initXMLAsync();
-		cache.put(id(), this);
 
 	}
 
@@ -482,9 +477,19 @@ public final class POM {
 	}
 
 	public static Resource local(Resource dir, String groupId, String artifactId, String version, String extension) {
-		Resource parent = dir.getRealResource(groupId.replace('.', '/') + "/" + artifactId + "/" + version + "/");
+		Resource parent = localDir(dir, groupId, artifactId, version);
 		if (!parent.isDirectory()) parent.mkdirs();
 		return parent.getRealResource(artifactId + "-" + version + "." + extension);
+	}
+
+	/** Pure path resolution for the {@code {mvnDir}/{group}/{artifact}/{version}/} directory. No side effects. */
+	public static Resource localDir(Resource dir, String groupId, String artifactId, String version) {
+		return dir.getRealResource(groupId.replace('.', '/') + "/" + artifactId + "/" + version + "/");
+	}
+
+	/** Pure path resolution for the {@code {mvnDir}/{group}/{artifact}/} directory. No side effects. */
+	public static Resource localArtifactDir(Resource dir, String groupId, String artifactId) {
+		return dir.getRealResource(groupId.replace('.', '/') + "/" + artifactId);
 	}
 
 	public URL getArtifactAsURL(String type, Collection<Repository> repositories, boolean validate) throws IOException {

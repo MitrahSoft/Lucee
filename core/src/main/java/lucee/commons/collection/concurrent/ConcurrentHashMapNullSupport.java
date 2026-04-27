@@ -141,7 +141,7 @@ public final class ConcurrentHashMapNullSupport<K, V> implements Map<K, V>, Seri
 	 */
 	@SuppressWarnings("unchecked")
 	private V unwrapValue(Object value) {
-		return value == NULL_VALUE ? null : (V) value;
+		return (value instanceof NullValue) ? null : (V) value;
 	}
 
 	@Override
