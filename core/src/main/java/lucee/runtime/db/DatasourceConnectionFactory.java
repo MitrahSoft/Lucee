@@ -90,7 +90,10 @@ public final class DatasourceConnectionFactory extends BasePooledObjectFactory<D
 		}
 
 		try {
-			if (dc.getConnection().isClosed()) return false;
+			if (dc.getConnection().isClosed()) {
+				LogUtil.log(config, Log.LEVEL_DEBUG, logName, "connection", "datasource connection is closed: " + datasource.getName());
+				return false;
+			}
 		}
 		catch (Exception e) {
 			LogUtil.log(config, "connection", e, Log.LEVEL_ERROR, logName);
@@ -98,7 +101,10 @@ public final class DatasourceConnectionFactory extends BasePooledObjectFactory<D
 		}
 
 		try {
-			if (dc.getDatasource().validate() && !DataSourceUtil.isValid(dc, 1000)) return false;
+			if (dc.getDatasource().validate() && !DataSourceUtil.isValid(dc, 1)) {
+				LogUtil.log(config, Log.LEVEL_DEBUG, logName, "connection", "datasource connection failed isValid check: " + datasource.getName());
+				return false;
+			}
 		}
 		catch (Exception e) {
 			LogUtil.log(config, "connection", e, Log.LEVEL_ERROR, logName);
