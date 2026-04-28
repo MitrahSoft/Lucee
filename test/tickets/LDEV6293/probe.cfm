@@ -14,6 +14,7 @@
 		, {
 			datasource: {
 				  class            : "org.hsqldb.jdbcDriver"
+				, bundleName       : "org.lucee.hsqldb"
 				, connectionString : "jdbc:hsqldb:mem:LDEV6293_dynamic;shutdown=true"
 				, username         : "sa"
 				, password         : ""
