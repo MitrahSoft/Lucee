@@ -450,14 +450,9 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			for (Entry<Key, UDF> e: srcMap.entrySet()) {
 				udf = e.getValue();
 
-				// LDEV-6298: flyweight property accessors are stateless dispatchers (LDEV-3335) —
-				// dispatch reads/writes against the calling `this` scope, not the prototype.
-				// Safe to share across duplicates; mirrors the LDEV-6236 short-circuit in addUDFS.
-				// Compare via pageSource so chained duplicates (a → b → c) still match: the shared
-				// UDF's owner stays at the prototype, but the class identity is what matters.
+				// pageSource compare so chained duplicates match
 				if (udf instanceof UDFGSProperty) {
-					Component udfOwner = udf.getOwnerComponent();
-					if (udfOwner == null || udfOwner.getPageSource() == src.getPageSource()) {
+					if (udf.getOwnerComponent().getPageSource() == src.getPageSource()) {
 						trgMap.put(e.getKey(), udf);
 					}
 					continue;
