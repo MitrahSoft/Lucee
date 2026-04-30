@@ -253,6 +253,79 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				});
 			});
 
+			describe( title="cfinclude as a mixin path (parallel to closure-assignment mixin)", body=function(){
+				// Closure-assignment mixin (cfc.foo = function(){}) routes through _set, lands in
+				// _data + _udfs, flips hasInjectedFunctions. cfinclude routes differently:
+				//   - inside init() / constructor body → ComponentScopeShadow.set with
+				//     !afterConstructor → addConstructorUDF → registerUDF → _udfs + shadow
+				//   - inside a post-construction method → ComponentScopeShadow.set with
+				//     afterConstructor=true → shadow.put (probe confirmed externally visible too)
+				// Neither path flips hasInjectedFunctions. These tests pin the externally-visible
+				// dispatch + isolation semantics so phase 4 of the rebuild can change scope/UDF
+				// wiring without silently breaking cfinclude-based mixin libraries.
+				describe( title="constructor cfinclude (init body)", body=function(){
+					it( title="cfinclude'd function is externally callable and reads calling instance's tag", body=function( currentSpec ){
+						var c = new LDEV6300.CtorMixin( tag="alpha" );
+						expect( c.cfincludeMixedFn() ).toBe( "cfinclude-fn:alpha" );
+					});
+					it( title="siblings have isolated tags — mixin reads each instance's own tag", body=function( currentSpec ){
+						var a = new LDEV6300.CtorMixin( tag="aa" );
+						var b = new LDEV6300.CtorMixin( tag="bb" );
+						expect( a.cfincludeMixedFn() ).toBe( "cfinclude-fn:aa" );
+						expect( b.cfincludeMixedFn() ).toBe( "cfinclude-fn:bb" );
+					});
+					it( title="duplicate preserves the cfinclude'd mixin and reads duplicate's tag", body=function( currentSpec ){
+						var orig = new LDEV6300.CtorMixin( tag="orig" );
+						var dup = duplicate( orig );
+						expect( dup.cfincludeMixedFn() ).toBe( "cfinclude-fn:orig" );
+						dup.tag = "dup-mutated";
+						expect( dup.cfincludeMixedFn() ).toBe( "cfinclude-fn:dup-mutated" );
+						expect( orig.cfincludeMixedFn() ).toBe( "cfinclude-fn:orig" );
+					});
+				});
+
+				describe( title="post-construction cfinclude (method body)", body=function(){
+					it( title="mixin not present until loadMixins() is called", body=function( currentSpec ){
+						var c = new LDEV6300.PostMixin( tag="x" );
+						expect( structKeyExists( c, "cfincludeMixedFn" ) ).toBeFalse();
+						c.loadMixins();
+						expect( structKeyExists( c, "cfincludeMixedFn" ) ).toBeTrue();
+						expect( c.cfincludeMixedFn() ).toBe( "cfinclude-fn:x" );
+					});
+					it( title="mixin loaded on one sibling doesn't leak to a sibling that hasn't loaded it", body=function( currentSpec ){
+						var a = new LDEV6300.PostMixin( tag="aa" );
+						var b = new LDEV6300.PostMixin( tag="bb" );
+						a.loadMixins();
+						expect( a.cfincludeMixedFn() ).toBe( "cfinclude-fn:aa" );
+						expect( structKeyExists( b, "cfincludeMixedFn" ) ).toBeFalse();
+					});
+					it( title="duplicate after loadMixins carries the mixin to the dup, isolated from source", body=function( currentSpec ){
+						var orig = new LDEV6300.PostMixin( tag="orig" );
+						orig.loadMixins();
+						var dup = duplicate( orig );
+						expect( dup.cfincludeMixedFn() ).toBe( "cfinclude-fn:orig" );
+						dup.tag = "dup-mutated";
+						expect( dup.cfincludeMixedFn() ).toBe( "cfinclude-fn:dup-mutated" );
+						expect( orig.cfincludeMixedFn() ).toBe( "cfinclude-fn:orig" );
+					});
+					it( title="duplicate before loadMixins doesn't carry a phantom mixin to the dup", body=function( currentSpec ){
+						var orig = new LDEV6300.PostMixin( tag="orig" );
+						var dup = duplicate( orig );
+						expect( structKeyExists( dup, "cfincludeMixedFn" ) ).toBeFalse();
+						orig.loadMixins();
+						// loading mixin on source post-duplicate doesn't leak to dup
+						expect( structKeyExists( dup, "cfincludeMixedFn" ) ).toBeFalse();
+						expect( orig.cfincludeMixedFn() ).toBe( "cfinclude-fn:orig" );
+					});
+					it( title="internal call via variables scope returns same as external call", body=function( currentSpec ){
+						var c = new LDEV6300.PostMixin( tag="z" );
+						c.loadMixins();
+						expect( c.callMixinInternally() ).toBe( c.cfincludeMixedFn() );
+						expect( c.callMixinInternally() ).toBe( "cfinclude-fn:z" );
+					});
+				});
+			});
+
 			describe( title="ThreadLocalDuplication re-entry (self-referential CFC)", body=function(){
 				// Identity is asserted via mutation-through-reference rather than equality compare,
 				// because TestBox's toBe() recurses through CFC content and stack-overflows on cycles.
