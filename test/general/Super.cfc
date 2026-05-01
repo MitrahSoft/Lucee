@@ -65,19 +65,20 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				expect( c.isSuperInstanceOf( "Base" ) ).toBeTrue();
 			});
 
-			it( title="isInstanceOf(super, ""Child"") ALSO returns true — SuperComponent.instanceOf delegates to the LEAF's identity", body=function( currentSpec ){
+			it( title="isInstanceOf(super, ""Child"") ALSO returns true — SuperComponent.instanceOf delegates to the calling CFC instance's identity", body=function( currentSpec ){
 				// Surprising but real: SuperComponent.instanceOf(type) calls `comp.top.instanceOf(type)`
-				// (SuperComponent.java:282), where `comp.top` is the leaf. So `isInstanceOf(super, X)`
-				// effectively asks "is the leaf an instance of X" — not "is the parent class".
-				// CFML developers who expect "super = parent identity" get a counter-intuitive answer.
-				// Pin the actual behaviour; document the surprise.
+				// (SuperComponent.java:282), where `comp.top` is the calling CFC instance. So
+				// `isInstanceOf(super, X)` effectively asks "is the CFC instance an instance of X" —
+				// not "is the parent class". CFML developers who expect "super = parent identity"
+				// get a counter-intuitive answer. Pin the actual behaviour; document the surprise.
 				var c = new super.Child();
 				expect( c.isSuperInstanceOf( "Child" ) ).toBeTrue();
 			});
 
-			it( title="getMetaData(super) reports the LEAF's metadata — same `comp.top` delegation pattern", body=function( currentSpec ){
-				// Same shape as isInstanceOf(super, X): getMetaData(super) returns leaf-class metadata,
-				// not the parent's. SuperComponent dispatches metadata through `comp.top`. Pin actual.
+			it( title="getMetaData(super) reports the calling CFC instance's metadata — same `comp.top` delegation pattern", body=function( currentSpec ){
+				// Same shape as isInstanceOf(super, X): getMetaData(super) returns the calling
+				// CFC instance's class metadata, not the parent's. SuperComponent dispatches
+				// metadata through `comp.top`. Pin actual.
 				var c = new super.Child();
 				var meta = c.metaDataOfSuper();
 				expect( right( meta.name, len( ".super.Child" ) ) ).toBe( ".super.Child" );
@@ -163,7 +164,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 			it( title="structClear(super) on A doesn't wipe B's super state", body=function( currentSpec ){
 				// Asserts B's state only — A's state after the clear is currently ill-defined
 				// because today's `_data = base._data` aliasing means clearing super wipes the
-				// leaf's UDF map too. That aliasing is a phase-3 fix target (LDEV-6300).
+				// CFC instance's UDF map too. That aliasing is a phase-3 fix target (LDEV-6300).
 				var a = new super.Plain();
 				var b = new super.Plain();
 				a.writeSuperKey( "preserved", "set-on-a" );
@@ -210,20 +211,21 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 		});
 
-		describe( "super keyword — `this` dispatch resolves to leaf", function(){
+		describe( "super keyword — `this` dispatch resolves to the calling CFC instance", function(){
 
 			// 3-level case is pinned by Inheritance.cfc; this is the 2-level case for
 			// self-containment of this file.
 
 			it( title="super.whoAmIFromBase() reads `this.tag` from the calling Child", body=function( currentSpec ){
-				var c = new super.Child( tag="leaf-tag" );
+				var c = new super.Child( tag="cfc-instance-tag" );
 				// whoAmIFromBase is defined on Base and reads `this.tag` — when dispatched
-				// via super from Child, `this` must resolve to Child, so this.tag is leaf-tag.
+				// via super from Child, `this` must resolve to Child, so this.tag is the
+				// CFC instance's tag.
 				var s = c.returnSuperReference();
-				expect( s.whoAmIFromBase() ).toBe( "leaf-tag" );
+				expect( s.whoAmIFromBase() ).toBe( "cfc-instance-tag" );
 			});
 
-			it( title="two Child siblings — super.whoAmIFromBase() reads each leaf's own tag", body=function( currentSpec ){
+			it( title="two Child siblings — super.whoAmIFromBase() reads each CFC instance's own tag", body=function( currentSpec ){
 				var a = new super.Child( tag="aa" );
 				var b = new super.Child( tag="bb" );
 				expect( a.returnSuperReference().whoAmIFromBase() ).toBe( "aa" );

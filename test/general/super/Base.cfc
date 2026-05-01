@@ -22,7 +22,7 @@ component accessors="true" {
 
 	function whoAmIFromBase() {
 		// Dispatched on a Child via super.whoAmIFromBase() — `this` must resolve to the Child,
-		// not the Base. Pins the leaf-instance dispatch contract.
+		// not the Base. Pins the CFC-instance dispatch contract.
 		return this.tag;
 	}
 
