@@ -71,6 +71,25 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				});
 			});
 
+			describe( "closure mixin coexists with accessors", function(){
+				it( title="dynamic mixin method doesn't interfere with accessors", body=function( currentSpec ){
+					var cfc = new accessors.testPropertyTypes();
+					cfc.setAge(25);
+					expect(cfc.getAge()).toBe(25);
+					cfc.customMethod = function(){ return "mixin works"; };
+					expect(cfc.customMethod()).toBe("mixin works");
+					cfc.setAge(30);
+					expect(cfc.getAge()).toBe(30);
+				});
+				it( title="dynamic override of accessor method", body=function( currentSpec ){
+					var cfc = new accessors.testPropertyTypes();
+					cfc.setAge(25);
+					expect(cfc.getAge()).toBe(25);
+					cfc.getAge = function(){ return 999; };
+					expect(cfc.getAge()).toBe(999);
+				});
+			});
+
 			describe( "concurrent closure injection — per-thread isolation", function(){
 				it( title="concurrent new + closure-mixin on same class — mixin per-thread, no leak across siblings", body=function( currentSpec ){
 					var threadCount = 20;

@@ -106,7 +106,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase"{
 	private string function createURI(string calledName) {
 		// contractPath resolves to whichever mapping was used (/test, /test71, etc) so
 		// _internalRequest stays inside this checkout instead of crossing into a sibling one
-		return getDirectoryFromPath( contractPath( getCurrentTemplatePath() ) ) & calledName;
+		return contractPath( getDirectoryFromPath( getCurrentTemplatePath() ) ) & "/" & calledName;
 	}
 
 	// this function is helps to write the cfc files/change the source code of the cfc files

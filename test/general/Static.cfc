@@ -194,6 +194,32 @@ component extends="org.lucee.cfml.test.LuceeTestCase"	{
 			});
 		});
 
+		describe( "static scope inheritance", function(){
+			// `_static` chain head is class-level via LDEV-3335. Static methods on the
+			// base class must be reachable via the child's scope ref (the bcp-null bug
+			// from the LDEV-3335 implementation work).
+			it( title="access static method on base component", body=function( currentSpec ){
+				var result = static.BaseComponent::baseStaticMethod();
+				expect(result).toBe("base static method");
+			});
+			it( title="access static method on child component", body=function( currentSpec ){
+				var result = static.ChildComponent::childStaticMethod();
+				expect(result).toBe("child static method");
+			});
+			it( title="access base static method through child (bcp null issue)", body=function( currentSpec ){
+				var result = static.ChildComponent::baseStaticMethod();
+				expect(result).toBe("base static method");
+			});
+			it( title="access static method via variable reference (benchmark pattern)", body=function( currentSpec ){
+				// must instantiate first so static.args is initialized
+				var cfc = new static.StaticComponent();
+				loop times=10 {
+					static.StaticComponent::toSQL();
+				}
+				expect( serializeJson( static.StaticComponent::toSQL() ) ).toBe( '{"table":true,"name":true}' );
+			});
+		});
+
 		describe( "static function instance overlay", function(){
 			// Per lucee-docs/recipes/static-mocking.md — assigning a function to an
 			// instance whose name matches a static function on the class overlays only

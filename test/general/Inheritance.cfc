@@ -225,6 +225,30 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 				});
 			});
 
+			describe( "child inherits parent accessors", function(){
+				it( title="child inherits parent property accessors", body=function( currentSpec ){
+					var child = new inheritance.testInheritChild();
+					expect(child.getParentProp()).toBe("from parent");
+				});
+				it( title="child manual method overrides parent accessor", body=function( currentSpec ){
+					var child = new inheritance.testInheritChildOverride();
+					expect(child.getParentProp()).toBe("CHILD OVERRIDE");
+				});
+				it( title="duplicate() with inheritance — child accessors work", body=function( currentSpec ){
+					var child = new inheritance.testInheritChild();
+					var copy = duplicate( child );
+					expect( copy.getParentProp() ).toBe( "from parent" );
+					copy.setParentProp( "modified" );
+					expect( copy.getParentProp() ).toBe( "modified" );
+					expect( child.getParentProp() ).toBe( "from parent" );
+				});
+				it( title="duplicate() with child override — override preserved", body=function( currentSpec ){
+					var orig = new inheritance.testInheritChildOverride();
+					var copy = duplicate( orig );
+					expect( copy.getParentProp() ).toBe( "CHILD OVERRIDE" );
+				});
+			});
+
 			describe( "concurrent super dispatch", function(){
 				it( title="100 threads × super.chain() — every result is `grand:parent:child`", body=function( currentSpec ){
 					var threadCount = 100;

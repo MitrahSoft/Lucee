@@ -224,6 +224,21 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					expect( arrayLen( getMetaData( d ).functions ) ).toBe( arrayLen( getMetaData( c ).functions ) );
 				}, labels = [ "metadata", "mixin" ] );
 
+				it( title = "property order is preserved (declaration order, not alphabetical)", body = function() {
+					// Critical for ORM, serialization, and backward compatibility — getMetaData
+					// must surface properties in the order they were declared, not sorted.
+					var cfc = new component accessors="true" {
+						property name="zulu" type="string" default="last";
+						property name="alpha" type="string" default="first";
+						property name="mike" type="string" default="middle";
+					};
+					var props = getMetaData( cfc ).properties;
+					expect( arrayLen( props ) ).toBe( 3 );
+					expect( props[ 1 ].name ).toBe( "zulu" );
+					expect( props[ 2 ].name ).toBe( "alpha" );
+					expect( props[ 3 ].name ).toBe( "mike" );
+				}, labels = [ "metadata", "properties" ] );
+
 			});
 
 		});
