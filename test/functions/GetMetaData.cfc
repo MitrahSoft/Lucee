@@ -177,6 +177,55 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 
 			});
 
+			describe( title = "Component metadata", body = function() {
+
+				it( title = "name is the fully-qualified dotted path from the web root", body = () => {
+					var c = new getMetaData.GetMetaDataChild();
+					expect( getMetaData( c ).name ).toInclude( "functions.getMetaData.GetMetaDataChild" );
+				}, labels = [ "metadata" ] );
+
+				it( title = "implements is reported on the CFC that declared it, not on descendants", body = () => {
+					// GetMetaDataChild extends GetMetaDataBase implements GetMetaDataIface.
+					// The interface metadata lives on Base (which declared `implements`),
+					// not on Child. Child's own `implements` struct is empty.
+					var c = new getMetaData.GetMetaDataChild();
+					var meta = getMetaData( c );
+					expect( meta ).toHaveKey( "implements" );
+					expect( meta.implements ).toBeEmpty();
+					expect( meta.extends.implements ).toHaveKey( "GetMetaDataIface" );
+					expect( meta.extends.implements.GetMetaDataIface.name ).toInclude( "GetMetaDataIface" );
+				}, labels = [ "metadata", "inheritance", "implements" ] );
+
+				it( title = "runtime-injected closures don't appear in getMetaData.functions", body = () => {
+					// Assigning a closure at runtime makes it callable but invisible to
+					// metadata — getMetaData reflects declared structure, not the
+					// component's current member table.
+					var c = new getMetaData.GetMetaDataChild();
+					var declaredCount = arrayLen( getMetaData( c ).functions );
+
+					c.injectedFn = function() { return "injected"; };
+					expect( c.injectedFn() ).toBe( "injected" );
+
+					expect( arrayLen( getMetaData( c ).functions ) ).toBe( declaredCount );
+				}, labels = [ "metadata", "mixin" ] );
+
+				it( title = "duplicate has identical metadata shape to the original", body = () => {
+					var c = new getMetaData.GetMetaDataChild();
+					var d = duplicate( c );
+					expect( getMetaData( d ).name ).toBe( getMetaData( c ).name );
+					expect( arrayLen( getMetaData( d ).functions ) ).toBe( arrayLen( getMetaData( c ).functions ) );
+				}, labels = [ "metadata" ] );
+
+				it( title = "duplicate metadata is unaffected by runtime mixins on either side", body = () => {
+					var c = new getMetaData.GetMetaDataChild();
+					c.injectedFn = function() { return "injected"; };
+					var d = duplicate( c );
+					// metadata reports declared structure for both, despite the mixin
+					expect( arrayLen( getMetaData( d ).functions ) ).toBe( arrayLen( getMetaData( c ).functions ) );
+				}, labels = [ "metadata", "mixin" ] );
+
+			});
+
 		});
 
 	}
