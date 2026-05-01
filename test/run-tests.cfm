@@ -271,7 +271,7 @@ try {
 		else
 			request.testFilter="";
 	}
-	request.testFilter = ListToArray( trim( request.testFilter ) );
+	request.testFilter = ListToArray( trim( request.testFilter ), ",|" );
 	if ( Arraylen( request.testFilter ) gt 0 )
 		systemOutput( NL & "Filtering only tests with filenames containing: " & request.testFilter.toJson() & NL, true );
 	else
