@@ -67,6 +67,82 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="xml" {
 				xrdsService.URI[1] = duplicate(xrdsService.URI[2]);
 				<!--- end old test code --->
 			});
-		});	
+
+			describe( "duplicate of a CFC — per-instance state isolation", function(){
+				it( title="cfc.variables.x assigned then duplicated — duplicate has independent value", body=function( currentSpec ){
+					var orig = new Duplicate.Tagged();
+					orig.variables.adhoc = "orig-adhoc";
+					var dup = duplicate( orig );
+					expect( dup.variables.adhoc ).toBe( "orig-adhoc" );
+					dup.variables.adhoc = "dup-adhoc";
+					expect( orig.variables.adhoc ).toBe( "orig-adhoc" );
+					expect( dup.variables.adhoc ).toBe( "dup-adhoc" );
+				});
+				it( title="cfc.this.x assigned then duplicated — duplicate has independent value", body=function( currentSpec ){
+					var orig = new Duplicate.Tagged();
+					orig.adhoc = "orig-this";
+					var dup = duplicate( orig );
+					expect( dup.adhoc ).toBe( "orig-this" );
+					dup.adhoc = "dup-this";
+					expect( orig.adhoc ).toBe( "orig-this" );
+					expect( dup.adhoc ).toBe( "dup-this" );
+				});
+			});
+
+			describe( "ThreadLocalDuplication re-entry (self-referential / cyclic CFCs)", function(){
+				// Identity is asserted via mutation-through-reference rather than equality compare,
+				// because TestBox's toBe() recurses through CFC content and stack-overflows on cycles.
+				it( title="duplicate of CFC holding reference to itself doesn't infinite-loop", body=function( currentSpec ){
+					var c = new Duplicate.Tagged( tag="root" );
+					c.self = c;
+					var d = duplicate( c );
+					expect( d.tag ).toBe( "root" );
+					d.marker = "before";
+					d.self.marker = "via-self";
+					expect( d.marker ).toBe( "via-self" );
+					expect( structKeyExists( c, "marker" ) ).toBeFalse();
+				});
+				it( title="duplicate of two-CFC cycle (a.peer = b, b.peer = a) — both duplicates form a cycle of their own", body=function( currentSpec ){
+					var a = new Duplicate.Tagged( tag="a" );
+					var b = new Duplicate.Tagged( tag="b" );
+					a.peer = b;
+					b.peer = a;
+					var dupA = duplicate( a );
+					expect( dupA.tag ).toBe( "a" );
+					expect( dupA.peer.tag ).toBe( "b" );
+					dupA.peer.peer.marker = "via-cycle";
+					expect( dupA.marker ).toBe( "via-cycle" );
+					expect( structKeyExists( a, "marker" ) ).toBeFalse();
+					expect( structKeyExists( b, "marker" ) ).toBeFalse();
+				});
+				it( title="concurrent self-referential duplicates — ThreadLocal scoped per thread", body=function( currentSpec ){
+					var threadCount = 20;
+					var threadNames = [];
+					for ( var t=1; t<=threadCount; t++ ) {
+						var tname = "duplicate-reentry-" & t;
+						arrayAppend( threadNames, tname );
+						thread name="#tname#" tid=t {
+							var c = new Duplicate.Tagged( tag="t-" & attributes.tid );
+							c.self = c;
+							var d = duplicate( c );
+							d.self.marker = "m-" & attributes.tid;
+							thread.tagOut = d.tag;
+							thread.markerOut = d.marker;
+							thread.sourceUntouched = !structKeyExists( c, "marker" );
+						}
+					}
+					thread action="join" name="#arrayToList( threadNames )#";
+					for ( var t=1; t<=threadCount; t++ ) {
+						var tname = "duplicate-reentry-" & t;
+						var th = cfthread[ tname ];
+						if ( th.status != "COMPLETED" ) throw( object=th.error );
+						expect( th.tagOut ).toBe( "t-" & t );
+						expect( th.markerOut ).toBe( "m-" & t );
+						expect( th.sourceUntouched ).toBeTrue();
+					}
+				});
+			});
+
+		});
 	}
 }
