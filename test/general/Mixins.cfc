@@ -6,6 +6,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 	// Documented contract from the GetMetaData reference:
 	//   "Runtime-injected functions are invisible to GetMetadata."
 	//   "Duplicates return identical metadata to the original, regardless of mixins."
+	// LDEV-6236's shared accessor UDF optimization must keep per-instance closure overrides isolated.
 
 	function run( testResults, testBox ){
 		describe( "CFC mixin patterns", function(){
@@ -87,6 +88,29 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					expect(cfc.getAge()).toBe(25);
 					cfc.getAge = function(){ return 999; };
 					expect(cfc.getAge()).toBe(999);
+				});
+				it( title="closure override of accessor on one instance doesn't leak to siblings", body=function( currentSpec ){
+					var a = new accessors.testPropertyTypes();
+					var b = new accessors.testPropertyTypes();
+					a.setAge( 11 );
+					b.setAge( 22 );
+					b.getAge = function() { return 999; };
+					expect( a.getAge() ).toBe( 11 );
+					expect( b.getAge() ).toBe( 999 );
+				});
+				it( title="structDelete of closure override doesn't affect siblings", body=function( currentSpec ){
+					// Accessor regen on the instance after structDelete is not guaranteed —
+					// only sibling isolation is asserted here.
+					var a = new accessors.testPropertyTypes();
+					var b = new accessors.testPropertyTypes();
+					a.setAge( 11 );
+					b.setAge( 22 );
+					b.getAge = function() { return 999; };
+					expect( b.getAge() ).toBe( 999 );
+					structDelete( b, "getAge" );
+					expect( a.getAge() ).toBe( 11 );
+					b.setAge( 33 );
+					expect( a.getAge() ).toBe( 11 );
 				});
 			});
 

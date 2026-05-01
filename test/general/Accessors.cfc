@@ -32,6 +32,31 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					var cfc = new accessors.testWithAccessors();
 					expect(cfc.getA()).toBe("1");
 				});
+				it( title="50 fresh instances — property values fully isolated", body=function( currentSpec ){
+					var instances = [];
+					for ( var i=1; i<=50; i++ ) {
+						var inst = new accessors.testPropertyTypes();
+						inst.setAge( i );
+						inst.setName( "inst-" & i );
+						arrayAppend( instances, inst );
+					}
+					for ( var i=1; i<=50; i++ ) {
+						expect( instances[ i ].getAge() ).toBe( i );
+						expect( instances[ i ].getName() ).toBe( "inst-" & i );
+					}
+				});
+				it( title="callDirect bypass: getter returns the underlying value, not the UDF", body=function( currentSpec ){
+					var cfc = new accessors.testPropertyTypes();
+					cfc.setAge( 42 );
+					var v = cfc.getAge();
+					expect( v ).toBe( 42 );
+					expect( isCustomFunction( v ) ).toBeFalse();
+				});
+				it( title="callDirect bypass: setter returns the component for chaining", body=function( currentSpec ){
+					var cfc = new accessors.testPropertyTypes();
+					var ret = cfc.setAge( 30 );
+					expect( ret.getAge() ).toBe( 30 );
+				});
 			});
 
 			describe( "manual method overrides", function(){
@@ -61,6 +86,12 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					expect(function(){
 						cfc.setReadOnly("new");
 					}).toThrow();
+				});
+				it( title="typed casting still applies through callDirect path", body=function( currentSpec ){
+					var cfc = new accessors.testPropertyTypes();
+					cfc.setAge( "42" );
+					expect( cfc.getAge() ).toBe( 42 );
+					expect( isNumeric( cfc.getAge() ) ).toBeTrue();
 				});
 			});
 
@@ -128,6 +159,39 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					var copy = duplicate( orig );
 					var result = copy.setAge( 30 );
 					expect( result.getName() ).toBe( "John" );
+				});
+			});
+
+			describe( "concurrent createObject (shared accessor stress)", function(){
+				it( title="50 threads × 20 fresh instances — property values fully isolated", body=function( currentSpec ){
+					var threadCount = 50;
+					var perThread = 20;
+					var threadNames = [];
+					for ( var t=1; t<=threadCount; t++ ) {
+						var tname = "accessors-stress-" & t;
+						arrayAppend( threadNames, tname );
+						thread name="#tname#" tid=t perThread=perThread {
+							thread.results = [];
+							for ( var i=1; i<=attributes.perThread; i++ ) {
+								var inst = new accessors.testPropertyTypes();
+								var ageVal = ( attributes.tid * 1000 ) + i;
+								inst.setAge( ageVal );
+								inst.setName( "t" & attributes.tid & "-i" & i );
+								arrayAppend( thread.results, { age: inst.getAge(), name: inst.getName(), expectedAge: ageVal, expectedName: "t" & attributes.tid & "-i" & i } );
+							}
+						}
+					}
+					thread action="join" name="#arrayToList( threadNames )#";
+					for ( var t=1; t<=threadCount; t++ ) {
+						var tname = "accessors-stress-" & t;
+						var th = cfthread[ tname ];
+						if ( th.status != "COMPLETED" ) throw( object=th.error );
+						expect( arrayLen( th.results ) ).toBe( perThread );
+						for ( var r in th.results ) {
+							expect( r.age ).toBe( r.expectedAge );
+							expect( r.name ).toBe( r.expectedName );
+						}
+					}
 				});
 			});
 
