@@ -7,6 +7,7 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 	//   "Runtime-injected functions are invisible to GetMetadata."
 	//   "Duplicates return identical metadata to the original, regardless of mixins."
 	// LDEV-6236's shared accessor UDF optimization must keep per-instance closure overrides isolated.
+	// LDEV-6298's shared ComponentProperties wrapper must keep per-duplicate mixin/closure state isolated.
 
 	function run( testResults, testBox ){
 		describe( "CFC mixin patterns", function(){
@@ -185,6 +186,34 @@ component extends="org.lucee.cfml.test.LuceeTestCase" {
 					dup.injected = function() { return "now-from-dup"; };
 					expect( dup.injected() ).toBe( "now-from-dup" );
 					expect( orig.injected() ).toBe( "from-orig" );
+				});
+				it( title="mixin-overridden accessor survives duplicate, and re-override on copy is isolated", body=function( currentSpec ){
+					var orig = new accessors.testPropertyTypes();
+					orig.getAge = function() { return 999; };
+					var copy = duplicate( orig );
+					expect( copy.getAge() ).toBe( 999 );
+					copy.getAge = function() { return 111; };
+					expect( copy.getAge() ).toBe( 111 );
+					expect( orig.getAge() ).toBe( 999 );
+				});
+				it( title="structDelete of mixed-in method on duplicate doesn't remove it from source", body=function( currentSpec ){
+					var orig = new accessors.testWithAccessors();
+					orig.shared = function() { return "original"; };
+					var copy = duplicate( orig );
+					structDelete( copy, "shared" );
+					expect( orig.shared() ).toBe( "original" );
+					expect( function(){ copy.shared(); } ).toThrow();
+				});
+				it( title="restoring real accessor after duplicate restores dispatch", body=function( currentSpec ){
+					// Accessor regen on the instance after structDelete is not guaranteed —
+					// only sibling isolation is asserted.
+					var orig = new accessors.testPropertyTypes();
+					orig.getAge = function() { return 999; };
+					var copy = duplicate( orig );
+					expect( orig.getAge() ).toBe( 999 );
+					structDelete( copy, "getAge" );
+					copy.setAge( 42 );
+					expect( orig.getAge() ).toBe( 999 );
 				});
 			});
 
