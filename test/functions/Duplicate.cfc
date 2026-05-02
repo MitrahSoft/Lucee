@@ -273,6 +273,73 @@ component extends="org.lucee.cfml.test.LuceeTestCase" labels="xml" {
 				});
 			});
 
+			describe( "LDEV-6298 v2 — BoundUDF wrapper semantics", function(){
+
+				it( title="extracted refs read live state, not snapshots", body=function( currentSpec ){
+					// Each extraction binds to the component (not the value), so a ref captured
+					// before a write still sees the new value. Confirms the wrapper holds a
+					// component reference, not a cached scope read.
+					var e = new test.general.accessors.testPropertyTypes();
+					e.setName( "first" );
+					var a = e.getName;
+					e.setName( "second" );
+					var b = e.getName;
+
+					expect( a() ).toBe( "second" );
+					expect( b() ).toBe( "second" );
+				});
+
+				it( title="direct ref invocation dispatches via the source component", body=function( currentSpec ){
+					// var ref = e.getName; ref() — bound to e for direct invocation. The wrapper
+					// carries the receiver across extraction so slow-path dispatch lands on e.
+					var e = new test.general.accessors.testPropertyTypes();
+					e.setName( "from-E" );
+
+					var ref = e.getName;
+					expect( ref() ).toBe( "from-E" );
+				});
+
+				it( title="LDEV-1962: ref assigned into another component rebinds to the new host", body=function( currentSpec ){
+					// f.x = e.getName followed by f.x() must dispatch via f — established 2017
+					// mixin contract used by ColdBox/WireBox virtual inheritance. The wrapper is
+					// unwrapped on assignment so the host component becomes the receiver.
+					var e = new test.general.accessors.testPropertyTypes();
+					e.setName( "from-E" );
+					var f = new test.general.accessors.testPropertyTypes();
+					f.setName( "from-F" );
+
+					f.callMethod = e.getName;
+					expect( f.callMethod() ).toBe( "from-F" );
+				});
+
+				it( title="LDEV-1962: setter ref assigned into another component writes to the new host", body=function( currentSpec ){
+					var e = new test.general.accessors.testPropertyTypes();
+					e.setName( "from-E" );
+					var f = new test.general.accessors.testPropertyTypes();
+					f.setName( "from-F" );
+
+					f.writeMethod = e.setName;
+					f.writeMethod( "rewritten-via-F" );
+
+					expect( e.getName() ).toBe( "from-E" );
+					expect( f.getName() ).toBe( "rewritten-via-F" );
+				});
+
+				it( title="ref captured before duplicate dispatches via the source", body=function( currentSpec ){
+					// Capturing a ref before duplication binds to the source. The duplicate's later
+					// state changes don't affect the bound ref under direct invocation.
+					var src = new test.general.accessors.testPropertyTypes();
+					src.setName( "src-name" );
+					var refBeforeDup = src.getName;
+
+					var dup = duplicate( src );
+					dup.setName( "dup-name" );
+
+					expect( refBeforeDup() ).toBe( "src-name" );
+					expect( dup.getName() ).toBe( "dup-name" );
+				});
+			});
+
 			describe( "mass duplication (ORM hot path)", function(){
 				it( title="50 duplicates from one prototype — all isolated", body=function( currentSpec ){
 					var prototype = new test.general.accessors.testPropertyTypes();
