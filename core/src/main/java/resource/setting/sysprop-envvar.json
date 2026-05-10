@@ -945,6 +945,7 @@
 		"tags": [ "cfquery" ],
 		"functions": [ "queryExecute" ],
 		"type": "numeric",
+		"deprecated": "7.1",
 		"default": 50
 	},
 	{
