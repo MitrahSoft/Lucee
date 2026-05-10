@@ -92,6 +92,7 @@ public final class HSQLDBHandler {
 	private static boolean hsqldbDisable;
 	private static boolean hsqldbDebug;
 	private static int hsqldbPoolSize;
+	private static boolean hsqldbNullsLastInDesc;
 	private static final Struct columnUsageCache = new StructImpl(StructImpl.TYPE_MAX, 32, 500);
 	private static BlockingQueue<Integer> dbQueue;
 	private static DataSource[] dsCache;
@@ -102,6 +103,7 @@ public final class HSQLDBHandler {
 	static {
 		hsqldbDisable = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.disable", "false"), false);
 		hsqldbDebug = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.debug", "false"), false);
+		hsqldbNullsLastInDesc = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.orderBy.nullsLastInDesc", "true"), true);
 		int defaultPoolSize = Math.min(Runtime.getRuntime().availableProcessors(), 8);
 		hsqldbPoolSize = Caster.toIntValue(SystemUtil.getSystemPropOrEnvVar("lucee.qoq.hsqldb.poolsize", String.valueOf(defaultPoolSize)), defaultPoolSize);
 
@@ -617,7 +619,10 @@ public final class HSQLDBHandler {
 
 		// Create datasource with unique database name using dbNum
 		String dbName = "qoq_" + dbNum;
-		String connStr = "jdbc:hsqldb:mem:" + dbName + ";sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;sql.concat_nulls=false;";
+		// nulls_first=true + nulls_order=false makes HSQLDB treat nulls as a low
+		// value (first in ASC, last in DESC), matching native QoQ engine + ACF.
+		String nullsOrdering = hsqldbNullsLastInDesc ? "sql.nulls_first=true;sql.nulls_order=false;" : "";
+		String connStr = "jdbc:hsqldb:mem:" + dbName + ";sql.regular_names=false;sql.enforce_strict_size=false;sql.enforce_types=false;sql.concat_nulls=false;" + nullsOrdering;
 
 		// We don't use connection pooling - each query creates a fresh connection and closes it immediately.
 		// Concurrency is controlled by the BlockingQueue (dbQueue), not by connection pool limits.
