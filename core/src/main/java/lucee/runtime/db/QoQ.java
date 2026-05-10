@@ -1479,7 +1479,7 @@ public final class QoQ {
 			return executeColumn(pc, sql, source, column, row, null);
 		}
 		try {
-			return column.getValue(pc, source, row);
+			return column.getValue(pc, source, row, null);
 		}
 		catch (DatabaseException e) {
 			// Wrap as IllegalQoQException to prevent fallback to HSQLDB
