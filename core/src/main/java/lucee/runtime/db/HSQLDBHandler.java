@@ -517,9 +517,11 @@ public final class HSQLDBHandler {
 				ThreadLocalPageContext.getLog(pc, "datasource").error("QoQ [" + sql.getSQLString() + "] errored and is falling back to HyperSQL.", qoqException);
 			}
 		}
-		else if (!useHsqldb) {
-			// engine=native but native returned null (couldn't handle the query) with no exception
-			throw new DatabaseException("Native QoQ engine could not handle this query and HSQLDB fallback is disabled (engine=native)", null, sql, null);
+		else if (!useHsqldb || hsqldbDisable) {
+			// Native returned null (couldn't handle the query, e.g. JOINs) with no exception, and
+			// HSQLDB fallback is blocked.
+			String which = !useHsqldb ? "engine=native" : "lucee.qoq.hsqldb.disable=true";
+			throw new DatabaseException("Native QoQ engine could not handle this query and HSQLDB fallback is disabled (" + which + ")", null, sql, null);
 		}
 
 		// SECOND Chance with hsqldb

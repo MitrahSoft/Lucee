@@ -940,7 +940,7 @@
 	{
 		"sysprop": "lucee.qoq.parallelism",
 		"envvar": "LUCEE_QOQ_PARALLELISM",
-		"desc": "Controls the parallelism level for Query of Queries operations",
+		"desc": "Controls the parallelism level for Query of Queries operations. No longer supported in Lucee 7.1+; native QoQ build is single-threaded because per-column lock contention and FJP overhead made parallel streams a net loss across nearly all measured workloads. Honoured in earlier versions (introduced 6.0.0.336).",
 		"category": "query",
 		"tags": [ "cfquery" ],
 		"functions": [ "queryExecute" ],
