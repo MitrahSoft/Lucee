@@ -22,8 +22,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
@@ -223,15 +221,15 @@ public final class MailUtil {
 	}
 
 	/**
-	 * This method should be called when TLS is used to ensure that the supported protocols are set.
-	 * Some servers, e.g. Outlook365, reject lists with older protocols so we only pass protocols that
-	 * start with the prefix "TLS"
+	 * Set mail.smtp.ssl.protocols to the JDK's enabled TLS protocols, tracking
+	 * jdk.tls.disabledAlgorithms. On JDK 11.0.11+ this means TLSv1.2/1.3 only.
+	 * The env-var / sysprop override path (checked first) is unaffected, so
+	 * users hitting picky servers (Outlook365 etc.) can still tune via that.
 	 */
 	public static void setSystemPropMailSslProtocols() {
 		String protocols = SystemUtil.getSystemPropOrEnvVar(SYSTEM_PROP_MAIL_SSL_PROTOCOLS, "");
 		if (protocols.isEmpty()) {
-			List<String> supportedProtocols = SSLConnectionSocketFactoryImpl.getSupportedSslProtocols();
-			protocols = supportedProtocols.stream().filter(el -> el.startsWith("TLS")).collect(Collectors.joining(" "));
+			protocols = String.join(" ", SSLConnectionSocketFactoryImpl.getEnabledSslProtocols());
 			if (!protocols.isEmpty()) {
 				System.setProperty(SYSTEM_PROP_MAIL_SSL_PROTOCOLS, protocols);
 				Config config = ThreadLocalPageContext.getConfig();
