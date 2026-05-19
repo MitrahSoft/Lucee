@@ -3535,6 +3535,7 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Log deployLog = config.getLog("deploy");
 			Array children = ConfigUtil.getAsArray("extensions", root);
 			RHExtension.removeDuplicates(children);
+			RHExtension.removeDisabled(children);
 			if (children.size() > 0) {
 				// Use a thread pool for processing
 				ExecutorService executor = ThreadUtil.createExecutorService(children.size(), true);
