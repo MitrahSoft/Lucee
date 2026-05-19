@@ -579,7 +579,21 @@ public final class MavenUtil {
 						URL url;
 						CloseableHttpClient httpClient;
 						int policy = CFMLEngineImpl.getActiveDownloadPolicy();
+
+						boolean isSnapshot = pom.getVersion().endsWith("-SNAPSHOT");
+						int eligibleRepoCount = 0;
+						for (Repository r: repositories) {
+							if (isSnapshot ? r.isSnapshotsEnabled() : r.isReleasesEnabled()) eligibleRepoCount++;
+						}
+						if (eligibleRepoCount == 0) {
+							throw new IOException("Failed to download Maven artifact [" + pom.getGroupId() + ":" + pom.getArtifactId() + ":" + pom.getVersion() + "] " + "(type: "
+									+ type + "). No " + (isSnapshot ? "snapshot-capable" : "release-capable") + " repository is configured among the " + repositories.size()
+									+ " available. " + "Configure a repository that serves " + (isSnapshot ? "snapshot" : "release") + " artifacts.");
+						}
+
 						for (Repository r: sort(repositories)) {
+							if (isSnapshot && !r.isSnapshotsEnabled()) continue;
+							if (!isSnapshot && !r.isReleasesEnabled()) continue;
 							url = null;
 							httpClient = null;
 							if (policy == CFMLEngineImpl.MAVEN_DOWNLOAD_POLICY_ERROR) {
@@ -676,6 +690,7 @@ public final class MavenUtil {
 					}
 					catch (IOException ioe) {
 						if (info != null) createLastUpdated(res, info);
+						if (failureSummary == null && lastException == null) throw ioe;
 						StringBuilder m = new StringBuilder("Failed to download Maven artifact [").append(pom.getGroupId()).append(":").append(pom.getArtifactId()).append(":")
 								.append(pom.getVersion()).append("] (type: ").append(type).append("). Check network connectivity and repository availability.");
 						if (failureSummary != null) m.append(" - ").append(failureSummary);
