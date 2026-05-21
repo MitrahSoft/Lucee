@@ -1103,7 +1103,7 @@ public final class PageContextImpl extends PageContext {
 			try {
 				addPageSource(currentPage.getPageSource(), true);
 				if (ConfigImpl.DEBUGGER) {
-					debuggerFrames.add(new DebuggerFrame(getTopmostDebuggerFrame(), currentPage.getPageSource()));
+					debuggerFrames.add(new DebuggerFrame(getTopmostDebuggerFrame(), currentPage.getPageSource(), variablesScope()));
 				}
 				debugEntry.updateFileLoadTime((System.nanoTime() - time));
 				exeTime = System.nanoTime();
@@ -1143,7 +1143,7 @@ public final class PageContextImpl extends PageContext {
 			try {
 				addPageSource(currentPage.getPageSource(), true);
 				if (ConfigImpl.DEBUGGER) {
-					debuggerFrames.add(new DebuggerFrame(getTopmostDebuggerFrame(), currentPage.getPageSource()));
+					debuggerFrames.add(new DebuggerFrame(getTopmostDebuggerFrame(), currentPage.getPageSource(), variablesScope()));
 				}
 				currentPage.call(this);
 			}
@@ -3573,11 +3573,12 @@ public final class PageContextImpl extends PageContext {
 			this.line = 0;
 		}
 
-		DebuggerFrame(DebuggerFrame enclosing, PageSource pageSource) {
+		DebuggerFrame(DebuggerFrame enclosing, PageSource pageSource, Variables currentVariables) {
 			this.kind = Kind.INCLUDE;
 			this.local = enclosing != null ? enclosing.local : null;
 			this.arguments = enclosing != null ? enclosing.arguments : null;
-			this.variables = enclosing != null ? enclosing.variables : null;
+			// not inherited: cfmodule/customtag swaps in a fresh variables scope
+			this.variables = currentVariables;
 			this.pageSource = pageSource;
 			this.functionName = null;
 			this.line = 0;
