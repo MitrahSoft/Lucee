@@ -630,6 +630,18 @@ public final class PageContextImpl extends PageContext {
 
 	@Override
 	public void release() {
+		if (ConfigImpl.DEBUGGER) {
+			DebuggerListener listener = DebuggerRegistry.getListener();
+			if (listener != null) {
+				try {
+					listener.onRequestEnd(this);
+				}
+				catch (Throwable t) {
+					LogUtil.log(this, "application", "debugger", t, Log.LEVEL_WARN);
+				}
+			}
+		}
+
 		config.releaseCacheHandlers(this);
 
 		if (config.getExecutionLogEnabled() && execLog != null) {
