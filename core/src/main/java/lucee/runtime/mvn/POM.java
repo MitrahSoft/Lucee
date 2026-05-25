@@ -34,16 +34,16 @@ public final class POM {
 
 	public static final List<Repository> REPOSITORIES = new ArrayList<>();
 
-	public static final Repository REPOSITORY_MAVEN_CENTRAL = new Repository("maven-central", "Maven Central", "https://repo1.maven.org/maven2/");
-	public static final Repository REPOSITORY_SONATYPE = new Repository("sonatype", "Sonatype", "https://oss.sonatype.org/content/repositories/releases/");
-	public static final Repository REPOSITORY_JCENTER = new Repository("jcenter", "JCenter", "https://jcenter.bintray.com/");
+	public static final Repository REPOSITORY_MAVEN_CENTRAL = new Repository("maven-central", "Maven Central", "https://repo1.maven.org/maven2/", true, false);
+	public static final Repository REPOSITORY_SONATYPE = new Repository("sonatype", "Sonatype", "https://oss.sonatype.org/content/repositories/releases/", true, false);
+	public static final Repository REPOSITORY_JCENTER = new Repository("jcenter", "JCenter", "https://jcenter.bintray.com/", true, false);
 
 	// only google specific stuff
-	public static final Repository REPOSITORY_GOOGLE = new Repository("google", "Google Maven", "https://maven.google.com/");
+	public static final Repository REPOSITORY_GOOGLE = new Repository("google", "Google Maven", "https://maven.google.com/", true, false);
 	// only apache specific stuff
-	public static final Repository REPOSITORY_APACHE = new Repository("apache", "Apache Repository", "https://repository.apache.org/content/repositories/releases/");
+	public static final Repository REPOSITORY_APACHE = new Repository("apache", "Apache Repository", "https://repository.apache.org/content/repositories/releases/", true, false);
 	// only spring specific stuff
-	public static final Repository REPOSITORY_SPRING = new Repository("spring", "Spring Repository", "https://repo.spring.io/release/");
+	public static final Repository REPOSITORY_SPRING = new Repository("spring", "Spring Repository", "https://repo.spring.io/release/", true, false);
 	// currently not supported
 	// public static final Repository REPOSITORY_ALIYUN = new Repository("aliyun", "Aliyun Maven
 	// Mirror", "https://maven.aliyun.com/repository/public");
@@ -600,7 +600,8 @@ public final class POM {
 		try {
 			List<POM> deps = pom.getDependencies();
 			if (deps != null && deps.size() > 0) {
-				executor = ThreadUtil.createExecutorService(deps.size(), false);
+				// LDEV-6320: single-threaded to avoid triggering 429 from Maven Central
+				executor = ThreadUtil.createExecutorService(1, false);
 				List<Future<Pair<IOException, POM>>> futures = new ArrayList<>();
 				for (POM p: deps) {
 

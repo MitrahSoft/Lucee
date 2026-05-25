@@ -1526,6 +1526,11 @@ public final class QueryImpl implements Query, Objects, QueryResult {
 		return recordcount.addAndGet(count);
 	}
 
+	// For build paths that populate columns via column.add(...) and publish the final count once.
+	public void setRecordcount(int rc) {
+		recordcount.set(rc);
+	}
+
 	@Override
 	public boolean addColumn(String columnName, Array content) throws DatabaseException {
 		return addColumn(columnName, content, Types.OTHER);
