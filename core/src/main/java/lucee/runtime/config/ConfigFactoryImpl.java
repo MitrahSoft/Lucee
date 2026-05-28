@@ -45,7 +45,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.osgi.framework.Bundle;
@@ -223,6 +222,17 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		((CFMLEngineImpl) ConfigUtil.getEngine(configWeb)).onStart(configWeb, false);
 
 		((GatewayEngineImpl) configWeb.getGatewayEngine()).autoStart();
+
+		// invoke config listener if set
+		try {
+			ConfigListener listener = configServer.getConfigListener();
+			if (listener != null) listener.onLoadWebContext(configServer, configWeb);
+		}
+		catch (Throwable t) {
+			ExceptionUtil.rethrowIfNecessary(t);
+			log(configServer, t);
+		}
+
 		log(configServer, Log.LEVEL_INFO,
 				"\n===================================================================\n" + "WEB CONTEXT (" + createLabel(configServer, servletConfig) + ")\n"
 						+ "-------------------------------------------------------------------\n" + "- config:" + configDir + "\n" + "- webroot:"
@@ -1050,7 +1060,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			}
 		}
 		// temp directory should be always accessible, even when access is local
-		reses.add(config.getTempDirectory());
+		Resource tempDir = config.getTempDirectory();
+		if (!reses.contains(tempDir)) reses.add(tempDir);
 		return reses.toArray(new Resource[reses.size()]);
 	}
 
@@ -1066,6 +1077,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 				_attr(config, el, "tag_registry", SecurityManager.VALUE_YES), _attr(config, el, "cache", SecurityManager.VALUE_YES),
 				_attr(config, el, "gateway", SecurityManager.VALUE_YES), _attr(config, el, "orm", SecurityManager.VALUE_YES),
 				_attr2(config, el, "access_read", SecurityManager.ACCESS_PROTECTED), _attr2(config, el, "access_write", SecurityManager.ACCESS_PROTECTED));
+		Array fileAccess = ConfigUtil.getAsArray("fileAccess", el);
+		if (fileAccess.size() > 0) sm.setCustomFileAccess(_loadFileAccess(config, fileAccess));
 		return sm;
 	}
 
@@ -1081,6 +1094,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 		sm.setAccess(SecurityManager.TYPE_TAG_REGISTRY, _attr(config, el, "tag_registry", SecurityManager.VALUE_YES));
 		sm.setAccess(SecurityManager.TYPE_DIRECT_JAVA_ACCESS, _attr(config, el, "direct_java_access", SecurityManager.VALUE_YES));
 		sm.setAccess(SecurityManager.TYPE_CFX_USAGE, _attr(config, el, "cfx_usage", SecurityManager.VALUE_YES));
+		Array fileAccess = ConfigUtil.getAsArray("fileAccess", el);
+		if (fileAccess.size() > 0) sm.setCustomFileAccess(_loadFileAccess(config, fileAccess));
 		return sm;
 	}
 
@@ -1891,9 +1906,8 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 						if (cache == null) continue;
 						cd = getClassDefinition(config, cache, "", config.getIdentification());
 
-						// check if it is a bundle
-						if (!cd.isBundle()) {
-							log(config, Log.LEVEL_INFO, "[" + cd + "] does not have bundle info");
+						if (!cd.isBundle() && !(cd instanceof ClassDefinitionImpl && ((ClassDefinitionImpl) cd).isMaven())) {
+							log(config, Log.LEVEL_WARN, "skipping cache definition [" + cd + "], no bundle or maven coordinates");
 							continue;
 						}
 						map.put(cd.getClassName(), cd);
@@ -2404,8 +2418,9 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			f = dir.getRealResource("interruptThread." + TEMPLATE_EXTENSION);
 			if (!f.exists() || doNew) createFileFromResourceEL("/resource/library/function/interruptThread." + TEMPLATE_EXTENSION, f);
 
+			// LDEV-6282: throw() is now a Java BIF; remove any stale CFML wrapper.
 			f = dir.getRealResource("throw." + TEMPLATE_EXTENSION);
-			if (!f.exists() || doNew) createFileFromResourceEL("/resource/library/function/throw." + TEMPLATE_EXTENSION, f);
+			if (f.exists()) delete(dir, "throw." + TEMPLATE_EXTENSION);
 
 			f = dir.getRealResource("trace." + TEMPLATE_EXTENSION);
 			if (!f.exists() || doNew) createFileFromResourceEL("/resource/library/function/trace." + TEMPLATE_EXTENSION, f);
@@ -3520,10 +3535,10 @@ public final class ConfigFactoryImpl extends ConfigFactory {
 			Log deployLog = config.getLog("deploy");
 			Array children = ConfigUtil.getAsArray("extensions", root);
 			RHExtension.removeDuplicates(children);
+			RHExtension.removeDisabled(children);
 			if (children.size() > 0) {
 				// Use a thread pool for processing
 				ExecutorService executor = ThreadUtil.createExecutorService(children.size(), true);
-				Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 				List<Future<ExtensionDefintion>> futures = new ArrayList<>();
 
 				Iterator<Object> it = children.valueIterator();

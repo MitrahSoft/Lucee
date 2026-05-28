@@ -178,7 +178,7 @@ component {
 	public void function loadServiceConfig() localmode=true {
 		systemOutput( "", true) ;
 		systemOutput("-------------- Test Services ------------", true );
-		services = ListToArray("oracle,MySQL,MSsql,postgres,h2,mongoDb,smtp,pop,imap,s3,s3_custom,s3_google,s3_backblaze,ftp,sftp,memcached,redis,ldap,httpbin");
+		services = ListToArray("oracle,MySQL,MSsql,postgres,h2,mongoDb,smtp,pop,imap,s3,s3_custom,s3_google,s3_backblaze,ftp,sftp,memcached,redis,ldap,httpbin,orm");
 		// can take a while, so we check them them in parallel
 
 		services.each( function( service ) localmode=true {
@@ -249,6 +249,9 @@ component {
 							break;
 						case "httpbin":
 							verify = verifyHttpbin(cfg);
+							break;
+						case "orm":
+							verify = "ORM engine: " & ( cfg.class ?: "installed" );
 							break;
 						default:
 							verify = verifyDatasource(cfg);
@@ -404,13 +407,14 @@ component {
 				throw "MemCached port closed #memcached.server#:#memcached.port#"; // otherwise the cache keeps trying and logging
 			try {
 				testCacheName = "testMemcached";
-				application 
-					action="update" 
+				bundleVersion = server.getDefaultBundleVersion( 'org.lucee.memcached.extension', '4.0.0.14' );
+				application
+					action="update"
 					caches="#{
 						testMemcached: {
 							class: 'org.lucee.extension.cache.mc.MemcachedCache'
-							, bundleName: 'memcached.extension'
-							, bundleVersion: '4.0.0.10-SNAPSHOT'
+							, bundleName: 'org.lucee.memcached.extension'
+							, bundleVersion: bundleVersion
 							, storage: false
 							, custom: {
 								"socket_timeout": "3",
@@ -438,7 +442,7 @@ component {
 				if ( !valid ) {
 					throw "MemCached configured, but not available";
 				} else {
-					return "MemCached connection verified";
+					return "MemCached connection verified, extension bundle [#bundleVersion#]";
 				}
 			} catch (e){
 				application action="update" caches="#{}#";
@@ -597,7 +601,7 @@ component {
 					return {
 						class: 'com.mysql.cj.jdbc.Driver'
 						, bundleName: 'com.mysql.cj'
-						, bundleVersion: server.getDefaultBundleVersion( 'com.mysql.cj', '9.3.0' )
+						, bundleVersion: server.getDefaultBundleVersion( 'com.mysql.cj', '9.6.0' )
 						, connectionString: 'jdbc:mysql://#mySQL.server#:#mySQL.port#/#mySQL.database#?useUnicode=true&characterEncoding=UTF-8&useLegacyDatetimeCode=true&useSSL=false&allowPublicKeyRetrieval=true' & arguments.connectionString
 						, username: mySQL.username
 						, password: mySQL.password
@@ -612,7 +616,7 @@ component {
 					return {
 						class: 'org.postgresql.Driver'
 						, bundleName: 'org.postgresql.jdbc'
-						, bundleVersion: server.getDefaultBundleVersion( 'org.postgresql.jdbc', '42.7.7' )
+						, bundleVersion: server.getDefaultBundleVersion( 'org.postgresql.jdbc', '42.7.9' )
 						, connectionString: 'jdbc:postgresql://#pgsql.server#:#pgsql.port#/#pgsql.database#' & arguments.connectionString
 						, username: pgsql.username
 						, password: pgsql.password
@@ -739,6 +743,17 @@ component {
 					};
 				}
 				break;
+			case "orm":
+				try {
+					admin
+						action="getORMEngine"
+						type="server"
+						password="#server.SERVERADMINPASSWORD#"
+						returnVariable="local.ormEngine";
+					if ( structKeyExists( ormEngine, "class" ) && len( trim( ormEngine.class ) ) && ormEngine.class neq "lucee.runtime.orm.DummyORMEngine" )
+						return ormEngine;
+				} catch (e) {}
+				break;
 			default:
 				break;
 		}
@@ -807,26 +822,20 @@ component {
 	public function checkVersionGTE(version, major, minor="", patch="", build="") {
 		var v = listToArray(arguments.version, ".");
 		while (v.len() < 4) v.append(0); // Normalize to 4 components
-		/*
-		var args = [];
-		for (var i=2; i < len(arguments); i++)
-			arrayAppend(args, arguments[i]);
-		dump("version " & v.toJson());
-		dump("minimum " & args.toJson());
-		*/
-		if (v[1] > arguments.major) return false //"fail major gt";
-		if (v[1] < arguments.major) return false //"fail major lt";
-	
-		if (len(arguments.minor) == 0) return true;//"true no minor";
-		if (v[2] < arguments.minor) return false;//"fail minor lt";
-		if (v[2] > arguments.minor) return false;//"fail minor gt";
-	
-		if (len(arguments.patch) == 0) return true;//"true no patch";
-		if (v[3] > arguments.patch) return false;//"fail patch #v[3]# < #patch#";
-		if (v[3] < arguments.patch) return false;//"fail patch #v[3]# < #patch#";
-	
-		if (len(arguments.build) == 0) return true;//"true no build";
-		return (v[4] <= arguments.build);// & " build";
+
+		if (v[1] > arguments.major) return true;
+		if (v[1] < arguments.major) return false;
+
+		if (len(arguments.minor) == 0) return true;
+		if (v[2] > arguments.minor) return true;
+		if (v[2] < arguments.minor) return false;
+
+		if (len(arguments.patch) == 0) return true;
+		if (v[3] > arguments.patch) return true;
+		if (v[3] < arguments.patch) return false;
+
+		if (len(arguments.build) == 0) return true;
+		return (v[4] >= arguments.build);
 	}
 
 }

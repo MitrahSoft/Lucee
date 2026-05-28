@@ -389,7 +389,7 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 	private Boolean executionLogEnabled;
 	private ExecutionLogFactory executionLogFactory;
-	private final Map<String, ORMEngine> ormengines = new HashMap<String, ORMEngine>();
+	private final Map<String, ORMEngine> ormengines = new ConcurrentHashMap<String, ORMEngine>();
 	private ClassDefinition<? extends ORMEngine> cdORMEngine;
 	private ORMConfiguration ormConfig;
 
@@ -4689,34 +4689,34 @@ public abstract class ConfigImpl extends ConfigBase implements ConfigPro {
 
 		ORMEngine engine = ormengines.get(name);
 		if (engine == null) {
-			// try {
-			Throwable t = null;
+			synchronized (SystemUtil.createToken("ConfigImpl", "getORMEngine:" + name)) {
+				engine = ormengines.get(name);
+				if (engine == null) {
+					Throwable t = null;
 
-			try {
-				engine = (ORMEngine) ClassUtil.loadInstance(getORMEngineClassDefintion().getClazz());
-				engine.init(pc);
-			}
-			catch (ClassException ce) {
-				t = ce;
-			}
-			catch (BundleException be) {
-				t = be;
-			}
-			catch (NoClassDefFoundError ncfe) {
-				t = ncfe;
-			}
+					try {
+						engine = (ORMEngine) ClassUtil.loadInstance(getORMEngineClassDefintion().getClazz());
+						engine.init(pc);
+					}
+					catch (ClassException ce) {
+						t = ce;
+					}
+					catch (BundleException be) {
+						t = be;
+					}
+					catch (NoClassDefFoundError ncfe) {
+						t = ncfe;
+					}
 
-			if (t != null) {
-				ApplicationException ae = new ApplicationException(
-						"cannot initialize ORM Engine [" + getORMEngineClassDefintion() + "], make sure you have added all the required jar files");
-				ExceptionUtil.initCauseEL(ae, t);
-				throw ae;
-
+					if (t != null) {
+						ApplicationException ae = new ApplicationException(
+								"cannot initialize ORM Engine [" + getORMEngineClassDefintion() + "], make sure you have added all the required jar files");
+						ExceptionUtil.initCauseEL(ae, t);
+						throw ae;
+					}
+					ormengines.put(name, engine);
+				}
 			}
-			ormengines.put(name, engine);
-			/*
-			 * } catch (PageException pe) { throw pe; }
-			 */
 		}
 
 		return engine;

@@ -630,6 +630,18 @@ public final class PageContextImpl extends PageContext {
 
 	@Override
 	public void release() {
+		if (ConfigImpl.DEBUGGER) {
+			DebuggerListener listener = DebuggerRegistry.getListener();
+			if (listener != null) {
+				try {
+					listener.onRequestEnd(this);
+				}
+				catch (Throwable t) {
+					LogUtil.log(this, "application", "debugger", t, Log.LEVEL_WARN);
+				}
+			}
+		}
+
 		config.releaseCacheHandlers(this);
 
 		if (config.getExecutionLogEnabled() && execLog != null) {
@@ -897,8 +909,7 @@ public final class PageContextImpl extends PageContext {
 		try {
 			getOut().flush();
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 	}
 
 	@Override
@@ -1091,6 +1102,9 @@ public final class PageContextImpl extends PageContext {
 			DebugEntryTemplate debugEntry = debugger.getEntry(this, currentPage.getPageSource());
 			try {
 				addPageSource(currentPage.getPageSource(), true);
+				if (ConfigImpl.DEBUGGER) {
+					debuggerFrames.add(new DebuggerFrame(getTopmostDebuggerFrame(), currentPage.getPageSource(), variablesScope()));
+				}
 				debugEntry.updateFileLoadTime((System.nanoTime() - time));
 				exeTime = System.nanoTime();
 				currentPage.call(this);
@@ -1106,6 +1120,8 @@ public final class PageContextImpl extends PageContext {
 						FDSignal.signal(pe, false);
 					}
 					pe.addContext(currentPage.getPageSource(), -187, -187, null);// TODO was soll das 187
+					// LDEV-6282: notify before finally pops the include frame; marker dedups inner catches.
+					if (ConfigImpl.DEBUGGER && !debuggerFrames.isEmpty()) debuggerNotifyThrow(pe);
 					throw pe;
 				}
 			}
@@ -1114,6 +1130,9 @@ public final class PageContextImpl extends PageContext {
 				long diff = ((System.nanoTime() - exeTime) - (executionTime - currTime));
 				executionTime += (System.nanoTime() - time);
 				debugEntry.updateExeTime(diff);
+				if (ConfigImpl.DEBUGGER && !debuggerFrames.isEmpty()) {
+					debuggerFrames.removeLast();
+				}
 				removeLastPageSource(true);
 			}
 		}
@@ -1123,6 +1142,9 @@ public final class PageContextImpl extends PageContext {
 			if (runOnce && includeOnce.contains(currentPage.getPageSource())) return;
 			try {
 				addPageSource(currentPage.getPageSource(), true);
+				if (ConfigImpl.DEBUGGER) {
+					debuggerFrames.add(new DebuggerFrame(getTopmostDebuggerFrame(), currentPage.getPageSource(), variablesScope()));
+				}
 				currentPage.call(this);
 			}
 			catch (Throwable t) {
@@ -1133,11 +1155,16 @@ public final class PageContextImpl extends PageContext {
 				}
 				else {
 					pe.addContext(currentPage.getPageSource(), -187, -187, null);
+					// LDEV-6282: notify before finally pops the include frame; marker dedups inner catches.
+					if (ConfigImpl.DEBUGGER && !debuggerFrames.isEmpty()) debuggerNotifyThrow(pe);
 					throw pe;
 				}
 			}
 			finally {
 				includeOnce.add(currentPage.getPageSource());
+				if (ConfigImpl.DEBUGGER && !debuggerFrames.isEmpty()) {
+					debuggerFrames.removeLast();
+				}
 				removeLastPageSource(true);
 			}
 		}
@@ -2157,8 +2184,7 @@ public final class PageContextImpl extends PageContext {
 			if (value == null) removeVariable(name);
 			else setVariable(name, value);
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 	}
 
 	@Override
@@ -2445,12 +2471,11 @@ public final class PageContextImpl extends PageContext {
 				if (!Abort.isSilentAbort(pe)) {
 					forceWrite(getConfig().getDefaultDumpWriter(DumpWriter.DEFAULT_RICH).toString(this, pe.toDumpData(this, 9999, DumpUtil.toDumpProperties()), true));
 					if (errorTemplateExp != null) {
-						LogUtil.log("errortemplate", errorTemplateExp);
+						LogUtil.log(Log.LEVEL_INFO, "errortemplate", "error template failed to render, original exception is exposed directly " + errorTemplateExp.getMessage());
 					}
 				}
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) {}
 		}
 	}
 
@@ -2826,8 +2851,7 @@ public final class PageContextImpl extends PageContext {
 					releaseORM();
 					removeLastPageSource(true);
 				}
-				catch (Exception e) {
-				}
+				catch (Exception e) {}
 			}
 			PageException pe;
 			if (ExceptionUtil.isThreadDeath(t) && getTimeoutStackTrace() != null) {
@@ -2841,8 +2865,9 @@ public final class PageContextImpl extends PageContext {
 				if (fdEnabled) {
 					FDSignal.signal(pe, false);
 				}
-				// External debugger extension - uncaught exception
-				if (ConfigImpl.DEBUGGER) {
+				// External debugger extension - uncaught exception.
+				// Skip if no live CFML frame (top-level 404/compile error); throw-site hooks dedup the rest.
+				if (ConfigImpl.DEBUGGER && !debuggerFrames.isEmpty()) {
 					DebuggerListener debugListener = DebuggerRegistry.getListener();
 					debuggerNotifyException(debugListener, pe, false);
 				}
@@ -2975,8 +3000,7 @@ public final class PageContextImpl extends PageContext {
 			// print.o(getOut().getClass().getName());
 			getOut().clear();
 		}
-		catch (IOException e) {
-		}
+		catch (IOException e) {}
 	}
 
 	@Override
@@ -3401,8 +3425,7 @@ public final class PageContextImpl extends PageContext {
 		try {
 			sessionScope().removeEL(KeyImpl.init(name));
 		}
-		catch (PageException e) {
-		}
+		catch (PageException e) {}
 
 	}
 
@@ -3530,6 +3553,9 @@ public final class PageContextImpl extends PageContext {
 	 * inspect variables in any frame, not just the current one.
 	 */
 	public static final class DebuggerFrame {
+		public enum Kind { UDF, INCLUDE }
+
+		public final Kind kind;
 		public final Local local;
 		public final Argument arguments;
 		public final Variables variables;
@@ -3538,6 +3564,7 @@ public final class PageContextImpl extends PageContext {
 		private volatile int line;
 
 		DebuggerFrame(Local local, Argument arguments, Variables variables, PageSource pageSource, String functionName) {
+			this.kind = Kind.UDF;
 			this.local = local;
 			this.arguments = arguments;
 			this.variables = variables;
@@ -3546,6 +3573,18 @@ public final class PageContextImpl extends PageContext {
 			this.line = 0;
 		}
 
+		DebuggerFrame(DebuggerFrame enclosing, PageSource pageSource, Variables currentVariables) {
+			this.kind = Kind.INCLUDE;
+			this.local = enclosing != null ? enclosing.local : null;
+			this.arguments = enclosing != null ? enclosing.arguments : null;
+			// not inherited: cfmodule/customtag swaps in a fresh variables scope
+			this.variables = currentVariables;
+			this.pageSource = pageSource;
+			this.functionName = null;
+			this.line = 0;
+		}
+
+		public Kind getKind() { return kind; }
 		public int getLine() { return line; }
 		public void setLine(int line) { this.line = line; }
 		public String getFile() { return pageSource != null ? pageSource.getDisplayPath() : null; }
@@ -3605,6 +3644,8 @@ public final class PageContextImpl extends PageContext {
 	 * Notify the debugger listener of an exception and suspend if requested.
 	 */
 	private void debuggerNotifyException(DebuggerListener listener, PageException pe, boolean caught) {
+		// LDEV-6282: skip uncaught path if throw-site already notified; caught path always fires.
+		if (!caught && pe instanceof PageExceptionImpl && !((PageExceptionImpl) pe).markDebuggerNotified()) return;
 		if (listener == null || !listener.isClientConnected() || !listener.onException(this, pe, caught)) return;
 		String file = null;
 		int line = 0;
@@ -3622,6 +3663,30 @@ public final class PageContextImpl extends PageContext {
 		}
 		String label = caught ? "Caught exception: " : "Uncaught exception: ";
 		debuggerSuspend(file, line, label + pe.getClass().getSimpleName());
+	}
+
+	// LDEV-6282: notify at throw site while frames are still live; marker dedups later notify paths.
+	public void debuggerNotifyThrow(PageException pe) {
+		if (!ConfigImpl.DEBUGGER) return;
+		DebuggerListener listener = DebuggerRegistry.getListener();
+		if (listener == null || !listener.isClientConnected()) return;
+		if (pe instanceof PageExceptionImpl && !((PageExceptionImpl) pe).markDebuggerNotified()) return;
+		if (!listener.onException(this, pe, false)) return;
+		String file = null;
+		int line = 0;
+		if (pe instanceof PageExceptionImpl) {
+			PageExceptionImpl pei = (PageExceptionImpl) pe;
+			file = pei.getFile(getConfig());
+			try {
+				String lineStr = pei.getLine(getConfig());
+				if (lineStr != null && !lineStr.isEmpty()) {
+					line = Integer.parseInt(lineStr);
+				}
+			}
+			catch (NumberFormatException ignored) {
+			}
+		}
+		debuggerSuspend(file, line, "Uncaught exception: " + pe.getClass().getSimpleName());
 	}
 
 	// Debugger suspension support

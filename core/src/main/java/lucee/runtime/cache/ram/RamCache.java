@@ -79,6 +79,7 @@ public final class RamCache extends CacheSupport {
 			if (engine != null) {
 				controller = new Controler(engine, this);
 				controller.setName("RamCacheCleaner");
+				controller.setDaemon(true);
 				controller.start();
 			}
 		}
@@ -92,6 +93,7 @@ public final class RamCache extends CacheSupport {
 			CFMLEngineImpl engine = CFMLEngineImpl.toCFMLEngineImpl(ConfigUtil.getEngine(config), null);
 			if (engine != null) {
 				controller = new Controler(engine, this);
+				controller.setDaemon(true);
 				controller.start();
 			}
 		}

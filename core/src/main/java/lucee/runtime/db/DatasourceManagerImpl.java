@@ -163,7 +163,6 @@ public final class DatasourceManagerImpl implements DataSourceManager {
 		try {
 			existingDC = transConnsORM.get(ds);
 			if (existingDC == null) {
-				if (isolation == Connection.TRANSACTION_NONE) isolation = Connection.TRANSACTION_SERIALIZABLE;
 				ORMDatasourceConnection newDC = new ORMDatasourceConnection(pc, session, ds, isolation);
 				transConnsORM.put(ds, newDC);
 				return;
@@ -380,6 +379,10 @@ public final class DatasourceManagerImpl implements DataSourceManager {
 	@Override
 	public boolean isAutoCommit() {
 		return autoCommit;
+	}
+
+	public int getIsolation() {
+		return isolation;
 	}
 
 	@Override

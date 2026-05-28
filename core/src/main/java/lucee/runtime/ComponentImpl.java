@@ -29,11 +29,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -98,6 +100,8 @@ import lucee.runtime.type.Struct;
 import lucee.runtime.type.StructImpl;
 import lucee.runtime.type.UDF;
 import lucee.runtime.type.UDFGSProperty;
+import lucee.runtime.type.UDFGetterProperty;
+import lucee.runtime.type.UDFSetterProperty;
 import lucee.runtime.type.UDFImpl;
 import lucee.runtime.type.UDFPlus;
 import lucee.runtime.type.UDFProperties;
@@ -160,6 +164,9 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	private boolean useShadow;
 	private boolean entity;
 	boolean afterConstructor;
+
+	// keys this component's setProperty seeded — lazy-init
+	private Set<Key> ownPropertyDefaults;
 	// private Map<Key,UDF> constructorUDFs;
 	private boolean loaded;
 	private boolean hasInjectedFunctions;
@@ -309,7 +316,11 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 			trg.isExtended = isExtended;
 			trg.afterConstructor = afterConstructor;
 			trg.dataMemberDefaultAccess = dataMemberDefaultAccess;
-			trg.properties = properties.duplicate();
+			// LDEV-6298 follow-up: ComponentProperties is treated as immutable post-init
+			// (its only post-init mutator setInline() runs in ComponentLoader before any
+			// duplicate, and the inner property/meta maps are populated once during init).
+			// Share the wrapper rather than allocating a fresh one per duplicate.
+			trg.properties = properties;
 			trg.isInit = isInit;
 			trg.absFin = absFin;
 			trg.isRestEnabled = this.isRestEnabled;
@@ -395,7 +406,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 						}
 					}
 					// udf with no owner
-					if (!done) trg.put(key, udf.duplicate());
+					if (!done) {
+						if (udf instanceof UDFGSProperty) trg.put(key, udf); // LDEV-6236 flyweight accessor — stateless, safe to share
+						else trg.put(key, udf.duplicate());
+					}
 
 					// print.o(owner.pageSource.getComponentName()+":"+udf.getFunctionName());
 				}
@@ -755,6 +769,17 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 	}
 
 	Object _call(PageContext pc, Collection.Key calledName, UDF udf, Struct namedArgs, Object[] args) throws PageException {
+
+		// LDEV-6236 accessor bypass — skip full UDF dispatch for generated getters/setters
+		if (!((PageContextImpl) pc).hasDebugOptions(ConfigPro.DEBUG_TEMPLATE)) {
+			if (udf instanceof UDFGetterProperty) {
+				return ((UDFGetterProperty) udf).callDirect( this, pc );
+			}
+			if (udf instanceof UDFSetterProperty && args != null) {
+				return ((UDFSetterProperty) udf).callDirect( this, pc, args );
+			}
+		}
+
 		Object rtn = null;
 		Variables parent = null;
 
@@ -2042,7 +2067,14 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		_udfs.put(key, udf);
 		_data.put(key, udf);
-		if (useShadow) scope.setEL(key, udf);
+		if (useShadow) {
+			// preserve only this component's seeded property default; inherited slots get stomped
+			Object existing = scope.get(key, null);
+			boolean preserveOwnDefault = (existing != null) && !(existing instanceof UDF) && ownPropertyDefaults != null && ownPropertyDefaults.contains(key);
+			if (!preserveOwnDefault) {
+				scope.setEL(key, udf);
+			}
+		}
 	}
 
 	@Override
@@ -2411,7 +2443,10 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 
 		top.properties.properties.put(propNameLower, propImpl);
 		if (propImpl.getDefaultAsObject() != null) {
-			scope.setEL(propImpl.getNameAsKey(), propImpl.getDefaultAsObject());
+			Key propKey = propImpl.getNameAsKey();
+			scope.setEL(propKey, propImpl.getDefaultAsObject());
+			if (ownPropertyDefaults == null) ownPropertyDefaults = new HashSet<>();
+			ownPropertyDefaults.add(propKey);
 		}
 		// Create accessor UDFs if:
 		// 1. Component has accessors enabled, OR
@@ -2432,7 +2467,8 @@ public final class ComponentImpl extends StructSupport implements Externalizable
 		}
 
 		// LDEV-3335: Add static flyweight accessor UDFs to _data and scope
-		Map<Key, UDF> staticAccessorUDFs = top.cp != null ? top.cp.getStaticAccessorUDFs() : null;
+		// Only add accessors if the component has accessors enabled or is persistent
+		Map<Key, UDF> staticAccessorUDFs = top.cp != null && (top.properties.accessors || top.properties.persistent) ? top.cp.getStaticAccessorUDFs() : null;
 		if (staticAccessorUDFs != null && !staticAccessorUDFs.isEmpty()) {
 			Iterator<Map.Entry<Key, UDF>> it = staticAccessorUDFs.entrySet().iterator();
 			while (it.hasNext()) {

@@ -47,9 +47,12 @@ import java.util.TimeZone;
 import javax.script.ScriptEngineFactory;
 
 import org.apache.felix.framework.Felix;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleException;
 import org.osgi.framework.Constants;
 import org.osgi.framework.Version;
+import org.osgi.framework.wiring.FrameworkWiring;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
@@ -367,7 +370,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				LogST._do(f, logName, timeRange);
 			}
 		}
-
 		// happen when Lucee is loaded directly
 		if (bundleCollection == null) {
 			try {
@@ -399,7 +401,6 @@ public final class CFMLEngineImpl implements CFMLEngine {
 				}
 
 				config.put(Constants.FRAMEWORK_BOOTDELEGATION, "lucee.*");
-
 				Felix felix = factory.getFelix(factory.getResourceRoot(), config);
 
 				bundleCollection = new BundleCollection(felix, felix, null);
@@ -410,6 +411,30 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			}
 		}
 		this.info = new InfoImpl(bundleCollection == null ? null : bundleCollection.core);
+
+		// remove older or newer lucee-core bundles to avoid conflicts
+		{
+			BundleContext context = bundleCollection.getBundleContext();
+			List<Bundle> staleCoreBundles = null;
+			for (Bundle b: context.getBundles()) {
+				if ("lucee.core".equals(b.getSymbolicName()) && !b.getVersion().equals(info.getVersion())) {
+					LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Found stale core bundle [" + b.getSymbolicName() + ":" + b.getVersion()
+							+ "], uninstalling to avoid conflicts with current version [" + info.getVersion() + "]");
+					try {
+						b.uninstall();
+						if (staleCoreBundles == null) staleCoreBundles = new ArrayList<>();
+						staleCoreBundles.add(b);
+					}
+					catch (BundleException ignored) {}
+				}
+			}
+
+			if (staleCoreBundles != null && !staleCoreBundles.isEmpty()) {
+				FrameworkWiring fw = context.getBundle(0).adapt(FrameworkWiring.class);
+				fw.refreshBundles(staleCoreBundles);
+			}
+		}
+
 		Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader()); // MUST better location for this
 
 		UpdateInfo updateInfo;
@@ -439,8 +464,10 @@ public final class CFMLEngineImpl implements CFMLEngine {
 		Set<ExtensionDefintion> extensions;
 		Set<String> extensionsToRemove = null;
 
+		boolean configOnly = Caster.toBooleanValue(SystemUtil.getSystemPropOrEnvVar("lucee.extensions.config.only", null), false);
+
 		if (installExtensions && (updateInfo.updateType == ConfigFactory.NEW_FRESH || updateInfo.updateType == ConfigFactory.NEW_FROM4)) {
-			List<ExtensionDefintion> ext = info.getRequiredExtension();
+			List<ExtensionDefintion> ext = configOnly ? new ArrayList<ExtensionDefintion>() : info.getRequiredExtension();
 			extensions = toSet(null, ext);
 			LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Found Extensions to install (new;" + updateInfo.getUpdateTypeAsString() + "):" + toList(extensions));
 		}
@@ -451,37 +478,38 @@ public final class CFMLEngineImpl implements CFMLEngine {
 			extensionsToRemove = new HashSet<String>();
 
 			checkInvalidExtensions(this, cs, extensions, extensionsToRemove);
+			if (!configOnly) {
+				Iterator<ExtensionDefintion> it = info.getRequiredExtension().iterator();
+				ExtensionDefintion ed;
+				RHExtension rhe;
+				Version edVersion, rheVersion;
+				while (it.hasNext()) {
+					ed = it.next();
+					edVersion = OSGiUtil.toVersion(ed.getVersion(), null);
+					if (ed.getVersion() == null) {
+						continue; // no version definition no update
+					}
+					try {
+						rhe = ConfigAdmin.hasRHExtensionInstalled(cs, new ExtensionDefintion(ed.getId()));
+						if (rhe == null) {
+							rheVersion = null;
+							Version since = ed.getSince();
+							if (since == null || updateInfo.oldVersion == null || !OSGiUtil.isNewerThan(since, updateInfo.oldVersion)) continue; // not installed we do not update
 
-			Iterator<ExtensionDefintion> it = info.getRequiredExtension().iterator();
-			ExtensionDefintion ed;
-			RHExtension rhe;
-			Version edVersion, rheVersion;
-			while (it.hasNext()) {
-				ed = it.next();
-				edVersion = OSGiUtil.toVersion(ed.getVersion(), null);
-				if (ed.getVersion() == null) {
-					continue; // no version definition no update
-				}
-				try {
-					rhe = ConfigAdmin.hasRHExtensionInstalled(cs, new ExtensionDefintion(ed.getId()));
-					if (rhe == null) {
-						rheVersion = null;
-						Version since = ed.getSince();
-						if (since == null || updateInfo.oldVersion == null || !OSGiUtil.isNewerThan(since, updateInfo.oldVersion)) continue; // not installed we do not update
-
-						LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Detected newer [" + since + ":" + updateInfo.oldVersion + "] Extension version [" + ed + "]");
+							LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Detected newer [" + since + ":" + updateInfo.oldVersion + "] Extension version [" + ed + "]");
+							extensions.add(ed);
+						}
+						else rheVersion = OSGiUtil.toVersion(rhe.getVersion(), null);
+						// if the installed is older than the one defined in the manifest we update (if possible)
+						if (rheVersion != null && OSGiUtil.isNewerThan(edVersion, rheVersion)) { // TODO do none OSGi version number comparsion
+							LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Detected newer [" + edVersion + ":" + rheVersion + "] Extension version [" + ed + "]");
+							extensions.add(ed);
+						}
+					}
+					catch (Exception e) {
+						LogUtil.log(LOG_NAME, LOG_TYPE_NAME, e);
 						extensions.add(ed);
 					}
-					else rheVersion = OSGiUtil.toVersion(rhe.getVersion(), null);
-					// if the installed is older than the one defined in the manifest we update (if possible)
-					if (rheVersion != null && OSGiUtil.isNewerThan(edVersion, rheVersion)) { // TODO do none OSGi version number comparsion
-						LogUtil.log(Log.LEVEL_INFO, LOG_NAME, LOG_TYPE_NAME, "Detected newer [" + edVersion + ":" + rheVersion + "] Extension version [" + ed + "]");
-						extensions.add(ed);
-					}
-				}
-				catch (Exception e) {
-					LogUtil.log(LOG_NAME, LOG_TYPE_NAME, e);
-					extensions.add(ed);
 				}
 			}
 			if (!extensions.isEmpty()) {

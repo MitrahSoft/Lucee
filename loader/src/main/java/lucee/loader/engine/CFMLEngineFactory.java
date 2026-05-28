@@ -438,8 +438,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 						file = new File(f, relResource).getCanonicalFile();
 					}
 				}
-				catch (URISyntaxException e) {
-				}
+				catch (URISyntaxException e) {}
 			}
 			if (file == null || ((dir && !file.isDirectory()) || (!dir && !file.isFile()))) {
 				throw new IOException("could not find the " + subject + " (" + desc + "), please set the enviroment variable [" + envVarName + "] that points to it.");
@@ -479,8 +478,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			}
 			jos.closeEntry();
 		}
-		catch (Exception ex) {
-		}
+		catch (Exception ex) {}
 	}
 
 	private static void addDirectoryToJar(JarOutputStream jos, File folder, String parentEntryName, FilenameFilter filter) throws IOException {
@@ -547,13 +545,15 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			}
 			else if (Util.isNewerThan(MIN_VERSION, specificVersion)) {
 				log(org.apache.felix.resolver.Logger.LOG_ERROR,
-						"Lucee version requested [" + specificVersion + "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader requires at least version ["
+						"Lucee version requested [" + specificVersion
+								+ "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader requires at least version ["
 								+ MIN_VERSION + "].");
 				specificVersion = null;
 			}
 			else if (MAX_VERSION != null && Util.isNewerThan(specificVersion, MAX_VERSION)) {
 				log(org.apache.felix.resolver.Logger.LOG_ERROR,
-						"Lucee version requested [" + specificVersion + "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader only supports versions up to ["
+						"Lucee version requested [" + specificVersion
+								+ "] via system property 'lucee.version' or environment variable 'LUCEE_VERSION' cannot be used, this loader only supports versions up to ["
 								+ MAX_VERSION + "].");
 				specificVersion = null;
 			}
@@ -690,7 +690,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 				start = ltmp;
 			}
 			else {
-				bundleCollection = BundleLoader.loadBundles(this, getFelixCacheDirectory(), getBundleDirectory(), lucee, bundleCollection);
+				bundleCollection = BundleLoader.loadBundles(this, getResourceRoot(), getBundleDirectory(), lucee, bundleCollection);
 
 				ltmp = System.currentTimeMillis();
 				log(LoggerImpl.LOG_DEBUG, "loaded bundles in " + (ltmp - start) + "ms");
@@ -745,7 +745,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		return singelton;
 	}
 
-	public Felix getFelix(final File cacheRootDir, Map<String, Object> config) throws BundleException {
+	public Felix getFelix(final File resourceRootDir, Map<String, Object> config) throws BundleException {
 
 		if (config == null) config = new HashMap<>();
 
@@ -789,12 +789,16 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 
 		boolean isNew = false;
 		// felix.cache.rootdir
-		if (Util.isEmpty((String) config.get("felix.cache.rootdir"))) {
-			if (!cacheRootDir.exists()) {
-				cacheRootDir.mkdirs();
+		String rootDir = (String) config.get("felix.cache.rootdir");
+
+		File felixCacheRootdir = null;
+		if (Util.isEmpty(rootDir) || !(felixCacheRootdir = new File(rootDir)).isDirectory()) {
+			felixCacheRootdir = resourceRootDir;
+			if (!resourceRootDir.exists()) {
+				resourceRootDir.mkdirs();
 				isNew = true;
 			}
-			if (cacheRootDir.isDirectory()) config.put("felix.cache.rootdir", cacheRootDir.getAbsolutePath());
+			if (resourceRootDir.isDirectory()) config.put("felix.cache.rootdir", rootDir = resourceRootDir.getAbsolutePath());
 		}
 
 		extend(config, Constants.FRAMEWORK_BOOTDELEGATION, null, true);
@@ -873,8 +877,9 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		catch (BundleException be) {
 			// this could be cause by an invalid felix cache, so we simply delete it and try again
 			if (!isNew && "Error creating bundle cache.".equals(be.getMessage())) {
-				Util.deleteContent(cacheRootDir, null);
-
+				Util.deleteContent(new File(felixCacheRootdir, "felix-cache"), null);
+				felix = new Felix(config);
+				felix.start();
 			}
 
 		}
@@ -922,7 +927,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 
 	private CFMLEngine _getCore(File rc) throws IOException, BundleException, ClassNotFoundException, SecurityException, NoSuchMethodException, IllegalArgumentException,
 			IllegalAccessException, InvocationTargetException {
-		bundleCollection = BundleLoader.loadBundles(this, getFelixCacheDirectory(), getBundleDirectory(), rc, bundleCollection);
+		bundleCollection = BundleLoader.loadBundles(this, getResourceRoot(), getBundleDirectory(), rc, bundleCollection);
 		return getEngine(bundleCollection);
 
 	}
@@ -983,7 +988,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		final Version v = null;
 		try {
 
-			bundleCollection = BundleLoader.loadBundles(this, getFelixCacheDirectory(), getBundleDirectory(), newLucee, bundleCollection);
+			bundleCollection = BundleLoader.loadBundles(this, getResourceRoot(), getBundleDirectory(), newLucee, bundleCollection);
 			final CFMLEngine e = getEngine(bundleCollection);
 			if (e == null) throw new IOException("Failed to load engine");
 			version = e.getInfo().getVersion();
@@ -1004,8 +1009,7 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 			try {
 				newLucee.delete();
 			}
-			catch (final Exception ee) {
-			}
+			catch (final Exception ee) {}
 			log(e);
 			e.printStackTrace();
 			return false;
@@ -1517,13 +1521,6 @@ public class CFMLEngineFactory extends CFMLEngineFactorySupport {
 		bd = new File(getResourceRoot(), "bundles");
 		if (!bd.exists()) bd.mkdirs();
 		return bd;
-	}
-
-	public File getFelixCacheDirectory() throws IOException {
-		return getResourceRoot();
-		// File bd = new File(getResourceRoot(),"felix-cache");
-		// if(!bd.exists())bd.mkdirs();
-		// return bd;
 	}
 
 	/**
