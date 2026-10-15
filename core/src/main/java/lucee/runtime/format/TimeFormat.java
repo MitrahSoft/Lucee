@@ -71,9 +71,7 @@ public final class TimeFormat extends BaseFormat implements Format {
 	}
 
 	public String format(long time, String mask, TimeZone tz) {
-		TimeZone def = null;
-		try {
-			Calendar calendar = JREDateTimeUtil.getThreadCalendar(getLocale(), tz);
+		Calendar calendar = JREDateTimeUtil.getThreadCalendar(getLocale(), tz);
 			calendar.setTimeInMillis(time);
 
 			String lcMask = StringUtil.toLowerCase(mask);
@@ -123,8 +121,6 @@ public final class TimeFormat extends BaseFormat implements Format {
 						pos++;
 						count++;
 					}
-					if (def == null) def = TimeZone.getDefault();
-					TimeZone.setDefault(TimeZone.getTimeZone("CET"));
 					formated.append(lucee.runtime.format.DateFormat.X(time, tz, count));
 				}
 					break;
@@ -232,10 +228,6 @@ public final class TimeFormat extends BaseFormat implements Format {
 				}
 			}
 			return StringUtil.replaceSpecialWhiteSpace(formated.toString());
-		}
-		finally {
-			if (def != null) TimeZone.setDefault(def);
-		}
 	}
 
 	private String getAsString(Calendar c, int style, TimeZone tz) {

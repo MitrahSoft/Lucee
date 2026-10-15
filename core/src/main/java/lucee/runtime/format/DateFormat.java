@@ -70,9 +70,7 @@ public final class DateFormat extends BaseFormat implements Format {
 	}
 
 	public String format(long time, String mask, TimeZone tz) {
-		TimeZone def = null;
-		try {
-			tz = ThreadLocalPageContext.getTimeZone(tz);
+		tz = ThreadLocalPageContext.getTimeZone(tz);
 			Calendar calendar = JREDateTimeUtil.getThreadCalendar(getLocale(), tz);
 			calendar.setTimeInMillis(time);
 
@@ -120,8 +118,6 @@ public final class DateFormat extends BaseFormat implements Format {
 						pos++;
 						count++;
 					}
-					if (def == null) def = TimeZone.getDefault();
-					TimeZone.setDefault(TimeZone.getTimeZone("CET"));
 					formated.append(X(time, tz, count));
 				}
 					break;
@@ -257,10 +253,6 @@ public final class DateFormat extends BaseFormat implements Format {
 				}
 			}
 			return formated.toString();
-		}
-		finally {
-			if (def != null) TimeZone.setDefault(def);
-		}
 	}
 
 	private String toEra(int era, String defaultValue) {
